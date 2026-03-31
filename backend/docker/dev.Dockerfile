@@ -5,8 +5,10 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 
+RUN go install github.com/air-verse/air@latest
+
 COPY . .
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "go mod download && go run cmd/server.go"]
+CMD ["air", "-c", ".air.toml"]
