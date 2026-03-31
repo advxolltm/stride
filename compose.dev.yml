@@ -60,7 +60,7 @@ services:
       VITE_API_BASE_PATH: ${API_BASE_PATH:-/api/v1}
     depends_on:
       backserver:
-        condition: service_started
+        condition: service_healthy
     networks:
       - stride_net
 
@@ -84,6 +84,16 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q -T 2 -O /dev/null http://localhost:8000${API_BASE_PATH:-/api/v1}/health || exit 1",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
     depends_on:
       db:
         condition: service_healthy

@@ -46,6 +46,7 @@ func main() {
 	// Routes
 	// Register route handler by adding them to the array
 	handlers := []routes.RouteHandler{
+		routes.NewHealthRouteHandler(),
 		routes.NewExampleRouteHandler(exampleService),
 	}
 

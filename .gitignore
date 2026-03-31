@@ -34,7 +34,9 @@ nginx/logs/
 nginx/*.log
 nginx/*.pid
 
-postgres-data/
+redis_data/
+
+
 postgres_data/
 pgdata/
 **/postgres-data/
