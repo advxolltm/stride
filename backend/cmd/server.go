@@ -1,6 +1,9 @@
 package main
 
 import (
+	"os"
+	"strings"
+
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
 
@@ -10,9 +13,27 @@ import (
 	exampleService "backend/services/example"
 )
 
+func getAPIBasePath() string {
+	apiBasePath := strings.TrimSpace(os.Getenv("API_BASE_PATH"))
+	if apiBasePath == "" {
+		return "/api/v1"
+	}
+
+	if !strings.HasPrefix(apiBasePath, "/") {
+		apiBasePath = "/" + apiBasePath
+	}
+
+	if len(apiBasePath) > 1 {
+		apiBasePath = strings.TrimRight(apiBasePath, "/")
+	}
+
+	return apiBasePath
+}
+
 func main() {
 	e := echo.New()
 	e.Use(middleware.RequestLogger())
+	apiGroup := e.Group(getAPIBasePath())
 
 	// NOTE: no automatic magic dependency injection
 	//		 we define everything we need here once and then just pass it to the handlers as necessary
@@ -29,10 +50,15 @@ func main() {
 	}
 
 	for _, handler := range handlers {
-		handler.AddRoutes(e)
+		handler.AddRoutes(apiGroup)
 	}
 
-	if err := e.Start(":1323"); err != nil {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "1323"
+	}
+
+	if err := e.Start(":" + port); err != nil {
 		e.Logger.Error("failed to start server", "error", err)
 	}
 }

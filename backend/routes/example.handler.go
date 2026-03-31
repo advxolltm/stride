@@ -19,8 +19,8 @@ func NewExampleRouteHandler(exampleService example.ExampleService) *exampleRoute
 }
 
 // The RouteHandler interface is implicitly implemented by "adding" this function to the struct
-func (h exampleRouteHandler) AddRoutes(e *echo.Echo) {
-	g := e.Group("/example")
+func (h exampleRouteHandler) AddRoutes(api *echo.Group) {
+	g := api.Group("/example")
 	g.GET("/data", h.dataGETHandle)
 }
 
