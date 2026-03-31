@@ -1,0 +1,114 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-stride}
+      POSTGRES_USER: ${POSTGRES_USER:-stride}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-stride}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-stride} -d ${POSTGRES_DB:-stride}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - stride_net
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - stride_net
+
+  frontserver:
+    build:
+      context: ./frontend
+      dockerfile: ./docker/dev.Dockerfile
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/index.html:/app/index.html
+      - ./frontend/package.json:/app/package.json
+      - ./frontend/package-lock.json:/app/package-lock.json
+      - ./frontend/vite.config.ts:/app/vite.config.ts
+      - ./frontend/tailwind.config.js:/app/tailwind.config.js
+      - ./frontend/tsconfig.json:/app/tsconfig.json
+      - ./frontend/tsconfig.app.json:/app/tsconfig.app.json
+      - ./frontend/tsconfig.node.json:/app/tsconfig.node.json
+    environment:
+      CHOKIDAR_USEPOLLING: "true"
+      VITE_API_BASE_PATH: ${API_BASE_PATH:-/api/v1}
+    depends_on:
+      backserver:
+        condition: service_started
+    networks:
+      - stride_net
+
+  backserver:
+    build:
+      context: ./backend
+      dockerfile: ./docker/dev.Dockerfile
+    restart: unless-stopped
+    working_dir: /app
+    environment:
+      PORT: "8000"
+      API_BASE_PATH: ${API_BASE_PATH:-/api/v1}
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_USER: ${POSTGRES_USER:-stride}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-stride}
+      DB_NAME: ${POSTGRES_DB:-stride}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - stride_net
+
+  web:
+    build:
+      context: ./nginx
+      dockerfile: ./dev/dev.Dockerfile
+    restart: unless-stopped
+    ports:
+      - "80:8080"
+    depends_on:
+      - frontserver
+      - backserver
+    networks:
+      - stride_net
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  stride_net:
+    driver: bridge
