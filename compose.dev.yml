@@ -108,7 +108,7 @@ services:
       dockerfile: ./dev/dev.Dockerfile
     restart: unless-stopped
     ports:
-      - "80:8080"
+      - "8080:8080"
     depends_on:
       - frontserver
       - backserver
