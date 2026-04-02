@@ -26,6 +26,6 @@ func (db exampleStore) FetchData() (int, error) {
 		return 0, errors.New("oh no! something went horribly wrong :(")
 	} else {
 		// NOTE: "no error" is indicated by returning nil for the error value
-		return 42, nil
+		return 43, nil
 	}
 }
