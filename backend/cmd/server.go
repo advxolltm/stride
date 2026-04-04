@@ -3,13 +3,19 @@ package main
 import (
 	"os"
 	"strings"
+	"fmt"
+	"log"
+	"time"
 
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
+	"github.com/golang-migrate/migrate/v4"
 
 	// NOTE: if you want to give multiple "layers" (route, service, db) the same package-name to group them together, you can provide a custom name on import to distinguish them like here
 	exampleDB "backend/db/example"
 	"backend/routes"
+	testDB "backend/db"
+	"backend/models"
 	exampleService "backend/services/example"
 )
 
@@ -39,6 +45,17 @@ func main() {
 	//		 we define everything we need here once and then just pass it to the handlers as necessary
 	// Stores
 	exampleStore := exampleDB.NewExampleStore("some-db-connection-string")
+
+	var migration *migrate.Migrate
+
+	testdb, migration, err := testDB.InitDB("postgresql://stride:stride@db:5432/stride?sslmode=disable")
+	defer migration.Down()
+	
+	if err != nil {
+		println("failed to initialize database", "error", err)
+	}
+	println("Database initialized successfully:", testdb != nil)
+
 
 	// Services
 	exampleService := exampleService.NewExampleService(exampleStore)
