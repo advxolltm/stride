@@ -3,9 +3,6 @@ package main
 import (
 	"os"
 	"strings"
-	"fmt"
-	"log"
-	"time"
 
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
@@ -15,7 +12,6 @@ import (
 	exampleDB "backend/db/example"
 	"backend/routes"
 	testDB "backend/db"
-	"backend/models"
 	exampleService "backend/services/example"
 )
 

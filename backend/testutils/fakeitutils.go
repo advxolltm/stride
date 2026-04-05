@@ -1,0 +1,221 @@
+package testutils
+
+import (
+	"backend/models"
+	"fmt"
+	"math/rand"
+
+	f "github.com/brianvoe/gofakeit/v7"
+	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
+)
+
+var seed int64 = 42
+var rng = rand.New(rand.NewSource(seed))
+
+func choice[V any](src *[]V) V {
+	if src == nil {
+		panic("choice src is nil")
+	}
+	idx := rng.Intn(len(*src))
+	return (*src)[idx]
+}
+
+func weightedChoice[V any](src *[]V, weights []float32) V {
+	var a []any
+	for _, v := range *src {
+		a = append(a, v)
+	}
+
+	res, err := f.Weighted(a, weights)
+	if err != nil {
+		panic(err)
+	}
+
+	return res.(V)
+}
+
+func uniqueChoice[V any](src *[]V) V {
+	if src == nil {
+		panic("unique choice src is nil")
+	}
+	idx := rng.Intn(len(*src))
+	c := (*src)[idx]
+	(*src)[idx] = (*src)[len(*src)-1]
+	*src = (*src)[:len(*src)-1]
+	return c
+}
+
+func optionalChoice[V any](src *[]V) *V {
+	takeChoice := rng.Intn(2)
+	if takeChoice == 1 {
+		c := choice(src)
+		return &c
+	} else {
+		return nil
+	}
+}
+
+func choiceN[V any](src []V, count int) []V {
+	if len(src) < count {
+		panic("choiceN count is larger than len(src)")
+	}
+
+	srcCopy := make([]V, 0, len(src))
+	for _, e := range src {
+		srcCopy = append(srcCopy, e)
+	}
+
+	res := make([]V, 0, count)
+	for range count {
+		c := uniqueChoice(&srcCopy)
+		res = append(res, c)
+	}
+	return res
+}
+
+func userPassword() string {
+	hash, err := bcrypt.GenerateFromPassword([]byte("pwd"), bcrypt.DefaultCost)
+	AssertNoError(err)
+	return string(hash)
+}
+
+func generateNOfType[T any](count int, producer func(idx int) T) []T {
+	res := make([]T, 0, count)
+	for i := range count {
+		res = append(res, producer(i))
+	}
+	return res
+}
+
+func fakeUser(idx int) models.User {
+	name := f.Name()
+	avatarUrl := "todo: set avatar url in fakeUser"
+	return models.User{
+		Username:     f.Username(),
+		Email:        f.Email(),
+		PasswordHash: userPassword(),
+		FullName:     &name,
+		AvatarURL:    &avatarUrl,
+	}
+}
+
+func fakeProjectWithUsers(users []models.User) func(int) models.Project {
+	return func(idx int) models.Project {
+		name := fmt.Sprintf("%s-%d", f.ProductName(), idx)
+		slug := fmt.Sprintf("%s-%d", f.ProductSuffix(), idx)
+		desc := f.ProductDescription()
+		owner := choice(&users)
+
+		return models.Project{
+			Name:        name,
+			Slug:        slug,
+			Description: &desc,
+			Creator:     &owner,
+			Status:      "active",
+		}
+	}
+}
+
+func fakeTaskWithUsers(users []models.User) func(int) models.Task {
+	return func(idx int) models.Task {
+		desc := f.ProductDescription()
+		startDate := f.PastDate()
+		dueDate := f.FutureDate()
+		expMinutes := f.Minute()
+		return models.Task{
+			Title:                   f.BookTitle(),
+			Description:             &desc,
+			Status:                  "todo: status",
+			StartDate:               &startDate,
+			DueDate:                 &dueDate,
+			ExpectedDurationMinutes: &expMinutes,
+			Position:                new(idx),
+			CompletedAt:             nil, // TODO: generate already-completed tasks too
+			Creator:                 new(choice(&users)),
+		}
+	}
+}
+
+func generateRandomUsers(count int) []models.User {
+	return generateNOfType(count, fakeUser)
+}
+
+func generateRandomProjects(count int, users []models.User) []models.Project {
+	return generateNOfType(count, fakeProjectWithUsers(users))
+}
+
+func generateRandomTasks(count int, users []models.User) []models.Task {
+	return generateNOfType(count, fakeTaskWithUsers(users))
+}
+
+func generateProjectMembers(users []models.User, projects []models.Project) {
+	for pidx := range projects {
+		membersCount := rng.Intn(len(users)) + 1
+		memberUsers := choiceN(users, membersCount-1)
+
+		members := make([]models.ProjectMember, 0, membersCount)
+		for _, memberUser := range memberUsers {
+			pm := models.ProjectMember{
+				JoinedAt: f.PastDate(),
+				User:     memberUser,
+				Project:  projects[pidx],
+			}
+
+			members = append(members, pm)
+		}
+
+		powner := models.ProjectMember{
+			JoinedAt: f.PastDate(),
+			User:     *projects[pidx].Creator,
+			Project:  projects[pidx],
+		}
+		members = append(members, powner)
+
+		projects[pidx].Members = members
+	}
+}
+
+func fillDBWithRandomData() {
+	// Define a fixed seed to make tests reproducable
+	f.Seed(seed)
+	batchsize := 25
+
+	users := generateRandomUsers(20)
+	AssertNoError(gorm.G[models.User](DB).CreateInBatches(ctx, &users, batchsize))
+
+	projects := generateRandomProjects(20, users)
+	AssertNoError(gorm.G[models.Project](DB).CreateInBatches(ctx, &projects, batchsize))
+
+	generateProjectMembers(users, projects)
+	generateTasksForProject(30, projects)
+
+	for pidx := range projects {
+		_, err := gorm.G[models.Project](DB).Updates(ctx, projects[pidx])
+		AssertNoError(err)
+	}
+}
+
+func generateTasksForProject(maxTasksPerProject int, projects []models.Project) {
+	for pidx := range projects {
+		taskCount := rng.Intn(maxTasksPerProject)
+		usersInProject := make([]models.User, 0, len(projects[pidx].Members))
+		for _, pm := range projects[pidx].Members {
+			usersInProject = append(usersInProject, pm.User)
+		}
+
+		tasks := generateRandomTasks(taskCount, usersInProject)
+		projects[pidx].Tasks = tasks
+	}
+}
+
+func assignProjectOwners(projects []models.Project) {
+	for pidx := range projects {
+		assignProjectOwner(&projects[pidx])
+	}
+}
+
+func assignProjectOwner(project *models.Project) {
+	o := choice(&project.Members)
+	project.Creator = &o.User
+}
