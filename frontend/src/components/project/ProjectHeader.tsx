@@ -3,7 +3,7 @@ import { Settings, UserPlus } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { InviteMembersDialog } from './InviteMembersDialog'
-import { ProjectSettingsModal } from './ProjectSettings/ProjectSettingsModal'
+import { ProjectSettingsModal } from './projectSettings/ProjectSettingsModal'
 
 interface ProjectHeaderProps {
     name: string

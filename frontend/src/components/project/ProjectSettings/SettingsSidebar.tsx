@@ -16,7 +16,7 @@ interface SettingsSidebarProps {
 export function SettingsSidebar({
     activeTab,
     onTabChange,
-}: SettingsSidebarProps) {
+}: Readonly<SettingsSidebarProps>) {
     return (
         <div
             className="flex h-full w-44 shrink-0 flex-col gap-1 border-r p-4"
