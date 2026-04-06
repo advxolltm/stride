@@ -20,6 +20,32 @@ var DB *gorm.DB
 var stack *compose.DockerCompose
 var ctx = context.Background()
 
+func SetupDBFromEnv() {
+	dsn := fmt.Sprintf(
+		"postgresql://%s:%s@%s:%s/%s?sslmode=disable",
+		os.Getenv("DB_USER"),
+		os.Getenv("DB_PASSWORD"),
+		os.Getenv("DB_HOST"),
+		os.Getenv("DB_PORT"),
+		os.Getenv("DB_NAME"),
+	)
+
+	testdb, _, err := db.InitDB(dsn)
+	AssertNoError(err)
+
+	DB = testdb
+}
+
+func SeedDB() {
+	fillDBWithRandomData()
+}
+
+func TAssertNoError(t interface{ Helper(); Fatalf(string, ...any) }, err error) {
+	t.Helper()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
 
 func SetupDB() {
 	composeReader := openDevComposeFile()
