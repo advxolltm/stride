@@ -10,13 +10,13 @@ variables:
   POSTGRES_DB: stride
   POSTGRES_USER: stride
   POSTGRES_PASSWORD: stride
-
   DB_HOST: postgres
   DB_PORT: "5432"
   DB_USER: stride
   DB_PASSWORD: stride
   DB_NAME: stride
   REDIS_HOST: redis
+  CI: "true"
   REDIS_PORT: "6379"
   API_BASE_PATH: /api/v1
 
@@ -69,23 +69,20 @@ test-backend:
   stage: test
   image: golang:1.26.1-alpine
   variables:
-    DB_HOST: 127.0.0.1
-    REDIS_HOST: 127.0.0.1
+    POSTGRES_DB: stride
+    POSTGRES_USER: stride
+    POSTGRES_PASSWORD: stride
+    DB_HOST: localhost
+    DB_PORT: "5432"
+    REDIS_HOST: localhost
   needs:
     - job: build-backend
       artifacts: true
   services:
     - name: postgres:16-alpine
       alias: postgres
-      variables:
-        POSTGRES_DB: stride
-        POSTGRES_USER: stride
-        POSTGRES_PASSWORD: stride
-        HEALTHCHECK_TCP_PORT: "5432"
     - name: redis:7-alpine
       alias: redis
-      variables:
-        HEALTHCHECK_TCP_PORT: "6379"
   before_script:
     - cd backend
   script:

@@ -20,7 +20,16 @@ var DB *gorm.DB
 var stack *compose.DockerCompose
 var ctx = context.Background()
 
-func SetupDBFromEnv() {
+func SetupDB() {
+    if os.Getenv("CI") != "" {
+		SetCICDTestDB()
+    } else {
+        SetupDevTestDB()
+    }
+}
+
+
+func SetCICDTestDB() {
 	dsn := fmt.Sprintf(
 		"postgresql://%s:%s@%s:%s/%s?sslmode=disable",
 		os.Getenv("DB_USER"),
@@ -47,7 +56,7 @@ func TAssertNoError(t interface{ Helper(); Fatalf(string, ...any) }, err error) 
 	}
 }
 
-func SetupDB() {
+func SetupDevTestDB() {
 	composeReader := openDevComposeFile()
 	newStack, err := compose.NewDockerComposeWith(
 		compose.WithStackReaders(composeReader),

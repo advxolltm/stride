@@ -10,8 +10,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	testutils.SetupDBFromEnv()
-	testutils.SeedDB()
+	testutils.SetupDB()
 	os.Exit(m.Run())
 }
 
