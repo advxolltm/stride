@@ -1,0 +1,46 @@
+{
+  "header": {
+    "invite": "Mitglieder einladen",
+    "settings": "Einstellungen"
+  },
+  "spaces": {
+    "title": "Bereiche",
+    "whiteboard": "Whiteboard",
+    "tasks": "Aufgaben",
+    "chat": "Chat",
+    "whiteboardDescription": "Ideen visuell brainstormen",
+    "tasksDescription": "Arbeit verwalten und verfolgen",
+    "chatDescription": "Mit deinem Team kommunizieren"
+  },
+  "tasks": {
+    "title": "Aufgabenübersicht"
+  },
+  "inviteDialog": {
+    "title": "Mitglieder einladen",
+    "description": "Lade Personen ein, an diesem Projekt mitzuarbeiten",
+    "emailPlaceholder": "E-Mail-Adressen eingeben...",
+    "copy": "Kopieren",
+    "send": "Einladung senden",
+    "inviteLinkLabel": "Einladungslink"
+  },
+  "generalSettings": {
+    "title": "Projektinformationen",
+    "edit": "Bearbeiten",
+    "projectName": "Projektname",
+    "projectDescription": "Projektbeschreibung",
+    "skills": "Fähigkeiten",
+    "nameLabel": "Name",
+    "descriptionLabel": "Beschreibung",
+    "skillsPlaceholder": "Fähigkeiten auswählen",
+    "projectSkills": "Projektfähigkeiten",
+    "cancel": "Abbrechen",
+    "save": "Änderungen speichern",
+    "defaultName": "Marketingkampagne Q2",
+    "defaultDescription": "Ein kollaboratives Projekt, bei dem das Team gemeinsam plant, organisiert und umsetzt."
+  },
+  "membersSettings": {
+    "title": "Teammitglieder",
+    "owner": "Inhaber",
+    "member": "Mitglied"
+  }
+}
