@@ -1,0 +1,44 @@
+{
+  "header": {
+    "invite": "Invite Members",
+    "settings": "Settings"
+  },
+  "spaces": {
+    "title": "Spaces",
+    "whiteboard": "Whiteboard",
+    "tasks": "Tasks",
+    "chat": "Chat",
+    "whiteboardDescription": "Brainstorm ideas visually",
+    "tasksDescription": "Manage and track work",
+    "chatDescription": "Communicate with your team"
+  },
+  "tasks": {
+    "title": "Tasks Board"
+  },
+  "inviteDialog": {
+    "title": "Invite Members",
+    "description": "Invite people to collaborate on this project",
+    "emailPlaceholder": "Enter email addresses...",
+    "copy": "Copy",
+    "send": "Send Invite",
+    "inviteLinkLabel": "Invite link"
+  },
+  "generalSettings": {
+    "title": "Project Info",
+    "edit": "Edit",
+    "projectName": "Project name",
+    "projectDescription": "Project description",
+    "skills": "Skills",
+    "nameLabel": "Name",
+    "descriptionLabel": "Description",
+    "skillsPlaceholder": "Select skills",
+    "projectSkills": "Project Skills",
+    "cancel": "Cancel",
+    "save": "Save changes"
+  },
+  "membersSettings": {
+    "title": "Team Members",
+    "owner": "Owner",
+    "member": "Member"
+  }
+}
