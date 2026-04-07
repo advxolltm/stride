@@ -1,7 +1,7 @@
 import { Button } from '@heroui/react'
 import { useTranslation } from 'react-i18next'
-import ThemeSwitcher from '../components/ThemeSwitcher'
 import LanguageSwitcher from '../components/LanguageSwitcher'
+import ThemeSwitcher from '../components/ThemeSwitcher'
 
 function HomePage() {
     const { t } = useTranslation()
