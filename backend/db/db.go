@@ -1,23 +1,40 @@
 package db
 
-
 import (
-    "log"
+	"embed"
+	"errors"
+	"log"
 
-    "github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
+//go:embed migrations/*.sql
+var fs embed.FS
+
 func migrateDB(postgresURL string) (*migrate.Migrate, error) {
-    m, err := migrate.New(
-		"file://db/migrations",
+	d, err := iofs.New(fs, "migrations")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	m, err := migrate.NewWithSourceInstance(
+		"iofs",
+		d,
 		postgresURL)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// Ensure that DB is in a consistent (empty) state first
+	if err := m.Down(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		log.Fatal(err)
+	}
+
 	if err := m.Up(); err != nil {
 		log.Fatal(err)
 	}
@@ -27,7 +44,7 @@ func migrateDB(postgresURL string) (*migrate.Migrate, error) {
 func InitGORMDB(dsn string) (*gorm.DB, error) {
 	var DB *gorm.DB
 	var err error
-	
+
 	// Open the connection and configure GORM
 	DB, err = gorm.Open(postgres.Open(dsn))
 
@@ -51,3 +68,4 @@ func InitDB(postgresURL string) (*gorm.DB, *migrate.Migrate, error) {
 	}
 	return gormDB, m, nil
 }
+
