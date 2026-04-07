@@ -1,7 +1,7 @@
 import { CheckSquare, Lightbulb, MessageCircle } from 'lucide-react'
 import type { JSX } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router'
 import SpaceCard from './SpaceCard'
 import SpaceIcon from './SpaceIcon'
 

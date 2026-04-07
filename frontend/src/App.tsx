@@ -1,6 +1,6 @@
 import dayjs from 'dayjs'
 import customParseFormat from 'dayjs/plugin/customParseFormat'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router'
 import HomePage from './routes/HomePage'
 import { ProjectLayout } from './routes/project/ProjectLayout'
 import { ProjectPage } from './routes/project/ProjectPage'
