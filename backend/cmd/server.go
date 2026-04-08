@@ -9,7 +9,7 @@ import (
 	"github.com/labstack/echo/v5/middleware"
 
 	// NOTE: if you want to give multiple "layers" (route, service, db) the same package-name to group them together, you can provide a custom name on import to distinguish them like here
-	testDB "backend/db"
+	mainDB "backend/db"
 	exampleDB "backend/db/example"
 	userDB "backend/db/user"
 	"backend/routes"
@@ -46,16 +46,16 @@ func main() {
 
 	var migration *migrate.Migrate
 
-	testdb, migration, err := testDB.InitDB("postgresql://stride:stride@db:5432/stride?sslmode=disable")
+	mainDB, migration, err := mainDB.InitDB("postgresql://stride:stride@db:5432/stride?sslmode=disable")
 	defer migration.Down()
 	
 	if err != nil {
 		println("failed to initialize database", "error", err)
 	}
-	println("Database initialized successfully:", testdb != nil)
+	println("Database initialized successfully:", mainDB != nil)
 
 
-	userStore := userDB.NewUserStore(testdb)
+	userStore := userDB.NewUserStore(mainDB)
 
 	// Services
 	exampleService := exampleService.NewExampleService(exampleStore)
