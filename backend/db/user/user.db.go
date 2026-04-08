@@ -1,6 +1,7 @@
 package user
 
 import (
+	"backend/db"
 	"backend/models"
 	"context"
 	"errors"
@@ -61,7 +62,7 @@ func (s *userStore) CreateUser(ctx context.Context, user *models.User) error {
 	result := s.db.WithContext(ctx).Create(user)
 	if result.Error != nil {
 		var pgErr *pgconn.PgError
-		if errors.As(result.Error, &pgErr) && pgErr.Code == "23505" {
+		if errors.As(result.Error, &pgErr) && pgErr.Code == db.UniqueConstraintViolationCode {
 			if strings.Contains(pgErr.ConstraintName, "email") {
 				return ErrDuplicateEmail
 			}
@@ -80,7 +81,7 @@ func (s *userStore) UpdateUser(ctx context.Context, id uuid.UUID, fields UpdateU
 		Updates(fields)
 	if result.Error != nil {
 		var pgErr *pgconn.PgError
-		if errors.As(result.Error, &pgErr) && pgErr.Code == "23505" {
+		if errors.As(result.Error, &pgErr) && pgErr.Code == db.UniqueConstraintViolationCode {
 			if strings.Contains(pgErr.ConstraintName, "email") {
 				return nil, ErrDuplicateEmail
 			}

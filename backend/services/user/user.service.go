@@ -6,8 +6,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/mail"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -84,7 +84,6 @@ func (s userServise) validatePassword(password string) error {
 	return nil
 }
 
-var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 
 func (s userServise) validateUsername(username string) error {
 	if len(username) < s.cfg.UsernameMinLength || len(username) > s.cfg.UsernameMaxLength {
@@ -94,7 +93,8 @@ func (s userServise) validateUsername(username string) error {
 }
 
 func (s userServise) validateEmail(email string) error {
-	if !emailRegex.MatchString(email) {
+	_, err := mail.ParseAddress(email)
+	if err != nil {
 		return ErrInvalidEmail
 	}
 	return nil
@@ -213,9 +213,6 @@ func (s userServise) UpdateUser(ctx context.Context, id uuid.UUID, input UpdateU
 func (s userServise) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	err := s.userStore.DeleteUser(ctx, id)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return ErrUserNotFound
-		}
 		return fmt.Errorf("%w: %w", ErrUserStoreFailed, err)
 	}
 	return nil
