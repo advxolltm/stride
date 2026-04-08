@@ -16,6 +16,8 @@ import (
 	"gorm.io/gorm"
 )
 
+//TODO: Tests user.service.go
+
 type UpdateUserInput struct {
 	Email		*string
 	Password 	*string
@@ -25,6 +27,7 @@ type UpdateUserInput struct {
 
 type (
 	UserService interface {
+		GetAllUsers(ctx context.Context) ([]models.User, error)
 		GetUser(ctx context.Context, id uuid.UUID) (*models.User, error)
 		CreateUser(ctx context.Context, username string, email string, password string) (*models.User, error)
 		UpdateUser(ctx context.Context, id uuid.UUID, input UpdateUserInput) (*models.User, error)
@@ -114,6 +117,14 @@ func (s userServise) CheckPassword(hashedPassword string, plainPassword string) 
 		return ErrInvalidPassword
 	}
 	return nil
+}
+
+func (s userServise) GetAllUsers(ctx context.Context) ([]models.User, error) {
+	users, err := s.userStore.GetAllUsers(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrUserStoreFailed, err)
+	}
+	return users, nil
 }
 
 func (s userServise) GetUser(ctx context.Context, id uuid.UUID) (*models.User, error) {

@@ -10,16 +10,20 @@ import (
 	"github.com/labstack/echo/v5"
 )
 
+// TODO: Tests user.handler.go
 type userRouteHandler struct {
 	userService	userService.UserService
 }
+
 
 func NewUserRouteHandler(us userService.UserService) *userRouteHandler {
 	return &userRouteHandler{userService: us}
 }
 
 func (h userRouteHandler) AddRoutes(api *echo.Group) {
+	// TODO: add auth middleware
 	g := api.Group("/users")
+	g.GET("", h.usersGETHandle)
 	g.GET("/:id", h.userGETHandle)
 	g.POST("", h.userPOSTHandle)
 	g.PATCH("/:id", h.userPATCHHandle)
@@ -60,12 +64,27 @@ func mapServiceError(err error) (int, string) {
 	}
 }
 
+// GET /users
+func (h userRouteHandler) usersGETHandle(c *echo.Context) error {
+	// TODO: add user-check
+
+	users, err := h.userService.GetAllUsers(c.Request().Context())
+	if err != nil {
+		status, msg := mapServiceError(err)
+		return c.JSON(status, errorResponse{Error: msg})
+	}
+
+	return c.JSON(http.StatusOK, users)
+}
+
 // GET /users/:id
 func (h userRouteHandler) userGETHandle(c *echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid user id"})
 	}
+
+	// TODO: add user-check - only admin and user himself can retrieve data
 
 	u, err := h.userService.GetUser(c.Request().Context(), id)
 	if err != nil {
@@ -82,6 +101,8 @@ func (h userRouteHandler) userPOSTHandle(c *echo.Context) error {
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid request body"})
 	}
+
+	// TODO: add user-check - only admin can create users
 
 	u, err := h.userService.CreateUser(c.Request().Context(), req.Username, req.Email, req.Password)
 	if err != nil {
