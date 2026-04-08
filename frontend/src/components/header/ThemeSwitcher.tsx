@@ -2,7 +2,7 @@ import { Button } from '@heroui/react'
 import { Moon, Sun } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-function ThemeSwitcher() {
+export function ThemeSwitcher() {
     const [isDark, setIsDark] = useState(() => {
         const saved = localStorage.getItem('theme')
 
@@ -28,6 +28,7 @@ function ThemeSwitcher() {
 
     return (
         <Button
+            variant="ghost"
             isIconOnly
             onPress={() => setIsDark((prev) => !prev)}
             className="transition-all"
@@ -40,5 +41,3 @@ function ThemeSwitcher() {
         </Button>
     )
 }
-
-export default ThemeSwitcher
