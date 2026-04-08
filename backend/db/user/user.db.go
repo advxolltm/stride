@@ -12,6 +12,8 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+// TODO: Tests user.db.go
+
 type UpdateUserFields struct {
     Email			*string	`gorm:"column:email"`
     PasswordHash	*string	`gorm:"column:password_hash"`
@@ -21,6 +23,7 @@ type UpdateUserFields struct {
 
 type (
 	UserStore interface {
+		GetAllUsers(ctx context.Context) ([]models.User, error)
 		GetUser(ctx context.Context, id uuid.UUID) (*models.User, error)
 		CreateUser(ctx context.Context, user *models.User) error
 		UpdateUser(ctx context.Context, id uuid.UUID, fields UpdateUserFields) (*models.User, error)
@@ -34,6 +37,15 @@ type (
 
 func NewUserStore(db *gorm.DB) UserStore {
 	return &userStore{db}
+}
+
+func (s *userStore) GetAllUsers(ctx context.Context) ([]models.User, error) {
+	var users []models.User
+	result := s.db.WithContext(ctx).Find(&users)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return users, nil
 }
 
 func (s *userStore) GetUser(ctx context.Context, id uuid.UUID) (*models.User, error) {
