@@ -94,7 +94,7 @@ func (s authService) AuthenticatedMiddleware() echo.MiddlewareFunc {
 func (s authService) GetClaims(ctx *echo.Context) jwtCustomClaims {
 	token, err := echo.ContextGet[*jwt.Token](ctx, "user")
 	if err != nil {
-		log.Fatal("invalid call to GetClaims: %s", err.Error())
+		log.Fatalf("invalid call to GetClaims: %s", err.Error())
 	}
 
 	claims, ok := token.Claims.(*jwtCustomClaims)
