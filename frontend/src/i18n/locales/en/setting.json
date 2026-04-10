@@ -1,0 +1,32 @@
+{
+  "title": "Settings",
+  "description": "Manage your account preferences and project skills",
+  "tabs": {
+    "profile": "Profile",
+    "security": "Security",
+    "skills": "Skills"
+  },
+  "profile": {
+    "title": "Personal Information",
+    "fullName": "Full name",
+    "username": "Username",
+    "email": "Email",
+    "save": "Save changes"
+  },
+  "security": {
+    "title": "Change Password",
+    "description": "Ensure your account uses a strong, unique password",
+    "currentPassword": "Current password",
+    "currentPasswordPlaceholder": "Enter current password",
+    "newPassword": "New password",
+    "newPasswordPlaceholder": "Enter new password",
+    "confirmPassword": "Confirm new password",
+    "confirmPasswordPlaceholder": "Confirm new password",
+    "update": "Update password"
+  },
+  "skills": {
+    "title": "Your Skills by Project",
+    "description": "Select the skills you contribute to each project",
+    "placeholder": "Select skills"
+  }
+}
