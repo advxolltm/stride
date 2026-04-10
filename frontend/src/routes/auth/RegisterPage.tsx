@@ -95,7 +95,7 @@ export default function RegisterPage() {
                     type="submit"
                     fullWidth
                     isPending={isPending}
-                    className="mt-1 h-11 rounded-xl bg-[var(--accent)] text-base  text-white transition-opacity hover:opacity-90"
+                    className="mt-1 h-11 rounded-xl bg-[var(--accent)] text-base text-white transition-opacity hover:opacity-90"
                 >
                     Create account
                 </Button>
