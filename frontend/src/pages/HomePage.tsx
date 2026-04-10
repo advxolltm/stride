@@ -1,37 +1,63 @@
-import { Button } from '@heroui/react'
-import { useTranslation } from 'react-i18next'
-import { LanguageSwitcher } from '../components/layout/LanguageSwitcher'
-import { ThemeSwitcher } from '../components/layout/ThemeSwitcher'
+import { MainPageLayout } from '../components/main/MainPageLayout'
+import { MainPageCard } from '../components/main/MainPageCard'
+import { MainPageHeader } from '../components/main/MainPageHeader'
+
+interface Project {
+    id: string
+    initials: string
+    name: string
+    description: string
+    members: number
+}
+
+const PROJECTS: Project[] = [
+    {
+        id: 'mk',
+        initials: 'MK',
+        name: 'Marketing Campaign Q2',
+        description:
+            'Planning and execution of Q2 marketing initiatives across all channels',
+        members: 6,
+    },
+    {
+        id: 'mpr',
+        initials: 'MPR',
+        name: 'Mobile App Redesign',
+        description:
+            'Complete redesign of the mobile app experience with focus on user engagement',
+        members: 1,
+    },
+    {
+        id: 'cr',
+        initials: 'CR',
+        name: 'Customer Research',
+        description: 'Conduct user interviews and surveys',
+        members: 12,
+    },
+    {
+        id: 'it',
+        initials: 'IT',
+        name: 'Internal Tools',
+        description: 'Build tools to improve team efficiency',
+        members: 2,
+    },
+]
 
 export function HomePage() {
-    const { t } = useTranslation()
-
     return (
-        <div className="bg-background text-foreground min-h-screen p-6 transition-colors">
-            <div className="mx-auto max-w-xl space-y-6">
-                <div className="flex items-center justify-between">
-                    <h1 className="text-2xl font-bold">{t('title')}</h1>
+        <MainPageLayout>
+            <div className="flex-1 overflow-y-auto px-8 py-8">
+                <MainPageHeader
+                    title="Projects"
+                    description="Manage your projects, collaborate with your team, and organize your workspaces."
+                />
 
-                    <div className="flex items-center gap-2">
-                        <LanguageSwitcher />
-                        <ThemeSwitcher />
-                    </div>
-                </div>
-
-                <div className="rounded-base border-border bg-surface border p-4">
-                    <h2 className="text-lg font-semibold">{t('cardTitle')}</h2>
-                    <p className="text-muted">{t('cardDescription')}</p>
-                </div>
-
-                <div className="flex gap-3">
-                    <Button>{t('primary')}</Button>
-                    <Button>{t('danger')}</Button>
-                </div>
-
-                <div className="rounded-base bg-primary text-primary-foreground p-3">
-                    {t('tailwindMessage')}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    {PROJECTS.map((project) => (
+                        <MainPageCard key={project.id} project={project} />
+                    ))}
                 </div>
             </div>
-        </div>
+        </MainPageLayout>
     )
 }
