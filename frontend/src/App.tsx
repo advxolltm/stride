@@ -7,6 +7,8 @@ import { HomePage } from './routes/HomePage'
 import { ProjectLayout } from './routes/project/ProjectLayout'
 import { ProjectPage } from './routes/project/ProjectPage'
 import { SettingsPage } from './routes/SettingsPage'
+import LoginPage from './routes/auth/LoginPage'
+import RegisterPage from './routes/auth/RegisterPage'
 
 dayjs.extend(customParseFormat)
 
@@ -18,7 +20,9 @@ function App() {
 
                 <Route path="/settings" element={<SettingsPage />} />
 
-                <Route path="/project/:projectId" element={<ProjectLayout />}>
+                <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/project/:projectId" element={<ProjectLayout />}>
                     <Route index element={<ProjectPage />} />
                 </Route>
 
