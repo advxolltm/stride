@@ -1,9 +1,9 @@
 import { Button } from '@heroui/react'
 import { useTranslation } from 'react-i18next'
-import LanguageSwitcher from '../components/LanguageSwitcher'
-import ThemeSwitcher from '../components/ThemeSwitcher'
+import { LanguageSwitcher } from '../components/header/LanguageSwitcher'
+import { ThemeSwitcher } from '../components/header/ThemeSwitcher'
 
-function HomePage() {
+export function HomePage() {
     const { t } = useTranslation()
 
     return (
@@ -35,5 +35,3 @@ function HomePage() {
         </div>
     )
 }
-
-export default HomePage
