@@ -3,6 +3,17 @@
     "invite": "Invite Members",
     "settings": "Settings"
   },
+  "home": {
+    "title": "Projects",
+    "description": "Manage your projects, collaborate with your team, and organize your workspaces."
+  },
+  "emptyState": {
+    "title": "No projects yet",
+    "description": "Create your first project to start organizing workspaces, people, and progress in one place."
+  },
+  "projectPage": {
+    "notFound": "Project not found."
+  },
   "spaces": {
     "title": "Spaces",
     "whiteboard": "Whiteboard",
@@ -23,6 +34,24 @@
     "send": "Send Invite",
     "inviteLinkLabel": "Invite link"
   },
+  "createDialog": {
+    "title": "Create Project",
+    "description": "Set up a new project with a title, a short description, and the skills your team needs.",
+    "fields": {
+      "title": "Title",
+      "description": "Description",
+      "skills": "Skills"
+    },
+    "placeholders": {
+      "title": "Enter project title",
+      "description": "Describe the goal of this project",
+      "skills": "Select skills",
+      "skillsSearch": "Search skills"
+    },
+    "actions": {
+      "create": "Create project"
+    }
+  },
   "generalSettings": {
     "title": "Project Info",
     "edit": "Edit",
@@ -32,6 +61,7 @@
     "nameLabel": "Name",
     "descriptionLabel": "Description",
     "skillsPlaceholder": "Select skills",
+    "skillsSearchPlaceholder": "Search skills",
     "projectSkills": "Project Skills",
     "cancel": "Cancel",
     "save": "Save changes"
