@@ -1,51 +1,17 @@
+import { useNavigate } from 'react-router'
 import { MainPageLayout } from '../components/main/MainPageLayout'
 import { MainPageCard } from '../components/main/MainPageCard'
 import { MainPageHeader } from '../components/main/MainPageHeader'
-import { useNavigate } from 'react-router'
-
-interface Project {
-    id: string
-    initials: string
-    name: string
-    description: string
-    members: number
-}
-
-const PROJECTS: Project[] = [
-    {
-        id: 'mk',
-        initials: 'MK',
-        name: 'Marketing Campaign Q2',
-        description:
-            'Planning and execution of Q2 marketing initiatives across all channels',
-        members: 6,
-    },
-    {
-        id: 'mpr',
-        initials: 'MPR',
-        name: 'Mobile App Redesign',
-        description:
-            'Complete redesign of the mobile app experience with focus on user engagement',
-        members: 1,
-    },
-    {
-        id: 'cr',
-        initials: 'CR',
-        name: 'Customer Research',
-        description: 'Conduct user interviews and surveys',
-        members: 12,
-    },
-    {
-        id: 'it',
-        initials: 'IT',
-        name: 'Internal Tools',
-        description: 'Build tools to improve team efficiency',
-        members: 2,
-    },
-]
+import { EmptyProjectsState } from '../components/main/EmptyProjectsState'
+import { PROJECTS } from '../shared/data/mockProjectsData'
 
 export function HomePage() {
     const navigate = useNavigate()
+    const hasProjects = PROJECTS.length > 0
+
+    const handleCreateProject = () => {
+        console.log('Create project')
+    }
 
     return (
         <MainPageLayout>
@@ -53,17 +19,30 @@ export function HomePage() {
                 <MainPageHeader
                     title="Projects"
                     description="Manage your projects, collaborate with your team, and organize your workspaces."
+                    onCreateProject={handleCreateProject}
                 />
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    {PROJECTS.map((project) => (
-                        <MainPageCard
-                            key={project.id}
-                            project={project}
-                            onClick={() => navigate(`/project/${project.id}`)}
-                        />
-                    ))}
-                </div>
+                {hasProjects ? (
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        {PROJECTS.map((project) => (
+                            <MainPageCard
+                                key={project.id}
+                                project={{
+                                    id: project.id,
+                                    initials: project.initials,
+                                    name: project.name,
+                                    description: project.description,
+                                    members: project.members.length,
+                                }}
+                                onClick={() =>
+                                    navigate(`/project/${project.id}`)
+                                }
+                            />
+                        ))}
+                    </div>
+                ) : (
+                    <EmptyProjectsState onCreateProject={handleCreateProject} />
+                )}
             </div>
         </MainPageLayout>
     )

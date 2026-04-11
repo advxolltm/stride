@@ -1,34 +1,18 @@
+import { useParams } from 'react-router'
 import { ProjectOverviewHeader, ProjectSpacesGrid } from '../components/project'
-
-const mockProject = {
-    id: '1',
-    name: 'Marketing Campaign Q2',
-    description: 'Plan and execute Q2 marketing initiatives across channels.',
-    skills: ['React', 'Node.js', 'UX Design'],
-    ownerId: 'u1',
-    members: [
-        {
-            id: 'u1',
-            name: 'John Doe',
-            role: 'owner',
-        },
-        {
-            id: 'u2',
-            name: 'Jane Smith',
-            role: 'member',
-        },
-        {
-            id: 'u3',
-            name: 'Mike Brown',
-            role: 'member',
-        },
-    ],
-}
+import { PROJECTS } from '../shared/data/mockProjectsData'
 
 export function ProjectPage() {
+    const { projectId } = useParams()
+    const project = PROJECTS.find((item) => item.id === projectId)
+
+    if (!project) {
+        return <div className="p-6">Project not found.</div>
+    }
+
     return (
         <div className="flex flex-col gap-8 p-6">
-            <ProjectOverviewHeader name={mockProject.name} />
+            <ProjectOverviewHeader name={project.name} />
             <ProjectSpacesGrid />
         </div>
     )

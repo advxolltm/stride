@@ -13,6 +13,7 @@ interface SidebarItemsProps {
     activeKey: string
     onSelect: (key: string) => void
     projects: SidebarProject[]
+    onCreateProject?: () => void
 }
 
 interface SidebarItemContentProps {
@@ -66,6 +67,7 @@ export function SidebarItems({
     activeKey,
     onSelect,
     projects,
+    onCreateProject,
 }: SidebarItemsProps) {
     const handleSelectionChange = (keys: 'all' | Set<Key>) => {
         if (keys === 'all') return
@@ -197,6 +199,7 @@ export function SidebarItems({
                 <SidebarTooltip label="Create project">
                     <button
                         type="button"
+                        onClick={onCreateProject}
                         className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl text-[var(--muted)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]"
                     >
                         <Plus size={14} />
@@ -205,6 +208,7 @@ export function SidebarItems({
             ) : (
                 <button
                     type="button"
+                    onClick={onCreateProject}
                     className="mt-1 flex w-full min-w-0 items-center gap-2 rounded-xl px-3 py-2 text-sm text-[var(--muted)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]"
                 >
                     <Plus size={13} />

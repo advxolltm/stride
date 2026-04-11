@@ -17,13 +17,12 @@ function App() {
             <Route element={<AppLayout />}>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/settings" element={<AccountPage />} />
-                <Route path="/project/:projectId">
-                    <Route index element={<ProjectPage />} />
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                </Route>
+                <Route path="/project/:projectId" element={<ProjectPage />} />
             </Route>
+
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     )
 }

@@ -23,16 +23,18 @@ export function MainPageHeader({
                 </p>
             </div>
 
-            <Button
-                variant="primary"
-                onPress={onCreateProject}
-                className="h-10 rounded-xl bg-[var(--accent)] px-4 text-sm font-medium text-[var(--accent-foreground)] shadow-sm hover:opacity-90"
-            >
-                <span className="flex items-center gap-2">
-                    <Plus size={15} />
-                    <span>Create project</span>
-                </span>
-            </Button>
+            {onCreateProject ? (
+                <Button
+                    variant="primary"
+                    onPress={onCreateProject}
+                    className="h-10 rounded-xl bg-[var(--accent)] px-4 text-sm font-medium text-[var(--accent-foreground)] shadow-sm hover:opacity-90"
+                >
+                    <span className="flex items-center gap-2">
+                        <Plus size={15} />
+                        <span>Create project</span>
+                    </span>
+                </Button>
+            ) : null}
         </div>
     )
 }

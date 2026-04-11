@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Button, Tooltip } from '@heroui/react'
 import {
     Megaphone,
@@ -8,39 +7,65 @@ import {
     Users,
     Wrench,
 } from 'lucide-react'
+import { useLocation, useNavigate } from 'react-router'
 import { LogoutButton } from '../main/LogoutButton'
 import { SidebarItems, type SidebarProject } from '../main/SidebarItems'
+import {
+    PROJECTS,
+    type ProjectSidebarIcon,
+} from '../../shared/data/mockProjectsData'
 
 interface SidebarProps {
     collapsed: boolean
     onToggle: () => void
 }
 
-const PROJECTS: SidebarProject[] = [
-    {
-        id: 'mkt',
-        label: 'Marketing Campaign Q2',
-        icon: <Megaphone size={14} />,
-    },
-    {
-        id: 'mob',
-        label: 'Mobile App Redesign',
-        icon: <Smartphone size={14} />,
-    },
-    {
-        id: 'cus',
-        label: 'Customer Research',
-        icon: <Users size={14} />,
-    },
-    {
-        id: 'int',
-        label: 'Internal Tools',
-        icon: <Wrench size={14} />,
-    },
-]
+function getSidebarIcon(icon: ProjectSidebarIcon) {
+    switch (icon) {
+        case 'megaphone':
+            return <Megaphone size={14} />
+        case 'smartphone':
+            return <Smartphone size={14} />
+        case 'users':
+            return <Users size={14} />
+        case 'wrench':
+            return <Wrench size={14} />
+        default:
+            return <Wrench size={14} />
+    }
+}
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
-    const [activeNav, setActiveNav] = useState<string>('overview')
+    const navigate = useNavigate()
+    const location = useLocation()
+
+    const sidebarProjects: SidebarProject[] = PROJECTS.map((project) => ({
+        id: project.id,
+        label: project.name,
+        icon: getSidebarIcon(project.sidebarIcon),
+    }))
+
+    const getActiveKey = () => {
+        if (location.pathname === '/') {
+            return 'overview'
+        }
+
+        if (location.pathname.startsWith('/project/')) {
+            const projectId = location.pathname.split('/')[2]
+            return projectId || ''
+        }
+
+        return ''
+    }
+
+    const handleSelect = (key: string) => {
+        if (key === 'overview') {
+            navigate('/')
+            return
+        }
+
+        navigate(`/project/${key}`)
+    }
 
     const toggleButton = (
         <Button
@@ -83,9 +108,10 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
             <SidebarItems
                 collapsed={collapsed}
-                activeKey={activeNav}
-                onSelect={setActiveNav}
-                projects={PROJECTS}
+                activeKey={getActiveKey()}
+                onSelect={handleSelect}
+                projects={sidebarProjects}
+                onCreateProject={() => navigate('/')}
             />
 
             <div className="shrink-0 border-t border-[var(--border)] px-2 py-3">
