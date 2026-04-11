@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -16,10 +17,10 @@ import (
 // TODO: Tests user.db.go
 
 type UpdateUserFields struct {
-    Email			*string	`gorm:"column:email"`
-    PasswordHash	*string	`gorm:"column:password_hash"`
-    FullName		*string	`gorm:"column:full_name"`
-    AvatarURL		*string	`gorm:"column:avatar_url"`
+	Email        *string `gorm:"column:email"`
+	PasswordHash *string `gorm:"column:password_hash"`
+	FullName     *string `gorm:"column:full_name"`
+	AvatarURL    *string `gorm:"column:avatar_url"`
 }
 
 type (
@@ -29,6 +30,7 @@ type (
 		CreateUser(ctx context.Context, user *models.User) error
 		UpdateUser(ctx context.Context, id uuid.UUID, fields UpdateUserFields) (*models.User, error)
 		DeleteUser(ctx context.Context, id uuid.UUID) error
+		GetByEmailAndPassword(ctx context.Context, email, passwordHash string) (uuid.UUID, error)
 	}
 
 	userStore struct {
@@ -100,8 +102,29 @@ func (s *userStore) DeleteUser(ctx context.Context, id uuid.UUID) error {
 		return gorm.ErrRecordNotFound
 	}
 	if result.RowsAffected == 0 {
-    	return gorm.ErrRecordNotFound
+		return gorm.ErrRecordNotFound
 	}
 	return nil
 }
 
+func (s *userStore) GetByEmailAndPassword(ctx context.Context, email, password string) (uuid.UUID, error) {
+	var user models.User
+
+	result := s.db.WithContext(ctx).
+		First(&user, "email = ?", email)
+
+	if result.Error != nil {
+		// not found is not an error-case
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return uuid.Nil, nil
+		}
+
+		return uuid.Nil, result.Error
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
+		return uuid.Nil, err
+	}
+
+	return user.ID, nil
+}
