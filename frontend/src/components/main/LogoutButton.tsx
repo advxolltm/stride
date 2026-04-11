@@ -10,14 +10,20 @@ export function LogoutButton({ collapsed, onLogout }: LogoutButtonProps) {
     const button = (
         <button
             onClick={onLogout}
-            className={`flex w-full rounded-lg text-[var(--muted)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)] ${
+            className={`flex w-full min-w-0 items-center rounded-lg text-[var(--muted)] transition-[padding,background-color,color] hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)] ${
                 collapsed
-                    ? 'items-center justify-center px-2 py-2'
-                    : 'items-center gap-2.5 px-2.5 py-[7px] text-sm'
+                    ? 'justify-center px-2 py-2'
+                    : 'gap-2.5 px-2.5 py-[7px] text-sm'
             }`}
         >
             <LogOut size={16} />
-            {!collapsed && <span>Log Out</span>}
+            <span
+                className={`overflow-hidden whitespace-nowrap transition-[max-width,opacity] duration-200 ${
+                    collapsed ? 'max-w-0 opacity-0' : 'max-w-[8rem] opacity-100'
+                }`}
+            >
+                Log Out
+            </span>
         </button>
     )
 

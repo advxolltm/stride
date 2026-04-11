@@ -11,11 +11,33 @@ interface MainPageCardProject {
 
 interface MainPageCardProps {
     project: MainPageCardProject
+    onClick?: () => void
 }
 
-export function MainPageCard({ project }: MainPageCardProps) {
+export function MainPageCard({ project, onClick }: MainPageCardProps) {
+    const isInteractive = Boolean(onClick)
+
     return (
-        <Card className="border border-[var(--border)] bg-[var(--surface)] text-left transition-all hover:border-[var(--accent)]/30 hover:shadow-md">
+        <Card
+            role={isInteractive ? 'button' : undefined}
+            tabIndex={isInteractive ? 0 : undefined}
+            onClick={onClick}
+            onKeyDown={
+                isInteractive
+                    ? (event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault()
+                              onClick?.()
+                          }
+                      }
+                    : undefined
+            }
+            className={`border border-[var(--border)] bg-[var(--surface)] text-left transition-all ${
+                isInteractive
+                    ? 'cursor-pointer hover:border-[var(--accent)]/30 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]'
+                    : 'hover:border-[var(--accent)]/30 hover:shadow-md'
+            }`}
+        >
             <Card.Header className="flex items-start gap-4 pb-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--accent)] text-xs font-bold text-[var(--accent-foreground)]">
                     {project.initials}

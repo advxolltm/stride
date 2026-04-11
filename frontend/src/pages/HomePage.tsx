@@ -1,6 +1,7 @@
 import { MainPageLayout } from '../components/main/MainPageLayout'
 import { MainPageCard } from '../components/main/MainPageCard'
 import { MainPageHeader } from '../components/main/MainPageHeader'
+import { useNavigate } from 'react-router'
 
 interface Project {
     id: string
@@ -44,6 +45,8 @@ const PROJECTS: Project[] = [
 ]
 
 export function HomePage() {
+    const navigate = useNavigate()
+
     return (
         <MainPageLayout>
             <div className="flex-1 overflow-y-auto px-8 py-8">
@@ -54,7 +57,11 @@ export function HomePage() {
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     {PROJECTS.map((project) => (
-                        <MainPageCard key={project.id} project={project} />
+                        <MainPageCard
+                            key={project.id}
+                            project={project}
+                            onClick={() => navigate(`/project/${project.id}`)}
+                        />
                     ))}
                 </div>
             </div>

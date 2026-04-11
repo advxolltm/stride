@@ -107,7 +107,11 @@ export function SidebarItems({
                 selectionMode="single"
                 selectedKeys={new Set([activeKey])}
                 onSelectionChange={handleSelectionChange}
-                className={collapsed ? 'flex min-w-0 items-center' : 'min-w-0'}
+                className={
+                    collapsed
+                        ? 'flex w-full min-w-0 items-center overflow-hidden'
+                        : 'w-full min-w-0 overflow-hidden'
+                }
             >
                 <ListBox.Section>
                     {!collapsed && (
@@ -147,7 +151,11 @@ export function SidebarItems({
                 selectionMode="single"
                 selectedKeys={new Set([activeKey])}
                 onSelectionChange={handleSelectionChange}
-                className={collapsed ? 'flex min-w-0 items-center' : 'min-w-0'}
+                className={
+                    collapsed
+                        ? 'flex w-full min-w-0 items-center overflow-hidden'
+                        : 'w-full min-w-0 overflow-hidden'
+                }
             >
                 <ListBox.Section>
                     {!collapsed && (

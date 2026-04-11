@@ -8,8 +8,8 @@ import {
     Users,
     Wrench,
 } from 'lucide-react'
-import { LogoutButton } from './LogoutButton'
-import { SidebarItems, type SidebarProject } from './SidebarItems'
+import { LogoutButton } from '../main/LogoutButton'
+import { SidebarItems, type SidebarProject } from '../main/SidebarItems'
 
 interface SidebarProps {
     collapsed: boolean
@@ -61,9 +61,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     return (
         <aside
             className={[
-                'relative flex h-full shrink-0 flex-col border-r border-[var(--border)] bg-[var(--surface)]',
+                'relative flex h-full shrink-0 flex-col overflow-hidden border-r border-[var(--border)] bg-[var(--surface)]',
                 'transition-[width] duration-300 ease-in-out',
-                collapsed ? 'w-[68px]' : 'w-[220px]',
+                collapsed ? 'w-[68px]' : 'w-[240px]',
             ].join(' ')}
         >
             <div
