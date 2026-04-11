@@ -1,16 +1,20 @@
 import { useNavigate } from 'react-router'
+import { useOutletContext } from 'react-router-dom'
 import { MainPageLayout } from '../components/main/MainPageLayout'
 import { MainPageCard } from '../components/main/MainPageCard'
 import { MainPageHeader } from '../components/main/MainPageHeader'
 import { EmptyProjectsState } from '../components/main/EmptyProjectsState'
+import type { AppLayoutOutletContext } from '../layouts/AppLayout'
 import { PROJECTS } from '../shared/data/mockProjectsData'
 
 export function HomePage() {
     const navigate = useNavigate()
+    const { openCreateProjectDialog } =
+        useOutletContext<AppLayoutOutletContext>()
     const hasProjects = PROJECTS.length > 0
 
     const handleCreateProject = () => {
-        console.log('Create project')
+        openCreateProjectDialog()
     }
 
     return (
@@ -19,7 +23,9 @@ export function HomePage() {
                 <MainPageHeader
                     title="Projects"
                     description="Manage your projects, collaborate with your team, and organize your workspaces."
-                    onCreateProject={handleCreateProject}
+                    onCreateProject={
+                        hasProjects ? handleCreateProject : undefined
+                    }
                 />
 
                 {hasProjects ? (

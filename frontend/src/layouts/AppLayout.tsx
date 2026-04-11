@@ -2,9 +2,19 @@ import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { AppHeader } from '../components/layout'
 import { Sidebar } from '../components/layout/SideBar'
+import { CreateProjectDialog } from '../components/project/CreateProjectDialog'
+
+export interface AppLayoutOutletContext {
+    openCreateProjectDialog: () => void
+}
 
 export function AppLayout() {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+    const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+
+    const handleOpenCreateProjectDialog = () => {
+        setIsCreateDialogOpen(true)
+    }
 
     return (
         <div className="flex min-h-screen flex-col">
@@ -14,12 +24,24 @@ export function AppLayout() {
                 <Sidebar
                     collapsed={sidebarCollapsed}
                     onToggle={() => setSidebarCollapsed((prev) => !prev)}
+                    onCreateProject={handleOpenCreateProjectDialog}
                 />
 
                 <div className="flex min-w-0 flex-1 flex-col overflow-auto bg-[var(--background)]">
-                    <Outlet />
+                    <Outlet
+                        context={{
+                            openCreateProjectDialog:
+                                handleOpenCreateProjectDialog,
+                        }}
+                    />
                 </div>
             </main>
+
+            <CreateProjectDialog
+                isOpen={isCreateDialogOpen}
+                setIsOpen={setIsCreateDialogOpen}
+                onCreate={(project) => console.log('Create project', project)}
+            />
         </div>
     )
 }

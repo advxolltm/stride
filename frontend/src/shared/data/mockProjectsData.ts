@@ -6,6 +6,16 @@ export interface ProjectMember {
 
 export type ProjectSidebarIcon = 'megaphone' | 'smartphone' | 'users' | 'wrench'
 
+export const AVAILABLE_PROJECT_SKILLS = [
+    'React',
+    'TypeScript',
+    'Design',
+    'Vue',
+    'Node.js',
+    'Python',
+    'Figma',
+]
+
 export interface Project {
     id: string
     initials: string

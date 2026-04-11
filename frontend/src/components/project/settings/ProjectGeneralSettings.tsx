@@ -3,24 +3,14 @@ import {
     FieldError,
     Input,
     Label,
-    ListBox,
-    Select,
     TextArea,
     TextField,
 } from '@heroui/react'
 import { Pencil } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-
-const AVAILABLE_SKILLS = [
-    'React',
-    'TypeScript',
-    'Design',
-    'Vue',
-    'Node.js',
-    'Python',
-    'Figma',
-]
+import { AVAILABLE_PROJECT_SKILLS } from '../../../shared/data/mockProjectsData'
+import { SkillsAutocomplete } from '../../shared/SkillsAutocomplete'
 
 export function ProjectGeneralSettings({ isOwner }: { isOwner: boolean }) {
     const { t } = useTranslation('project')
@@ -126,42 +116,16 @@ export function ProjectGeneralSettings({ isOwner }: { isOwner: boolean }) {
                         <FieldError />
                     </TextField>
 
-                    <Select
-                        variant="secondary"
-                        className="w-full"
+                    <SkillsAutocomplete
+                        label={t('generalSettings.projectSkills')}
                         placeholder={t('generalSettings.skillsPlaceholder')}
-                        selectionMode="multiple"
-                    >
-                        <Label>{t('generalSettings.projectSkills')}</Label>
-
-                        <Select.Trigger>
-                            <Select.Value />
-                            <Select.Indicator />
-                        </Select.Trigger>
-
-                        <Select.Popover>
-                            <ListBox
-                                selectionMode="multiple"
-                                selectedKeys={new Set(skills)}
-                                onSelectionChange={(keys) =>
-                                    setSkills(Array.from(keys) as string[])
-                                }
-                                className="rounded-lg border"
-                                style={{ borderColor: 'var(--border)' }}
-                            >
-                                {AVAILABLE_SKILLS.map((skill) => (
-                                    <ListBox.Item
-                                        key={skill}
-                                        id={skill}
-                                        textValue={skill}
-                                    >
-                                        {skill}
-                                        <ListBox.ItemIndicator />
-                                    </ListBox.Item>
-                                ))}
-                            </ListBox>
-                        </Select.Popover>
-                    </Select>
+                        searchPlaceholder={t(
+                            'generalSettings.skillsSearchPlaceholder',
+                        )}
+                        options={AVAILABLE_PROJECT_SKILLS}
+                        selectedSkills={skills}
+                        onChange={setSkills}
+                    />
 
                     <div className="flex gap-2 pt-1">
                         <Button

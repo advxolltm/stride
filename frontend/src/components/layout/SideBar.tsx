@@ -18,6 +18,7 @@ import {
 interface SidebarProps {
     collapsed: boolean
     onToggle: () => void
+    onCreateProject: () => void
 }
 
 function getSidebarIcon(icon: ProjectSidebarIcon) {
@@ -35,7 +36,11 @@ function getSidebarIcon(icon: ProjectSidebarIcon) {
     }
 }
 
-export function Sidebar({ collapsed, onToggle }: SidebarProps) {
+export function Sidebar({
+    collapsed,
+    onToggle,
+    onCreateProject,
+}: SidebarProps) {
     const navigate = useNavigate()
     const location = useLocation()
 
@@ -111,7 +116,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 activeKey={getActiveKey()}
                 onSelect={handleSelect}
                 projects={sidebarProjects}
-                onCreateProject={() => navigate('/')}
+                onCreateProject={onCreateProject}
             />
 
             <div className="shrink-0 border-t border-[var(--border)] px-2 py-3">

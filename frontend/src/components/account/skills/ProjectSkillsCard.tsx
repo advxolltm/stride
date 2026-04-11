@@ -1,4 +1,4 @@
-import { Chip, Label, ListBox, Select } from '@heroui/react'
+import { SkillsAutocomplete } from '../../shared/SkillsAutocomplete'
 
 interface ProjectSkillsCardProps {
     project: {
@@ -10,7 +10,7 @@ interface ProjectSkillsCardProps {
     onChange: (values: string[]) => void
 }
 
-export  function ProjectSkillsCard({
+export function ProjectSkillsCard({
     project,
     onChange,
 }: ProjectSkillsCardProps) {
@@ -24,58 +24,14 @@ export  function ProjectSkillsCard({
                 </span>
             </div>
 
-            <Select
-                variant="secondary"
-                selectionMode="multiple"
-                value={project.selected}
+            <SkillsAutocomplete
+                label="Select skills"
                 placeholder="Select skills"
-            >
-                <Label>Select skills</Label>
-
-                <Select.Trigger>
-                    <Select.Value />
-                    <Select.Indicator />
-                </Select.Trigger>
-
-                <Select.Popover>
-                    <ListBox
-                        selectionMode="multiple"
-                        selectedKeys={new Set(project.selected)}
-                        onSelectionChange={(keys) =>
-                            onChange(Array.from(keys) as string[])
-                        }
-                    >
-                        {project.skills.map((skill) => (
-                            <ListBox.Item
-                                key={skill}
-                                id={skill}
-                                textValue={skill}
-                            >
-                                {skill}
-                                <ListBox.ItemIndicator />
-                            </ListBox.Item>
-                        ))}
-                    </ListBox>
-                </Select.Popover>
-            </Select>
-
-            <div className="mt-3 flex flex-wrap gap-2">
-                {project.selected.map((skill) => (
-                    <Chip
-                        key={skill}
-                        variant="secondary"
-                        color="accent"
-                        className="cursor-pointer"
-                        onClick={() =>
-                            onChange(
-                                project.selected.filter((s) => s !== skill),
-                            )
-                        }
-                    >
-                        {skill} ✕
-                    </Chip>
-                ))}
-            </div>
+                searchPlaceholder="Search skills"
+                options={project.skills}
+                selectedSkills={project.selected}
+                onChange={onChange}
+            />
         </div>
     )
 }
