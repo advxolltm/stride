@@ -1,10 +1,10 @@
 import { CheckSquare } from 'lucide-react'
-import { ProjectSpaceHeader } from '../components/project'
 import { KanbanBoard } from '../components/project/space/kanban/KanbanBoard'
 import { useTranslation } from 'react-i18next'
+import { ProjectSpaceHeader } from '../components/project/space/ProjectSpaceHeader'
 
 export function TasksPage() {
-    const { t } = useTranslation("project")
+    const { t } = useTranslation('project')
 
     return (
         <div className="flex flex-col gap-6 p-6">
