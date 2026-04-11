@@ -1,5 +1,6 @@
 import { Button, Card } from '@heroui/react'
 import { FolderKanban, Plus } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 interface EmptyProjectsStateProps {
     onCreateProject?: () => void
@@ -8,6 +9,8 @@ interface EmptyProjectsStateProps {
 export function EmptyProjectsState({
     onCreateProject,
 }: EmptyProjectsStateProps) {
+    const { t } = useTranslation(['project', 'common'])
+
     return (
         <Card className="relative overflow-hidden border border-[var(--border)] bg-[var(--surface)] shadow-sm">
             <div className="relative flex min-h-[22rem] flex-col items-center justify-center px-6 py-12 text-center sm:px-10">
@@ -29,11 +32,10 @@ export function EmptyProjectsState({
                 </div>
 
                 <h2 className="max-w-lg text-xl font-semibold text-[var(--foreground)] sm:text-2xl">
-                    No projects yet
+                    {t('emptyState.title')}
                 </h2>
                 <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--muted)]">
-                    Create your first project to start organizing workspaces,
-                    people, and progress in one place.
+                    {t('emptyState.description')}
                 </p>
 
                 <Button
@@ -43,7 +45,7 @@ export function EmptyProjectsState({
                 >
                     <span className="flex items-center gap-2">
                         <Plus size={15} />
-                        <span>Create project</span>
+                        <span>{t('common:actions.createProject')}</span>
                     </span>
                 </Button>
             </div>

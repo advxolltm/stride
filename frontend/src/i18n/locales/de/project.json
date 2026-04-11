@@ -3,6 +3,17 @@
     "invite": "Mitglieder einladen",
     "settings": "Einstellungen"
   },
+  "home": {
+    "title": "Projekte",
+    "description": "Verwalte deine Projekte, arbeite mit deinem Team zusammen und organisiere deine Arbeitsbereiche."
+  },
+  "emptyState": {
+    "title": "Noch keine Projekte",
+    "description": "Erstelle dein erstes Projekt, um Arbeitsbereiche, Personen und Fortschritt an einem Ort zu organisieren."
+  },
+  "projectPage": {
+    "notFound": "Projekt nicht gefunden."
+  },
   "spaces": {
     "title": "Bereiche",
     "whiteboard": "Whiteboard",
@@ -38,7 +49,6 @@
       "skillsSearch": "Faehigkeiten suchen"
     },
     "actions": {
-      "cancel": "Abbrechen",
       "create": "Projekt erstellen"
     }
   },

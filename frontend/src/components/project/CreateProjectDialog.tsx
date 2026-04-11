@@ -35,7 +35,7 @@ export function CreateProjectDialog({
     setIsOpen,
     onCreate,
 }: Readonly<CreateProjectDialogProps>) {
-    const { t } = useTranslation('project')
+    const { t } = useTranslation(['project', 'common'])
     const [title, setTitle] = useState(EMPTY_FORM.title)
     const [description, setDescription] = useState(EMPTY_FORM.description)
     const [skills, setSkills] = useState<string[]>(EMPTY_FORM.skills)
@@ -136,7 +136,7 @@ export function CreateProjectDialog({
                             variant="outline"
                             onPress={() => handleOpenChange(false)}
                         >
-                            {t('createDialog.actions.cancel')}
+                            {t('common:actions.cancel')}
                         </Button>
 
                         <Button

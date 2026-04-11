@@ -8,6 +8,7 @@ import {
     Wrench,
 } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router'
+import { useTranslation } from 'react-i18next'
 import { LogoutButton } from '../main/LogoutButton'
 import { SidebarItems, type SidebarProject } from '../main/SidebarItems'
 import {
@@ -43,6 +44,7 @@ export function Sidebar({
 }: SidebarProps) {
     const navigate = useNavigate()
     const location = useLocation()
+    const { t } = useTranslation('common')
 
     const sidebarProjects: SidebarProject[] = PROJECTS.map((project) => ({
         id: project.id,
@@ -104,7 +106,9 @@ export function Sidebar({
                 {collapsed ? (
                     <Tooltip>
                         <Tooltip.Trigger>{toggleButton}</Tooltip.Trigger>
-                        <Tooltip.Content>Expand sidebar</Tooltip.Content>
+                        <Tooltip.Content>
+                            {t('navigation.expandSidebar')}
+                        </Tooltip.Content>
                     </Tooltip>
                 ) : (
                     toggleButton

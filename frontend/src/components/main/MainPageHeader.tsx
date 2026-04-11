@@ -1,5 +1,6 @@
 import { Button } from '@heroui/react'
 import { Plus } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 interface MainPageHeaderProps {
     title: string
@@ -12,6 +13,8 @@ export function MainPageHeader({
     description,
     onCreateProject,
 }: MainPageHeaderProps) {
+    const { t } = useTranslation('common')
+
     return (
         <div className="mb-6 flex items-start justify-between gap-4">
             <div>
@@ -31,7 +34,7 @@ export function MainPageHeader({
                 >
                     <span className="flex items-center gap-2">
                         <Plus size={15} />
-                        <span>Create project</span>
+                        <span>{t('actions.createProject')}</span>
                     </span>
                 </Button>
             ) : null}

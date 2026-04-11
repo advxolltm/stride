@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router'
 import { useOutletContext } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { MainPageLayout } from '../components/main/MainPageLayout'
 import { MainPageCard } from '../components/main/MainPageCard'
 import { MainPageHeader } from '../components/main/MainPageHeader'
@@ -9,6 +10,7 @@ import { PROJECTS } from '../shared/data/mockProjectsData'
 
 export function HomePage() {
     const navigate = useNavigate()
+    const { t } = useTranslation('project')
     const { openCreateProjectDialog } =
         useOutletContext<AppLayoutOutletContext>()
     const hasProjects = PROJECTS.length > 0
@@ -21,8 +23,8 @@ export function HomePage() {
         <MainPageLayout>
             <div className="flex-1 overflow-y-auto px-8 py-8">
                 <MainPageHeader
-                    title="Projects"
-                    description="Manage your projects, collaborate with your team, and organize your workspaces."
+                    title={t('home.title')}
+                    description={t('home.description')}
                     onCreateProject={
                         hasProjects ? handleCreateProject : undefined
                     }

@@ -3,6 +3,17 @@
     "invite": "Invite Members",
     "settings": "Settings"
   },
+  "home": {
+    "title": "Projects",
+    "description": "Manage your projects, collaborate with your team, and organize your workspaces."
+  },
+  "emptyState": {
+    "title": "No projects yet",
+    "description": "Create your first project to start organizing workspaces, people, and progress in one place."
+  },
+  "projectPage": {
+    "notFound": "Project not found."
+  },
   "spaces": {
     "title": "Spaces",
     "whiteboard": "Whiteboard",
@@ -38,7 +49,6 @@
       "skillsSearch": "Search skills"
     },
     "actions": {
-      "cancel": "Cancel",
       "create": "Create project"
     }
   },

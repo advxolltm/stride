@@ -1,6 +1,7 @@
 import type { Key, ReactNode } from 'react'
 import { Header, ListBox, Tooltip } from '@heroui/react'
 import { LayoutDashboard, Plus } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 export interface SidebarProject {
     id: string
@@ -69,6 +70,8 @@ export function SidebarItems({
     projects,
     onCreateProject,
 }: SidebarItemsProps) {
+    const { t } = useTranslation('common')
+
     const handleSelectionChange = (keys: 'all' | Set<Key>) => {
         if (keys === 'all') return
 
@@ -118,21 +121,21 @@ export function SidebarItems({
                 <ListBox.Section>
                     {!collapsed && (
                         <Header className="px-3 pb-2 text-xs font-medium text-[var(--muted)]">
-                            Home
+                            {t('navigation.home')}
                         </Header>
                     )}
 
                     <ListBox.Item
                         id="overview"
-                        textValue="Overview"
+                        textValue={t('navigation.overview')}
                         className={itemClassName}
                     >
                         {collapsed ? (
-                            <SidebarTooltip label="Overview">
+                            <SidebarTooltip label={t('navigation.overview')}>
                                 <div className="flex h-10 w-10 items-center justify-center">
                                     <SidebarItemContent
                                         icon={<LayoutDashboard size={16} />}
-                                        label="Overview"
+                                        label={t('navigation.overview')}
                                         collapsed
                                     />
                                 </div>
@@ -140,7 +143,7 @@ export function SidebarItems({
                         ) : (
                             <SidebarItemContent
                                 icon={<LayoutDashboard size={16} />}
-                                label="Overview"
+                                label={t('navigation.overview')}
                                 collapsed={false}
                             />
                         )}
@@ -162,7 +165,7 @@ export function SidebarItems({
                 <ListBox.Section>
                     {!collapsed && (
                         <Header className="px-3 pb-2 text-xs font-medium text-[var(--muted)]">
-                            Projects
+                            {t('navigation.projects')}
                         </Header>
                     )}
 
@@ -196,7 +199,7 @@ export function SidebarItems({
             </ListBox>
 
             {collapsed ? (
-                <SidebarTooltip label="Create project">
+                <SidebarTooltip label={t('actions.createProject')}>
                     <button
                         type="button"
                         onClick={onCreateProject}
@@ -212,7 +215,9 @@ export function SidebarItems({
                     className="mt-1 flex w-full min-w-0 items-center gap-2 rounded-xl px-3 py-2 text-sm text-[var(--muted)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]"
                 >
                     <Plus size={13} />
-                    <span className="truncate">Create project</span>
+                    <span className="truncate">
+                        {t('actions.createProject')}
+                    </span>
                 </button>
             )}
         </div>

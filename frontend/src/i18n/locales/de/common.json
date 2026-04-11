@@ -2,7 +2,17 @@
   "title": "Startseite",
   "cardTitle": "Karte",
   "cardDescription": "Dies sollte sich an den hellen und dunklen Modus anpassen.",
-  "primary": "Primär",
+  "actions": {
+    "cancel": "Abbrechen",
+    "createProject": "Projekt erstellen"
+  },
+  "navigation": {
+    "home": "Home",
+    "overview": "Uebersicht",
+    "projects": "Projekte",
+    "expandSidebar": "Seitenleiste erweitern"
+  },
+  "primary": "Primaer",
   "danger": "Gefahr",
   "tailwindMessage": "Tailwind + Theme funktioniert"
 }
