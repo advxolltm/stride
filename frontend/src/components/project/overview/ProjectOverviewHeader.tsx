@@ -9,7 +9,9 @@ interface ProjectOverviewHeaderProps {
     name: string
 }
 
-export function ProjectOverviewHeader({ name }: Readonly<ProjectOverviewHeaderProps>) {
+export function ProjectOverviewHeader({
+    name,
+}: Readonly<ProjectOverviewHeaderProps>) {
     const { t } = useTranslation('project')
     const [isInviteOpen, setIsInviteOpen] = useState(false)
     const [isSettingsOpen, setSettingsOpen] = useState(false)
@@ -18,9 +20,14 @@ export function ProjectOverviewHeader({ name }: Readonly<ProjectOverviewHeaderPr
         <>
             <div className="border-b">
                 <div className="mb-6 flex items-center justify-between">
-                    <h1 className="text-2xl font-bold tracking-tight">
-                        {name}
-                    </h1>
+                    <div className="flex flex-col">
+                        <span className="text-muted">
+                            {t('header.projects')}
+                        </span>
+                        <h1 className="text-2xl font-bold tracking-tight">
+                            {name}
+                        </h1>
+                    </div>
 
                     <div className="flex items-center gap-2">
                         <Button
