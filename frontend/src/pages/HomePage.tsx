@@ -1,37 +1,57 @@
-import { Button } from '@heroui/react'
+import { useNavigate } from 'react-router'
+import { useOutletContext } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { LanguageSwitcher } from '../components/layout/LanguageSwitcher'
-import { ThemeSwitcher } from '../components/layout/ThemeSwitcher'
+import { MainPageLayout } from '../components/main/MainPageLayout'
+import { MainPageCard } from '../components/main/MainPageCard'
+import { MainPageHeader } from '../components/main/MainPageHeader'
+import { EmptyProjectsState } from '../components/main/EmptyProjectsState'
+import type { AppLayoutOutletContext } from '../layouts/AppLayout'
+import { PROJECTS } from '../shared/data/mockProjectsData'
 
 export function HomePage() {
-    const { t } = useTranslation()
+    const navigate = useNavigate()
+    const { t } = useTranslation('project')
+    const { openCreateProjectDialog } =
+        useOutletContext<AppLayoutOutletContext>()
+    const hasProjects = PROJECTS.length > 0
+
+    const handleCreateProject = () => {
+        openCreateProjectDialog()
+    }
 
     return (
-        <div className="bg-background text-foreground min-h-screen p-6 transition-colors">
-            <div className="mx-auto max-w-xl space-y-6">
-                <div className="flex items-center justify-between">
-                    <h1 className="text-2xl font-bold">{t('title')}</h1>
+        <MainPageLayout>
+            <div className="flex-1 overflow-y-auto px-8 py-8">
+                <MainPageHeader
+                    title={t('home.title')}
+                    description={t('home.description')}
+                    onCreateProject={
+                        hasProjects ? handleCreateProject : undefined
+                    }
+                />
 
-                    <div className="flex items-center gap-2">
-                        <LanguageSwitcher />
-                        <ThemeSwitcher />
+                {hasProjects ? (
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        {PROJECTS.map((project) => (
+                            <MainPageCard
+                                key={project.id}
+                                project={{
+                                    id: project.id,
+                                    initials: project.initials,
+                                    name: project.name,
+                                    description: project.description,
+                                    members: project.members.length,
+                                }}
+                                onClick={() =>
+                                    navigate(`/project/${project.id}`)
+                                }
+                            />
+                        ))}
                     </div>
-                </div>
-
-                <div className="rounded-base border-border bg-surface border p-4">
-                    <h2 className="text-lg font-semibold">{t('cardTitle')}</h2>
-                    <p className="text-muted">{t('cardDescription')}</p>
-                </div>
-
-                <div className="flex gap-3">
-                    <Button>{t('primary')}</Button>
-                    <Button>{t('danger')}</Button>
-                </div>
-
-                <div className="rounded-base bg-primary text-primary-foreground p-3">
-                    {t('tailwindMessage')}
-                </div>
+                ) : (
+                    <EmptyProjectsState onCreateProject={handleCreateProject} />
+                )}
             </div>
-        </div>
+        </MainPageLayout>
     )
 }
