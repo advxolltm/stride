@@ -29,7 +29,7 @@ type (
 	ProjectService interface {
 		GetAllProjects(ctx context.Context) ([]models.Project, error)
 		GetProject(ctx context.Context, id uuid.UUID) (*models.Project, error)
-		CreateProject(ctx context.Context, name string, description string, status string, createdby uuid.UUID, slug string) (*models.Project, error)
+		CreateProject(ctx context.Context, createdBy *uuid.UUID, name string, slug string, description *string, status string) (*models.Project, error)
 		UpdateProject(ctx context.Context, id uuid.UUID, input UpdateProjectInput) (*models.Project, error)
 		DeleteProject(ctx context.Context, id uuid.UUID) error
 	}
