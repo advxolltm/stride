@@ -1,0 +1,48 @@
+{
+  "tasks": {
+    "tabs": {
+      "ariaLabel": "Aufgabenansichten",
+      "board": "Board",
+      "list": "Liste"
+    },
+    "actions": {
+      "filter": "Filter",
+      "assign": "Automatisch zuweisen",
+      "add": "Aufgabe hinzufügen",
+      "menuAria": "Aufgabenaktionen",
+      "edit": "Aufgabe bearbeiten",
+      "delete": "Aufgabe löschen"
+    },
+    "columns": {
+      "todo": "Zu erledigen",
+      "inProgress": "In Bearbeitung",
+      "done": "Erledigt"
+    },
+    "messages": {
+      "listComingSoon": "Listenansicht kommt bald."
+    },
+    "drawer": {
+      "detailsTitle": "Aufgabendetails",
+      "cancel": "Abbrechen",
+      "save": "Änderungen speichern"
+    },
+    "modal": {
+      "createTitle": "Neue Aufgabe",
+      "description": "Fügen Sie die Aufgabendetails hinzu und weisen Sie einen Verantwortlichen zu.",
+      "cancel": "Abbrechen"
+    },
+    "form": {
+      "title": "Aufgabenname",
+      "titlePlaceholder": "Aufgabenname eingeben",
+      "description": "Beschreibung",
+      "descriptionPlaceholder": "Aufgabe beschreiben",
+      "status": "Status",
+      "statusPlaceholder": "Status auswählen",
+      "labels": "Labels / Fähigkeiten",
+      "labelsPlaceholder": "Labels auswählen",
+      "labelsSearch": "Labels suchen",
+      "assignee": "Zuständiger",
+      "assigneePlaceholder": "Zuständigen auswählen"
+    }
+  }
+}

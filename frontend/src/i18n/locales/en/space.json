@@ -1,0 +1,48 @@
+{
+  "tasks": {
+    "tabs": {
+      "ariaLabel": "Task Views",
+      "board": "Board",
+      "list": "List"
+    },
+    "actions": {
+      "filter": "Filter",
+      "assign": "Auto assign",
+      "add": "Add Task",
+      "menuAria": "Task actions",
+      "edit": "Edit task",
+      "delete": "Delete task"
+    },
+    "columns": {
+      "todo": "To Do",
+      "inProgress": "In Progress",
+      "done": "Done"
+    },
+    "messages": {
+      "listComingSoon": "List view is coming soon."
+    },
+    "drawer": {
+      "detailsTitle": "Task Details",
+      "cancel": "Cancel",
+      "save": "Save changes"
+    },
+    "modal": {
+      "createTitle": "New Task",
+      "description": "Add the task details and assign an owner.",
+      "cancel": "Cancel"
+    },
+    "form": {
+      "title": "Task name",
+      "titlePlaceholder": "Enter task name",
+      "description": "Description",
+      "descriptionPlaceholder": "Describe the task",
+      "status": "Status",
+      "statusPlaceholder": "Select status",
+      "labels": "Labels / Skills",
+      "labelsPlaceholder": "Select labels",
+      "labelsSearch": "Search labels",
+      "assignee": "Assignee",
+      "assigneePlaceholder": "Select assignee"
+    }
+  }
+}

@@ -2,6 +2,16 @@
   "title": "Home",
   "cardTitle": "Card",
   "cardDescription": "This should adapt to light and dark mode.",
+  "actions": {
+    "cancel": "Cancel",
+    "createProject": "Create project"
+  },
+  "navigation": {
+    "home": "Home",
+    "overview": "Overview",
+    "projects": "Projects",
+    "expandSidebar": "Expand sidebar"
+  },
   "primary": "Primary",
   "danger": "Danger",
   "tailwindMessage": "Tailwind + theme working"
