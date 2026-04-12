@@ -27,7 +27,7 @@ type (
 	ProjectStore interface {
 		GetAllProjects(ctx context.Context) ([]models.Project, error)
 		GetProject(ctx context.Context, id uuid.UUID) (*models.Project, error)
-		GetProjectMembers(ctx context.Context, id uuid.UUID) ([]models.User, error)
+		GetProjectMembers(ctx context.Context, id uuid.UUID) ([]models.ProjectMember, error)
 		CreateProject(ctx context.Context, project *models.Project) error
 		UpdateProject(ctx context.Context, id uuid.UUID, input UpdateProjectFields) (*models.Project, error)
 		DeleteProject(ctx context.Context, id uuid.UUID) error
@@ -62,13 +62,10 @@ func (s *projectStore) GetProject(ctx context.Context, id uuid.UUID) (*models.Pr
 	return &project, nil
 }
 
-func (s *projectStore) GetProjectMembers(ctx context.Context, id uuid.UUID) ([]models.User, error) {
+func (s *projectStore) GetProjectMembers(ctx context.Context, id uuid.UUID) ([]models.ProjectMember, error) {
 	var project models.Project
 
-	result := s.db
-				.Preload("Members")
-				.Preload("Members.User")
-				.First(&project, id)
+	result := s.db.Preload("Members").Preload("Members.User").First(&project, id)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -131,9 +128,7 @@ func (s *projectStore) AddUserToProject(ctx context.Context, projectmember *mode
 
 
 func (s *projectStore) RemoveUserFromProject(ctx context.Context, userId uuid.UUID, projectId uuid.UUID) error {
-	result := s.db.WithContext(ctx)
-				.Where("user_id = ? AND project_id = ?", userId, projectId)
-				.Delete(&models.ProjectMember{})
+	result := s.db.WithContext(ctx).Where("user_id = ? AND project_id = ?", userId, projectId).Delete(&models.ProjectMember{})
 	if result.Error != nil {
 		return gorm.ErrRecordNotFound
 	}

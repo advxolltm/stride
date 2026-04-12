@@ -33,10 +33,6 @@ func (h projectRouteHandler) AddRoutes(api *echo.Group) {
 	g.DELETE("/:id", h.projectDELETEHandle)
 }
 
-type errorResponse struct {
-    Error		string	`json:"error"`
-}
-
 type createProjectRequest struct { // createdBy *uuid.UUID, name string, slug string, description *string, status string
 	Name		string	`json:"name"`
 	Slug		string	`json:"slug"`
@@ -56,7 +52,7 @@ type updateProjectRequest struct {
 	Status		*string	`json:"status"`
 }
 
-func mapServiceError(err error) (int, string) {
+func mapServiceErrorProj(err error) (int, string) {
 	switch {
 		case errors.Is(err, projectService.ErrProjectNotFound):
 			return http.StatusNotFound, err.Error()
@@ -73,7 +69,7 @@ func (h projectRouteHandler) projectsGETHandle(c *echo.Context) error {
 
 	projects, err := h.projectService.GetAllProjects(c.Request().Context())
 	if err != nil {
-		status, msg := mapServiceError(err)
+		status, msg := mapServiceErrorProj(err)
 		return c.JSON(status, errorResponse{Error: msg})
 	}
 
@@ -91,7 +87,7 @@ func (h projectRouteHandler) projectGETHandle(c *echo.Context) error {
 
 	p, err := h.projectService.GetProject(c.Request().Context(), id)
 	if err != nil {
-		status, msg := mapServiceError(err)
+		status, msg := mapServiceErrorProj(err)
 		return c.JSON(status, errorResponse{Error: msg})
 	}
 
@@ -109,7 +105,7 @@ func (h projectRouteHandler) membersGETHandle(c *echo.Context) error {
 
 	members, err := h.projectService.GetProjectMembers(c.Request().Context(), id)
 	if err != nil {
-		status, msg := mapServiceError(err)
+		status, msg := mapServiceErrorProj(err)
 		return c.JSON(status, errorResponse{Error: msg})
 	}
 
@@ -128,7 +124,7 @@ func (h projectRouteHandler) projectPOSTHandle(c *echo.Context) error {
 	//createdBy *uuid.UUID, name string, slug string, description *string, status string
 	p, err := h.projectService.CreateProject(c.Request().Context(), nil, req.Name, req.Slug, req.Description, req.Status)
 	if err != nil {
-		status, msg := mapServiceError(err)
+		status, msg := mapServiceErrorProj(err)
 		return c.JSON(status, errorResponse{Error: msg})
 	}
 
@@ -149,7 +145,7 @@ func (h projectRouteHandler) memberPOSTHandle(c *echo.Context) error {
 
 	p, err := h.projectService.AddUserToProject(c.Request().Context(), req.UserId, id, req.Role)
 	if err != nil {
-		status, msg := mapServiceError(err)
+		status, msg := mapServiceErrorProj(err)
 		return c.JSON(status, errorResponse{Error: msg})
 	}
 
@@ -176,7 +172,7 @@ func (h projectRouteHandler) projectPATCHHandle(c *echo.Context) error {
 		Status: 		req.Status,
 	})
 	if err != nil {
-		status, msg := mapServiceError(err)
+		status, msg := mapServiceErrorProj(err)
 		return c.JSON(status, errorResponse{Error: msg})
 	}
 
@@ -191,7 +187,7 @@ func (h projectRouteHandler) projectDELETEHandle(c *echo.Context) error {
 	}
 
 	if err := h.projectService.DeleteProject(c.Request().Context(), id); err != nil {
-		status, msg := mapServiceError(err)
+		status, msg := mapServiceErrorProj(err)
 		return c.JSON(status, errorResponse{Error: msg})
 	}
 
@@ -211,7 +207,7 @@ func (h projectRouteHandler) memberDELETEHandle(c *echo.Context) error {
 
 	// TODO: ONLY PROJECT OWNER CAN REMOVE USERS
 	if err := h.projectService.RemoveUserFromProject(c.Request().Context(), userid, projid); err != nil {
-		status, msg := mapServiceError(err)
+		status, msg := mapServiceErrorProj(err)
 		return c.JSON(status, errorResponse{Error: msg})
 	}
 

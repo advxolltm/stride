@@ -6,14 +6,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/mail"
-	"os"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -29,11 +24,11 @@ type (
 	ProjectService interface {
 		GetAllProjects(ctx context.Context) ([]models.Project, error)
 		GetProject(ctx context.Context, id uuid.UUID) (*models.Project, error)
-		GetProjectMembers(ctx context.Context, id uuid.UUID) ([]models.User, error)
+		GetProjectMembers(ctx context.Context, id uuid.UUID) ([]models.ProjectMember, error)
 		CreateProject(ctx context.Context, createdBy *uuid.UUID, name string, slug string, description *string, status string) (*models.Project, error)
 		UpdateProject(ctx context.Context, id uuid.UUID, input UpdateProjectInput) (*models.Project, error)
 		DeleteProject(ctx context.Context, id uuid.UUID) error
-		AddUserToProject(ctx context.Context, userId uuid.UUID, projectId uuid.UUID, role string) error
+		AddUserToProject(ctx context.Context, userId uuid.UUID, projectId uuid.UUID, role string) (*models.ProjectMember, error)
 		RemoveUserFromProject(ctx context.Context, userId uuid.UUID, projectId uuid.UUID) error
 	}
 	projectService struct {
@@ -65,7 +60,7 @@ func (s projectService) GetProject(ctx context.Context, id uuid.UUID) (*models.P
 	return p, nil
 }
 
-func (s projectService) GetProjectMembers(ctx context.Context, id uuid.UUID) ([]models.User, error) {
+func (s projectService) GetProjectMembers(ctx context.Context, id uuid.UUID) ([]models.ProjectMember, error) {
 	members, err := s.projectStore.GetProjectMembers(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrProjectStoreFailed, err)
@@ -99,7 +94,7 @@ func (s projectService) UpdateProject(ctx context.Context, id uuid.UUID, input U
 		Slug:        input.Slug,
 		Description: input.Description,
 		Status:      input.Status,
-		UpdatedAt:	 time.Now()
+		UpdatedAt:	 time.Now(),
 	}
 
 	p, err := s.projectStore.UpdateProject(ctx, id, fields)
