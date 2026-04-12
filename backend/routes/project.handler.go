@@ -25,7 +25,10 @@ func (h projectRouteHandler) AddRoutes(api *echo.Group) {
 	g := api.Group("/projects")
 	g.GET("", h.projectsGETHandle)
 	g.GET("/:id", h.projectGETHandle)
+	g.GET("/:id/members", h.membersGETHandle)
 	g.POST("", h.projectPOSTHandle)
+	g.POST("/:id/members", h.memberPOSTHandle)
+	g.DELETE("/:id/members/:userid", h.memberDELETEHandle)
 	g.PATCH("/:id", h.projectPATCHHandle)
 	g.DELETE("/:id", h.projectDELETEHandle)
 }
@@ -39,6 +42,11 @@ type createProjectRequest struct { // createdBy *uuid.UUID, name string, slug st
 	slug		string	`json:"slug"`
 	description	*string	`json:"description"`
 	status		string	`json:"status"`
+}
+
+type addMemberReqest struct {
+	userId		uuid.UUID 	`json:"userid"`
+	role		string		`json:"role"`
 }
 
 type updateProjectRequest struct {
@@ -90,6 +98,24 @@ func (h projectRouteHandler) projectGETHandle(c *echo.Context) error {
 	return c.JSON(http.StatusOK, p)
 }
 
+// GET /projects:id/members
+func (h projectRouteHandler) membersGETHandle(c *echo.Context) error {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid project id"})
+	}
+
+	// TODO: add user-check
+
+	members, err := h.projectService.GetProjectMembers(c.Request().Context(), id)
+	if err != nil {
+		status, msg := mapServiceError(err)
+		return c.JSON(status, errorResponse{Error: msg})
+	}
+
+	return c.JSON(http.StatusOK, members)
+}
+
 // POST /projects
 func (h projectRouteHandler) projectPOSTHandle(c *echo.Context) error {
 	var req createProjectRequest
@@ -107,6 +133,28 @@ func (h projectRouteHandler) projectPOSTHandle(c *echo.Context) error {
 	}
 
 	return c.JSON(http.StatusCreated, p)
+}
+
+// POST /projects/:id/members
+func (h projectRouteHandler) memberPOSTHandle(c *echo.Context) error {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid project id"})
+	}
+
+	var req addMemberReqest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid request body"})
+	}
+
+	p, err := h.projectService.AddUserToProject(c.Request().Context(), req.userId, id, req.role)
+	if err != nil {
+		status, msg := mapServiceError(err)
+		return c.JSON(status, errorResponse{Error: msg})
+	}
+
+	return c.JSON(http.StatusCreated, p)
+
 }
 
 // PATCH /projects/:id
@@ -148,4 +196,25 @@ func (h projectRouteHandler) projectDELETEHandle(c *echo.Context) error {
 	}
 
 	return c.NoContent(http.StatusNoContent)
+}
+
+func (h projectRouteHandler) memberDELETEHandle(c *echo.Context) error {
+	projid, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid user id"})
+	}
+	userid, err := uuid.Parse(c.Param("userid"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid user id"})
+	}
+
+
+	// TODO: ONLY PROJECT OWNER CAN REMOVE USERS
+	if err := h.projectService.RemoveUserFromProject(c.Request().Context(), userid, projid); err != nil {
+		status, msg := mapServiceError(err)
+		return c.JSON(status, errorResponse{Error: msg})
+	}
+
+	return c.NoContent(http.StatusNoContent)
+
 }

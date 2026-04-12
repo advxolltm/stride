@@ -27,9 +27,12 @@ type (
 	ProjectStore interface {
 		GetAllProjects(ctx context.Context) ([]models.Project, error)
 		GetProject(ctx context.Context, id uuid.UUID) (*models.Project, error)
-		CreateProject(ctx context.Context, project *models.Project) (*models.Project, error)
+		GetProjectMembers(ctx context.Context, id uuid.UUID) ([]models.User, error)
+		CreateProject(ctx context.Context, project *models.Project) error
 		UpdateProject(ctx context.Context, id uuid.UUID, input UpdateProjectInput) (*models.Project, error)
 		DeleteProject(ctx context.Context, id uuid.UUID) error
+		AddUserToProject(ctx context.Context, projectmember *model.ProjectMember) error
+		RemoveUserFromProject(ctx context.Context, userId uuid.UUID, projectId uuid.UUID) error
 	}
 
 	projectStore struct {
@@ -57,6 +60,19 @@ func (s *projectStore) GetProject(ctx context.Context, id uuid.UUID) (*models.Pr
 		return nil, result.Error
 	}
 	return &project, nil
+}
+
+func (s *projectStore) GetProjectMembers(ctx context.Context, id uuid.UUID) ([]models.User, error) {
+	var project models.Project
+
+	result := s.db
+				.Preload("Members")
+				.Preload("Members.User")
+				.First(&project, id)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return project.Members, nil
 }
 
 func (s *projectStore) CreateProject(ctx context.Context, project *models.Project) error {
@@ -96,6 +112,28 @@ func (s *projectStore) UpdateProject(ctx context.Context, id uuid.UUID, fields U
 
 func (s *projectStore) DeleteProject(ctx context.Context, id uuid.UUID) error {
 	result := s.db.WithContext(ctx).Delete(&models.Project{}, "id = ?", id)
+	if result.Error != nil {
+		return gorm.ErrRecordNotFound
+	}
+	if result.RowsAffected == 0 {
+    	return gorm.ErrRecordNotFound
+	}
+	return nil
+}
+
+func (s *projectStore) AddUserToProject(ctx context.Context, projectmember *model.ProjectMember) error {
+	result := s.db.WithContext(ctx).Create(projectmember)
+	if result.Error != nil {
+		return result.Error
+	}
+	return nil
+}
+
+
+func (s *projectStore) RemoveUserFromProject(ctx context.Context, userId uuid.UUID, projectId uuid.UUID) error {
+	result := s.db.WithContext(ctx)
+				.Where("user_id = ? AND project_id = ?", userId, projectId)
+				.Delete(&models.ProjectMember{})
 	if result.Error != nil {
 		return gorm.ErrRecordNotFound
 	}

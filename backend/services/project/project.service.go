@@ -29,9 +29,12 @@ type (
 	ProjectService interface {
 		GetAllProjects(ctx context.Context) ([]models.Project, error)
 		GetProject(ctx context.Context, id uuid.UUID) (*models.Project, error)
+		GetProjectMembers(ctx context.Context, id uuid.UUID) ([]models.User, error)
 		CreateProject(ctx context.Context, createdBy *uuid.UUID, name string, slug string, description *string, status string) (*models.Project, error)
 		UpdateProject(ctx context.Context, id uuid.UUID, input UpdateProjectInput) (*models.Project, error)
 		DeleteProject(ctx context.Context, id uuid.UUID) error
+		AddUserToProject(ctx context.Context, userId uuid.UUID, projectId uuid.UUID, role string) error
+		RemoveUserFromProject(ctx context.Context, userId uuid.UUID, projectId uuid.UUID) error
 	}
 	projectService struct {
 		projectStore	project.ProjectStore
@@ -60,6 +63,14 @@ func (s projectService) GetProject(ctx context.Context, id uuid.UUID) (*models.P
 		return nil, fmt.Errorf("%w: %w", ErrProjectNotFound, err)
 	}
 	return p, nil
+}
+
+func (s projectService) GetProjectMembers(ctx context.Context, id uuid.UUID) ([]models.User, error) {
+	members, err := s.projectStore.GetProjectMembers(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrProjectStoreFailed, err)
+	}
+	return members, nil
 }
 
 func (s projectService) CreateProject(ctx context.Context, createdBy *uuid.UUID, name string, slug string, description *string, status string) (*models.User, error) {
@@ -103,6 +114,29 @@ func (s projectService) UpdateProject(ctx context.Context, id uuid.UUID, input U
 
 func (s projectService) DeleteProject(ctx context.Context, id uuid.UUID) error {
 	err := s.projectStore.DeleteProject(ctx, id)
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrProjectStoreFailed, err)
+	}
+	return nil
+}
+
+func (s projectService) AddUserToProject(ctx context.Context, userId uuid.UUID, projectId uuid.UUID, role string) error{
+
+	//TODO: REFINE ERROR HANDLING
+
+	m := &models.ProjectMember{
+		UserID:   		userId,
+		ProjectID:      projectId,
+		Role:        	role,
+	}
+	err := s.projectStore.AddUserToProject(ctx, m)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrProjectStoreFailed, err)
+	}
+	return m, nil
+}
+func (s projectService) RemoveUserFromProject(ctx context.Context, userId uuid.UUID, projectId uuid.UUID) error{
+	err := s.projectStore.RemoveUserFromProject(ctx, userId, projectId)
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrProjectStoreFailed, err)
 	}
