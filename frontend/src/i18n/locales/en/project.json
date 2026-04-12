@@ -1,7 +1,8 @@
 {
   "header": {
     "invite": "Invite Members",
-    "settings": "Settings"
+    "settings": "Settings",
+    "projects": "PROJECTS"
   },
   "home": {
     "title": "Projects",

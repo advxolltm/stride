@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
-import { AppHeader } from '../components/layout'
+import { AppBreadcrumb, AppHeader } from '../components/layout'
 import { Sidebar } from '../components/layout/SideBar'
 import { CreateProjectDialog } from '../components/project/CreateProjectDialog'
 
@@ -28,6 +28,7 @@ export function AppLayout() {
                 />
 
                 <div className="flex min-w-0 flex-1 flex-col overflow-auto bg-[var(--background)]">
+                    <AppBreadcrumb />
                     <Outlet
                         context={{
                             openCreateProjectDialog:

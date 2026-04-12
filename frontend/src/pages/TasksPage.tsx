@@ -11,7 +11,6 @@ export function TasksPage() {
             <ProjectSpaceHeader
                 title={t('spaces.tasks')}
                 description={t('spaces.tasksDescription')}
-                projectName="Marketing Campaign Q2"
                 icon={CheckSquare}
                 iconColor="yellow"
             />
