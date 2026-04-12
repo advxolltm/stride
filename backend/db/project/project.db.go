@@ -1,0 +1,107 @@
+package project
+
+import (
+	"backend/db"
+	"backend/models"
+	"context"
+	"errors"
+	"strings"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
+)
+
+// TODO: Tests project.db.go
+type UpdateProjectFields struct {
+	Name			*string `gorm:"column:name"`
+    Slug 			*string `gorm:"column:slug"`
+    Description 	*string `gorm:"column:description"`
+    Status 			*string `gorm:"column:status"`
+	UpdatedAt		time.Time `gorm:"column:updated_at"`
+}
+
+type (
+	ProjectStore interface {
+		GetAllProjects(ctx context.Context) ([]models.Project, error)
+		GetProject(ctx context.Context, id uuid.UUID) (*models.Project, error)
+		CreateProject(ctx context.Context, project *models.Project) (*models.Project, error)
+		UpdateProject(ctx context.Context, id uuid.UUID, input UpdateProjectInput) (*models.Project, error)
+		DeleteProject(ctx context.Context, id uuid.UUID) error
+	}
+
+	projectStore struct {
+		db *gorm.DB
+	}
+)
+
+func NewProjectStore(db *gorm.DB) ProjectStore {
+	return &projectStore{db}
+}
+
+func (s *projectStore) GetAllProjects(ctx context.Context) ([]models.Project, error) {
+	var projects []models.Project
+	result := s.db.WithContext(ctx).Find(&projects)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return projects, nil
+}
+
+func (s *projectStore) GetProject(ctx context.Context, id uuid.UUID) (*models.Project, error) {
+	var project models.Project
+	result := s.db.WithContext(ctx).First(&project, "id = ?", id)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return &project, nil
+}
+
+func (s *projectStore) CreateProject(ctx context.Context, project *models.Project) error {
+	result := s.db.WithContext(ctx).Create(project)
+	if result.Error != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(result.Error, &pgErr) && pgErr.Code == db.UniqueConstraintViolationCode {
+			if strings.Contains(pgErr.ConstraintName, "slug") {
+				return ErrDuplicateSlug
+			}
+		}
+		return result.Error
+	}
+	return nil
+}
+
+func (s *projectStore) UpdateProject(ctx context.Context, id uuid.UUID, fields UpdateProjectFields) (*models.Project, error) {
+	var project models.Project
+	result := s.db.WithContext(ctx).Model(&project).
+		Clauses(clause.Returning{}).
+		Where("id = ?", id).
+		Updates(fields)
+	if result.Error != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(result.Error, &pgErr) && pgErr.Code == db.UniqueConstraintViolationCode {
+			if strings.Contains(pgErr.ConstraintName, "slug") {
+				return nil, ErrDuplicateSlug
+			}
+		}
+		return nil, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+	return &project, nil
+}
+
+func (s *projectStore) DeleteProject(ctx context.Context, id uuid.UUID) error {
+	result := s.db.WithContext(ctx).Delete(&models.Project{}, "id = ?", id)
+	if result.Error != nil {
+		return gorm.ErrRecordNotFound
+	}
+	if result.RowsAffected == 0 {
+    	return gorm.ErrRecordNotFound
+	}
+	return nil
+}
+

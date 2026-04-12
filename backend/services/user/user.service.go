@@ -33,7 +33,7 @@ type (
 		UpdateUser(ctx context.Context, id uuid.UUID, input UpdateUserInput) (*models.User, error)
 		DeleteUser(ctx context.Context, id uuid.UUID) error
 	}
-	userServise struct {
+	userService struct {
 		userStore	user.UserStore
 		cfg			validationConfig
 	}
@@ -41,7 +41,7 @@ type (
 
 
 func NewUserService(userStore user.UserStore) UserService {
-	return &userServise{userStore, loadValidationConfig()}
+	return &userService{userStore, loadValidationConfig()}
 }
 
 
@@ -72,7 +72,7 @@ func loadValidationConfig() validationConfig {
 	}
 }
 
-func (s userServise) validatePassword(password string) error {
+func (s userService) validatePassword(password string) error {
 	if len(password) < s.cfg.PasswordMinLength {
 		return ErrPasswordTooShort
 	}
@@ -85,14 +85,14 @@ func (s userServise) validatePassword(password string) error {
 }
 
 
-func (s userServise) validateUsername(username string) error {
+func (s userService) validateUsername(username string) error {
 	if len(username) < s.cfg.UsernameMinLength || len(username) > s.cfg.UsernameMaxLength {
 		return ErrInvalidUsername
 	}
 	return nil
 }
 
-func (s userServise) validateEmail(email string) error {
+func (s userService) validateEmail(email string) error {
 	_, err := mail.ParseAddress(email)
 	if err != nil {
 		return ErrInvalidEmail
@@ -100,7 +100,7 @@ func (s userServise) validateEmail(email string) error {
 	return nil
 }
 
-func (s userServise) hashPassword(password string) ([]byte, error) {
+func (s userService) hashPassword(password string) ([]byte, error) {
 	if err := s.validatePassword(password); err != nil {
 		return nil, err
 	}
@@ -111,7 +111,7 @@ func (s userServise) hashPassword(password string) ([]byte, error) {
 	return hash, nil
 }
 
-func (s userServise) CheckPassword(hashedPassword string, plainPassword string) error {
+func (s userService) CheckPassword(hashedPassword string, plainPassword string) error {
 	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(plainPassword))
 	if err != nil {
 		return ErrInvalidPassword
@@ -119,7 +119,7 @@ func (s userServise) CheckPassword(hashedPassword string, plainPassword string) 
 	return nil
 }
 
-func (s userServise) GetAllUsers(ctx context.Context) ([]models.User, error) {
+func (s userService) GetAllUsers(ctx context.Context) ([]models.User, error) {
 	users, err := s.userStore.GetAllUsers(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrUserStoreFailed, err)
@@ -127,7 +127,7 @@ func (s userServise) GetAllUsers(ctx context.Context) ([]models.User, error) {
 	return users, nil
 }
 
-func (s userServise) GetUser(ctx context.Context, id uuid.UUID) (*models.User, error) {
+func (s userService) GetUser(ctx context.Context, id uuid.UUID) (*models.User, error) {
 	u, err := s.userStore.GetUser(ctx, id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -138,7 +138,7 @@ func (s userServise) GetUser(ctx context.Context, id uuid.UUID) (*models.User, e
 	return u, nil
 }
 
-func (s userServise) CreateUser(ctx context.Context, username string, email string, password string) (*models.User, error) {
+func (s userService) CreateUser(ctx context.Context, username string, email string, password string) (*models.User, error) {
 	if err := s.validateUsername(username); err != nil {
 		return nil, err
 	}
@@ -175,7 +175,7 @@ func (s userServise) CreateUser(ctx context.Context, username string, email stri
 }
 
 
-func (s userServise) UpdateUser(ctx context.Context, id uuid.UUID, input UpdateUserInput) (*models.User, error) {
+func (s userService) UpdateUser(ctx context.Context, id uuid.UUID, input UpdateUserInput) (*models.User, error) {
 	fields := user.UpdateUserFields{
 		Email:     input.Email,
 		FullName:  input.FullName,
@@ -210,7 +210,7 @@ func (s userServise) UpdateUser(ctx context.Context, id uuid.UUID, input UpdateU
 	return u, nil
 }
 
-func (s userServise) DeleteUser(ctx context.Context, id uuid.UUID) error {
+func (s userService) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	err := s.userStore.DeleteUser(ctx, id)
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrUserStoreFailed, err)
