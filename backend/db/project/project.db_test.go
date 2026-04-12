@@ -21,6 +21,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestProjectStore_CreateAndGetProject(t *testing.T) {
+	//TODO: WRITE MORE TESTS
 	store := project.NewProjectStore(testutils.DB)
 	ctx := context.Background()
 

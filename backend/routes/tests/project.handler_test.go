@@ -25,6 +25,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestProjectRouteHandler_Integration(t *testing.T) {
+	//TODO: WRITE MORE TESTS
 	store := project.NewProjectStore(testutils.DB)
 	service := projectService.NewProjectService(store)
 	
