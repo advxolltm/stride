@@ -7,9 +7,12 @@ interface ConfirmDialogProps {
     title: string
     message: ReactNode
     confirmLabel: string
+    pendingConfirmLabel?: string
     cancelLabel?: string
     confirmVariant?: 'primary' | 'danger'
-    onConfirm: () => void
+    isConfirmPending?: boolean
+    closeOnConfirm?: boolean
+    onConfirm: () => void | Promise<void>
 }
 
 export function ConfirmDialog({
@@ -18,8 +21,11 @@ export function ConfirmDialog({
     title,
     message,
     confirmLabel,
+    pendingConfirmLabel,
     cancelLabel = 'Cancel',
     confirmVariant = 'primary',
+    isConfirmPending = false,
+    closeOnConfirm = true,
     onConfirm,
 }: ConfirmDialogProps) {
     return (
@@ -36,22 +42,29 @@ export function ConfirmDialog({
                         <Modal.Footer>
                             <Button
                                 variant="ghost"
+                                isDisabled={isConfirmPending}
                                 onPress={() => onOpenChange(false)}
                             >
                                 {cancelLabel}
                             </Button>
                             <Button
+                                isPending={isConfirmPending}
                                 variant={
                                     confirmVariant === 'danger'
                                         ? 'danger'
                                         : 'primary'
                                 }
-                                onPress={() => {
-                                    onConfirm()
-                                    onOpenChange(false)
+                                onPress={async () => {
+                                    await onConfirm()
+
+                                    if (closeOnConfirm) {
+                                        onOpenChange(false)
+                                    }
                                 }}
                             >
-                                {confirmLabel}
+                                {isConfirmPending
+                                    ? pendingConfirmLabel || confirmLabel
+                                    : confirmLabel}
                             </Button>
                         </Modal.Footer>
                     </Modal.Dialog>
