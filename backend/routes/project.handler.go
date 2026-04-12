@@ -38,22 +38,22 @@ type errorResponse struct {
 }
 
 type createProjectRequest struct { // createdBy *uuid.UUID, name string, slug string, description *string, status string
-	name		string	`json:"name"`
-	slug		string	`json:"slug"`
-	description	*string	`json:"description"`
-	status		string	`json:"status"`
+	Name		string	`json:"name"`
+	Slug		string	`json:"slug"`
+	Description	*string	`json:"description"`
+	Status		string	`json:"status"`
 }
 
 type addMemberReqest struct {
-	userId		uuid.UUID 	`json:"userid"`
-	role		string		`json:"role"`
+	UserId		uuid.UUID 	`json:"userid"`
+	Role		string		`json:"role"`
 }
 
 type updateProjectRequest struct {
-	name		*string	`json:"name"`
-	slug		*string	`json:"slug"`
-	description	*string	`json:"description"`
-	status		*string	`json:"status"`
+	Name		*string	`json:"name"`
+	Slug		*string	`json:"slug"`
+	Description	*string	`json:"description"`
+	Status		*string	`json:"status"`
 }
 
 func mapServiceError(err error) (int, string) {
@@ -126,7 +126,7 @@ func (h projectRouteHandler) projectPOSTHandle(c *echo.Context) error {
 	// TODO: add user-check - only user can create Projects, add the userid as a parameter for createdBy field
 
 	//createdBy *uuid.UUID, name string, slug string, description *string, status string
-	p, err := h.projectService.CreateProject(c.Request().Context(), nil, req.name, req.slug, req.description, req.status)
+	p, err := h.projectService.CreateProject(c.Request().Context(), nil, req.Name, req.Slug, req.Description, req.Status)
 	if err != nil {
 		status, msg := mapServiceError(err)
 		return c.JSON(status, errorResponse{Error: msg})
@@ -147,7 +147,7 @@ func (h projectRouteHandler) memberPOSTHandle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid request body"})
 	}
 
-	p, err := h.projectService.AddUserToProject(c.Request().Context(), req.userId, id, req.role)
+	p, err := h.projectService.AddUserToProject(c.Request().Context(), req.UserId, id, req.Role)
 	if err != nil {
 		status, msg := mapServiceError(err)
 		return c.JSON(status, errorResponse{Error: msg})
@@ -170,10 +170,10 @@ func (h projectRouteHandler) projectPATCHHandle(c *echo.Context) error {
 	}
 
 	p, err := h.projectService.UpdateProject(c.Request().Context(), id, projectService.UpdateProjectInput{
-		Name:			req.name,
-		Slug: 			req.password,
-		Description: 	req.description,
-		Status: 		req.status,
+		Name:			req.Name,
+		Slug: 			req.Slug,
+		Description: 	req.Description,
+		Status: 		req.Status,
 	})
 	if err != nil {
 		status, msg := mapServiceError(err)

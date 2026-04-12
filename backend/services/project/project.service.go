@@ -73,7 +73,7 @@ func (s projectService) GetProjectMembers(ctx context.Context, id uuid.UUID) ([]
 	return members, nil
 }
 
-func (s projectService) CreateProject(ctx context.Context, createdBy *uuid.UUID, name string, slug string, description *string, status string) (*models.User, error) {
+func (s projectService) CreateProject(ctx context.Context, createdBy *uuid.UUID, name string, slug string, description *string, status string) (*models.Project, error) {
 
 	p := &models.Project{
 		CreatedBy:   createdBy,
@@ -120,7 +120,7 @@ func (s projectService) DeleteProject(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func (s projectService) AddUserToProject(ctx context.Context, userId uuid.UUID, projectId uuid.UUID, role string) error{
+func (s projectService) AddUserToProject(ctx context.Context, userId uuid.UUID, projectId uuid.UUID, role string) (*models.ProjectMember, error) {
 
 	//TODO: REFINE ERROR HANDLING
 
