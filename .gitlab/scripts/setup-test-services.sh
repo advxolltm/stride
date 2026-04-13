@@ -4,7 +4,9 @@
 set -ex
 
 echo ">>> Installing packages..."
-apk add --no-cache postgresql postgresql-client redis su-exec
+apk add --no-cache postgresql postgresql-client redis su-exec || {
+  echo ">>> apk add returned non-zero (post-install chown warnings) — continuing..."
+}
 
 echo ">>> System info:"
 id
