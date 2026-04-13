@@ -1,4 +1,5 @@
 import { Button, Tooltip } from '@heroui/react'
+import { useState } from 'react'
 import {
     Megaphone,
     PanelLeftClose,
@@ -9,12 +10,13 @@ import {
 } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
-import { LogoutButton } from '../main/LogoutButton'
 import { SidebarItems, type SidebarProject } from '../main/SidebarItems'
 import {
     PROJECTS,
     type ProjectSidebarIcon,
 } from '../../shared/data/mockProjectsData'
+import { LogoutButton } from '../../shared/components/LogoutButton'
+import { LogoutConfirmDialog } from '../../shared/components/LogoutConfirmDialog'
 
 interface SidebarProps {
     collapsed: boolean
@@ -45,6 +47,7 @@ export function Sidebar({
     const navigate = useNavigate()
     const location = useLocation()
     const { t } = useTranslation('common')
+    const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false)
 
     const sidebarProjects: SidebarProject[] = PROJECTS.map((project) => ({
         id: project.id,
@@ -124,8 +127,16 @@ export function Sidebar({
             />
 
             <div className="shrink-0 border-t border-[var(--border)] px-2 py-3">
-                <LogoutButton collapsed={collapsed} />
+                <LogoutButton
+                    collapsed={collapsed}
+                    variant="sidebar"
+                    onPress={() => setIsLogoutConfirmOpen(true)}
+                />
             </div>
+            <LogoutConfirmDialog
+                isOpen={isLogoutConfirmOpen}
+                onOpenChange={setIsLogoutConfirmOpen}
+            />
         </aside>
     )
 }
