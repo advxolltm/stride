@@ -72,8 +72,6 @@ test-backend:
     - job: build-backend
       artifacts: true
   before_script:
-    - chmod +x .gitlab/scripts/setup-test-services.sh
-    - sh .gitlab/scripts/setup-test-services.sh
     - cd backend
   script:
     - go mod download

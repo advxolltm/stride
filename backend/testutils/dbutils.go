@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"runtime"
 
+	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
 	"github.com/testcontainers/testcontainers-go/modules/compose"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"gorm.io/gorm"
@@ -18,27 +19,30 @@ import (
 
 var DB *gorm.DB
 var stack *compose.DockerCompose
+var embeddedPG *embeddedpostgres.EmbeddedPostgres
 var ctx = context.Background()
 
 func SetupDB() {
-    if os.Getenv("CI") != "" {
+	if os.Getenv("CI") != "" {
 		SetCICDTestDB()
-    } else {
-        SetupDevTestDB()
-    }
+	} else {
+		SetupDevTestDB()
+	}
 }
 
-
 func SetCICDTestDB() {
-	dsn := fmt.Sprintf(
-		"postgresql://%s:%s@%s:%s/%s?sslmode=disable",
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASSWORD"),
-		os.Getenv("DB_HOST"),
-		os.Getenv("DB_PORT"),
-		os.Getenv("DB_NAME"),
-	)
+	pg := embeddedpostgres.NewDatabase(embeddedpostgres.DefaultConfig().
+		Username("stride").
+		Password("stride").
+		Database("stride").
+		Port(5432).
+		Version(embeddedpostgres.V16))
 
+	err := pg.Start()
+	AssertNoError(err)
+	embeddedPG = pg
+
+	dsn := "postgresql://stride:stride@localhost:5432/stride?sslmode=disable"
 	testdb, _, err := db.InitDB(dsn)
 	AssertNoError(err)
 
@@ -89,14 +93,22 @@ func SetupDevTestDB() {
 }
 
 func TeardownDB() {
-	err := stack.Down(
-		ctx,
-		compose.RemoveOrphans(true),
-		compose.RemoveVolumes(true),
-		compose.RemoveImagesLocal,
-	)
-	if err != nil {
-		log.Printf("Failed to stop stack: %v", err)
+	if embeddedPG != nil {
+		if err := embeddedPG.Stop(); err != nil {
+			log.Printf("Failed to stop embedded postgres: %v", err)
+		}
+		return
+	}
+	if stack != nil {
+		err := stack.Down(
+			ctx,
+			compose.RemoveOrphans(true),
+			compose.RemoveVolumes(true),
+			compose.RemoveImagesLocal,
+		)
+		if err != nil {
+			log.Printf("Failed to stop stack: %v", err)
+		}
 	}
 }
 
