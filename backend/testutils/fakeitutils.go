@@ -4,6 +4,7 @@ import (
 	"backend/models"
 	"fmt"
 	"math/rand"
+	"testing"
 
 	f "github.com/brianvoe/gofakeit/v7"
 	"golang.org/x/crypto/bcrypt"
@@ -80,6 +81,14 @@ func userPassword() string {
 	return string(hash)
 }
 
+
+func GenerateUserPassword() string {
+	pwd := f.Password(true, true, true, true, true, 20)
+	hash, err := bcrypt.GenerateFromPassword([]byte(pwd), bcrypt.DefaultCost)
+	AssertNoError(err)
+	return string(hash)
+}
+
 func generateNOfType[T any](count int, producer func(idx int) T) []T {
 	res := make([]T, 0, count)
 	for i := range count {
@@ -137,16 +146,42 @@ func fakeTaskWithUsers(users []models.User) func(int) models.Task {
 	}
 }
 
-func generateRandomUsers(count int) []models.User {
+func GenerateRandomUser() models.User {
+	return generateNOfType(1, fakeUser)[0]
+}
+
+func GenerateRandomUsers(count int) []models.User {
 	return generateNOfType(count, fakeUser)
 }
 
-func generateRandomProjects(count int, users []models.User) []models.Project {
+func GenerateRandomProject(users []models.User) models.Project {
+	return generateNOfType(1, fakeProjectWithUsers(users))[0]
+}
+
+func GenerateRandomProjects(count int, users []models.User) []models.Project {
 	return generateNOfType(count, fakeProjectWithUsers(users))
 }
 
-func generateRandomTasks(count int, users []models.User) []models.Task {
+func GenerateRandomTask(users []models.User) models.Task {
+	return generateNOfType(1, fakeTaskWithUsers(users))[0]
+}
+
+func GenerateRandomTasks(count int, users []models.User) []models.Task {
 	return generateNOfType(count, fakeTaskWithUsers(users))
+}
+
+func SelectRandomUser(t *testing.T, db *gorm.DB) models.User {
+	t.Helper()
+	users, err := gorm.G[models.User](db).Find(t.Context())
+	AssertNoError(err)
+	return choice(&users)
+}
+
+func SelectRandomUsers(t *testing.T, db *gorm.DB, count int) []models.User {
+	t.Helper()
+	users, err := gorm.G[models.User](db).Find(t.Context())
+	AssertNoError(err)
+	return choiceN(users, count)
 }
 
 func generateProjectMembers(users []models.User, projects []models.Project) {
@@ -176,22 +211,22 @@ func generateProjectMembers(users []models.User, projects []models.Project) {
 	}
 }
 
-func fillDBWithRandomData() {
+func fillDBWithRandomData(db *gorm.DB) {
 	// Define a fixed seed to make tests reproducable
 	f.Seed(seed)
 	batchsize := 25
 
-	users := generateRandomUsers(20)
-	AssertNoError(gorm.G[models.User](DB).CreateInBatches(ctx, &users, batchsize))
+	users := GenerateRandomUsers(20)
+	AssertNoError(gorm.G[models.User](db).CreateInBatches(ctx, &users, batchsize))
 
-	projects := generateRandomProjects(20, users)
-	AssertNoError(gorm.G[models.Project](DB).CreateInBatches(ctx, &projects, batchsize))
+	projects := GenerateRandomProjects(20, users)
+	AssertNoError(gorm.G[models.Project](db).CreateInBatches(ctx, &projects, batchsize))
 
 	generateProjectMembers(users, projects)
 	generateTasksForProject(30, projects)
 
 	for pidx := range projects {
-		_, err := gorm.G[models.Project](DB).Updates(ctx, projects[pidx])
+		_, err := gorm.G[models.Project](db).Updates(ctx, projects[pidx])
 		AssertNoError(err)
 	}
 }
@@ -204,7 +239,7 @@ func generateTasksForProject(maxTasksPerProject int, projects []models.Project) 
 			usersInProject = append(usersInProject, pm.User)
 		}
 
-		tasks := generateRandomTasks(taskCount, usersInProject)
+		tasks := GenerateRandomTasks(taskCount, usersInProject)
 		projects[pidx].Tasks = tasks
 	}
 }

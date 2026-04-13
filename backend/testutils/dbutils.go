@@ -16,11 +16,10 @@ import (
 	"gorm.io/gorm"
 )
 
-var DB *gorm.DB
 var stack *compose.DockerCompose
 var ctx = context.Background()
 
-func SetupDBFromEnv() {
+func SetupDBFromEnv() *gorm.DB {
 	dsn := fmt.Sprintf(
 		"postgresql://%s:%s@%s:%s/%s?sslmode=disable",
 		os.Getenv("DB_USER"),
@@ -33,11 +32,11 @@ func SetupDBFromEnv() {
 	testdb, _, err := db.InitDB(dsn)
 	AssertNoError(err)
 
-	DB = testdb
+	return testdb
 }
 
-func SeedDB() {
-	fillDBWithRandomData()
+func SeedDB(db *gorm.DB) {
+	fillDBWithRandomData(db)
 }
 
 func TAssertNoError(t interface{ Helper(); Fatalf(string, ...any) }, err error) {
@@ -47,7 +46,7 @@ func TAssertNoError(t interface{ Helper(); Fatalf(string, ...any) }, err error) 
 	}
 }
 
-func SetupDB() {
+func SetupDB() *gorm.DB {
 	composeReader := openDevComposeFile()
 	newStack, err := compose.NewDockerComposeWith(
 		compose.WithStackReaders(composeReader),
@@ -58,6 +57,11 @@ func SetupDB() {
 	AssertNoError(err)
 
 	err = stack.
+		WithEnv(map[string]string{
+			"POSTGRES_DB": "",
+			"POSTGRES_USER": "",
+			"POSTGRES_PASSWORD": "",
+		}).
 		WaitForService("db", wait.ForListeningPort("5432/tcp")).
 		Up(ctx, compose.RunServices("db"), compose.Wait(true))
 
@@ -69,26 +73,27 @@ func SetupDB() {
 
 	dbPort, err := dbContainer.MappedPort(ctx, "5432")
 
-	dsn := fmt.Sprintf("postgresql://stride:stride@%s:%s/stride?sslmode=disable", dbHost, dbPort.Port())
+
+	dsn := fmt.Sprintf(
+		"postgresql://%s:%s@%s:%s/%s?sslmode=disable",
+		"stride",
+		"stride",
+		dbHost,
+		dbPort.Port(),
+		"stride",
+	)
 
 	testdb, _, err := db.InitDB(dsn)
 	AssertNoError(err)
 
-	DB = testdb
-
-	fillDBWithRandomData()
+	return testdb
 }
 
 func TeardownDB() {
-	err := stack.Down(
-		ctx,
-		compose.RemoveOrphans(true),
-		compose.RemoveVolumes(true),
-		compose.RemoveImagesLocal,
-	)
-	if err != nil {
-		log.Printf("Failed to stop stack: %v", err)
-	}
+	// the testcontainers ryuk container manages cleanup automatically
+	// therefore it is currently better not to do manual cleanup
+	// this also allows other tests from different packages to reuse the container
+	// which improves test-time
 }
 
 func findGoModuleRoot() string {

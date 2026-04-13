@@ -7,11 +7,16 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
+var db *gorm.DB
+
 func TestMain(m *testing.M) {
-	testutils.SetupDBFromEnv()
-	testutils.SeedDB()
+	db = testutils.SetupDBFromEnv()
+	db = db.Begin()
+	testutils.SeedDB(db)
+	db.Rollback()
 	os.Exit(m.Run())
 }
 
@@ -34,7 +39,7 @@ func TestTablesExist(t *testing.T) {
 	for _, table := range allTableNames() {
 		t.Run(table, func(t *testing.T) {
 			var exists bool
-			err := testutils.DB.Raw(
+			err := db.Raw(
 				"SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = ?)", table,
 			).Scan(&exists).Error
 			testutils.TAssertNoError(t, err)
@@ -112,7 +117,7 @@ func TestProjectWithRelations(t *testing.T) {
 		CreatedBy: &owner.ID,
 	}
 	mustCreate(t, &project)
-	t.Cleanup(func() { testutils.DB.Delete(&project) })
+	t.Cleanup(func() { db.Delete(&project) })
 
 	member := models.ProjectMember{
 		UserID:    owner.ID,
@@ -120,11 +125,11 @@ func TestProjectWithRelations(t *testing.T) {
 		Role:      "owner",
 	}
 	mustCreate(t, &member)
-	t.Cleanup(func() { testutils.DB.Delete(&member) })
+	t.Cleanup(func() { db.Delete(&member) })
 
 	t.Run("project_member_linked", func(t *testing.T) {
 		var found models.ProjectMember
-		err := testutils.DB.Preload("User").Preload("Project").First(&found, member.ID).Error
+		err := db.Preload("User").Preload("Project").First(&found, member.ID).Error
 		testutils.TAssertNoError(t, err)
 		assertEqual(t, "user_id", owner.ID, found.User.ID)
 		assertEqual(t, "project_id", project.ID, found.Project.ID)
@@ -138,7 +143,7 @@ func TestProjectWithRelations(t *testing.T) {
 			Description: &desc,
 		}
 		mustCreate(t, &skill)
-		t.Cleanup(func() { testutils.DB.Delete(&skill) })
+		t.Cleanup(func() { db.Delete(&skill) })
 
 		var found models.ProjectSkill
 		mustFirst(t, &found, skill.ID)
@@ -156,7 +161,7 @@ func TestTaskAssigneeChain(t *testing.T) {
 		Role:      "developer",
 	}
 	mustCreate(t, &member)
-	t.Cleanup(func() { testutils.DB.Delete(&member) })
+	t.Cleanup(func() { db.Delete(&member) })
 
 	task := models.Task{
 		ProjectID: project.ID,
@@ -165,18 +170,18 @@ func TestTaskAssigneeChain(t *testing.T) {
 		Status:    "todo",
 	}
 	mustCreate(t, &task)
-	t.Cleanup(func() { testutils.DB.Delete(&task) })
+	t.Cleanup(func() { db.Delete(&task) })
 
 	assignee := models.TaskAssignee{
 		TaskID:          task.ID,
 		ProjectMemberID: member.ID,
 	}
 	mustCreate(t, &assignee)
-	t.Cleanup(func() { testutils.DB.Delete(&assignee) })
+	t.Cleanup(func() { db.Delete(&assignee) })
 
 	t.Run("assignee_preload", func(t *testing.T) {
 		var found models.TaskAssignee
-		err := testutils.DB.Preload("Task").Preload("ProjectMember").First(&found, assignee.ID).Error
+		err := db.Preload("Task").Preload("ProjectMember").First(&found, assignee.ID).Error
 		testutils.TAssertNoError(t, err)
 		assertEqual(t, "task_id", task.ID, found.Task.ID)
 		assertEqual(t, "member_id", member.ID, found.ProjectMember.ID)
@@ -193,10 +198,10 @@ func TestMessageBelongsToProject(t *testing.T) {
 		Content:   "hello world",
 	}
 	mustCreate(t, &msg)
-	t.Cleanup(func() { testutils.DB.Delete(&msg) })
+	t.Cleanup(func() { db.Delete(&msg) })
 
 	var found models.Message
-	err := testutils.DB.Preload("Sender").Preload("Project").First(&found, msg.ID).Error
+	err := db.Preload("Sender").Preload("Project").First(&found, msg.ID).Error
 	testutils.TAssertNoError(t, err)
 	assertEqual(t, "content", "hello world", found.Content)
 	assertEqual(t, "sender_id", sender.ID, found.Sender.ID)
@@ -211,7 +216,7 @@ func TestWhiteboardWithElements(t *testing.T) {
 		ProjectID: project.ID,
 	}
 	mustCreate(t, &wb)
-	t.Cleanup(func() { testutils.DB.Delete(&wb) })
+	t.Cleanup(func() { db.Delete(&wb) })
 
 	elem := models.WhiteboardElement{
 		WhiteboardID: wb.ID,
@@ -219,10 +224,10 @@ func TestWhiteboardWithElements(t *testing.T) {
 		ElementType:  "rectangle",
 	}
 	mustCreate(t, &elem)
-	t.Cleanup(func() { testutils.DB.Delete(&elem) })
+	t.Cleanup(func() { db.Delete(&elem) })
 
 	var found models.Whiteboard
-	err := testutils.DB.Preload("Elements").First(&found, wb.ID).Error
+	err := db.Preload("Elements").First(&found, wb.ID).Error
 	testutils.TAssertNoError(t, err)
 	if len(found.Elements) != 1 {
 		t.Fatalf("expected 1 element, got %d", len(found.Elements))
@@ -254,7 +259,7 @@ func TestCascadeDeleteProject(t *testing.T) {
 	}
 	mustCreate(t, &task)
 
-	testutils.DB.Delete(&project)
+	db.Delete(&project)
 
 	assertRowGone(t, "project_members", member.ID)
 	assertRowGone(t, "tasks", task.ID)
@@ -264,7 +269,7 @@ func TestCascadeDeleteProject(t *testing.T) {
 
 func countOf[T any]() int64 {
 	var count int64
-	testutils.DB.Model(new(T)).Count(&count)
+	db.Model(new(T)).Count(&count)
 	return count
 }
 
@@ -276,7 +281,7 @@ func createTestUser(t *testing.T, prefix string) models.User {
 		PasswordHash: "hash",
 	}
 	mustCreate(t, &user)
-	t.Cleanup(func() { testutils.DB.Delete(&user) })
+	t.Cleanup(func() { db.Delete(&user) })
 	return user
 }
 
@@ -288,28 +293,28 @@ func createTestProject(t *testing.T, name, slug string) models.Project {
 		Status: "active",
 	}
 	mustCreate(t, &project)
-	t.Cleanup(func() { testutils.DB.Delete(&project) })
+	t.Cleanup(func() { db.Delete(&project) })
 	return project
 }
 
 func mustCreate(t *testing.T, value any) {
 	t.Helper()
-	testutils.TAssertNoError(t, testutils.DB.Create(value).Error)
+	testutils.TAssertNoError(t, db.Create(value).Error)
 }
 
 func mustFirst(t *testing.T, dest any, id uuid.UUID) {
 	t.Helper()
-	testutils.TAssertNoError(t, testutils.DB.First(dest, id).Error)
+	testutils.TAssertNoError(t, db.First(dest, id).Error)
 }
 
 func mustSave(t *testing.T, value any) {
 	t.Helper()
-	testutils.TAssertNoError(t, testutils.DB.Save(value).Error)
+	testutils.TAssertNoError(t, db.Save(value).Error)
 }
 
 func mustDelete(t *testing.T, value any) {
 	t.Helper()
-	testutils.TAssertNoError(t, testutils.DB.Delete(value).Error)
+	testutils.TAssertNoError(t, db.Delete(value).Error)
 }
 
 func assertEqual[T comparable](t *testing.T, field string, expected, actual T) {
@@ -322,7 +327,7 @@ func assertEqual[T comparable](t *testing.T, field string, expected, actual T) {
 func assertRowGone(t *testing.T, table string, id uuid.UUID) {
 	t.Helper()
 	var count int64
-	testutils.DB.Table(table).Where("id = ?", id).Count(&count)
+	db.Table(table).Where("id = ?", id).Count(&count)
 	if count != 0 {
 		t.Errorf("expected row %s in %s to be cascade-deleted", id, table)
 	}

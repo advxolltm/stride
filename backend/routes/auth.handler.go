@@ -3,7 +3,6 @@ package routes
 import (
 	"backend/services/auth"
 	"errors"
-	"log/slog"
 	"net/http"
 
 	"github.com/labstack/echo/v5"
@@ -28,7 +27,7 @@ func (h authRouteHandler) mapServiceError(err error) (int, string) {
 	case errors.Is(err, auth.ErrUnauthorized):
 		return http.StatusUnauthorized, err.Error()
 	default:
-		slog.Error("error", err)
+		// slog.Error("error", err.Error())
 		return http.StatusInternalServerError, "internal server error"
 	}
 }
