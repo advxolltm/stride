@@ -1,5 +1,5 @@
 # GitLab CI/CD Pipeline — Stride Application
-# DEBUG VERSION — diagnosing K8s runner postgres/redis connectivity
+# DEBUG ROUND 2 — Why postgres/redis sidecar processes fail to start
 # Triggers: MR pipelines only (+ master for deploy)
 
 stages:
@@ -24,110 +24,159 @@ workflow:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == "master"
 
-debug-k8s-services:
+# ── Test 1: Is shared network namespace working at all? ──
+debug-networking:
+  stage: debug
+  image: alpine:3.21
+  services:
+    # Minimal service: just listen on port 9999
+    - name: alpine:3.21
+      alias: nettest
+      entrypoint: ["sh"]
+      command:
+        [
+          "-c",
+          "apk add --no-cache socat && socat TCP-LISTEN:9999,fork,reuseaddr SYSTEM:'echo HELLO' & sleep 300",
+        ]
+  script:
+    - apk add --no-cache netcat-openbsd
+    - echo "===== NETWORK NAMESPACE TEST ====="
+    - echo "Waiting 15s for service to start..."
+    - sleep 15
+    - nc -zv localhost 9999 2>&1 && echo "PORT 9999 OPEN - networking works!" || echo "PORT 9999 CLOSED - networking broken!"
+    - echo "TEST" | nc -w 2 localhost 9999 2>&1 || echo "DATA TRANSFER FAILED"
+    - echo ""
+    - echo "===== UID / SECURITY CONTEXT ====="
+    - id
+    - whoami
+    - cat /proc/1/status 2>/dev/null | grep -E "^(Uid|Gid|Groups)" || echo "cannot read proc status"
+    - echo ""
+    - echo "===== POD FILESYSTEM MOUNTS ====="
+    - mount | head -30
+    - echo ""
+    - echo "===== CAPABILITIES ====="
+    - cat /proc/1/status 2>/dev/null | grep -i cap || echo "cannot read capabilities"
+
+# ── Test 2: Postgres with log capture via shared volume ──
+debug-postgres-log:
   stage: debug
   image: golang:1.26.1-alpine
   variables:
-    # --- PostgreSQL config ---
     POSTGRES_DB: stride
     POSTGRES_USER: stride
     POSTGRES_PASSWORD: stride
-    # Fix for K8s runner: move PGDATA to subdirectory to avoid init-permissions conflict
     PGDATA: /var/lib/postgresql/data/pgdata
-    # --- App DB connection ---
-    DB_HOST: localhost
-    DB_PORT: "5432"
-    REDIS_HOST: localhost
+    POSTGRES_HOST_AUTH_METHOD: trust
+    # Try changing initdb permissions behavior
+    POSTGRES_INITDB_ARGS: "--auth-host=trust --auth-local=trust"
   services:
     - name: postgres:16-alpine
       alias: postgres
+      # Override entrypoint to capture logs to a shared path
+      entrypoint: ["sh"]
+      command:
+        - "-c"
+        - |
+          echo "=== POSTGRES SIDECAR STARTING ===" > /tmp/pg_debug.log 2>&1
+          echo "UID: $(id)" >> /tmp/pg_debug.log 2>&1
+          echo "PGDATA: $PGDATA" >> /tmp/pg_debug.log 2>&1
+          echo "HOME: $HOME" >> /tmp/pg_debug.log 2>&1
+          ls -la /var/lib/postgresql/ >> /tmp/pg_debug.log 2>&1
+          ls -la /var/lib/postgresql/data/ >> /tmp/pg_debug.log 2>&1 || echo "data dir not exists yet" >> /tmp/pg_debug.log 2>&1
+          echo "=== STARTING ENTRYPOINT ===" >> /tmp/pg_debug.log 2>&1
+          exec docker-entrypoint.sh postgres 2>&1 | tee -a /tmp/pg_debug.log
     - name: redis:7-alpine
       alias: redis
   script:
-    - apk add --no-cache postgresql-client curl netcat-openbsd
-    - echo "===== ENVIRONMENT ====="
-    - echo "DB_HOST=$DB_HOST  DB_PORT=$DB_PORT  DB_USER=$DB_USER  DB_NAME=$DB_NAME"
-    - echo "REDIS_HOST=$REDIS_HOST  REDIS_PORT=$REDIS_PORT"
-    - echo "PGDATA=$PGDATA"
-    - echo "POSTGRES_USER=$POSTGRES_USER  POSTGRES_DB=$POSTGRES_DB"
+    - apk add --no-cache postgresql-client netcat-openbsd
+    - echo "===== CURRENT USER IN BUILD CONTAINER ====="
+    - id
+    - whoami
     - echo ""
 
-    # --- Network diagnostics ---
-    - echo "===== DNS RESOLUTION ====="
-    - nslookup localhost || echo "nslookup localhost failed"
-    - nslookup postgres || echo "nslookup postgres failed (expected in k8s - services are on localhost)"
-    - nslookup redis || echo "nslookup redis failed (expected in k8s - services are on localhost)"
+    - echo "===== CHECKING SHARED /tmp FOR POSTGRES LOGS ====="
+    - ls -la /tmp/pg_debug.log 2>/dev/null && cat /tmp/pg_debug.log || echo "No shared log file (volumes not shared between containers)"
     - echo ""
 
-    - echo "===== /etc/hosts ====="
-    - cat /etc/hosts
-    - echo ""
-
-    - echo "===== NETWORK INTERFACES ====="
-    - ip addr 2>/dev/null || ifconfig 2>/dev/null || echo "no network tools available"
-    - echo ""
-
-    # --- Port scan on localhost ---
-    - echo "===== PORT SCAN localhost ====="
-    - nc -zv localhost 5432 2>&1 && echo "postgres:5432 OPEN" || echo "postgres:5432 CLOSED"
-    - nc -zv localhost 6379 2>&1 && echo "redis:6379 OPEN" || echo "redis:6379 CLOSED"
-    - nc -zv 127.0.0.1 5432 2>&1 && echo "127.0.0.1:5432 OPEN" || echo "127.0.0.1:5432 CLOSED"
-    - nc -zv 127.0.0.1 6379 2>&1 && echo "127.0.0.1:6379 OPEN" || echo "127.0.0.1:6379 CLOSED"
-    - echo ""
-
-    # --- Wait loop with detailed logging ---
-    - echo "===== WAITING FOR POSTGRES (max 60s) ====="
-    - |
-      for i in $(seq 1 60); do
-        if pg_isready -h localhost -p 5432 -U stride 2>/dev/null; then
-          echo "PostgreSQL is ready after ${i}s"
-          break
-        fi
-        if [ "$i" -eq 60 ]; then
-          echo "TIMEOUT: PostgreSQL never became ready"
-          echo "--- Attempting direct TCP check ---"
-          nc -zv localhost 5432 2>&1 || true
-          nc -zv 127.0.0.1 5432 2>&1 || true
-        fi
-        sleep 1
-      done
-    - echo ""
-    - echo "===== WAITING FOR REDIS (max 30s) ====="
+    - echo "===== WAIT 30s FOR POSTGRES ====="
     - |
       for i in $(seq 1 30); do
-        if nc -z localhost 6379 2>/dev/null; then
-          echo "Redis is ready after ${i}s"
+        if nc -z localhost 5432 2>/dev/null; then
+          echo "PostgreSQL READY after ${i}s!"
           break
         fi
-        if [ "$i" -eq 30 ]; then
-          echo "TIMEOUT: Redis never became ready"
-        fi
+        [ "$i" -eq 30 ] && echo "PostgreSQL TIMEOUT"
         sleep 1
       done
     - echo ""
-    # --- Actual connection tests ---
-    - echo "===== POSTGRES CONNECTION TEST ====="
-    - PGPASSWORD=stride psql -h localhost -p 5432 -U stride -d stride -c "SELECT version();" 2>&1 || echo "PSQL CONNECTION FAILED"
-    - PGPASSWORD=stride psql -h localhost -p 5432 -U stride -d stride -c "SELECT 1 as connectivity_test;" 2>&1 || echo "PSQL QUERY FAILED"
+    - echo "===== WAIT 15s FOR REDIS ====="
+    - |
+      for i in $(seq 1 15); do
+        if nc -z localhost 6379 2>/dev/null; then
+          echo "Redis READY after ${i}s!"
+          break
+        fi
+        [ "$i" -eq 15 ] && echo "Redis TIMEOUT"
+        sleep 1
+      done
+    - echo ""
+    - echo "===== CONNECTION TESTS ====="
+    - PGPASSWORD=stride psql -h localhost -p 5432 -U stride -d stride -c "SELECT 1;" 2>&1 || echo "PSQL FAILED"
+    - echo "PING" | nc -w 2 localhost 6379 2>&1 || echo "REDIS FAILED"
+
+# ── Test 3: Bitnami postgres (runs as non-root by design) ──
+debug-bitnami-postgres:
+  stage: debug
+  image: golang:1.26.1-alpine
+  variables:
+    POSTGRESQL_DATABASE: stride
+    POSTGRESQL_USERNAME: stride
+    POSTGRESQL_PASSWORD: stride
+    # Bitnami uses different env vars
+    ALLOW_EMPTY_PASSWORD: "no"
+  services:
+    - name: bitnami/postgresql:16
+      alias: postgres
+      variables:
+        POSTGRESQL_DATABASE: stride
+        POSTGRESQL_USERNAME: stride
+        POSTGRESQL_PASSWORD: stride
+    - name: bitnami/redis:7.0
+      alias: redis
+      variables:
+        ALLOW_EMPTY_PASSWORD: "yes"
+  script:
+    - apk add --no-cache postgresql-client netcat-openbsd
+    - echo "===== TESTING BITNAMI IMAGES (non-root friendly) ====="
+    - echo "Build container user:"
+    - id
     - echo ""
 
-    - echo "===== REDIS CONNECTION TEST ====="
-    - echo "PING" | nc -w 2 localhost 6379 2>&1 || echo "REDIS PING FAILED"
+    - echo "===== WAIT 45s FOR BITNAMI POSTGRES ====="
+    - |
+      for i in $(seq 1 45); do
+        if nc -z localhost 5432 2>/dev/null; then
+          echo "Bitnami PostgreSQL READY after ${i}s!"
+          break
+        fi
+        [ "$i" -eq 45 ] && echo "Bitnami PostgreSQL TIMEOUT"
+        sleep 1
+      done
     - echo ""
-
-    # --- Process listing (what's running in the pod) ---
-    - echo "===== RUNNING PROCESSES ====="
-    - ps aux 2>/dev/null || echo "ps not available"
+    - echo "===== WAIT 20s FOR BITNAMI REDIS ====="
+    - |
+      for i in $(seq 1 20); do
+        if nc -z localhost 6379 2>/dev/null; then
+          echo "Bitnami Redis READY after ${i}s!"
+          break
+        fi
+        [ "$i" -eq 20 ] && echo "Bitnami Redis TIMEOUT"
+        sleep 1
+      done
     - echo ""
-
-    # --- Container filesystem check ---
-    - echo "===== FILESYSTEM CHECK ====="
-    - ls -la /var/lib/postgresql/ 2>/dev/null || echo "/var/lib/postgresql/ not accessible (expected, different container)"
-    - echo ""
-
-    - echo "===== K8S RUNNER INFO ====="
-    - echo "Runner executor type - check logs above for 'kubernetes'"
-    - echo "Pod name - check logs above"
+    - echo "===== CONNECTION TESTS ====="
+    - PGPASSWORD=stride psql -h localhost -p 5432 -U stride -d stride -c "SELECT version();" 2>&1 || echo "BITNAMI PSQL FAILED"
+    - echo "PING" | nc -w 2 localhost 6379 2>&1 || echo "BITNAMI REDIS FAILED"
     - echo ""
 
     - echo "===== SUMMARY ====="
@@ -136,11 +185,5 @@ debug-k8s-services:
       REDIS_OK=false
       nc -z localhost 5432 2>/dev/null && PG_OK=true
       nc -z localhost 6379 2>/dev/null && REDIS_OK=true
-      echo "PostgreSQL on localhost:5432 = $PG_OK"
-      echo "Redis on localhost:6379 = $REDIS_OK"
-      if [ "$PG_OK" = "true" ] && [ "$REDIS_OK" = "true" ]; then
-        echo "ALL SERVICES REACHABLE"
-      else
-        echo "SERVICES UNREACHABLE - see diagnostics above"
-        exit 1
-      fi
+      echo "Bitnami PostgreSQL = $PG_OK"
+      echo "Bitnami Redis = $REDIS_OK"
