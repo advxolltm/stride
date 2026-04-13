@@ -1,21 +1,20 @@
 # GitLab CI/CD Pipeline — Stride Application
+# DEBUG VERSION — diagnosing K8s runner postgres/redis connectivity
 # Triggers: MR pipelines only (+ master for deploy)
 
 stages:
-  - build
-  - test
-  - deploy
+  - debug
 
 variables:
   POSTGRES_DB: stride
   POSTGRES_USER: stride
   POSTGRES_PASSWORD: stride
-  DB_HOST: postgres
+  DB_HOST: localhost
   DB_PORT: "5432"
   DB_USER: stride
   DB_PASSWORD: stride
   DB_NAME: stride
-  REDIS_HOST: redis
+  REDIS_HOST: localhost
   CI: "true"
   REDIS_PORT: "6379"
   API_BASE_PATH: /api/v1
@@ -25,108 +24,123 @@ workflow:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == "master"
 
-build-backend:
-  stage: build
-  image: golang:1.26.1-alpine
-  before_script:
-    - cd backend
-  script:
-    - go mod download
-    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o bin/server cmd/server.go
-  artifacts:
-    paths:
-      - backend/bin/server
-    expire_in: 1 hour
-  cache:
-    key:
-      files:
-        - backend/go.sum
-    paths:
-      - backend/vendor/
-    policy: pull-push
-
-build-frontend:
-  stage: build
-  image: node:24-slim
-  before_script:
-    - cd frontend
-  script:
-    - npm ci --prefer-offline
-    - npm run build
-  artifacts:
-    paths:
-      - frontend/dist/
-    expire_in: 1 hour
-  cache:
-    key:
-      files:
-        - frontend/package-lock.json
-    paths:
-      - frontend/node_modules/
-    policy: pull-push
-
-test-backend:
-  stage: test
+debug-k8s-services:
+  stage: debug
   image: golang:1.26.1-alpine
   variables:
+    # --- PostgreSQL config ---
     POSTGRES_DB: stride
     POSTGRES_USER: stride
     POSTGRES_PASSWORD: stride
+    # Fix for K8s runner: move PGDATA to subdirectory to avoid init-permissions conflict
+    PGDATA: /var/lib/postgresql/data/pgdata
+    # --- App DB connection ---
     DB_HOST: localhost
     DB_PORT: "5432"
     REDIS_HOST: localhost
-  needs:
-    - job: build-backend
-      artifacts: true
   services:
     - name: postgres:16-alpine
       alias: postgres
     - name: redis:7-alpine
       alias: redis
-  before_script:
-    - cd backend
   script:
-    - go mod download
-    - go test ./... -v -count=1
-  cache:
-    key:
-      files:
-        - backend/go.sum
-    paths:
-      - backend/vendor/
-    policy: pull
+    - apk add --no-cache postgresql-client curl netcat-openbsd
+    - echo "===== ENVIRONMENT ====="
+    - echo "DB_HOST=$DB_HOST  DB_PORT=$DB_PORT  DB_USER=$DB_USER  DB_NAME=$DB_NAME"
+    - echo "REDIS_HOST=$REDIS_HOST  REDIS_PORT=$REDIS_PORT"
+    - echo "PGDATA=$PGDATA"
+    - echo "POSTGRES_USER=$POSTGRES_USER  POSTGRES_DB=$POSTGRES_DB"
+    - echo ""
 
-test-frontend:
-  stage: test
-  image: node:24-slim
-  needs:
-    - job: build-frontend
-      artifacts: true
-  before_script:
-    - cd frontend
-  script:
-    - npm ci --prefer-offline
-    - npm run test:run
-    - npm run typecheck
-    - npm run lint
-  cache:
-    key:
-      files:
-        - frontend/package-lock.json
-    paths:
-      - frontend/node_modules/
-    policy: pull
+    # --- Network diagnostics ---
+    - echo "===== DNS RESOLUTION ====="
+    - nslookup localhost || echo "nslookup localhost failed"
+    - nslookup postgres || echo "nslookup postgres failed (expected in k8s - services are on localhost)"
+    - nslookup redis || echo "nslookup redis failed (expected in k8s - services are on localhost)"
+    - echo ""
 
-deploy:
-  stage: deploy
-  image: alpine:latest
-  needs:
-    - job: test-backend
-      artifacts: false
-    - job: test-frontend
-      artifacts: false
-  script:
-    - echo "Deploy stage placeholder — all build and test stages passed successfully."
-    - echo "Pipeline running for branch $CI_COMMIT_REF_NAME (commit $CI_COMMIT_SHORT_SHA)"
-  rules:
-    - if: $CI_COMMIT_BRANCH == "master"
+    - echo "===== /etc/hosts ====="
+    - cat /etc/hosts
+    - echo ""
+
+    - echo "===== NETWORK INTERFACES ====="
+    - ip addr 2>/dev/null || ifconfig 2>/dev/null || echo "no network tools available"
+    - echo ""
+
+    # --- Port scan on localhost ---
+    - echo "===== PORT SCAN localhost ====="
+    - nc -zv localhost 5432 2>&1 && echo "postgres:5432 OPEN" || echo "postgres:5432 CLOSED"
+    - nc -zv localhost 6379 2>&1 && echo "redis:6379 OPEN" || echo "redis:6379 CLOSED"
+    - nc -zv 127.0.0.1 5432 2>&1 && echo "127.0.0.1:5432 OPEN" || echo "127.0.0.1:5432 CLOSED"
+    - nc -zv 127.0.0.1 6379 2>&1 && echo "127.0.0.1:6379 OPEN" || echo "127.0.0.1:6379 CLOSED"
+    - echo ""
+
+    # --- Wait loop with detailed logging ---
+    - echo "===== WAITING FOR POSTGRES (max 60s) ====="
+    - |
+      for i in $(seq 1 60); do
+        if pg_isready -h localhost -p 5432 -U stride 2>/dev/null; then
+          echo "PostgreSQL is ready after ${i}s"
+          break
+        fi
+        if [ "$i" -eq 60 ]; then
+          echo "TIMEOUT: PostgreSQL never became ready"
+          echo "--- Attempting direct TCP check ---"
+          nc -zv localhost 5432 2>&1 || true
+          nc -zv 127.0.0.1 5432 2>&1 || true
+        fi
+        sleep 1
+      done
+    - echo ""
+    - echo "===== WAITING FOR REDIS (max 30s) ====="
+    - |
+      for i in $(seq 1 30); do
+        if nc -z localhost 6379 2>/dev/null; then
+          echo "Redis is ready after ${i}s"
+          break
+        fi
+        if [ "$i" -eq 30 ]; then
+          echo "TIMEOUT: Redis never became ready"
+        fi
+        sleep 1
+      done
+    - echo ""
+    # --- Actual connection tests ---
+    - echo "===== POSTGRES CONNECTION TEST ====="
+    - PGPASSWORD=stride psql -h localhost -p 5432 -U stride -d stride -c "SELECT version();" 2>&1 || echo "PSQL CONNECTION FAILED"
+    - PGPASSWORD=stride psql -h localhost -p 5432 -U stride -d stride -c "SELECT 1 as connectivity_test;" 2>&1 || echo "PSQL QUERY FAILED"
+    - echo ""
+
+    - echo "===== REDIS CONNECTION TEST ====="
+    - echo "PING" | nc -w 2 localhost 6379 2>&1 || echo "REDIS PING FAILED"
+    - echo ""
+
+    # --- Process listing (what's running in the pod) ---
+    - echo "===== RUNNING PROCESSES ====="
+    - ps aux 2>/dev/null || echo "ps not available"
+    - echo ""
+
+    # --- Container filesystem check ---
+    - echo "===== FILESYSTEM CHECK ====="
+    - ls -la /var/lib/postgresql/ 2>/dev/null || echo "/var/lib/postgresql/ not accessible (expected, different container)"
+    - echo ""
+
+    - echo "===== K8S RUNNER INFO ====="
+    - echo "Runner executor type - check logs above for 'kubernetes'"
+    - echo "Pod name - check logs above"
+    - echo ""
+
+    - echo "===== SUMMARY ====="
+    - |
+      PG_OK=false
+      REDIS_OK=false
+      nc -z localhost 5432 2>/dev/null && PG_OK=true
+      nc -z localhost 6379 2>/dev/null && REDIS_OK=true
+      echo "PostgreSQL on localhost:5432 = $PG_OK"
+      echo "Redis on localhost:6379 = $REDIS_OK"
+      if [ "$PG_OK" = "true" ] && [ "$REDIS_OK" = "true" ]; then
+        echo "ALL SERVICES REACHABLE"
+      else
+        echo "SERVICES UNREACHABLE - see diagnostics above"
+        exit 1
+      fi
