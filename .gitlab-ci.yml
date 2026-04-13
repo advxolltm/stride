@@ -1,9 +1,10 @@
 # GitLab CI/CD Pipeline — Stride Application
-# DEBUG ROUND 3 — Testing specific fixes for K8s runner
 # Triggers: MR pipelines only (+ master for deploy)
 
 stages:
-  - debug
+  - build
+  - test
+  - deploy
 
 variables:
   POSTGRES_DB: stride
@@ -24,387 +25,98 @@ workflow:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == "master"
 
-# ── Test A: Override entrypoints to bypass gosu ──
-# Redis: run redis-server directly as root (redis allows this)
-# Postgres: use su-exec (test if service containers have SETUID cap)
-debug-entrypoint-override:
-  stage: debug
-  image: alpine:3.21
-  services:
-    - name: redis:7-alpine
-      alias: redis
-      # Bypass docker-entrypoint.sh which uses gosu → needs SETUID
-      entrypoint: ["redis-server"]
-      command: ["--protected-mode", "no", "--bind", "0.0.0.0"]
-    - name: postgres:16-alpine
-      alias: postgres
-      entrypoint: ["sh"]
-      command:
-        - "-c"
-        - |
-          set -e
-          echo "=== POSTGRES SIDECAR DEBUG ==="
-          echo "UID: $(id)"
-          echo "Caps: $(cat /proc/1/status | grep Cap || echo 'n/a')"
-          # Test if su-exec works (needs SETUID)
-          if su-exec postgres id 2>/dev/null; then
-            echo "su-exec WORKS! Starting postgres normally..."
-            mkdir -p "$PGDATA"
-            chown -R postgres:postgres /var/lib/postgresql 2>/dev/null || true
-            chmod 700 "$PGDATA" 2>/dev/null || true
-            su-exec postgres initdb -D "$PGDATA"
-            su-exec postgres pg_ctl -D "$PGDATA" -l /tmp/pg.log start
-            echo "host all all 0.0.0.0/0 trust" >> "$PGDATA/pg_hba.conf"
-            su-exec postgres pg_ctl -D "$PGDATA" reload
-            tail -f /dev/null
-          else
-            echo "su-exec FAILED — no SETUID capability"
-            echo "Trying chmod 777 + direct initdb as root..."
-            mkdir -p "$PGDATA"
-            chmod -R 777 /var/lib/postgresql 2>/dev/null || true
-            # postgres refuses to run as root - confirm this
-            initdb -D "$PGDATA" 2>&1 || echo "initdb as root FAILED (expected)"
-            echo "=== POSTGRES CANNOT START WITHOUT USER SWITCHING ==="
-            # Keep container alive for diagnostics
-            sleep 600
-          fi
-      variables:
-        PGDATA: /var/lib/postgresql/data/pgdata
-        POSTGRES_DB: stride
-        POSTGRES_USER: stride
-        POSTGRES_PASSWORD: stride
+build-backend:
+  stage: build
+  image: golang:1.26.1-alpine
+  before_script:
+    - cd backend
   script:
-    - apk add --no-cache netcat-openbsd postgresql-client
-    - echo "===== WAIT FOR REDIS (15s) ====="
-    - |
-      for i in $(seq 1 15); do
-        if nc -z localhost 6379 2>/dev/null; then
-          echo "Redis READY after ${i}s!"
-          break
-        fi
-        [ "$i" -eq 15 ] && echo "Redis TIMEOUT"
-        sleep 1
-      done
-    - echo "PING" | nc -w 2 localhost 6379 || echo "Redis PING FAILED"
-    - echo ""
+    - go mod download
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o bin/server cmd/server.go
+  artifacts:
+    paths:
+      - backend/bin/server
+    expire_in: 1 hour
+  cache:
+    key:
+      files:
+        - backend/go.sum
+    paths:
+      - backend/vendor/
+    policy: pull-push
 
-    - echo "===== WAIT FOR POSTGRES (45s) ====="
-    - |
-      for i in $(seq 1 45); do
-        if nc -z localhost 5432 2>/dev/null; then
-          echo "PostgreSQL READY after ${i}s!"
-          break
-        fi
-        [ "$i" -eq 45 ] && echo "PostgreSQL TIMEOUT"
-        sleep 1
-      done
-    - PGPASSWORD=stride psql -h localhost -p 5432 -U stride -d stride -c "SELECT 1;" 2>&1 || echo "PSQL FAILED"
-
-    - echo ""
-    - echo "===== SUMMARY ====="
-    - |
-      REDIS_OK=false; PG_OK=false
-      nc -z localhost 6379 2>/dev/null && REDIS_OK=true
-      nc -z localhost 5432 2>/dev/null && PG_OK=true
-      echo "Redis = $REDIS_OK"
-      echo "PostgreSQL = $PG_OK"
-
-# ── Test B: Check service container capabilities ──
-debug-service-caps:
-  stage: debug
-  image: alpine:3.21
-  services:
-    - name: alpine:3.21
-      alias: captest
-      entrypoint: ["sh"]
-      command:
-        - "-c"
-        - |
-          echo "=== SERVICE CONTAINER CAPABILITIES ==="
-          echo "UID: $(id)"
-          cat /proc/1/status | grep -i cap
-          echo ""
-          echo "=== TESTING PRIVILEGE OPERATIONS ==="
-          # Test chown
-          touch /tmp/testfile
-          chown nobody /tmp/testfile 2>&1 && echo "chown: WORKS" || echo "chown: FAILED"
-          # Test su-exec equivalent
-          apk add --no-cache su-exec 2>/dev/null
-          su-exec nobody id 2>&1 && echo "su-exec: WORKS" || echo "su-exec: FAILED"
-          # Test setpriv
-          setpriv --reuid=65534 --regid=65534 id 2>&1 && echo "setpriv: WORKS" || echo "setpriv: FAILED"
-          echo ""
-          echo "=== STARTING LISTENER ON :8888 ==="
-          # Keep alive and expose a port for verification
-          nc -l -k -p 8888 &
-          # Also try listening as non-root user if possible
-          sleep 300
+build-frontend:
+  stage: build
+  image: node:24-slim
+  before_script:
+    - cd frontend
   script:
-    - apk add --no-cache netcat-openbsd
-    - sleep 10
-    - echo "===== Service container reachable? ====="
-    - nc -zv localhost 8888 2>&1 && echo "PORT 8888 OPEN" || echo "PORT 8888 CLOSED"
+    - npm ci --prefer-offline
+    - npm run build
+  artifacts:
+    paths:
+      - frontend/dist/
+    expire_in: 1 hour
+  cache:
+    key:
+      files:
+        - frontend/package-lock.json
+    paths:
+      - frontend/node_modules/
+    policy: pull-push
 
-# ── Test C: Run postgres INSIDE build container (no services) ──
-debug-inline-postgres:
-  stage: debug
-  image: alpine:3.21
+test-backend:
+  stage: test
+  image: golang:1.26.1-alpine
+  needs:
+    - job: build-backend
+      artifacts: true
+  before_script:
+    - chmod +x .gitlab/scripts/setup-test-services.sh
+    - sh .gitlab/scripts/setup-test-services.sh
+    - cd backend
   script:
-    - echo "===== INSTALLING POSTGRES IN BUILD CONTAINER ====="
-    - apk add --no-cache postgresql postgresql-client netcat-openbsd
-    - echo ""
+    - go mod download
+    - go test ./... -v -count=1
+  cache:
+    key:
+      files:
+        - backend/go.sum
+    paths:
+      - backend/vendor/
+    policy: pull
 
-    - echo "===== CAPABILITIES OF BUILD CONTAINER ====="
-    - id
-    - cat /proc/1/status | grep -i cap
-    - echo ""
+test-frontend:
+  stage: test
+  image: node:24-slim
+  needs:
+    - job: build-frontend
+      artifacts: true
+  before_script:
+    - cd frontend
+  script:
+    - npm ci --prefer-offline
+    - npm run test:run
+    - npm run typecheck
+    - npm run lint
+  cache:
+    key:
+      files:
+        - frontend/package-lock.json
+    paths:
+      - frontend/node_modules/
+    policy: pull
 
-    - echo "===== TEST CHOWN ====="
-    - touch /tmp/testchown
-    - chown nobody /tmp/testchown 2>&1 && echo "chown WORKS" || echo "chown FAILED"
-    - echo ""
-
-    - echo "===== TEST SU-EXEC ====="
-    - apk add --no-cache su-exec
-    - su-exec nobody id 2>&1 && echo "su-exec WORKS" || echo "su-exec FAILED"
-    - echo ""
-
-    - echo "===== SETUP POSTGRES INLINE ====="
-    - |
-      mkdir -p /var/lib/postgresql/data
-      # Try chown first
-      if chown -R postgres:postgres /var/lib/postgresql 2>/dev/null; then
-        echo "chown succeeded"
-      else
-        echo "chown failed, trying chmod 777"
-        chmod -R 777 /var/lib/postgresql
-      fi
-    - echo ""
-
-    - echo "===== INIT DB ====="
-    - |
-      # Try su-exec
-      if su-exec postgres initdb -D /var/lib/postgresql/data 2>&1; then
-        echo "initdb with su-exec SUCCEEDED"
-      else
-        echo "initdb with su-exec FAILED"
-        echo "--- Trying direct initdb as root ---"
-        initdb -D /var/lib/postgresql/data 2>&1 || echo "initdb as root FAILED (expected: postgres refuses root)"
-      fi
-    - echo ""
-
-    - echo "===== START POSTGRES ====="
-    - |
-      if su-exec postgres pg_ctl -D /var/lib/postgresql/data -l /tmp/pg.log start 2>&1; then
-        echo "PostgreSQL STARTED via su-exec!"
-        sleep 2
-        # Create stride database
-        su-exec postgres createdb stride 2>/dev/null || true
-        su-exec postgres psql -c "ALTER USER postgres PASSWORD 'stride';" 2>/dev/null || true
-        su-exec postgres psql -c "CREATE USER stride WITH PASSWORD 'stride' SUPERUSER;" 2>/dev/null || true
-        su-exec postgres createdb -O stride stride 2>/dev/null || true
-        PGPASSWORD=stride psql -h localhost -p 5432 -U stride -d stride -c "SELECT version();" 2>&1 || \
-          PGPASSWORD=stride psql -h localhost -p 5432 -U postgres -d postgres -c "SELECT version();" 2>&1 || \
-          echo "PSQL connection test FAILED"
-      else
-        echo "PostgreSQL START FAILED"
-        cat /tmp/pg.log 2>/dev/null || echo "No pg log file"
-      fi
-    - echo ""
-
-    - echo "===== REDIS INLINE ====="
-    - apk add --no-cache redis
-    - redis-server --daemonize yes --bind 0.0.0.0 --protected-mode no
-    - sleep 1
-    - echo "PING" | nc -w 2 localhost 6379 || echo "Redis PING FAILED"
-    - echo ""
-
-    - echo "===== FINAL SUMMARY ====="
-    - |
-      PG_OK=false; REDIS_OK=false
-      nc -z localhost 5432 2>/dev/null && PG_OK=true
-      nc -z localhost 6379 2>/dev/null && REDIS_OK=true
-      echo "Inline PostgreSQL = $PG_OK"
-      echo "Inline Redis = $REDIS_OK"
-      if [ "$PG_OK" = "true" ] && [ "$REDIS_OK" = "true" ]; then
-        echo "INLINE APPROACH WORKS!"
-      fi
-  POSTGRES_PASSWORD: stride
-  DB_HOST: localhost
-  DB_PORT: "5432"
-  DB_USER: stride
-  DB_PASSWORD: stride
-  DB_NAME: stride
-  REDIS_HOST: localhost
-  CI: "true"
-  REDIS_PORT: "6379"
-  API_BASE_PATH: /api/v1
-
-workflow:
+deploy:
+  stage: deploy
+  image: alpine:latest
+  needs:
+    - job: test-backend
+      artifacts: false
+    - job: test-frontend
+      artifacts: false
+  script:
+    - echo "Deploy stage placeholder — all build and test stages passed successfully."
+    - echo "Pipeline running for branch $CI_COMMIT_REF_NAME (commit $CI_COMMIT_SHORT_SHA)"
   rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == "master"
-
-# ── Test 1: Is shared network namespace working at all? ──
-debug-networking:
-  stage: debug
-  image: alpine:3.21
-  services:
-    # Minimal service: just listen on port 9999
-    - name: alpine:3.21
-      alias: nettest
-      entrypoint: ["sh"]
-      command:
-        [
-          "-c",
-          "apk add --no-cache socat && socat TCP-LISTEN:9999,fork,reuseaddr SYSTEM:'echo HELLO' & sleep 300",
-        ]
-  script:
-    - apk add --no-cache netcat-openbsd
-    - echo "===== NETWORK NAMESPACE TEST ====="
-    - echo "Waiting 15s for service to start..."
-    - sleep 15
-    - nc -zv localhost 9999 2>&1 && echo "PORT 9999 OPEN - networking works!" || echo "PORT 9999 CLOSED - networking broken!"
-    - echo "TEST" | nc -w 2 localhost 9999 2>&1 || echo "DATA TRANSFER FAILED"
-    - echo ""
-    - echo "===== UID / SECURITY CONTEXT ====="
-    - id
-    - whoami
-    - cat /proc/1/status 2>/dev/null | grep -E "^(Uid|Gid|Groups)" || echo "cannot read proc status"
-    - echo ""
-    - echo "===== POD FILESYSTEM MOUNTS ====="
-    - mount | head -30
-    - echo ""
-    - echo "===== CAPABILITIES ====="
-    - cat /proc/1/status 2>/dev/null | grep -i cap || echo "cannot read capabilities"
-
-# ── Test 2: Postgres with log capture via shared volume ──
-debug-postgres-log:
-  stage: debug
-  image: golang:1.26.1-alpine
-  variables:
-    POSTGRES_DB: stride
-    POSTGRES_USER: stride
-    POSTGRES_PASSWORD: stride
-    PGDATA: /var/lib/postgresql/data/pgdata
-    POSTGRES_HOST_AUTH_METHOD: trust
-    # Try changing initdb permissions behavior
-    POSTGRES_INITDB_ARGS: "--auth-host=trust --auth-local=trust"
-  services:
-    - name: postgres:16-alpine
-      alias: postgres
-      # Override entrypoint to capture logs to a shared path
-      entrypoint: ["sh"]
-      command:
-        - "-c"
-        - |
-          echo "=== POSTGRES SIDECAR STARTING ===" > /tmp/pg_debug.log 2>&1
-          echo "UID: $(id)" >> /tmp/pg_debug.log 2>&1
-          echo "PGDATA: $PGDATA" >> /tmp/pg_debug.log 2>&1
-          echo "HOME: $HOME" >> /tmp/pg_debug.log 2>&1
-          ls -la /var/lib/postgresql/ >> /tmp/pg_debug.log 2>&1
-          ls -la /var/lib/postgresql/data/ >> /tmp/pg_debug.log 2>&1 || echo "data dir not exists yet" >> /tmp/pg_debug.log 2>&1
-          echo "=== STARTING ENTRYPOINT ===" >> /tmp/pg_debug.log 2>&1
-          exec docker-entrypoint.sh postgres 2>&1 | tee -a /tmp/pg_debug.log
-    - name: redis:7-alpine
-      alias: redis
-  script:
-    - apk add --no-cache postgresql-client netcat-openbsd
-    - echo "===== CURRENT USER IN BUILD CONTAINER ====="
-    - id
-    - whoami
-    - echo ""
-
-    - echo "===== CHECKING SHARED /tmp FOR POSTGRES LOGS ====="
-    - ls -la /tmp/pg_debug.log 2>/dev/null && cat /tmp/pg_debug.log || echo "No shared log file (volumes not shared between containers)"
-    - echo ""
-
-    - echo "===== WAIT 30s FOR POSTGRES ====="
-    - |
-      for i in $(seq 1 30); do
-        if nc -z localhost 5432 2>/dev/null; then
-          echo "PostgreSQL READY after ${i}s!"
-          break
-        fi
-        [ "$i" -eq 30 ] && echo "PostgreSQL TIMEOUT"
-        sleep 1
-      done
-    - echo ""
-    - echo "===== WAIT 15s FOR REDIS ====="
-    - |
-      for i in $(seq 1 15); do
-        if nc -z localhost 6379 2>/dev/null; then
-          echo "Redis READY after ${i}s!"
-          break
-        fi
-        [ "$i" -eq 15 ] && echo "Redis TIMEOUT"
-        sleep 1
-      done
-    - echo ""
-    - echo "===== CONNECTION TESTS ====="
-    - PGPASSWORD=stride psql -h localhost -p 5432 -U stride -d stride -c "SELECT 1;" 2>&1 || echo "PSQL FAILED"
-    - echo "PING" | nc -w 2 localhost 6379 2>&1 || echo "REDIS FAILED"
-
-# ── Test 3: Bitnami postgres (runs as non-root by design) ──
-debug-bitnami-postgres:
-  stage: debug
-  image: golang:1.26.1-alpine
-  variables:
-    POSTGRESQL_DATABASE: stride
-    POSTGRESQL_USERNAME: stride
-    POSTGRESQL_PASSWORD: stride
-    # Bitnami uses different env vars
-    ALLOW_EMPTY_PASSWORD: "no"
-  services:
-    - name: bitnami/postgresql:16
-      alias: postgres
-      variables:
-        POSTGRESQL_DATABASE: stride
-        POSTGRESQL_USERNAME: stride
-        POSTGRESQL_PASSWORD: stride
-    - name: bitnami/redis:7.0
-      alias: redis
-      variables:
-        ALLOW_EMPTY_PASSWORD: "yes"
-  script:
-    - apk add --no-cache postgresql-client netcat-openbsd
-    - echo "===== TESTING BITNAMI IMAGES (non-root friendly) ====="
-    - echo "Build container user:"
-    - id
-    - echo ""
-
-    - echo "===== WAIT 45s FOR BITNAMI POSTGRES ====="
-    - |
-      for i in $(seq 1 45); do
-        if nc -z localhost 5432 2>/dev/null; then
-          echo "Bitnami PostgreSQL READY after ${i}s!"
-          break
-        fi
-        [ "$i" -eq 45 ] && echo "Bitnami PostgreSQL TIMEOUT"
-        sleep 1
-      done
-    - echo ""
-    - echo "===== WAIT 20s FOR BITNAMI REDIS ====="
-    - |
-      for i in $(seq 1 20); do
-        if nc -z localhost 6379 2>/dev/null; then
-          echo "Bitnami Redis READY after ${i}s!"
-          break
-        fi
-        [ "$i" -eq 20 ] && echo "Bitnami Redis TIMEOUT"
-        sleep 1
-      done
-    - echo ""
-    - echo "===== CONNECTION TESTS ====="
-    - PGPASSWORD=stride psql -h localhost -p 5432 -U stride -d stride -c "SELECT version();" 2>&1 || echo "BITNAMI PSQL FAILED"
-    - echo "PING" | nc -w 2 localhost 6379 2>&1 || echo "BITNAMI REDIS FAILED"
-    - echo ""
-
-    - echo "===== SUMMARY ====="
-    - |
-      PG_OK=false
-      REDIS_OK=false
-      nc -z localhost 5432 2>/dev/null && PG_OK=true
-      nc -z localhost 6379 2>/dev/null && REDIS_OK=true
-      echo "Bitnami PostgreSQL = $PG_OK"
-      echo "Bitnami Redis = $REDIS_OK"
