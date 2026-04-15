@@ -25,11 +25,14 @@ type (
 		GetAllProjects(ctx context.Context) ([]models.Project, error)
 		GetProject(ctx context.Context, id uuid.UUID) (*models.Project, error)
 		GetProjectMembers(ctx context.Context, id uuid.UUID) ([]models.ProjectMember, error)
+		GetProjectSkills(ctx context.Context, id uuid.UUID) ([]models.ProjectSkill, error)
 		CreateProject(ctx context.Context, createdBy *uuid.UUID, name string, slug string, description *string, status string) (*models.Project, error)
 		UpdateProject(ctx context.Context, id uuid.UUID, input UpdateProjectInput) (*models.Project, error)
 		DeleteProject(ctx context.Context, id uuid.UUID) error
 		AddUserToProject(ctx context.Context, userId uuid.UUID, projectId uuid.UUID, role string) (*models.ProjectMember, error)
 		RemoveUserFromProject(ctx context.Context, userId uuid.UUID, projectId uuid.UUID) error
+		AddProjectSkill(ctx context.Context, projectId uuid.UUID, name string, description *string) (*model.ProjectSkill, error)
+		RemoveProjectSkill(ctx context.Context, skillId uuid.UUID) error
 	}
 	projectService struct {
 		projectStore	project.ProjectStore
@@ -62,6 +65,14 @@ func (s projectService) GetProject(ctx context.Context, id uuid.UUID) (*models.P
 
 func (s projectService) GetProjectMembers(ctx context.Context, id uuid.UUID) ([]models.ProjectMember, error) {
 	members, err := s.projectStore.GetProjectMembers(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrProjectStoreFailed, err)
+	}
+	return members, nil
+}
+
+func (s projectService) GetProjectSkills(ctx context.Context, id uuid.UUID) ([]models.ProjectSkill, error) {
+	skills, err := s.projectStore.GetProjectSkills(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrProjectStoreFailed, err)
 	}
@@ -137,3 +148,25 @@ func (s projectService) RemoveUserFromProject(ctx context.Context, userId uuid.U
 	}
 	return nil
 }
+
+func (s projectService) AddProjectSkill(ctx context.Context, projectId uuid.UUID, name string, description *string) (*model.ProjectSkill, error) {
+	s := &models.ProjectSkill{
+		ProjectID:   	projectId,
+		Name:      		name,
+		Description:    description,
+	}
+	err := s.projectStore.AddProjectSkill(ctx, s)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrProjectStoreFailed, err)
+	}
+	return s, nil
+}
+
+func (s projectService) RemoveProjectSkill(ctx context.Context, skillId uuid.UUID) error {
+	err := s.projectStore.RemoveProjectSkill(ctx, skillId)
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrProjectStoreFailed, err)
+	}
+	return nil
+}
+

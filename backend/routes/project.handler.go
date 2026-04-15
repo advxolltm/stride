@@ -26,9 +26,12 @@ func (h projectRouteHandler) AddRoutes(api *echo.Group) {
 	g.GET("", h.projectsGETHandle)
 	g.GET("/:id", h.projectGETHandle)
 	g.GET("/:id/members", h.membersGETHandle)
+	g.GET("/:id/skills", h.skillsGETHandle)
 	g.POST("", h.projectPOSTHandle)
 	g.POST("/:id/members", h.memberPOSTHandle)
+	g.POST("/:id/skills", h.skillsPOSTHandle)
 	g.DELETE("/:id/members/:userid", h.memberDELETEHandle)
+	g.POST("/skills/:id", h.skillsDELETEHandle)
 	g.PATCH("/:id", h.projectPATCHHandle)
 	g.DELETE("/:id", h.projectDELETEHandle)
 }
@@ -38,6 +41,12 @@ type createProjectRequest struct { // createdBy *uuid.UUID, name string, slug st
 	Slug		string	`json:"slug"`
 	Description	*string	`json:"description"`
 	Status		string	`json:"status"`
+}
+
+type createSkillRequest struct {
+	ProjectID	string	`json:"projectid"`
+	Name		string	`json:"name"`
+	Description	*string	`json:"description"`
 }
 
 type addMemberReqest struct {
@@ -112,6 +121,24 @@ func (h projectRouteHandler) membersGETHandle(c *echo.Context) error {
 	return c.JSON(http.StatusOK, members)
 }
 
+// GET /projects:id/skills
+func (h projectRouteHandler) skillsGETHandle(c *echo.Context) error {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid project id"})
+	}
+
+	// TODO: add user-check
+
+	skills, err := h.projectService.GetProjectSkills(c.Request().Context(), id)
+	if err != nil {
+		status, msg := mapServiceErrorProj(err)
+		return c.JSON(status, errorResponse{Error: msg})
+	}
+
+	return c.JSON(http.StatusOK, skills)
+}
+
 // POST /projects
 func (h projectRouteHandler) projectPOSTHandle(c *echo.Context) error {
 	var req createProjectRequest
@@ -153,6 +180,27 @@ func (h projectRouteHandler) memberPOSTHandle(c *echo.Context) error {
 
 }
 
+func (h projectRouteHandler) skillsPOSTHandle(c *echo.Context) error {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid project id"})
+	}
+
+	var req createSkillRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid request body"})
+	}
+
+	s, err := h.projectService.AddProjectSkill(c.Request().Context(), req.ProjectID, req.Name, req.Description)
+
+	if err != nil {
+		status, msg := mapServiceErrorProj(err)
+		return c.JSON(status, errorResponse{Error: msg})
+	}
+
+	return c.JSON(http.StatusOK, s)
+}
+
 // PATCH /projects/:id
 func (h projectRouteHandler) projectPATCHHandle(c *echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
@@ -183,7 +231,7 @@ func (h projectRouteHandler) projectPATCHHandle(c *echo.Context) error {
 func (h projectRouteHandler) projectDELETEHandle(c *echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid user id"})
+		return c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid project id"})
 	}
 
 	if err := h.projectService.DeleteProject(c.Request().Context(), id); err != nil {
@@ -194,10 +242,11 @@ func (h projectRouteHandler) projectDELETEHandle(c *echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// DELETE /projects/:id/members/:userid
 func (h projectRouteHandler) memberDELETEHandle(c *echo.Context) error {
 	projid, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid user id"})
+		return c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid project id"})
 	}
 	userid, err := uuid.Parse(c.Param("userid"))
 	if err != nil {
@@ -213,4 +262,19 @@ func (h projectRouteHandler) memberDELETEHandle(c *echo.Context) error {
 
 	return c.NoContent(http.StatusNoContent)
 
+}
+
+// DELETE /projects/:id/skills/:skillid
+func (h projectRouteHandler) skillsDELETEHandle(c *echo.Context) error {
+	skillid, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid skill id"})
+	}
+
+	if err := h.projectService.RemoveProjectSkill(c.Request().Context(), skillid); err != nil {
+		status, msg := mapServiceErrorProj(err)
+		return c.JSON(status, errorResponse{Error: msg})
+	}
+
+	return c.NoContent(http.StatusNoContent)
 }

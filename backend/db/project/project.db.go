@@ -28,11 +28,15 @@ type (
 		GetAllProjects(ctx context.Context) ([]models.Project, error)
 		GetProject(ctx context.Context, id uuid.UUID) (*models.Project, error)
 		GetProjectMembers(ctx context.Context, id uuid.UUID) ([]models.ProjectMember, error)
+		GetProjectSkills(ctx context.Context, id uuid.UUID) ([]models.ProjectSkill, error)
 		CreateProject(ctx context.Context, project *models.Project) error
 		UpdateProject(ctx context.Context, id uuid.UUID, input UpdateProjectFields) (*models.Project, error)
 		DeleteProject(ctx context.Context, id uuid.UUID) error
 		AddUserToProject(ctx context.Context, projectmember *models.ProjectMember) error
 		RemoveUserFromProject(ctx context.Context, userId uuid.UUID, projectId uuid.UUID) error
+		AddProjectSkill(ctx context.Context, projectSkill *models.ProjectSkill) error
+		RemoveProjectSkill(ctx context.Context, id uuid.UUID) error
+
 	}
 
 	projectStore struct {
@@ -70,6 +74,16 @@ func (s *projectStore) GetProjectMembers(ctx context.Context, id uuid.UUID) ([]m
 		return nil, result.Error
 	}
 	return project.Members, nil
+}
+
+func (s *projectStore) GetProjectSkill(ctx context.Context, id uuid.UUID) ([]models.ProjectSkill, error) {
+	var project models.Project
+
+	result := s.db.Preload("Skills").First(&project, id)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return project.Skills, nil
 }
 
 func (s *projectStore) CreateProject(ctx context.Context, project *models.Project) error {
@@ -138,3 +152,21 @@ func (s *projectStore) RemoveUserFromProject(ctx context.Context, userId uuid.UU
 	return nil
 }
 
+func (s *projectStore) AddProjectSkill(ctx context.Context, projectSkill *models.ProjectSkill) error {
+	result := s.db.WithContext(ctx).Create(projectSkill)
+	if result.Error != nil {
+		return result.Error
+	}
+	return nil
+}
+
+func (s *projectStore) RemoveProjectSkill(ctx context.Context, id uuid.UUID) error {
+	result := s.db.WithContext(ctx).Where("id = ?", id).Delete(&models.ProjectSkill{})
+	if result.Error != nil {
+		return gorm.ErrRecordNotFound
+	}
+	if result.RowsAffected == 0 {
+    	return gorm.ErrRecordNotFound
+	}
+	return nil
+}
