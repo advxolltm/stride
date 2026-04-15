@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 
+	authService "backend/services/auth"
 	projectService "backend/services/project"
 
 	"github.com/google/uuid"
@@ -12,12 +13,12 @@ import (
 
 // TODO: Tests user.handler.go
 type projectRouteHandler struct {
-	projectService	projectService.ProjectService
+	projectService projectService.ProjectService
+	authService    authService.AuthService
 }
 
-
-func NewProjectRouteHandler(ps projectService.ProjectService) *projectRouteHandler {
-	return &projectRouteHandler{projectService: ps}
+func NewProjectRouteHandler(ps projectService.ProjectService, as authService.AuthService) *projectRouteHandler {
+	return &projectRouteHandler{projectService: ps, authService: as}
 }
 
 func (h projectRouteHandler) AddRoutes(api *echo.Group) {
@@ -37,10 +38,10 @@ func (h projectRouteHandler) AddRoutes(api *echo.Group) {
 }
 
 type createProjectRequest struct { // createdBy *uuid.UUID, name string, slug string, description *string, status string
-	Name		string	`json:"name"`
-	Slug		string	`json:"slug"`
-	Description	*string	`json:"description"`
-	Status		string	`json:"status"`
+	Name        string  `json:"name"`
+	Slug        string  `json:"slug"`
+	Description *string `json:"description"`
+	Status      string  `json:"status"`
 }
 
 type createSkillRequest struct {
@@ -50,23 +51,23 @@ type createSkillRequest struct {
 }
 
 type addMemberReqest struct {
-	UserId		uuid.UUID 	`json:"userid"`
-	Role		string		`json:"role"`
+	UserId uuid.UUID `json:"userid"`
+	Role   string    `json:"role"`
 }
 
 type updateProjectRequest struct {
-	Name		*string	`json:"name"`
-	Slug		*string	`json:"slug"`
-	Description	*string	`json:"description"`
-	Status		*string	`json:"status"`
+	Name        *string `json:"name"`
+	Slug        *string `json:"slug"`
+	Description *string `json:"description"`
+	Status      *string `json:"status"`
 }
 
 func mapServiceErrorProj(err error) (int, string) {
 	switch {
-		case errors.Is(err, projectService.ErrProjectNotFound):
-			return http.StatusNotFound, err.Error()
-		case errors.Is(err, projectService.ErrDuplicateSlug):
-			return http.StatusConflict, err.Error()
+	case errors.Is(err, projectService.ErrProjectNotFound):
+		return http.StatusNotFound, err.Error()
+	case errors.Is(err, projectService.ErrDuplicateSlug):
+		return http.StatusConflict, err.Error()
 	default:
 		return http.StatusInternalServerError, "internal server error"
 	}
@@ -79,7 +80,7 @@ func (h projectRouteHandler) projectsGETHandle(c *echo.Context) error {
 	projects, err := h.projectService.GetAllProjects(c.Request().Context())
 	if err != nil {
 		status, msg := mapServiceErrorProj(err)
-		return c.JSON(status, errorResponse{Error: msg})
+		return c.JSON(status, ErrorResponse{Error: msg})
 	}
 
 	return c.JSON(http.StatusOK, projects)
@@ -89,7 +90,7 @@ func (h projectRouteHandler) projectsGETHandle(c *echo.Context) error {
 func (h projectRouteHandler) projectGETHandle(c *echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid project id"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid project id"})
 	}
 
 	// TODO: add user-check - only admin and user himself can retrieve data
@@ -97,7 +98,7 @@ func (h projectRouteHandler) projectGETHandle(c *echo.Context) error {
 	p, err := h.projectService.GetProject(c.Request().Context(), id)
 	if err != nil {
 		status, msg := mapServiceErrorProj(err)
-		return c.JSON(status, errorResponse{Error: msg})
+		return c.JSON(status, ErrorResponse{Error: msg})
 	}
 
 	return c.JSON(http.StatusOK, p)
@@ -107,7 +108,7 @@ func (h projectRouteHandler) projectGETHandle(c *echo.Context) error {
 func (h projectRouteHandler) membersGETHandle(c *echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid project id"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid project id"})
 	}
 
 	// TODO: add user-check
@@ -115,7 +116,7 @@ func (h projectRouteHandler) membersGETHandle(c *echo.Context) error {
 	members, err := h.projectService.GetProjectMembers(c.Request().Context(), id)
 	if err != nil {
 		status, msg := mapServiceErrorProj(err)
-		return c.JSON(status, errorResponse{Error: msg})
+		return c.JSON(status, ErrorResponse{Error: msg})
 	}
 
 	return c.JSON(http.StatusOK, members)
@@ -143,16 +144,16 @@ func (h projectRouteHandler) skillsGETHandle(c *echo.Context) error {
 func (h projectRouteHandler) projectPOSTHandle(c *echo.Context) error {
 	var req createProjectRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid request body"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid request body"})
 	}
 
-	// TODO: add user-check - only user can create Projects, add the userid as a parameter for createdBy field
+	userId := h.authService.GetClaims(c).UserID
 
 	//createdBy *uuid.UUID, name string, slug string, description *string, status string
-	p, err := h.projectService.CreateProject(c.Request().Context(), nil, req.Name, req.Slug, req.Description, req.Status)
+	p, err := h.projectService.CreateProject(c.Request().Context(), &userId, req.Name, req.Slug, req.Description, req.Status)
 	if err != nil {
 		status, msg := mapServiceErrorProj(err)
-		return c.JSON(status, errorResponse{Error: msg})
+		return c.JSON(status, ErrorResponse{Error: msg})
 	}
 
 	return c.JSON(http.StatusCreated, p)
@@ -162,18 +163,18 @@ func (h projectRouteHandler) projectPOSTHandle(c *echo.Context) error {
 func (h projectRouteHandler) memberPOSTHandle(c *echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid project id"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid project id"})
 	}
 
 	var req addMemberReqest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid request body"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid request body"})
 	}
 
 	p, err := h.projectService.AddUserToProject(c.Request().Context(), req.UserId, id, req.Role)
 	if err != nil {
 		status, msg := mapServiceErrorProj(err)
-		return c.JSON(status, errorResponse{Error: msg})
+		return c.JSON(status, ErrorResponse{Error: msg})
 	}
 
 	return c.JSON(http.StatusCreated, p)
@@ -205,23 +206,23 @@ func (h projectRouteHandler) skillsPOSTHandle(c *echo.Context) error {
 func (h projectRouteHandler) projectPATCHHandle(c *echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid project id"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid project id"})
 	}
 
 	var req updateProjectRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid request body"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid request body"})
 	}
 
 	p, err := h.projectService.UpdateProject(c.Request().Context(), id, projectService.UpdateProjectInput{
-		Name:			req.Name,
-		Slug: 			req.Slug,
-		Description: 	req.Description,
-		Status: 		req.Status,
+		Name:        req.Name,
+		Slug:        req.Slug,
+		Description: req.Description,
+		Status:      req.Status,
 	})
 	if err != nil {
 		status, msg := mapServiceErrorProj(err)
-		return c.JSON(status, errorResponse{Error: msg})
+		return c.JSON(status, ErrorResponse{Error: msg})
 	}
 
 	return c.JSON(http.StatusOK, p)
@@ -236,7 +237,7 @@ func (h projectRouteHandler) projectDELETEHandle(c *echo.Context) error {
 
 	if err := h.projectService.DeleteProject(c.Request().Context(), id); err != nil {
 		status, msg := mapServiceErrorProj(err)
-		return c.JSON(status, errorResponse{Error: msg})
+		return c.JSON(status, ErrorResponse{Error: msg})
 	}
 
 	return c.NoContent(http.StatusNoContent)
@@ -250,14 +251,13 @@ func (h projectRouteHandler) memberDELETEHandle(c *echo.Context) error {
 	}
 	userid, err := uuid.Parse(c.Param("userid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid user id"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid user id"})
 	}
-
 
 	// TODO: ONLY PROJECT OWNER CAN REMOVE USERS
 	if err := h.projectService.RemoveUserFromProject(c.Request().Context(), userid, projid); err != nil {
 		status, msg := mapServiceErrorProj(err)
-		return c.JSON(status, errorResponse{Error: msg})
+		return c.JSON(status, ErrorResponse{Error: msg})
 	}
 
 	return c.NoContent(http.StatusNoContent)

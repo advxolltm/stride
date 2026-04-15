@@ -1,6 +1,7 @@
 package user
 
 import (
+	"backend/config"
 	"backend/db/user"
 	"backend/models"
 	"context"
@@ -19,10 +20,10 @@ import (
 //TODO: Tests user.service.go
 
 type UpdateUserInput struct {
-	Email		*string
-	Password 	*string
-	FullName	*string
-	AvatarURL	*string
+	Email     *string
+	Password  *string
+	FullName  *string
+	AvatarURL *string
 }
 
 type (
@@ -32,43 +33,33 @@ type (
 		CreateUser(ctx context.Context, username string, email string, password string) (*models.User, error)
 		UpdateUser(ctx context.Context, id uuid.UUID, input UpdateUserInput) (*models.User, error)
 		DeleteUser(ctx context.Context, id uuid.UUID) error
+		GetByEmailAndPassword(ctx context.Context, email, password string) (uuid.UUID, error)
 	}
 	userService struct {
-		userStore	user.UserStore
-		cfg			validationConfig
+		userStore user.UserStore
+		cfg       validationConfig
 	}
 )
-
 
 func NewUserService(userStore user.UserStore) UserService {
 	return &userService{userStore, loadValidationConfig()}
 }
 
-
 type validationConfig struct {
-	PasswordMinLength		int
-	PasswordRequireNumber	bool
-	PasswordRequireSpecial	bool
-	UsernameMinLength		int
-	UsernameMaxLength		int
-}
-
-func envInt(key string, fallback int) int {
-	if val, ok := os.LookupEnv(key); ok {
-		if n, err := strconv.Atoi(val); err == nil {
-			return n
-		}
-	}
-	return fallback
+	PasswordMinLength      int
+	PasswordRequireNumber  bool
+	PasswordRequireSpecial bool
+	UsernameMinLength      int
+	UsernameMaxLength      int
 }
 
 func loadValidationConfig() validationConfig {
 	return validationConfig{
-		PasswordMinLength:		envInt("PASSWORD_MIN_LENGTH", 8),
-		PasswordRequireNumber:	os.Getenv("PASSWORD_REQUIRE_NUM") == "true",
-		PasswordRequireSpecial:	os.Getenv("PASSWORD_REQUIRE_SPECIAL_CHAR") == "true",
-		UsernameMinLength:		envInt("USERNAME_MIN_LENGTH", 3),
-		UsernameMaxLength:		envInt("USERNAME_MAX_LENGTH", 255),
+		PasswordMinLength:      config.EnvInt("PASSWORD_MIN_LENGTH", 8),
+		PasswordRequireNumber:  config.EnvBool("PASSWORD_REQUIRE_NUM", true),
+		PasswordRequireSpecial: config.EnvBool("PASSWORD_REQUIRE_SPECIAL_CHAR", true),
+		UsernameMinLength:      config.EnvInt("USERNAME_MIN_LENGTH", 3),
+		UsernameMaxLength:      config.EnvInt("USERNAME_MAX_LENGTH", 255),
 	}
 }
 
@@ -83,7 +74,6 @@ func (s userService) validatePassword(password string) error {
 	}
 	return nil
 }
-
 
 func (s userService) validateUsername(username string) error {
 	if len(username) < s.cfg.UsernameMinLength || len(username) > s.cfg.UsernameMaxLength {
@@ -101,14 +91,18 @@ func (s userService) validateEmail(email string) error {
 }
 
 func (s userService) hashPassword(password string) ([]byte, error) {
-	if err := s.validatePassword(password); err != nil {
-		return nil, err
-	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, fmt.Errorf("error hashing password: %w", err)
 	}
 	return hash, nil
+}
+
+func (s userService) validateAndHashPassword(password string) ([]byte, error) {
+	if err := s.validatePassword(password); err != nil {
+		return nil, err
+	}
+	return s.hashPassword(password)
 }
 
 func (s userService) CheckPassword(hashedPassword string, plainPassword string) error {
@@ -147,14 +141,10 @@ func (s userService) CreateUser(ctx context.Context, username string, email stri
 		return nil, err
 	}
 
-
-	hash, errHash := s.hashPassword(password)
+	hash, errHash := s.validateAndHashPassword(password)
 	if errHash != nil {
 		return nil, errHash
 	}
-
-
-
 
 	u := &models.User{
 		Username:     username,
@@ -174,7 +164,6 @@ func (s userService) CreateUser(ctx context.Context, username string, email stri
 	return u, nil
 }
 
-
 func (s userService) UpdateUser(ctx context.Context, id uuid.UUID, input UpdateUserInput) (*models.User, error) {
 	fields := user.UpdateUserFields{
 		Email:     input.Email,
@@ -189,7 +178,7 @@ func (s userService) UpdateUser(ctx context.Context, id uuid.UUID, input UpdateU
 	}
 
 	if input.Password != nil {
-		hash, err := s.hashPassword(*input.Password)
+		hash, err := s.validateAndHashPassword(*input.Password)
 		if err != nil {
 			return nil, err
 		}
@@ -216,4 +205,17 @@ func (s userService) DeleteUser(ctx context.Context, id uuid.UUID) error {
 		return fmt.Errorf("%w: %w", ErrUserStoreFailed, err)
 	}
 	return nil
+}
+
+func (s userService) GetByEmailAndPassword(ctx context.Context, email, password string) (uuid.UUID, error) {
+	userId, err := s.userStore.GetByEmailAndPassword(ctx, email, password)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("%w: %w", ErrUserFindFailed, err)
+	}
+
+	if userId == uuid.Nil {
+		return uuid.Nil, ErrUserNotFound
+	}
+
+	return userId, nil
 }
