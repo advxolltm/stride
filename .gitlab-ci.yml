@@ -6,9 +6,11 @@ stages:
   - deploy
 
 variables:
+  # PostgreSQL service config (used by backend tests)
   POSTGRES_DB: stride
   POSTGRES_USER: stride
   POSTGRES_PASSWORD: stride
+  # Backend env vars matching SetupDBFromEnv()
   DB_HOST: postgres
   DB_PORT: "5432"
   DB_USER: stride

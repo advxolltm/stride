@@ -38,12 +38,11 @@ func newTestAuthService(db *gorm.DB) authService {
 }
 
 func TestMain(m *testing.M) {
-	db = testutils.SetupDB()
+	db = testutils.SetupDBFromEnv()
 	db = db.Begin()
 	testutils.SeedDB(db)
 	exitCode := m.Run()
 	db.Rollback()
-	testutils.TeardownDB()
 	os.Exit(exitCode)
 }
 
