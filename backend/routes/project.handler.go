@@ -45,7 +45,6 @@ type createProjectRequest struct { // createdBy *uuid.UUID, name string, slug st
 }
 
 type createSkillRequest struct {
-	ProjectID	string	`json:"projectid"`
 	Name		string	`json:"name"`
 	Description	*string	`json:"description"`
 }
@@ -126,7 +125,7 @@ func (h projectRouteHandler) membersGETHandle(c *echo.Context) error {
 func (h projectRouteHandler) skillsGETHandle(c *echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid project id"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid project id"})
 	}
 
 	// TODO: add user-check
@@ -134,7 +133,7 @@ func (h projectRouteHandler) skillsGETHandle(c *echo.Context) error {
 	skills, err := h.projectService.GetProjectSkills(c.Request().Context(), id)
 	if err != nil {
 		status, msg := mapServiceErrorProj(err)
-		return c.JSON(status, errorResponse{Error: msg})
+		return c.JSON(status, ErrorResponse{Error: msg})
 	}
 
 	return c.JSON(http.StatusOK, skills)
@@ -184,19 +183,19 @@ func (h projectRouteHandler) memberPOSTHandle(c *echo.Context) error {
 func (h projectRouteHandler) skillsPOSTHandle(c *echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid project id"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid project id"})
 	}
 
 	var req createSkillRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid request body"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid request body"})
 	}
 
-	s, err := h.projectService.AddProjectSkill(c.Request().Context(), req.ProjectID, req.Name, req.Description)
+	s, err := h.projectService.AddProjectSkill(c.Request().Context(), id, req.Name, req.Description)
 
 	if err != nil {
 		status, msg := mapServiceErrorProj(err)
-		return c.JSON(status, errorResponse{Error: msg})
+		return c.JSON(status, ErrorResponse{Error: msg})
 	}
 
 	return c.JSON(http.StatusOK, s)
@@ -232,7 +231,7 @@ func (h projectRouteHandler) projectPATCHHandle(c *echo.Context) error {
 func (h projectRouteHandler) projectDELETEHandle(c *echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid project id"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid project id"})
 	}
 
 	if err := h.projectService.DeleteProject(c.Request().Context(), id); err != nil {
@@ -247,7 +246,7 @@ func (h projectRouteHandler) projectDELETEHandle(c *echo.Context) error {
 func (h projectRouteHandler) memberDELETEHandle(c *echo.Context) error {
 	projid, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid project id"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid project id"})
 	}
 	userid, err := uuid.Parse(c.Param("userid"))
 	if err != nil {
@@ -268,12 +267,12 @@ func (h projectRouteHandler) memberDELETEHandle(c *echo.Context) error {
 func (h projectRouteHandler) skillsDELETEHandle(c *echo.Context) error {
 	skillid, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid skill id"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid skill id"})
 	}
 
 	if err := h.projectService.RemoveProjectSkill(c.Request().Context(), skillid); err != nil {
 		status, msg := mapServiceErrorProj(err)
-		return c.JSON(status, errorResponse{Error: msg})
+		return c.JSON(status, ErrorResponse{Error: msg})
 	}
 
 	return c.NoContent(http.StatusNoContent)

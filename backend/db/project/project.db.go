@@ -76,7 +76,7 @@ func (s *projectStore) GetProjectMembers(ctx context.Context, id uuid.UUID) ([]m
 	return project.Members, nil
 }
 
-func (s *projectStore) GetProjectSkill(ctx context.Context, id uuid.UUID) ([]models.ProjectSkill, error) {
+func (s *projectStore) GetProjectSkills(ctx context.Context, id uuid.UUID) ([]models.ProjectSkill, error) {
 	var project models.Project
 
 	result := s.db.Preload("Skills").First(&project, id)

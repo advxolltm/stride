@@ -31,7 +31,7 @@ type (
 		DeleteProject(ctx context.Context, id uuid.UUID) error
 		AddUserToProject(ctx context.Context, userId uuid.UUID, projectId uuid.UUID, role string) (*models.ProjectMember, error)
 		RemoveUserFromProject(ctx context.Context, userId uuid.UUID, projectId uuid.UUID) error
-		AddProjectSkill(ctx context.Context, projectId uuid.UUID, name string, description *string) (*model.ProjectSkill, error)
+		AddProjectSkill(ctx context.Context, projectId uuid.UUID, name string, description *string) (*models.ProjectSkill, error)
 		RemoveProjectSkill(ctx context.Context, skillId uuid.UUID) error
 	}
 	projectService struct {
@@ -76,7 +76,7 @@ func (s projectService) GetProjectSkills(ctx context.Context, id uuid.UUID) ([]m
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrProjectStoreFailed, err)
 	}
-	return members, nil
+	return skills, nil
 }
 
 func (s projectService) CreateProject(ctx context.Context, createdBy *uuid.UUID, name string, slug string, description *string, status string) (*models.Project, error) {
@@ -149,17 +149,17 @@ func (s projectService) RemoveUserFromProject(ctx context.Context, userId uuid.U
 	return nil
 }
 
-func (s projectService) AddProjectSkill(ctx context.Context, projectId uuid.UUID, name string, description *string) (*model.ProjectSkill, error) {
-	s := &models.ProjectSkill{
+func (s projectService) AddProjectSkill(ctx context.Context, projectId uuid.UUID, name string, description *string) (*models.ProjectSkill, error) {
+	ps := &models.ProjectSkill{
 		ProjectID:   	projectId,
 		Name:      		name,
 		Description:    description,
 	}
-	err := s.projectStore.AddProjectSkill(ctx, s)
+	err := s.projectStore.AddProjectSkill(ctx, ps)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrProjectStoreFailed, err)
 	}
-	return s, nil
+	return ps, nil
 }
 
 func (s projectService) RemoveProjectSkill(ctx context.Context, skillId uuid.UUID) error {

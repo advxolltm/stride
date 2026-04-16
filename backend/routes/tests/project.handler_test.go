@@ -5,29 +5,54 @@ import (
 	"backend/models"
 	"backend/routes"
 	projectService "backend/services/project"
+	userStore "backend/db/user"
+	userService "backend/services/user"
+	authService "backend/services/auth"
 	"backend/testutils"
 	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"fmt"
+	"os"
+
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 )
+
+var db *gorm.DB
 
 func TestMain(m *testing.M) {
 	testutils.SetupDB()
+	testutils.DB.Begin()
+	testutils.SeedDB()
+	exitCode := m.Run()
+	testutils.DB.Rollback()
 	defer testutils.TeardownDB()
-	m.Run()
+	os.Exit(exitCode)
 }
 
 func TestProjectRouteHandler_Integration(t *testing.T) {
+
+	runTest := func(t *testing.T, name string, f func(*testing.T, *gorm.DB)) {
+		t.Run(name, func(t *testing.T) {
+			db.Transaction(func(tx *gorm.DB) error {
+				f(t, tx)
+				return fmt.Errorf("rollback %s", t.Name())
+			})
+		})
+	}
+
 	//TODO: WRITE MORE TESTS
 	store := project.NewProjectStore(testutils.DB)
 	service := projectService.NewProjectService(store)
+	auth := authService.NewAuthenticationService(userService.NewUserService(userStore.NewUserStore(testutils.DB)))
+	handler := routes.NewProjectRouteHandler(service, auth)
 	
 	desc := "Handler Integration Test"
 	testProj, err := service.CreateProject(context.Background(), nil, "Handler Project", "handler-slug", &desc, "active")
@@ -35,11 +60,10 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 
 	e := echo.New()
 	api := e.Group("/api")
-	
-	handler := routes.NewProjectRouteHandler(service)
+
 	handler.AddRoutes(api)
 
-	t.Run("Returns 200 on successful retrieval", func(t *testing.T) {
+	runTest(t, "Returns 200 on successful retrieval", func(t *testing.T, db *gorm.DB) {
 		req := httptest.NewRequest(http.MethodGet, "/api/projects/"+testProj.ID.String(), nil)
 		rec := httptest.NewRecorder()
 		e.ServeHTTP(rec, req) 
@@ -54,7 +78,7 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 		assert.Equal(t, "Handler Project", respProject.Name)
 	})
 
-	t.Run("Returns 400 on invalid UUID", func(t *testing.T) {
+	runTest(t, "Returns 400 on invalid UUID", func(t *testing.T, db *gorm.DB) {
 		req := httptest.NewRequest(http.MethodGet, "/api/projects/invalid-uuid-string", nil)
 		rec := httptest.NewRecorder()
 		e.ServeHTTP(rec, req)
@@ -62,7 +86,7 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 	})
 
-	t.Run("Returns 404 on project not found", func(t *testing.T) {
+	runTest(t, "Returns 404 on project not found", func(t *testing.T, db *gorm.DB) {
 		req := httptest.NewRequest(http.MethodGet, "/api/projects/"+uuid.New().String(), nil)
 		rec := httptest.NewRecorder()
 		e.ServeHTTP(rec, req)
