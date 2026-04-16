@@ -30,7 +30,7 @@ var db *gorm.DB
 func TestMain(m *testing.M) {
 	testutils.SetupDB()
 	testutils.DB.Begin()
-	testutils.SeedDB()
+	//testutils.SeedDB()
 	exitCode := m.Run()
 	testutils.DB.Rollback()
 	defer testutils.TeardownDB()
@@ -41,7 +41,7 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 
 	runTest := func(t *testing.T, name string, f func(*testing.T, *gorm.DB)) {
 		t.Run(name, func(t *testing.T) {
-			db.Transaction(func(tx *gorm.DB) error {
+			testutils.DB.Transaction(func(tx *gorm.DB) error {
 				f(t, tx)
 				return fmt.Errorf("rollback %s", t.Name())
 			})
@@ -51,6 +51,8 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 	//TODO: WRITE MORE TESTS
 	store := project.NewProjectStore(testutils.DB)
 	service := projectService.NewProjectService(store)
+
+	os.Setenv("SESSION_SECRET", "secretsecret")
 	auth := authService.NewAuthenticationService(userService.NewUserService(userStore.NewUserStore(testutils.DB)))
 	handler := routes.NewProjectRouteHandler(service, auth)
 	
@@ -79,6 +81,7 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 	})
 
 	runTest(t, "Returns 400 on invalid UUID", func(t *testing.T, db *gorm.DB) {
+
 		req := httptest.NewRequest(http.MethodGet, "/api/projects/invalid-uuid-string", nil)
 		rec := httptest.NewRecorder()
 		e.ServeHTTP(rec, req)
