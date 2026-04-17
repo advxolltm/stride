@@ -7,6 +7,7 @@ import (
 	"errors"
 	"strings"
 	"time"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -87,15 +88,30 @@ func (s *projectStore) GetProjectSkills(ctx context.Context, id uuid.UUID) ([]mo
 }
 
 func (s *projectStore) CreateProject(ctx context.Context, project *models.Project) error {
-	result := s.db.WithContext(ctx).Create(project)
-	if result.Error != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(result.Error, &pgErr) && pgErr.Code == db.UniqueConstraintViolationCode {
-			if strings.Contains(pgErr.ConstraintName, "slug") {
-				return ErrDuplicateSlug
-			}
-		}
-		return result.Error
+	result := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(project).Error; err != nil {
+            if strings.Contains(err.Error(), "duplicate key") {
+                return ErrDuplicateSlug
+            }
+            return err
+        }
+
+		if project.CreatedBy != nil {
+            member := &models.ProjectMember{
+                ProjectID: project.ID,
+                UserID:    *project.CreatedBy,
+                Role:      "owner",
+            }
+            if err := tx.Create(member).Error; err != nil {
+                return err
+            }
+        }
+
+        return nil
+	})
+
+	if result != nil {
+		return fmt.Errorf("failed to create project and link owner: %w", result)
 	}
 	return nil
 }

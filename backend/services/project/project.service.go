@@ -88,6 +88,7 @@ func (s projectService) CreateProject(ctx context.Context, createdBy *uuid.UUID,
 		Description: description,
 		Status:      status,
 	}
+
 	if status != "active" && status != "archived" {
 		return nil, ErrStatusDoesNotExist
 	}
