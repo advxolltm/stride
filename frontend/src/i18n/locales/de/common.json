@@ -12,6 +12,13 @@
     "projects": "Projekte",
     "expandSidebar": "Seitenleiste erweitern"
   },
+  "logout": {
+    "label": "Abmelden",
+    "title": "Abmelden?",
+    "message": "Sie muessen sich erneut anmelden, um fortzufahren.",
+    "confirm": "Abmelden",
+    "pending": "Abmeldung laeuft..."
+  },
   "primary": "Primaer",
   "danger": "Gefahr",
   "tailwindMessage": "Tailwind + Theme funktioniert"

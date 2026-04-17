@@ -12,6 +12,13 @@
     "projects": "Projects",
     "expandSidebar": "Expand sidebar"
   },
+  "logout": {
+    "label": "Log Out",
+    "title": "Log out?",
+    "message": "You will need to sign in again to continue.",
+    "confirm": "Log Out",
+    "pending": "Logging out..."
+  },
   "primary": "Primary",
   "danger": "Danger",
   "tailwindMessage": "Tailwind + theme working"
