@@ -28,11 +28,11 @@ import (
 var db *gorm.DB
 
 func TestMain(m *testing.M) {
-	testutils.SetupDB()
-	testutils.DB.Begin()
+	db = testutils.SetupDB()
+	db.Begin()
 	//testutils.SeedDB()
 	exitCode := m.Run()
-	testutils.DB.Rollback()
+	db.Rollback()
 	defer testutils.TeardownDB()
 	os.Exit(exitCode)
 }
@@ -52,7 +52,7 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 
 	runTest := func(t *testing.T, name string, f func(*testing.T, *gorm.DB)) {
 		t.Run(name, func(t *testing.T) {
-			testutils.DB.Transaction(func(tx *gorm.DB) error {
+			db.Transaction(func(tx *gorm.DB) error {
 				f(t, tx)
 				return fmt.Errorf("rollback %s", t.Name())
 			})
@@ -62,10 +62,10 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 	//TODO: WRITE MORE TESTS
 
 	os.Setenv("SESSION_SECRET", "secretsecret")
-	store := project.NewProjectStore(testutils.DB)
+	store := project.NewProjectStore(db)
 	service := projectService.NewProjectService(store)
 
-	uStore := userStore.NewUserStore(testutils.DB)
+	uStore := userStore.NewUserStore(db)
     uServe := userService.NewUserService(uStore)
     aServ := authService.NewAuthenticationService(uServe)
 
