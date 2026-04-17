@@ -88,6 +88,9 @@ func (s projectService) CreateProject(ctx context.Context, createdBy *uuid.UUID,
 		Description: description,
 		Status:      status,
 	}
+	if status != "active" && status != "archived" {
+		return nil, ErrStatusDoesNotExist
+	}
 	err := s.projectStore.CreateProject(ctx, p)
 	if err != nil {
 		if errors.Is(err, project.ErrDuplicateSlug) {
@@ -106,6 +109,10 @@ func (s projectService) UpdateProject(ctx context.Context, id uuid.UUID, input U
 		Description: input.Description,
 		Status:      input.Status,
 		UpdatedAt:	 time.Now(),
+	}
+
+	if *input.Status != "active" && *input.Status != "archived" {
+		return nil, ErrStatusDoesNotExist
 	}
 
 	p, err := s.projectStore.UpdateProject(ctx, id, fields)
