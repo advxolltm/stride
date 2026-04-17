@@ -37,6 +37,17 @@ func TestMain(m *testing.M) {
 	os.Exit(exitCode)
 }
 
+func getCookie(t *testing.T, authServ authService.AuthService, email string, password string) *http.Cookie {
+	jwt, _, err := authServ.AuthenticateUser(context.Background(), email, password)
+
+	require.NoError(t, err)
+
+	return &http.Cookie {
+		Name:	"sessionToken",
+		Value:	string(jwt),
+	}
+}
+
 func TestProjectRouteHandler_Integration(t *testing.T) {
 
 	runTest := func(t *testing.T, name string, f func(*testing.T, *gorm.DB)) {
@@ -49,12 +60,25 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 	}
 
 	//TODO: WRITE MORE TESTS
+
+	os.Setenv("SESSION_SECRET", "secretsecret")
 	store := project.NewProjectStore(testutils.DB)
 	service := projectService.NewProjectService(store)
 
-	os.Setenv("SESSION_SECRET", "secretsecret")
-	auth := authService.NewAuthenticationService(userService.NewUserService(userStore.NewUserStore(testutils.DB)))
-	handler := routes.NewProjectRouteHandler(service, auth)
+	uStore := userStore.NewUserStore(testutils.DB)
+    uServe := userService.NewUserService(uStore)
+    aServ := authService.NewAuthenticationService(uServe)
+
+	ctx := context.Background()
+    email := "global@test.com"
+    pass := "Password123!"
+    
+    _, err := uServe.CreateUser(ctx, "testuser", email, pass)
+    require.NoError(t, err)
+
+    globalCookie := getCookie(t, aServ, email, pass)
+
+	handler := routes.NewProjectRouteHandler(service, aServ)
 	
 	desc := "Handler Integration Test"
 	testProj, err := service.CreateProject(context.Background(), nil, "Handler Project", "handler-slug", &desc, "active")
@@ -67,6 +91,7 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 
 	runTest(t, "Returns 200 on successful retrieval", func(t *testing.T, db *gorm.DB) {
 		req := httptest.NewRequest(http.MethodGet, "/api/projects/"+testProj.ID.String(), nil)
+		req.AddCookie(globalCookie)
 		rec := httptest.NewRecorder()
 		e.ServeHTTP(rec, req) 
 		
@@ -81,8 +106,8 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 	})
 
 	runTest(t, "Returns 400 on invalid UUID", func(t *testing.T, db *gorm.DB) {
-
 		req := httptest.NewRequest(http.MethodGet, "/api/projects/invalid-uuid-string", nil)
+		req.AddCookie(globalCookie)
 		rec := httptest.NewRecorder()
 		e.ServeHTTP(rec, req)
 
@@ -91,6 +116,7 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 
 	runTest(t, "Returns 404 on project not found", func(t *testing.T, db *gorm.DB) {
 		req := httptest.NewRequest(http.MethodGet, "/api/projects/"+uuid.New().String(), nil)
+		req.AddCookie(globalCookie)
 		rec := httptest.NewRecorder()
 		e.ServeHTTP(rec, req)
 

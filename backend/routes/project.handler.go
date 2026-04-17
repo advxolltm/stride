@@ -24,6 +24,7 @@ func NewProjectRouteHandler(ps projectService.ProjectService, as authService.Aut
 func (h projectRouteHandler) AddRoutes(api *echo.Group) {
 	// TODO: add auth middleware
 	g := api.Group("/projects")
+	g.Use(h.authService.AuthenticatedMiddleware())
 	g.GET("", h.projectsGETHandle)
 	g.GET("/:id", h.projectGETHandle)
 	g.GET("/:id/members", h.membersGETHandle)
