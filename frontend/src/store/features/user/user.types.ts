@@ -1,7 +1,3 @@
-export type ApiErrorResponse = {
-    error: string
-}
-
 export type ApiUser = {
     ID: string
     Username: string

@@ -1,5 +1,5 @@
 import type { User } from '../../../shared/types';
-import { baseApi } from '../../api/baseApi';
+import { baseApi } from '../../api/base.api';
 import type {
     ApiUser,
     CreateUserRequest,
