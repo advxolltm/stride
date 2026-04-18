@@ -80,6 +80,7 @@ test-backend:
     DB_HOST: db
     DB_PORT: "5432"
   before_script:
+    - apk add --no-cache postgresql-client
     - until pg_isready -h db -p 5432; do sleep 1; done
     - psql -h db -p 5432 -d postgres -c "CREATE USER stride WITH PASSWORD 'stride';"
     - psql -h db -p 5432 -d postgres -c "CREATE DATABASE stride OWNER stride;"
