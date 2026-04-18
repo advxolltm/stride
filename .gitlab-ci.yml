@@ -80,7 +80,9 @@ test-backend:
     - env
     - cat /etc/hosts
     - apk add --no-cache postgresql-client
+    - apk add --no-cache net-tools
     - until getent hosts postgres; do sleep 1; done
+    - netstat -tulpn
     - until pg_isready -h localhost -p 5432 -U stride -d stride; do sleep 10; done
     - cd backend
   script:
