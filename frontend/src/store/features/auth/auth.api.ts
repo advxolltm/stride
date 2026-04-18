@@ -1,4 +1,4 @@
-import { baseApi } from '../../api/baseApi'
+import { baseApi } from '../../api/base.api'
 import type { LoginRequest } from './auth.types'
 
 export const authApi = baseApi.injectEndpoints({
