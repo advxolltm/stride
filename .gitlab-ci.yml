@@ -77,8 +77,8 @@ test-backend:
     DB_HOST: localhost
     DB_PORT: "5432"
   before_script:
-    - w
     - whoami
+    - id
     - apk add --no-cache postgresql16 postgresql16-contrib
     - export PGDATA="/tmp/pgdata"
     - mkdir -p "$PGDATA"
