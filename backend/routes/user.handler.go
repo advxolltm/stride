@@ -92,6 +92,11 @@ func (h userRouteHandler) userGETHandle(c *echo.Context) error {
 }
 
 // POST /users
+//	@Summary	Create user
+//	@Tags		users
+//	@Success	200
+//	@Param		data	body	createUserRequest	true	"Create user data"
+//	@Router		/users [post]
 func (h userRouteHandler) userPOSTHandle(c *echo.Context) error {
 	var req createUserRequest
 	if err := c.Bind(&req); err != nil {
