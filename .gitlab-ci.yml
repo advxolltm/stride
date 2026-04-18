@@ -67,8 +67,6 @@ build-frontend:
       - frontend/node_modules/
     policy: pull-push
 
-build-db:
-
 test-backend:
   stage: test
   image: golang:1.26.1-alpine
