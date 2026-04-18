@@ -82,8 +82,6 @@ test-backend:
     - tar -C /usr/local -xzf go1.26.2.linux-amd64.tar.gz
     - export PATH="/usr/local/go/bin:$PATH"
     - go version
-    - apk update
-    - apk upgrade
     - apk add git bash
     - cd backend
   script:
