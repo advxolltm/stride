@@ -12,11 +12,14 @@ import (
 	// NOTE: if you want to give multiple "layers" (route, service, db) the same package-name to group them together, you can provide a custom name on import to distinguish them like here
 	mainDB "backend/db"
 	exampleDB "backend/db/example"
+	projectDB "backend/db/project"
 	userDB "backend/db/user"
 	"backend/routes"
 	authService "backend/services/auth"
 	exampleService "backend/services/example"
+	projectService "backend/services/project"
 	userService "backend/services/user"
+	"backend/testutils"
 
 	_ "backend/routes"
 
@@ -83,17 +86,21 @@ func main() {
 	mainDB, migration, err := mainDB.InitDB(dsn)
 	defer migration.Down()
 
+	testutils.SeedDB(mainDB)
+
 	if err != nil {
 		println("failed to initialize database", "error", err)
 	}
 	println("Database initialized successfully:", mainDB != nil)
 
 	userStore := userDB.NewUserStore(mainDB)
+	projectStore := projectDB.NewProjectStore(mainDB)
 
 	// Services
 	exampleService := exampleService.NewExampleService(exampleStore)
 	userService := userService.NewUserService(userStore)
-	authService := authService.NewAuthenticationService(userService)
+	projectService := projectService.NewProjectService(projectStore)
+	authService := authService.NewAuthenticationService(userService, projectService)
 
 	// Routes
 	// Register route handler by adding them to the array
@@ -104,6 +111,7 @@ func main() {
 		routes.NewHealthRouteHandler(),
 		routes.NewAuthRouteHandler(authService),
 		routes.NewExampleRouteHandler(exampleService, authService),
+		routes.NewProjectRouteHandler(projectService, authService),
 		routes.NewUserRouteHandler(userService),
 	}
 

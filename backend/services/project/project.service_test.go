@@ -5,22 +5,30 @@ import (
 	projectService "backend/services/project"
 	"backend/testutils"
 	"context"
+	"os"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 )
 
+var db *gorm.DB
+
 func TestMain(m *testing.M) {
-	testutils.SetupDB()
-	defer testutils.TeardownDB()
-	m.Run()
+	db = testutils.SetupDB()
+	db = db.Begin()
+	testutils.SeedDB(db)
+	exitCode := m.Run()
+	db.Rollback()
+	testutils.TeardownDB()
+	os.Exit(exitCode)
 }
 
 func TestProjectService_Integration(t *testing.T) {
 	//TODO: WRITE MORE TESTS
-	store := project.NewProjectStore(testutils.DB)
+	store := project.NewProjectStore(db)
 	service := projectService.NewProjectService(store)
 	ctx := context.Background()
 

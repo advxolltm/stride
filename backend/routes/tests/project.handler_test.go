@@ -67,7 +67,7 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 
 	uStore := userStore.NewUserStore(db)
     uServe := userService.NewUserService(uStore)
-    aServ := authService.NewAuthenticationService(uServe)
+    aServ := authService.NewAuthenticationService(uServe, service)
 
 	ctx := context.Background()
     email := "global@test.com"
