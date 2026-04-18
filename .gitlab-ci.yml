@@ -78,11 +78,10 @@ test-backend:
     DB_PORT: "5432"
   before_script:
     - apk add --no-cache postgresql16 postgresql16-contrib
-    - su - postgres
-    - export PGDATA="$HOME/pgdata"
+    - export PGDATA="/tmp/pgdata"
     - mkdir -p "$PGDATA"
-    - initdb -D "$PGDATA" --auth=trust --no-locale --encoding=UTF8
-    - pg_ctl start -D "$PGDATA" -o "-k /tmp -p 5432 -h localhost" -l "$HOME/pg.log"
+    - runuser -u postgres -- initdb -D "$PGDATA" --auth=trust --no-locale --encoding=UTF8
+    - pg_ctl start -D "$PGDATA" -o "-k /tmp -p 5432 -h localhost" -l "/tmp/pg.log"
     - psql -h localhost -p 5432 -d postgres -c "CREATE USER stride WITH PASSWORD 'stride';"
     - psql -h localhost -p 5432 -d postgres -c "CREATE DATABASE stride OWNER stride;"
     - exit
