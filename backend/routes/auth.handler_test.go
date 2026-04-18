@@ -14,9 +14,11 @@ import (
 	"github.com/labstack/echo/v5"
 	"gorm.io/gorm"
 
+	projectStore "backend/db/project"
 	userStore "backend/db/user"
 	"backend/services/auth"
 	authService "backend/services/auth"
+	projectService "backend/services/project"
 	userService "backend/services/user"
 )
 
@@ -24,8 +26,10 @@ var db *gorm.DB
 
 func newTestAuthHandler(db *gorm.DB) authRouteHandler {
 	userStore := userStore.NewUserStore(db)
+	projectStore := projectStore.NewProjectStore(db)
 	userService := userService.NewUserService(userStore)	
-	authService := authService.NewAuthenticationService(userService)
+	projectService := projectService.NewProjectService(projectStore)
+	authService := authService.NewAuthenticationService(userService, projectService)
 	return authRouteHandler{
 		authService,
 	}
