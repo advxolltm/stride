@@ -75,15 +75,15 @@ test-backend:
       artifacts: true
   services:
     - name: postgres:16
-      alias: db
+      alias: postgres
   variables:
-    DB_HOST: db
+    DB_HOST: postgres
     DB_PORT: "5432"
   before_script:
     - apk add --no-cache postgresql-client
-    - until pg_isready -h db -p 5432; do sleep 1; done
-    - psql -h db -p 5432 -d postgres -c "CREATE USER stride WITH PASSWORD 'stride';"
-    - psql -h db -p 5432 -d postgres -c "CREATE DATABASE stride OWNER stride;"
+    - until pg_isready -h postgres -p 5432; do sleep 1; done
+    - psql -h postgres -p 5432 -d postgres -c "CREATE USER stride WITH PASSWORD 'stride';"
+    - psql -h postgres -p 5432 -d postgres -c "CREATE DATABASE stride OWNER stride;"
     - cd backend
     # - apk add --no-cache postgresql16 postgresql16-contrib
     # - export PGDATA="/tmp/pgdata"
