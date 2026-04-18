@@ -9,11 +9,13 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/labstack/echo/v5"
 	"gorm.io/gorm"
 
 	userStore "backend/db/user"
+	"backend/services/auth"
 	authService "backend/services/auth"
 	userService "backend/services/user"
 )
@@ -70,7 +72,7 @@ func TestAuthHandler(t *testing.T) {
 					testutils.TAssertNoError(t, err)
 
 					if rec.Code != http.StatusBadRequest {
-						t.Errorf("rec.Code: expected %d, got: %d", rec.Code, http.StatusBadRequest)
+						t.Errorf("rec.Code: expected %d, got: %d", http.StatusBadRequest, rec.Code)
 					}
 
 				}
@@ -88,7 +90,7 @@ func TestAuthHandler(t *testing.T) {
 					testutils.TAssertNoError(t, err)
 
 					if rec.Code != http.StatusBadRequest {
-						t.Errorf("rec.Code: expected %d, got: %d", rec.Code, http.StatusBadRequest)
+						t.Errorf("rec.Code: expected %d, got: %d", http.StatusBadRequest, rec.Code)
 					}
 				}
 
@@ -121,7 +123,7 @@ func TestAuthHandler(t *testing.T) {
 					testutils.TAssertNoError(t, err)
 
 					if rec.Code != http.StatusUnauthorized {
-						t.Errorf("rec.Code: expected %d, got: %d", rec.Code, http.StatusBadRequest)
+						t.Errorf("rec.Code: expected %d, got: %d", http.StatusBadRequest, rec.Code)
 					}
 				}
 			})
@@ -143,17 +145,45 @@ func TestAuthHandler(t *testing.T) {
 				testutils.TAssertNoError(t, err)
 
 				if rec.Code != http.StatusOK {
-					t.Errorf("rec.Code: expected %d, got: %d", rec.Code, http.StatusBadRequest)
+					t.Errorf("rec.Code: expected %d, got: %d", http.StatusBadRequest, rec.Code)
 				}
 
 				if len(rec.Result().Cookies()) != 1 {
 					t.Errorf("expected cookie to be set")
 				} else {
 					cookie := rec.Result().Cookies()[0]
-					if cookie.Name != "sessionToken" {
+					if cookie.Name != authService.SessionTokenName {
 						t.Errorf("expected sessionToken cookie to be set")
 					}
 				} 
+			})
+
+			runTest(t, db, "logout should return a cookie with expiry set in the past", func(t *testing.T, db *gorm.DB, sut authRouteHandler) {
+				e := echo.New()
+				req := httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
+				rec := httptest.NewRecorder()
+				c := e.NewContext(req, rec)
+
+				err := sut.logoutPOST(c)
+				testutils.TAssertNoError(t, err)
+
+				if rec.Code != http.StatusOK {
+					t.Errorf("rec.Code: expected %d, got: %d", http.StatusBadRequest, rec.Code)
+				}
+
+				if len(rec.Result().Cookies()) != 1 {
+					t.Errorf("expected cookie to be set")
+				} 
+
+				cookie := rec.Result().Cookies()[0]
+				if cookie.Name != auth.SessionTokenName {
+					t.Errorf("expected sessionToken cookie to be set")
+				}
+
+				now := time.Now()
+				if cookie.Expires.After(now) || cookie.Expires.Equal(now) {
+					t.Errorf("cookie expiry should be set in the past, got: %s", cookie.Expires)
+				}
 			})
 		})
 	})

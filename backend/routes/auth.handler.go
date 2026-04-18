@@ -4,6 +4,7 @@ import (
 	"backend/services/auth"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/labstack/echo/v5"
 )
@@ -19,6 +20,7 @@ func NewAuthRouteHandler(authService auth.AuthService) *authRouteHandler {
 func (h authRouteHandler) AddRoutes(api *echo.Group) {
 	g := api.Group("/auth")
 	g.POST("/login", h.loginPOST)
+	g.POST("/logout", h.logoutPOST)
 }
 
 func (h authRouteHandler) mapServiceError(err error) (int, string) {
@@ -55,12 +57,26 @@ func (h authRouteHandler) loginPOST(c *echo.Context) error {
 	}
 
 	cookie := http.Cookie{
-		Name:     "sessionToken",
+		Name:     auth.SessionTokenName,
 		Value:    string(jwtTokenString),
 		Expires:  jwtExpiry,
 		Secure:   true,
 		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteStrictMode,
+		Path: "/",
+	}
+	c.SetCookie(&cookie)
+	return c.NoContent(http.StatusOK)
+}
+
+func (h authRouteHandler) logoutPOST(c *echo.Context) error {
+	cookie := http.Cookie{
+		Name: auth.SessionTokenName,
+		Value: "",
+		Expires: time.Unix(0, 0), // set past date to immediately remove cookie
+		Secure: true,
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
 		Path: "/",
 	}
 	c.SetCookie(&cookie)
