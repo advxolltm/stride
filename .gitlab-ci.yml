@@ -81,7 +81,6 @@ test-backend:
     - cat /etc/hosts
     - apk add --no-cache postgresql-client
     - until getent hosts postgres; do sleep 1; done
-    - until nc -w 1 -z localhost 5432; do sleep 2; done
     - until pg_isready -h localhost -p 5432 -U stride -d stride; do sleep 10; done
     - cd backend
   script:
