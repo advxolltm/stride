@@ -78,7 +78,7 @@ test-backend:
       alias: postgres
   before_script:
     - apk add --no-cache postgresql-client
-    - until pg_isready -h postgres -p 5432 -U stride -d stride; do sleep 1; done
+    - until pg_isready -h postgres -p 5432 -U stride -d stride; do sleep 10; done
     - cd backend
   script:
     - go mod download
