@@ -77,6 +77,8 @@ test-backend:
     - name: postgres:16
       alias: postgres
   before_script:
+    - env
+    - cat /etc/hosts
     - apk add --no-cache postgresql-client
     - until getent hosts postgres; do sleep 1; done
     - until nc -w 1 -z postgres 5432; do sleep 2; done
