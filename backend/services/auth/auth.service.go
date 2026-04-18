@@ -15,7 +15,6 @@ import (
 )
 
 
-// TODO: Tests auth.service.go
 type (
 	jwtTokenString string
 
