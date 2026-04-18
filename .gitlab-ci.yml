@@ -10,6 +10,7 @@ variables:
   POSTGRES_DB: stride
   POSTGRES_USER: stride
   POSTGRES_PASSWORD: stride
+  POSTGRES_HOST_AUTH_METHOD: trust
   # Backend env vars matching SetupDBFromEnv()
   DB_HOST: postgres
   DB_PORT: "5432"
@@ -70,24 +71,23 @@ build-frontend:
 test-backend:
   stage: test
   image: postgres:16-alpine
+  services:
+    - postgres:16-alpine
   needs:
     - job: build-backend
       artifacts: true
-  variables:
-    DB_HOST: localhost
-    DB_PORT: "5432"
   before_script:
-    # - export PGDATA="/tmp/pgdata"
-    # - mkdir -p "$PGDATA"
-    # - initdb -D /tmp/pgdata --auth=trust --no-locale --encoding=UTF8
-    # - pg_ctl start -D "$PGDATA" -o "-k /tmp -p 5432 -h localhost" -l "/tmp/pg.log"
-    # - psql -h localhost -p 5432 -d postgres -c "CREATE USER stride WITH PASSWORD 'stride';"
-    # - psql -h localhost -p 5432 -d postgres -c "CREATE DATABASE stride OWNER stride;"
-    # - cd backend
-    - apk add --no-cache go git bash
-    - until pg_isready -U stride -d stride; do sleep 1; done
+    - whoami
+    - wget https://go.dev/dl/go1.26.2.linux-amd64.tar.gz
+    - tar -C /usr/local -xzf go1.26.2.linux-amd64.tar.gz
+    - export PATH="/usr/local/go/bin:$PATH"
+    - go version
+    - apk update
+    - apk upgrade
+    - apk add git bash
     - cd backend
   script:
+    - psql -h "postgres" -U stride -d stride -c "SELECT 'OK' AS status;"
     - go mod download
     - go test -p 1 ./... -v -count=1
   cache:
