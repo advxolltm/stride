@@ -17,6 +17,13 @@ import (
 	authService "backend/services/auth"
 	exampleService "backend/services/example"
 	userService "backend/services/user"
+
+	_ "backend/routes"
+
+	"backend/docs"
+	_ "backend/docs"
+
+	"github.com/swaggo/echo-swagger/v2"
 )
 
 func getAPIBasePath() string {
@@ -36,10 +43,28 @@ func getAPIBasePath() string {
 	return apiBasePath
 }
 
+//	@title		STRIDE backend API
+//	@version	1.0
+
+//	@license.name	MIT
+//	@license.url	https://mit-license.org/
+
+//	@host	localhost:8000
+
+//	@securityDefinitions.bearerauth	Auth
+//	@description					Authentication via Bearer JWT. Since authentication works using cookies, simply use the /auth/login route to authenticate for subsequent requests!
+//	@bearerformat					JWT
+
+//	@securityDefinitions.apikey	Auth
+//	@in							cookie
+//	@name						sessionToken
+//	@description				DO NOT USE THIS, AUTHENTICATION HAPPENS AUTOMATICALLY (this is just needed to correctly generate the swagger ui config!)
 func main() {
 	e := echo.New()
 	e.Use(middleware.RequestLogger())
+
 	apiGroup := e.Group(getAPIBasePath())
+	docs.SwaggerInfo.BasePath = getAPIBasePath()
 
 	// NOTE: No automatic magic dependency injection
 	//		 We define everything we need here once and then just pass it to the handlers as necessary Stores
@@ -85,6 +110,10 @@ func main() {
 	for _, handler := range handlers {
 		handler.AddRoutes(apiGroup)
 	}
+
+	e.GET("/swagger/*", echoSwagger.EchoWrapHandlerV3(
+		echoSwagger.PersistAuthorization(true),
+	))
 
 	port := os.Getenv("PORT")
 	if port == "" {

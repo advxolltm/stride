@@ -14,8 +14,8 @@ import (
 	"github.com/labstack/echo/v5"
 )
 
+const SessionTokenName = "sessionToken"
 
-// TODO: Tests auth.service.go
 type (
 	jwtTokenString string
 
@@ -114,7 +114,7 @@ func echoJwtConfig(cfg authenticationConfig) echojwt.Config {
 			return new(jwtCustomClaims)
 		},
 		SigningKey: []byte(cfg.sessionSecret),
-		TokenLookup: "cookie:sessionToken",
+		TokenLookup: "cookie:" + SessionTokenName,
 	}
 	return config
 }
