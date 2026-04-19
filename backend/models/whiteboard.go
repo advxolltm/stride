@@ -4,16 +4,14 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/datatypes"
 )
 
 type Whiteboard struct {
-	ID          uuid.UUID      `gorm:"primaryKey;default:gen_random_uuid()"`
-	ProjectID   uuid.UUID
-	CanvasState datatypes.JSON 
-	CreatedAt   time.Time `gorm:"default:current_timestamp"`
-	UpdatedAt   time.Time `gorm:"default:current_timestamp"`
+	ID          uuid.UUID      `gorm:"primaryKey;default:gen_random_uuid()" json:"id"`
+	ProjectID   uuid.UUID      `json:"projectId"`
+	CreatedAt   time.Time      `gorm:"default:current_timestamp" json:"createdAt"`
+	UpdatedAt   time.Time      `gorm:"default:current_timestamp" json:"updatedAt"`
 
-	Project  Project             `gorm:"foreignKey:ProjectID"`
-	Elements []WhiteboardElement `gorm:"foreignKey:WhiteboardID"`
+	Project  Project             `gorm:"foreignKey:ProjectID" json:"-"`
+	Elements []WhiteboardElement `gorm:"foreignKey:WhiteboardID" json:"-"`
 }
