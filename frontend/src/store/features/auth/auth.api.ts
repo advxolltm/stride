@@ -1,3 +1,4 @@
+import type { User } from '../../../shared/types'
 import { baseApi } from '../../api/base.api'
 import type { LoginRequest } from './auth.types'
 
@@ -15,14 +16,27 @@ export const authApi = baseApi.injectEndpoints({
                     body,
                 }
             },
+            invalidatesTags: ['Auth'],
         }),
+
         logout: builder.mutation<void, void>({
             query: () => ({
                 url: '/auth/logout',
                 method: 'POST',
             }),
+            invalidatesTags: ['Auth'],
+        }),
+
+        getSession: builder.query<User, void>({
+            query: () => ({
+                url: '/auth/session',
+                method: 'GET',
+                credentials: 'include',
+            }),
+            providesTags: ['Auth'],
         }),
     }),
 })
 
-export const { useLoginMutation, useLogoutMutation } = authApi
+export const { useLoginMutation, useLogoutMutation, useGetSessionQuery } =
+    authApi

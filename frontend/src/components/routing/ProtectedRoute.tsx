@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
-import { useAppSelector } from '../../shared/hooks/redux'
+import { useGetSessionQuery } from '../../store/features/auth/auth.api'
+import { RouteLoadingFallback } from './RouteLoadingFallback'
 
 type ProtectedRouteProps = {
     children?: ReactNode
@@ -8,17 +9,19 @@ type ProtectedRouteProps = {
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     const location = useLocation()
-    const { isAuthenticated, isInitialized } = useAppSelector(
-        (state) => state.auth,
-    )
 
-    if (!isInitialized) {
-        return null
+    const { data: user, isLoading, isError } = useGetSessionQuery()
+
+    // Loading state
+    if (isLoading) {
+        return <RouteLoadingFallback />
     }
 
-    if (!isAuthenticated) {
+    // Not authenticated
+    if (!user || isError) {
         return <Navigate to="/login" replace state={{ from: location }} />
     }
 
+    // Authenticated
     return children ? <>{children}</> : <Outlet />
 }

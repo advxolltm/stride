@@ -10,14 +10,14 @@ import {
 } from '../components/account'
 import { useGetUserByIdQuery } from '../store/features/user/user.api'
 import { AccountPageSkeleton } from './AccountPageSkeleton'
-
-//TODO:This should come from redux slice of authSlice
-const USER_ID = '9b4a0d98-db51-4372-8d83-db13ccf048a8'
+import { useGetSessionQuery } from '../store/features/auth/auth.api'
 
 export function AccountPage() {
     const { t } = useTranslation('setting')
     const navigate = useNavigate()
-    const { isLoading } = useGetUserByIdQuery(USER_ID)
+    const { data: user } = useGetSessionQuery()
+    const userId = user!.id
+    const { isLoading } = useGetUserByIdQuery(userId)
 
     if (isLoading) return <AccountPageSkeleton />
 

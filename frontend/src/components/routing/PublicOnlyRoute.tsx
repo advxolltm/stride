@@ -1,21 +1,22 @@
 import type { ReactNode } from 'react'
 import { Navigate, Outlet } from 'react-router-dom'
-import { useAppSelector } from '../../shared/hooks/redux'
+import { useGetSessionQuery } from '../../store/features/auth/auth.api'
+import { RouteLoadingFallback } from './RouteLoadingFallback'
 
 type PublicOnlyRouteProps = {
     children?: ReactNode
 }
 
 export default function PublicOnlyRoute({ children }: PublicOnlyRouteProps) {
-    const { isAuthenticated, isInitialized } = useAppSelector(
-        (state) => state.auth,
-    )
+    const { data: user, isLoading, isError } = useGetSessionQuery()
 
-    if (!isInitialized) {
-        return null
+    // show spinner instead of white screen
+    if (isLoading) {
+        return <RouteLoadingFallback />
     }
 
-    if (isAuthenticated) {
+    // already logged in - redirect
+    if (user && !isError) {
         return <Navigate to="/" replace />
     }
 
