@@ -18,12 +18,12 @@ const authSlice = createSlice({
             state.isAuthenticated = false
             state.isInitialized = true
         },
-        resolveAuth(state, action: PayloadAction<boolean>) {
+        hydrateAuth(state, action: PayloadAction<boolean>) {
             state.isAuthenticated = action.payload
             state.isInitialized = true
         },
     },
 })
 
-export const { setAuthenticated, logout, resolveAuth } = authSlice.actions
+export const { setAuthenticated, logout, hydrateAuth } = authSlice.actions
 export default authSlice.reducer

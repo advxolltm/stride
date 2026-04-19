@@ -5,6 +5,7 @@ import { useAppDispatch } from '../hooks/redux'
 import { getApiErrorMessage } from '../utils/api/errors'
 import { useLogoutMutation } from '../../store/features/auth/auth.api'
 import { logout } from '../../store/features/auth/auth.slice'
+import { clearAuthState } from '../../store/features/auth/auth.storage'
 import { ConfirmDialog } from './ConfirmDialog'
 
 interface LogoutConfirmDialogProps {
@@ -28,6 +29,7 @@ export function LogoutConfirmDialog({
         try {
             await logoutUser().unwrap()
             dispatch(logout())
+            clearAuthState()
             onOpenChange(false)
             navigate('/login', { replace: true })
         } catch (error: unknown) {
