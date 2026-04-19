@@ -69,6 +69,11 @@ func (h authRouteHandler) loginPOST(c *echo.Context) error {
 	return c.NoContent(http.StatusOK)
 }
 
+//	@Summary	Logout
+//	@Tags		auth
+//	@Success	200
+//	@Header		200	{string}	Set-Cookie	"sessionToken=<empty>,expires=1970-01-01"
+//	@Router		/auth/logout [post]
 func (h authRouteHandler) logoutPOST(c *echo.Context) error {
 	cookie := http.Cookie{
 		Name: auth.SessionTokenName,

@@ -2,6 +2,7 @@ package auth
 
 import (
 	"backend/config"
+	"backend/services/project"
 	"backend/services/user"
 	"context"
 	"fmt"
@@ -27,6 +28,7 @@ type (
 
 	AuthService interface {
 		AuthenticateUser(ctx context.Context, email, password string) (jwtTokenString, time.Time, error)
+		IsProjectOwner(ctx context.Context, userId uuid.UUID, projectId uuid.UUID) (bool, error)
 		AuthenticatedMiddleware() echo.MiddlewareFunc
 
 		// should only be called in routes protected by [AuthenticatedMiddleware]
@@ -36,6 +38,7 @@ type (
 
 	authService struct {
 		userService               user.UserService
+		projectService            project.ProjectService
 		cfg                       authenticationConfig
 		isAuthenticatedMiddleware echo.MiddlewareFunc
 	}
@@ -46,10 +49,11 @@ type (
 	}
 )
 
-func NewAuthenticationService(userService user.UserService) AuthService {
+func NewAuthenticationService(userService user.UserService, projectService project.ProjectService) AuthService {
 	cfg := loadAuthenticationConfig()
 	return &authService{
 		userService:               userService,
+		projectService:            projectService,
 		cfg:                       cfg,
 		isAuthenticatedMiddleware: createIsAuthenticatedMiddleware(cfg),
 	}
@@ -92,6 +96,24 @@ func (s authService) AuthenticatedMiddleware() echo.MiddlewareFunc {
 }
 
 func (s authService) GetClaims(ctx *echo.Context) jwtCustomClaims {
+	return getClaims(ctx)
+}
+
+func (s authService) expiresAtTime() time.Time {
+	return time.Now().Add(time.Hour * time.Duration(s.cfg.sessionExpiryHours))
+}
+
+
+func (s authService) IsProjectOwner(ctx context.Context, userId uuid.UUID, projectId uuid.UUID) (bool, error) {
+	project, err := s.projectService.GetProject(ctx, projectId)
+	if err != nil {
+		return false, fmt.Errorf("Failed to get project to check project owner: %w", err)
+	}
+
+	return *project.CreatedBy == userId, nil
+}
+
+func getClaims(ctx *echo.Context) jwtCustomClaims {
 	token, err := echo.ContextGet[*jwt.Token](ctx, "user")
 	if err != nil {
 		log.Fatalf("invalid call to GetClaims: %s", err.Error())
@@ -104,16 +126,12 @@ func (s authService) GetClaims(ctx *echo.Context) jwtCustomClaims {
 	return *claims
 }
 
-func (s authService) expiresAtTime() time.Time {
-	return time.Now().Add(time.Hour * time.Duration(s.cfg.sessionExpiryHours))
-}
-
 func echoJwtConfig(cfg authenticationConfig) echojwt.Config {
 	config := echojwt.Config{
 		NewClaimsFunc: func(c *echo.Context) jwt.Claims {
 			return new(jwtCustomClaims)
 		},
-		SigningKey: []byte(cfg.sessionSecret),
+		SigningKey:  []byte(cfg.sessionSecret),
 		TokenLookup: "cookie:" + SessionTokenName,
 	}
 	return config
