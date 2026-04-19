@@ -33,19 +33,39 @@ func (h *whiteboardRouteHandler) registerRoutes(g *echo.Group) {
 	g.DELETE("/:id/whiteboard/elements/:elementId", h.elementDELETEHandle)
 }
 
+// whiteboardResponse represents a whiteboard in API responses.
+type whiteboardResponse struct {
+	ID        string `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
+	ProjectID string `json:"projectId" example:"550e8400-e29b-41d4-a716-446655440000"`
+	CreatedAt string `json:"createdAt" example:"2026-01-01T00:00:00Z"`
+	UpdatedAt string `json:"updatedAt" example:"2026-01-01T00:00:00Z"`
+}
+
+// whiteboardElementResponse represents a whiteboard element in API responses.
+type whiteboardElementResponse struct {
+	ID           string `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
+	WhiteboardID string `json:"whiteboardId" example:"550e8400-e29b-41d4-a716-446655440000"`
+	CreatedBy    string `json:"createdBy" example:"550e8400-e29b-41d4-a716-446655440000"`
+	ElementType  string `json:"elementType" example:"rectangle"`
+	Props        any    `json:"props"`
+	ZIndex       int    `json:"zIndex" example:"1"`
+	CreatedAt    string `json:"createdAt" example:"2026-01-01T00:00:00Z"`
+	UpdatedAt    string `json:"updatedAt" example:"2026-01-01T00:00:00Z"`
+}
+
 type updateWhiteboardRequest struct {
-	CanvasState *datatypes.JSON `json:"canvasState"`
+	CanvasState *datatypes.JSON `json:"canvasState" swaggertype:"object"`
 }
 
 type createElementRequest struct {
 	ElementType string         `json:"elementType"`
-	Props       datatypes.JSON `json:"props"`
+	Props       datatypes.JSON `json:"props" swaggertype:"object"`
 	ZIndex      int            `json:"zIndex"`
 }
 
 type updateElementRequest struct {
 	ElementType *string         `json:"elementType"`
-	Props       *datatypes.JSON `json:"props"`
+	Props       *datatypes.JSON `json:"props" swaggertype:"object"`
 	ZIndex      *int            `json:"zIndex"`
 }
 
@@ -61,6 +81,17 @@ func mapServiceErrorWB(err error) (int, string) {
 }
 
 // GET /projects/:id/whiteboard
+//
+//	@Summary	Get or create whiteboard for a project
+//	@Tags		whiteboard
+//	@Param		id	path		string	true	"Project ID"
+//	@Success	200	{object}	whiteboardResponse
+//	@Failure	400	{object}	routes.ErrorResponse	"invalid project id"
+//	@Failure	401	{object}	routes.ErrorResponse	"unauthorized"
+//	@Failure	404	{object}	routes.ErrorResponse	"whiteboard not found"
+//	@Failure	500	{object}	routes.ErrorResponse	"internal server error"
+//	@Security	Auth
+//	@Router		/projects/{id}/whiteboard [get]
 func (h *whiteboardRouteHandler) whiteboardGETHandle(c *echo.Context) error {
 	projectID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -77,6 +108,18 @@ func (h *whiteboardRouteHandler) whiteboardGETHandle(c *echo.Context) error {
 }
 
 // PATCH /projects/:id/whiteboard
+//
+//	@Summary	Update whiteboard canvas state
+//	@Tags		whiteboard
+//	@Param		id		path	string					true	"Project ID"
+//	@Param		body	body	updateWhiteboardRequest	true	"Whiteboard update data"
+//	@Success	200		{object}	whiteboardResponse
+//	@Failure	400		{object}	routes.ErrorResponse	"invalid request body"
+//	@Failure	401		{object}	routes.ErrorResponse	"unauthorized"
+//	@Failure	404		{object}	routes.ErrorResponse	"whiteboard not found"
+//	@Failure	500		{object}	routes.ErrorResponse	"internal server error"
+//	@Security	Auth
+//	@Router		/projects/{id}/whiteboard [patch]
 func (h *whiteboardRouteHandler) whiteboardPATCHHandle(c *echo.Context) error {
 	projectID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -100,6 +143,17 @@ func (h *whiteboardRouteHandler) whiteboardPATCHHandle(c *echo.Context) error {
 }
 
 // GET /projects/:id/whiteboard/elements
+//
+//	@Summary	List all elements of a whiteboard
+//	@Tags		whiteboard
+//	@Param		id	path		string	true	"Project ID"
+//	@Success	200	{array}		whiteboardElementResponse
+//	@Failure	400	{object}	routes.ErrorResponse	"invalid project id"
+//	@Failure	401	{object}	routes.ErrorResponse	"unauthorized"
+//	@Failure	404	{object}	routes.ErrorResponse	"whiteboard not found"
+//	@Failure	500	{object}	routes.ErrorResponse	"internal server error"
+//	@Security	Auth
+//	@Router		/projects/{id}/whiteboard/elements [get]
 func (h *whiteboardRouteHandler) elementsGETHandle(c *echo.Context) error {
 	projectID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -116,6 +170,18 @@ func (h *whiteboardRouteHandler) elementsGETHandle(c *echo.Context) error {
 }
 
 // GET /projects/:id/whiteboard/elements/:elementId
+//
+//	@Summary	Get a single whiteboard element
+//	@Tags		whiteboard
+//	@Param		id			path		string	true	"Project ID"
+//	@Param		elementId	path		string	true	"Element ID"
+//	@Success	200			{object}	whiteboardElementResponse
+//	@Failure	400			{object}	routes.ErrorResponse	"invalid project or element id"
+//	@Failure	401			{object}	routes.ErrorResponse	"unauthorized"
+//	@Failure	404			{object}	routes.ErrorResponse	"element not found"
+//	@Failure	500			{object}	routes.ErrorResponse	"internal server error"
+//	@Security	Auth
+//	@Router		/projects/{id}/whiteboard/elements/{elementId} [get]
 func (h *whiteboardRouteHandler) elementGETHandle(c *echo.Context) error {
 	projectID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -137,6 +203,18 @@ func (h *whiteboardRouteHandler) elementGETHandle(c *echo.Context) error {
 }
 
 // POST /projects/:id/whiteboard/elements
+//
+//	@Summary	Create a new whiteboard element
+//	@Tags		whiteboard
+//	@Param		id		path	string					true	"Project ID"
+//	@Param		body	body	createElementRequest	true	"Element data"
+//	@Success	201		{object}	whiteboardElementResponse
+//	@Failure	400		{object}	routes.ErrorResponse	"invalid request body"
+//	@Failure	401		{object}	routes.ErrorResponse	"unauthorized"
+//	@Failure	404		{object}	routes.ErrorResponse	"whiteboard not found"
+//	@Failure	500		{object}	routes.ErrorResponse	"internal server error"
+//	@Security	Auth
+//	@Router		/projects/{id}/whiteboard/elements [post]
 func (h *whiteboardRouteHandler) elementPOSTHandle(c *echo.Context) error {
 	projectID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -164,6 +242,19 @@ func (h *whiteboardRouteHandler) elementPOSTHandle(c *echo.Context) error {
 }
 
 // PATCH /projects/:id/whiteboard/elements/:elementId
+//
+//	@Summary	Update a whiteboard element
+//	@Tags		whiteboard
+//	@Param		id			path	string					true	"Project ID"
+//	@Param		elementId	path	string					true	"Element ID"
+//	@Param		body		body	updateElementRequest	true	"Element update data"
+//	@Success	200			{object}	whiteboardElementResponse
+//	@Failure	400			{object}	routes.ErrorResponse	"invalid request body or id"
+//	@Failure	401			{object}	routes.ErrorResponse	"unauthorized"
+//	@Failure	404			{object}	routes.ErrorResponse	"element not found"
+//	@Failure	500			{object}	routes.ErrorResponse	"internal server error"
+//	@Security	Auth
+//	@Router		/projects/{id}/whiteboard/elements/{elementId} [patch]
 func (h *whiteboardRouteHandler) elementPATCHHandle(c *echo.Context) error {
 	projectID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -194,6 +285,18 @@ func (h *whiteboardRouteHandler) elementPATCHHandle(c *echo.Context) error {
 }
 
 // DELETE /projects/:id/whiteboard/elements/:elementId
+//
+//	@Summary	Delete a whiteboard element
+//	@Tags		whiteboard
+//	@Param		id			path	string	true	"Project ID"
+//	@Param		elementId	path	string	true	"Element ID"
+//	@Success	204
+//	@Failure	400			{object}	routes.ErrorResponse	"invalid project or element id"
+//	@Failure	401			{object}	routes.ErrorResponse	"unauthorized"
+//	@Failure	404			{object}	routes.ErrorResponse	"element not found"
+//	@Failure	500			{object}	routes.ErrorResponse	"internal server error"
+//	@Security	Auth
+//	@Router		/projects/{id}/whiteboard/elements/{elementId} [delete]
 func (h *whiteboardRouteHandler) elementDELETEHandle(c *echo.Context) error {
 	projectID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
