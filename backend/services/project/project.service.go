@@ -51,6 +51,9 @@ func (s projectService) IsProjectOwner(ctx context.Context, userId uuid.UUID, pr
 	if err != nil {
 		return false, fmt.Errorf("failed to get project to check project owner: %w", err)
 	}
+	if p.CreatedBy == nil {
+		return false, nil
+	}
 	return *p.CreatedBy == userId, nil
 }
 
