@@ -2,6 +2,7 @@ package routes
 
 import (
 	"backend/services/auth"
+	"backend/services/user"
 	"errors"
 	"net/http"
 	"time"
@@ -11,16 +12,18 @@ import (
 
 type authRouteHandler struct {
 	authService auth.AuthService
+	userService user.UserService
 }
 
-func NewAuthRouteHandler(authService auth.AuthService) *authRouteHandler {
-	return &authRouteHandler{authService}
+func NewAuthRouteHandler(authService auth.AuthService, userService user.UserService) *authRouteHandler {
+	return &authRouteHandler{authService, userService}
 }
 
 func (h authRouteHandler) AddRoutes(api *echo.Group) {
 	g := api.Group("/auth")
 	g.POST("/login", h.loginPOST)
 	g.POST("/logout", h.logoutPOST)
+	g.GET("/session", h.sessionGET, h.authService.AuthenticatedMiddleware())
 }
 
 func (h authRouteHandler) mapServiceError(err error) (int, string) {
@@ -63,7 +66,7 @@ func (h authRouteHandler) loginPOST(c *echo.Context) error {
 		Secure:   true,
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
-		Path: "/",
+		Path:     "/",
 	}
 	c.SetCookie(&cookie)
 	return c.NoContent(http.StatusOK)
@@ -76,14 +79,33 @@ func (h authRouteHandler) loginPOST(c *echo.Context) error {
 //	@Router		/auth/logout [post]
 func (h authRouteHandler) logoutPOST(c *echo.Context) error {
 	cookie := http.Cookie{
-		Name: auth.SessionTokenName,
-		Value: "",
-		Expires: time.Unix(0, 0), // set past date to immediately remove cookie
-		Secure: true,
+		Name:     auth.SessionTokenName,
+		Value:    "",
+		Expires:  time.Unix(0, 0), // set past date to immediately remove cookie
+		Secure:   true,
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
-		Path: "/",
+		Path:     "/",
 	}
 	c.SetCookie(&cookie)
 	return c.NoContent(http.StatusOK)
+}
+
+//	@Summary	Get the currently logged-in user
+//	@Tags		auth
+//	@Success	200	{object}	User			"return the authenticated user"
+//	@Failure	401	{object}	ErrorResponse	"unauthorized"
+//	@Router		/auth/session [get]
+func (h authRouteHandler) sessionGET(c *echo.Context) error {
+	ctx := c.Request().Context()
+	userID := h.authService.GetClaims(c).UserID
+	user, err := h.userService.GetUser(ctx, userID)
+	if err != nil {
+		status, msg := h.mapServiceError(err)
+		return c.JSON(status, ErrorResponse{Error: msg})
+	}
+
+	mappedUser := mapUser(*user)
+
+	return c.JSON(http.StatusOK, mappedUser)
 }

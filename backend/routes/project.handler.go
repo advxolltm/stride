@@ -46,8 +46,8 @@ type createProjectRequest struct { // createdBy *uuid.UUID, name string, slug st
 }
 
 type createSkillRequest struct {
-	Name		string	`json:"name"`
-	Description	*string	`json:"description"`
+	Name        string  `json:"name"`
+	Description *string `json:"description"`
 }
 
 type addMemberReqest struct {
@@ -74,9 +74,10 @@ func mapServiceErrorProj(err error) (int, string) {
 }
 
 // GET /projects
-// @Summary Get all projects for the authenticated user
-// @Success 200 {object} any
-// @Router /projects [get]
+//
+//	@Summary	Get all projects for the authenticated user
+//	@Success	200	{object}	any
+//	@Router		/projects [get]
 func (h projectRouteHandler) projectsGETHandle(c *echo.Context) error {
 	// TODO: add user-check
 
@@ -121,8 +122,6 @@ func (h projectRouteHandler) membersGETHandle(c *echo.Context) error {
 		status, msg := mapServiceErrorProj(err)
 		return c.JSON(status, ErrorResponse{Error: msg})
 	}
-
-
 
 	return c.JSON(http.StatusOK, members)
 }
@@ -207,13 +206,13 @@ func (h projectRouteHandler) skillsPOSTHandle(c *echo.Context) error {
 	return c.JSON(http.StatusOK, s)
 }
 
-//	@Summary	Change general project data. Must be project owner.
-//	@Tags		projects
-//	@Param		id	path string true	"Project ID"
-//	@Success	200
-//	@Failure	400	{object}	ErrorResponse	"invalid project id"
-//	@Failure	401	{object}	ErrorResponse	"unauthorized"
-//	@Router		/projects/{id} [patch]
+// @Summary	Change general project data. Must be project owner.
+// @Tags		projects
+// @Param		id	path	string	true	"Project ID"
+// @Success	200
+// @Failure	400	{object}	ErrorResponse	"invalid project id"
+// @Failure	401	{object}	ErrorResponse	"unauthorized"
+// @Router		/projects/{id} [patch]
 func (h projectRouteHandler) projectPATCHHandle(c *echo.Context) error {
 	ctx := c.Request().Context()
 	id, err := uuid.Parse(c.Param("id"))

@@ -6,7 +6,6 @@ import type {
     UpdateUserRequest,
 } from './user.types';
 
-// ─── Mapper ──────────────────────────────────────────────────────────────────
 
 const mapApiUserToUser = ({
     ID,
@@ -26,7 +25,6 @@ const mapApiUserToUser = ({
     updatedAt: UpdatedAt,
 })
 
-// ─── Endpoints ───────────────────────────────────────────────────────────────
 
 export const userApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
