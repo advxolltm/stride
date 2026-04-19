@@ -59,10 +59,10 @@ func getAPIBasePath() string {
 //	@description					Authentication via Bearer JWT. Since authentication works using cookies, simply use the /auth/login route to authenticate for subsequent requests!
 //	@bearerformat					JWT
 
-//	@securityDefinitions.apikey	Auth
-//	@in							cookie
-//	@name						sessionToken
-//	@description				DO NOT USE THIS, AUTHENTICATION HAPPENS AUTOMATICALLY (this is just needed to correctly generate the swagger ui config!)
+// @securityDefinitions.apikey	Auth
+// @in							cookie
+// @name						sessionToken
+// @description				DO NOT USE THIS, AUTHENTICATION HAPPENS AUTOMATICALLY (this is just needed to correctly generate the swagger ui config!)
 func main() {
 	e := echo.New()
 	e.Use(middleware.RequestLogger())
@@ -112,7 +112,7 @@ func main() {
 	//		 In order to protect routes registered by a handler, pass the [authService] to the handler (see exampleRouteHandler).
 	handlers := []routes.RouteHandler{
 		routes.NewHealthRouteHandler(),
-		routes.NewAuthRouteHandler(authService),
+		routes.NewAuthRouteHandler(authService, userService),
 		routes.NewExampleRouteHandler(exampleService, authService),
 		projects.NewProjectsGroup(projectService, whiteboardService, authService),
 		routes.NewUserRouteHandler(userService),
