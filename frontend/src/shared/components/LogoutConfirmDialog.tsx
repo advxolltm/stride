@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useAppDispatch } from '../hooks/redux'
+import { getApiErrorMessage } from '../utils/api/errors'
+import { useLogoutMutation } from '../../store/features/auth/auth.api'
 import { logout } from '../../store/features/auth/auth.slice'
-import { clearAuthState } from '../../store/features/auth/auth.storage'
 import { ConfirmDialog } from './ConfirmDialog'
 
 interface LogoutConfirmDialogProps {
@@ -18,16 +19,25 @@ export function LogoutConfirmDialog({
     const navigate = useNavigate()
     const dispatch = useAppDispatch()
     const { t } = useTranslation('common')
-    const [isLoggingOut, setIsLoggingOut] = useState(false)
+    const [logoutUser, { isLoading: isLoggingOut }] = useLogoutMutation()
+    const [logoutError, setLogoutError] = useState<string | null>(null)
 
     const handleLogout = async () => {
-        setIsLoggingOut(true)
-        await new Promise((resolve) => setTimeout(resolve, 350))
-        dispatch(logout())
-        clearAuthState()
-        onOpenChange(false)
-        setIsLoggingOut(false)
-        navigate('/login', { replace: true })
+        setLogoutError(null)
+
+        try {
+            await logoutUser().unwrap()
+            dispatch(logout())
+            onOpenChange(false)
+            navigate('/login', { replace: true })
+        } catch (error: unknown) {
+            setLogoutError(
+                getApiErrorMessage(
+                    error,
+                    'Failed to sign out. Please try again.',
+                ),
+            )
+        }
     }
 
     return (
@@ -35,7 +45,16 @@ export function LogoutConfirmDialog({
             isOpen={isOpen}
             onOpenChange={onOpenChange}
             title={t('logout.title')}
-            message={t('logout.message')}
+            message={
+                <>
+                    <span>{t('logout.message')}</span>
+                    {logoutError ? (
+                        <span className="mt-2 block text-sm text-red-500">
+                            {logoutError}
+                        </span>
+                    ) : null}
+                </>
+            }
             confirmLabel={t('logout.confirm')}
             pendingConfirmLabel={t('logout.pending')}
             cancelLabel={t('actions.cancel')}

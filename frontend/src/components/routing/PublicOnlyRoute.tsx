@@ -7,9 +7,13 @@ type PublicOnlyRouteProps = {
 }
 
 export default function PublicOnlyRoute({ children }: PublicOnlyRouteProps) {
-    const isAuthenticated = useAppSelector(
-        (state) => state.auth.isAuthenticated,
+    const { isAuthenticated, isInitialized } = useAppSelector(
+        (state) => state.auth,
     )
+
+    if (!isInitialized) {
+        return null
+    }
 
     if (isAuthenticated) {
         return <Navigate to="/" replace />

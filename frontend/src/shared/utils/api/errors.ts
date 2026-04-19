@@ -26,8 +26,24 @@ export const getApiErrorMessage = (
             return error.data.error
         }
 
+        if (typeof error.status === 'number') {
+            if ([502, 503, 504].includes(error.status)) {
+                return 'The server is temporarily unavailable. Please try again in a moment.'
+            }
+
+            return fallback
+        }
+
+        if (
+            error.status === 'PARSING_ERROR' ||
+            error.status === 'FETCH_ERROR' ||
+            error.status === 'TIMEOUT_ERROR'
+        ) {
+            return fallback
+        }
+
         if ('error' in error && typeof error.error === 'string') {
-            return error.error
+            return fallback
         }
     }
 

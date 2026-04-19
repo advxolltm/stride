@@ -14,7 +14,6 @@ import { useAppDispatch } from '../../shared/hooks/redux'
 import { getApiErrorMessage } from '../../shared/utils/api/errors'
 import { useLoginMutation } from '../../store/features/auth/auth.api'
 import { setAuthenticated } from '../../store/features/auth/auth.slice'
-import { saveAuthState } from '../../store/features/auth/auth.storage'
 
 export default function LoginPage() {
     const navigate = useNavigate()
@@ -48,7 +47,6 @@ export default function LoginPage() {
             }).unwrap()
 
             dispatch(setAuthenticated(true))
-            saveAuthState(true)
             navigate(redirectTarget, { replace: true })
         } catch (error: unknown) {
             setSubmitError(

@@ -8,9 +8,13 @@ type ProtectedRouteProps = {
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     const location = useLocation()
-    const isAuthenticated = useAppSelector(
-        (state) => state.auth.isAuthenticated,
+    const { isAuthenticated, isInitialized } = useAppSelector(
+        (state) => state.auth,
     )
+
+    if (!isInitialized) {
+        return null
+    }
 
     if (!isAuthenticated) {
         return <Navigate to="/login" replace state={{ from: location }} />
