@@ -110,7 +110,7 @@ func TestWhiteboardStore_Elements(t *testing.T) {
 
 		newType := "ellipse"
 		newProps := datatypes.JSON([]byte(`{"x": 10, "y": 20}`))
-		updated, err := store.UpdateElement(ctx, element.ID, whiteboard.UpdateElementFields{
+		updated, err := store.UpdateElement(ctx, project.ID, element.ID, whiteboard.UpdateElementFields{
 			ElementType: &newType,
 			Props:       &newProps,
 		})
@@ -135,15 +135,15 @@ func TestWhiteboardStore_Elements(t *testing.T) {
 		_, err = store.CreateElement(ctx, element)
 		require.NoError(t, err)
 
-		err = store.DeleteElement(ctx, element.ID)
+		err = store.DeleteElement(ctx, project.ID, element.ID)
 		require.NoError(t, err)
 
-		_, err = store.GetElement(ctx, element.ID)
+		_, err = store.GetElement(ctx, project.ID, element.ID)
 		assert.ErrorIs(t, err, gorm.ErrRecordNotFound)
 	})
 
 	runTest(t, db, "Delete non-existent element returns error", func(t *testing.T, db *gorm.DB, store whiteboard.WhiteboardStore) {
-		err := store.DeleteElement(ctx, uuid.New())
+		err := store.DeleteElement(ctx, uuid.New(), uuid.New())
 		assert.ErrorIs(t, err, gorm.ErrRecordNotFound)
 	})
 }
