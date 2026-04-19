@@ -96,6 +96,7 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app
+      - media_data:/app/media
     healthcheck:
       test:
         [
@@ -121,6 +122,8 @@ services:
     restart: unless-stopped
     ports:
       - "8080:8080"
+    volumes:
+      - media_data:/media:ro
     depends_on:
       - frontserver
       - backserver
@@ -130,6 +133,7 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  media_data:
 
 networks:
   stride_net:

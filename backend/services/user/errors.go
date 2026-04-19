@@ -14,5 +14,8 @@ var (
 	ErrPasswordHashFailed     = errors.New("failed to hash password")
 	ErrUserStoreFailed        = errors.New("user store operation failed")
 	ErrUserFindFailed         = errors.New("failed to check if user exists")
+	ErrAvatarTooLarge         = errors.New("avatar file too large (max 2MB)")
+	ErrAvatarInvalidType      = errors.New("avatar must be an image (jpeg, png, gif, webp)")
+	ErrAvatarSaveFailed       = errors.New("failed to save avatar file")
 )
 

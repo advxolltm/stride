@@ -7,9 +7,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/mail"
-	//"os"
-	//"strconv"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/google/uuid"
@@ -19,11 +20,17 @@ import (
 
 //TODO: Tests user.service.go
 
+type AvatarInput struct {
+	Filename string
+	File     io.Reader
+	Size     int64
+}
+
 type UpdateUserInput struct {
-	Email     *string
-	Password  *string
-	FullName  *string
-	AvatarURL *string
+	Email    *string
+	Password *string
+	FullName *string
+	Avatar   *AvatarInput
 }
 
 type (
@@ -38,11 +45,19 @@ type (
 	userService struct {
 		userStore user.UserStore
 		cfg       validationConfig
+		mediaDir  string
 	}
 )
 
+const maxAvatarSize = 2 << 20 // 2MB
+
+var allowedAvatarTypes = map[string]bool{
+	".jpg": true, ".jpeg": true, ".png": true, ".gif": true, ".webp": true,
+}
+
 func NewUserService(userStore user.UserStore) UserService {
-	return &userService{userStore, loadValidationConfig()}
+	mediaDir := config.EnvStr("MEDIA_DIR", "media")
+	return &userService{userStore, loadValidationConfig(), mediaDir}
 }
 
 type validationConfig struct {
@@ -166,9 +181,8 @@ func (s userService) CreateUser(ctx context.Context, username string, email stri
 
 func (s userService) UpdateUser(ctx context.Context, id uuid.UUID, input UpdateUserInput) (*models.User, error) {
 	fields := user.UpdateUserFields{
-		Email:     input.Email,
-		FullName:  input.FullName,
-		AvatarURL: input.AvatarURL,
+		Email:    input.Email,
+		FullName: input.FullName,
 	}
 
 	if input.Email != nil {
@@ -184,6 +198,17 @@ func (s userService) UpdateUser(ctx context.Context, id uuid.UUID, input UpdateU
 		}
 		hashStr := string(hash)
 		fields.PasswordHash = &hashStr
+	}
+
+	if input.Avatar != nil {
+		if err := validateAvatarFile(input.Avatar.Filename, input.Avatar.Size); err != nil {
+			return nil, err
+		}
+		avatarURL, err := s.saveAvatarFile(id, input.Avatar.Filename, input.Avatar.File)
+		if err != nil {
+			return nil, err
+		}
+		fields.AvatarURL = &avatarURL
 	}
 
 	u, err := s.userStore.UpdateUser(ctx, id, fields)
@@ -218,4 +243,38 @@ func (s userService) GetByEmailAndPassword(ctx context.Context, email, password 
 	}
 
 	return userId, nil
+}
+
+func validateAvatarFile(filename string, size int64) error {
+	if size > maxAvatarSize {
+		return ErrAvatarTooLarge
+	}
+	ext := strings.ToLower(filepath.Ext(filename))
+	if !allowedAvatarTypes[ext] {
+		return ErrAvatarInvalidType
+	}
+	return nil
+}
+
+func (s userService) saveAvatarFile(userID uuid.UUID, filename string, file io.Reader) (string, error) {
+	ext := strings.ToLower(filepath.Ext(filename))
+	avatarsDir := filepath.Join(s.mediaDir, "avatars")
+	if err := os.MkdirAll(avatarsDir, 0o755); err != nil {
+		return "", fmt.Errorf("%w: %w", ErrAvatarSaveFailed, err)
+	}
+
+	storedName := userID.String() + ext
+	dstPath := filepath.Join(avatarsDir, storedName)
+
+	dst, err := os.Create(dstPath)
+	if err != nil {
+		return "", fmt.Errorf("%w: %w", ErrAvatarSaveFailed, err)
+	}
+	defer dst.Close()
+
+	if _, err := io.Copy(dst, file); err != nil {
+		return "", fmt.Errorf("%w: %w", ErrAvatarSaveFailed, err)
+	}
+
+	return "/media/avatars/" + storedName, nil
 }

@@ -38,10 +38,9 @@ type createUserRequest struct {
 }
 
 type updateUserRequest struct {
-	Email		*string	`json:"email"`
-	Password	*string	`json:"password"`
-	FullName	*string	`json:"full_name"`
-	AvatarURL	*string	`json:"avatar_url"`
+	Email		*string	`json:"email" form:"email"`
+	Password	*string	`json:"password" form:"password"`
+	FullName	*string	`json:"full_name" form:"full_name"`
 }
 
 func (h userRouteHandler) mapServiceError(err error) (int, string) {
@@ -54,7 +53,9 @@ func (h userRouteHandler) mapServiceError(err error) (int, string) {
 		case errors.Is(err, userService.ErrInvalidEmail),
 			errors.Is(err, userService.ErrInvalidUsername),
 			errors.Is(err, userService.ErrPasswordTooShort),
-			errors.Is(err, userService.ErrPasswordMissingSpecial):
+			errors.Is(err, userService.ErrPasswordMissingSpecial),
+			errors.Is(err, userService.ErrAvatarTooLarge),
+			errors.Is(err, userService.ErrAvatarInvalidType):
 			return http.StatusBadRequest, err.Error()
 	default:
 		return http.StatusInternalServerError, "internal server error"
@@ -62,6 +63,14 @@ func (h userRouteHandler) mapServiceError(err error) (int, string) {
 }
 
 // GET /users
+//
+//	@Summary	Get all users
+//	@Tags		users
+//	@Produce	json
+//	@Success	200	{array}		User
+//	@Failure	401	{object}	ErrorResponse	"unauthorized"
+//	@Failure	500	{object}	ErrorResponse	"internal server error"
+//	@Router		/users [get]
 func (h userRouteHandler) usersGETHandle(c *echo.Context) error {
 	// TODO: add user-check
 
@@ -75,6 +84,16 @@ func (h userRouteHandler) usersGETHandle(c *echo.Context) error {
 }
 
 // GET /users/:id
+//
+//	@Summary	Get user by ID
+//	@Tags		users
+//	@Produce	json
+//	@Param		id	path		string	true	"User ID (UUID)"
+//	@Success	200	{object}	User
+//	@Failure	400	{object}	ErrorResponse	"invalid user id"
+//	@Failure	401	{object}	ErrorResponse	"unauthorized"
+//	@Failure	404	{object}	ErrorResponse	"user not found"
+//	@Router		/users/{id} [get]
 func (h userRouteHandler) userGETHandle(c *echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -91,10 +110,16 @@ func (h userRouteHandler) userGETHandle(c *echo.Context) error {
 }
 
 // POST /users
+//
 //	@Summary	Create user
 //	@Tags		users
-//	@Success	200
-//	@Param		data	body	createUserRequest	true	"Create user data"
+//	@Accept		json
+//	@Produce	json
+//	@Param		data	body		createUserRequest	true	"Create user data"
+//	@Success	201	{object}	User
+//	@Failure	400	{object}	ErrorResponse	"invalid request body"
+//	@Failure	401	{object}	ErrorResponse	"unauthorized"
+//	@Failure	409	{object}	ErrorResponse	"email or username already in use"
 //	@Router		/users [post]
 func (h userRouteHandler) userPOSTHandle(c *echo.Context) error {
 	var req createUserRequest
@@ -113,6 +138,23 @@ func (h userRouteHandler) userPOSTHandle(c *echo.Context) error {
 }
 
 // PATCH /users/:id
+//
+//	@Summary	Update user (self only)
+//	@Tags		users
+//	@Accept		multipart/form-data
+//	@Accept		json
+//	@Produce	json
+//	@Param		id			path		string			true	"User ID (UUID)"
+//	@Param		email		formData	string			false	"New email"
+//	@Param		password	formData	string			false	"New password"
+//	@Param		full_name	formData	string			false	"Full name"
+//	@Param		avatar		formData	file			false	"Avatar image (jpeg, png, gif, webp; max 2MB)"
+//	@Success	200			{object}	User
+//	@Failure	400			{object}	ErrorResponse	"invalid user id, request body, or avatar"
+//	@Failure	401			{object}	ErrorResponse	"unauthorized"
+//	@Failure	404			{object}	ErrorResponse	"user not found"
+//	@Failure	409			{object}	ErrorResponse	"email already in use"
+//	@Router		/users/{id} [patch]
 func (h userRouteHandler) userPATCHHandle(c *echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -129,12 +171,27 @@ func (h userRouteHandler) userPATCHHandle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid request body"})
 	}
 
-	u, err := h.userService.UpdateUser(c.Request().Context(), id, userService.UpdateUserInput{
-		Email:     req.Email,
-		Password:  req.Password,
-		FullName:  req.FullName,
-		AvatarURL: req.AvatarURL,
-	})
+	input := userService.UpdateUserInput{
+		Email:    req.Email,
+		Password: req.Password,
+		FullName: req.FullName,
+	}
+
+	file, err := c.FormFile("avatar")
+	if err == nil {
+		src, err := file.Open()
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "failed to read uploaded file"})
+		}
+		defer src.Close()
+		input.Avatar = &userService.AvatarInput{
+			Filename: file.Filename,
+			File:     src,
+			Size:     file.Size,
+		}
+	}
+
+	u, err := h.userService.UpdateUser(c.Request().Context(), id, input)
 	if err != nil {
 		status, msg := h.mapServiceError(err)
 		return c.JSON(status, ErrorResponse{Error: msg})
@@ -144,6 +201,14 @@ func (h userRouteHandler) userPATCHHandle(c *echo.Context) error {
 }
 
 // DELETE /users/:id
+//
+//	@Summary	Delete user (self only)
+//	@Tags		users
+//	@Param		id	path	string	true	"User ID (UUID)"
+//	@Success	204
+//	@Failure	400	{object}	ErrorResponse	"invalid user id"
+//	@Failure	401	{object}	ErrorResponse	"unauthorized"
+//	@Router		/users/{id} [delete]
 func (h userRouteHandler) userDELETEHandle(c *echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
