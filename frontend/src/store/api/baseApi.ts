@@ -22,8 +22,10 @@ const apiBasePath = normalizeApiBasePath(
 
 export const baseApi = createApi({
   reducerPath: 'baseApi',
+  tagTypes: ['User'],
   baseQuery: fetchBaseQuery({
     baseUrl: apiBasePath,
+    credentials: 'include',
   }),
   endpoints: () => ({}),
 })
