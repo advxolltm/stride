@@ -85,7 +85,7 @@ func TestWhiteboardStore_Elements(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotEqual(t, uuid.Nil, element.ID)
 
-		elements, err := store.GetElements(ctx, wb.ID)
+		elements, err := store.GetElements(ctx, project.ID)
 		require.NoError(t, err)
 		assert.Len(t, elements, 1)
 		assert.Equal(t, "rectangle", elements[0].ElementType)

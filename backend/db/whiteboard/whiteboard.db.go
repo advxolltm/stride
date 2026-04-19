@@ -13,10 +13,9 @@ import (
 type (
 	WhiteboardStore interface {
 		GetWhiteboardByProjectID(ctx context.Context, projectUUID uuid.UUID) (*models.Whiteboard, error)
+		UpdateWhiteboardByProjectID(ctx context.Context, projectUUID uuid.UUID, fields UpdateWhiteboardFields) (*models.Whiteboard, error)
 		CreateWhiteboard(ctx context.Context, whiteboard *models.Whiteboard) error
-		UpdateWhiteboard(ctx context.Context, id uuid.UUID, fields UpdateWhiteboardFields) (*models.Whiteboard, error)
-
-		GetElements(ctx context.Context, whiteboardID uuid.UUID) ([]models.WhiteboardElement, error)
+		GetElements(ctx context.Context, projectID uuid.UUID) ([]models.WhiteboardElement, error)
 		GetElement(ctx context.Context, id uuid.UUID) (*models.WhiteboardElement, error)
 		CreateElement(ctx context.Context, element *models.WhiteboardElement) (*models.WhiteboardElement, error)
 		UpdateElement(ctx context.Context, id uuid.UUID, fields UpdateElementFields) (*models.WhiteboardElement, error)
@@ -54,9 +53,9 @@ func (s *whiteboardStore) CreateWhiteboard(ctx context.Context, whiteboard *mode
 	return result.Error
 }
 
-func (s *whiteboardStore) UpdateWhiteboard(ctx context.Context, id uuid.UUID, fields UpdateWhiteboardFields) (*models.Whiteboard, error) {
+func (s *whiteboardStore) UpdateWhiteboardByProjectID(ctx context.Context, projectUUID uuid.UUID, fields UpdateWhiteboardFields) (*models.Whiteboard, error) {
 	var whiteboard models.Whiteboard
-	result := s.db.WithContext(ctx).Model(&whiteboard).Where("id = ?", id).Updates(fields).First(&whiteboard)
+	result := s.db.WithContext(ctx).Model(&whiteboard).Where("project_id = ?", projectUUID).Updates(fields).First(&whiteboard)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -73,9 +72,12 @@ func (s *whiteboardStore) GetElement(ctx context.Context, id uuid.UUID) (*models
 	return &element, nil
 }
 
-func (s *whiteboardStore) GetElements(ctx context.Context, whiteboardID uuid.UUID) ([]models.WhiteboardElement, error) {
+func (s *whiteboardStore) GetElements(ctx context.Context, projectID uuid.UUID) ([]models.WhiteboardElement, error) {
 	var elements []models.WhiteboardElement
-	result := s.db.WithContext(ctx).Where("whiteboard_id = ?", whiteboardID).Find(&elements)
+	result := s.db.WithContext(ctx).
+		Joins("JOIN whiteboards ON whiteboards.id = whiteboard_elements.whiteboard_id").
+		Where("whiteboards.project_id = ?", projectID).
+		Find(&elements)
 	if result.Error != nil {
 		return nil, result.Error
 	}
