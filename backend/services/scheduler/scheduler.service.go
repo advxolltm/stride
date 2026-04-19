@@ -15,6 +15,7 @@ type skill struct {
 type user struct {
 	name 	string
 	skills 	[]skill
+	weekyHours	int
 }
 
 type task struct {
@@ -24,12 +25,81 @@ type task struct {
 	needed_skills	[]skill
 }
 
+func weekday(d time.Time) int {
+    wd := d.Weekday()
+    if wd == time.Sunday {
+        return 6
+    }
+    return int(wd) - 1
+}
+
+func calculateWorkingDays (start time.Time, end time.Time) int {
+	//Round to days (for now at least)
+	d := 24 * time.Hour
+	start.Truncate(d)
+	end.Truncate(d)
+
+	startDay = weekday(start)
+	endDay = weekday(end)
+	fullWeeks = start.AddDate(0, 0, -startDay).Sub(end.AddDate(0, 0, endDay))
+	
+	return (fullWeeks * 5) - (min(startDay, 5) + min(endDay, 5))
+}
+
 func scheduleTaskToMembers(users []user, tasks []task, skills []skill) {
 	//Add ZERO task to tasks
 
 	model := cpmodel.NewCpModelBuilder()
 
-	tasksDomain := cpmodel.NewDomain(0, len(tasks))
+	numMembers := len(users)
+	numTasks := len(tasks)
+	numSkills := len(skills)
+
+
+	let timeframeEnd = tasks.indices.max(by: 
+    	{ tasks[$0].dueat < tasks[$1].dueat }
+	)
+	let timeframeStart = tasks.indices.min(
+		{ tasks[$0].startat < tasks[$1].startat }
+	)
+
+	workingDays = calculateWorkingDays(tasks[timeframeStart].startat, tasks[timeframeEnd].dueat)
+
+	var hoursPerMember [numMembers]int
+
+	for idx, member := range users {
+		hoursPerMember[idx] = int(member.weeklyHours * (workingDays/5))
+	}
+
+	assignment := make([][][]cpmodel.BoolVar, numMembers)
+	canDo := make([][]cpmodel.BoolVar, numMembers)
+	isInTimeScope := make([][][]cpmodel.BoolVar)
+
+	for i = 0; i < numMembers; i++ {
+		assignment[i] = make([][]cpmodel.BoolVar, hoursPerMember[i])
+		canDo[i] = make([]cpmodel.BoolVar, numTasks)
+		for j = 0; j < hoursPerMember[i]; j++ {
+			assignment[i][j] = make([]cpmodel.BoolVar, numTasks)
+			for k = 0; k < numTasks; k++ {
+				name := fmt.Sprintf("U%d_H%d_T%d", users[i].name, j, tasks[k].name)
+				assignment[i][j][k] = model.NewBoolVar().WithName(name) // BOOL for assigning a job to a user
+				
+				//check only once for job compatibility
+				if j == 0 {
+					compatibility := cpmodel.NewConstant(1)
+
+					for idx, taskSkill := range tasks[k].needed_skills {
+						if !users[i].skills.Contains(taskSkill) {
+							compatibility = cpmodel.NewConstant(0)
+						}
+					}
+
+					canDo[i][k] = compatibility
+				}
+				model.AddLessOrEqual(assignment[i][j][k], canDo[i][k]) // ONLY Members with required skills can do a job!
+			}
+		}
+	}
 
 
 	
