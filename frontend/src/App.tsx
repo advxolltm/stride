@@ -1,6 +1,6 @@
 import dayjs from 'dayjs'
 import customParseFormat from 'dayjs/plugin/customParseFormat'
-import { Navigate, Route, Routes } from 'react-router'
+import { Navigate, Route, Routes } from 'react-router-dom'
 
 import { AppLayout } from './layouts/AppLayout'
 import LoginPage from './pages/auth/LoginPage'
@@ -11,13 +11,21 @@ import { ProjectPage } from './pages/ProjectPage'
 import { AccountPage } from './pages/AccountPage'
 import { TasksPage } from './pages/TasksPage'
 import { WhiteboardPage } from './pages/WhiteboardPage'
+import ProtectedRoute from './components/routing/ProtectedRoute'
+import PublicOnlyRoute from './components/routing/PublicOnlyRoute'
 
 dayjs.extend(customParseFormat)
 
 function App() {
     return (
         <Routes>
-            <Route element={<AppLayout />}>
+            <Route
+                element={
+                    <ProtectedRoute>
+                        <AppLayout />
+                    </ProtectedRoute>
+                }
+            >
                 <Route path="/" element={<HomePage />} />
                 <Route path="/settings" element={<AccountPage />} />
                 <Route path="/project/:projectId">
@@ -29,8 +37,22 @@ function App() {
                 </Route>
             </Route>
 
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
+            <Route
+                path="/login"
+                element={
+                    <PublicOnlyRoute>
+                        <LoginPage />
+                    </PublicOnlyRoute>
+                }
+            />
+            <Route
+                path="/register"
+                element={
+                    <PublicOnlyRoute>
+                        <RegisterPage />
+                    </PublicOnlyRoute>
+                }
+            />
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     )

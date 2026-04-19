@@ -1,4 +1,4 @@
-import { baseApi } from '../../api/baseApi'
+import { baseApi } from '../../api/base.api'
 import type { LoginRequest } from './auth.types'
 
 export const authApi = baseApi.injectEndpoints({
@@ -16,7 +16,13 @@ export const authApi = baseApi.injectEndpoints({
                 }
             },
         }),
+        logout: builder.mutation<void, void>({
+            query: () => ({
+                url: '/auth/logout',
+                method: 'POST',
+            }),
+        }),
     }),
 })
 
-export const { useLoginMutation } = authApi
+export const { useLoginMutation, useLogoutMutation } = authApi

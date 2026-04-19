@@ -6,3 +6,7 @@ export type LoginRequest = {
 export type ApiErrorResponse = {
     error: string
 }
+export type AuthState = {
+    isAuthenticated: boolean
+    isInitialized: boolean
+}
