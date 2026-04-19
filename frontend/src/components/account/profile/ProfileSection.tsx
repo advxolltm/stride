@@ -13,6 +13,7 @@ import type {
 } from '../../../store/features/user/user.types'
 import { ProfileAvatarUpload } from './ProfileAvatarUpload'
 import { ProfileDetailsForm } from './ProfileDetailsForm'
+import { useGetSessionQuery } from '../../../store/features/auth/auth.api'
 
 export type ProfileForm = {
     fullName: string
@@ -24,13 +25,11 @@ export type ProfileForm = {
 const isFetchBaseQueryError = (error: unknown): error is FetchBaseQueryError =>
     typeof error === 'object' && error !== null && 'status' in error
 
-//TODO:This should come from redux slice of authSlice
-const USER_ID = '9b4a0d98-db51-4372-8d83-db13ccf048a8'
-
 export function ProfileSection() {
     const { t } = useTranslation('setting')
 
-    const { data: user } = useGetUserByIdQuery(USER_ID)
+    const { data: sessionUser } = useGetSessionQuery()
+    const { data: user } = useGetUserByIdQuery(sessionUser!.id)
     const [updateUser, { isLoading: isUpdating }] = useUpdateUserMutation()
 
     const [form, setForm] = useState<ProfileForm>({
@@ -64,7 +63,7 @@ export function ProfileSection() {
             body.email = form.email.trim()
 
         try {
-            await updateUser({ id: USER_ID, body }).unwrap()
+            await updateUser({ id: sessionUser!.id, body }).unwrap()
             toast.success(t('profile.updateSuccess'))
         } catch (error: unknown) {
             const message = isFetchBaseQueryError(error)
