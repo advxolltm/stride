@@ -2,7 +2,6 @@ package auth
 
 import (
 	"backend/config"
-	"backend/services/project"
 	"backend/services/user"
 	"context"
 	"fmt"
@@ -28,9 +27,7 @@ type (
 
 	AuthService interface {
 		AuthenticateUser(ctx context.Context, email, password string) (jwtTokenString, time.Time, error)
-		IsProjectOwner(ctx context.Context, userId uuid.UUID, projectId uuid.UUID) (bool, error)
 		AuthenticatedMiddleware() echo.MiddlewareFunc
-
 		// should only be called in routes protected by [AuthenticatedMiddleware]
 		// panics if no claims are found
 		GetClaims(ctx *echo.Context) jwtCustomClaims
@@ -38,7 +35,6 @@ type (
 
 	authService struct {
 		userService               user.UserService
-		projectService            project.ProjectService
 		cfg                       authenticationConfig
 		isAuthenticatedMiddleware echo.MiddlewareFunc
 	}
@@ -49,11 +45,10 @@ type (
 	}
 )
 
-func NewAuthenticationService(userService user.UserService, projectService project.ProjectService) AuthService {
+func NewAuthenticationService(userService user.UserService) AuthService {
 	cfg := loadAuthenticationConfig()
 	return &authService{
 		userService:               userService,
-		projectService:            projectService,
 		cfg:                       cfg,
 		isAuthenticatedMiddleware: createIsAuthenticatedMiddleware(cfg),
 	}
@@ -104,14 +99,6 @@ func (s authService) expiresAtTime() time.Time {
 }
 
 
-func (s authService) IsProjectOwner(ctx context.Context, userId uuid.UUID, projectId uuid.UUID) (bool, error) {
-	project, err := s.projectService.GetProject(ctx, projectId)
-	if err != nil {
-		return false, fmt.Errorf("Failed to get project to check project owner: %w", err)
-	}
-
-	return *project.CreatedBy == userId, nil
-}
 
 func getClaims(ctx *echo.Context) jwtCustomClaims {
 	token, err := echo.ContextGet[*jwt.Token](ctx, "user")

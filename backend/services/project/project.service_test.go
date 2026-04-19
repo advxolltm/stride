@@ -61,4 +61,28 @@ func TestProjectService_Integration(t *testing.T) {
 		_, err = service.CreateProject(ctx, nil, "Second", "shared-slug", &desc, "active")
 		assert.ErrorIs(t, err, projectService.ErrDuplicateSlug)
 	})
+
+	t.Run("IsProjectOwner", func(t *testing.T) {
+		t.Run("returns error if project does not exist", func(t *testing.T) {
+			isOwner, err := service.IsProjectOwner(ctx, uuid.New(), uuid.New())
+			assert.Error(t, err)
+			assert.False(t, isOwner)
+		})
+
+		t.Run("returns false if user is not the owner", func(t *testing.T) {
+			p := testutils.SelectRandomProject(t, db)
+			notOwner := uuid.New()
+			isOwner, err := service.IsProjectOwner(ctx, notOwner, p.ID)
+			assert.NoError(t, err)
+			assert.False(t, isOwner)
+		})
+
+		t.Run("returns true if user is the owner", func(t *testing.T) {
+			p := testutils.SelectRandomProject(t, db)
+			require.NotNil(t, p.CreatedBy)
+			isOwner, err := service.IsProjectOwner(ctx, *p.CreatedBy, p.ID)
+			assert.NoError(t, err)
+			assert.True(t, isOwner)
+		})
+	})
 }

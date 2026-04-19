@@ -30,6 +30,7 @@ type (
 		GetProject(ctx context.Context, id uuid.UUID) (*models.Project, error)
 		GetProjectMembers(ctx context.Context, id uuid.UUID) ([]models.ProjectMember, error)
 		GetProjectSkills(ctx context.Context, id uuid.UUID) ([]models.ProjectSkill, error)
+		IsProjectMember(ctx context.Context, userID uuid.UUID, projectID uuid.UUID) (bool, error)
 		CreateProject(ctx context.Context, project *models.Project) error
 		UpdateProject(ctx context.Context, id uuid.UUID, input UpdateProjectFields) (*models.Project, error)
 		DeleteProject(ctx context.Context, id uuid.UUID) error
@@ -75,6 +76,18 @@ func (s *projectStore) GetProjectMembers(ctx context.Context, id uuid.UUID) ([]m
 		return nil, result.Error
 	}
 	return project.Members, nil
+}
+
+func (s *projectStore) IsProjectMember(ctx context.Context, userID uuid.UUID, projectID uuid.UUID) (bool, error) {
+	var exists bool
+	err := s.db.WithContext(ctx).
+		Model(&models.ProjectMember{}).
+		Select("1").
+		Where("user_id = ? AND project_id = ?", userID, projectID).
+		Limit(1).
+		Find(&exists).
+		Error
+	return exists, err
 }
 
 func (s *projectStore) GetProjectSkills(ctx context.Context, id uuid.UUID) ([]models.ProjectSkill, error) {

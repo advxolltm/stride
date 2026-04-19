@@ -4,8 +4,10 @@ import (
 	"backend/db/whiteboard"
 	"backend/models"
 	"backend/services/auth"
+	"backend/services/project"
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -29,24 +31,25 @@ type (
 		
 	whiteboardService struct {
 		store whiteboard.WhiteboardStore
-		authService auth.AuthService
+		projectService project.ProjectService
 	}	
 )
 
-func NewWhiteboardService(store whiteboard.WhiteboardStore, authService auth.AuthService) WhiteboardService {
-	return &whiteboardService{store: store, authService: authService}
+func NewWhiteboardService(store whiteboard.WhiteboardStore, projectService project.ProjectService) WhiteboardService {
+	return &whiteboardService{store: store, projectService: projectService}
 }
 
-func ValidateUserAccessToProject(ctx context.Context, authService auth.AuthService, projectID uuid.UUID) error {
-	//TODO: This function is duplicated in project.service.go, consider refactoring to a shared location
-	//TODO: switch to using Redis cache for project membership checks to improve performance
+func ValidateUserAccessToProject(ctx context.Context, projectService project.ProjectService, projectID uuid.UUID) error {
 	userID, ok := ctx.Value("userID").(uuid.UUID)
 	if !ok || userID == uuid.Nil {
 		return auth.ErrUserIDNotInContext
 	}
 
-	_, validationErr := authService.IsProjectMember(ctx, userID, projectID)
-	if validationErr != nil {
+	isMember, err := projectService.IsProjectMember(ctx, userID, projectID)
+	if err != nil {
+		return fmt.Errorf("failed to check project membership: %w", err)
+	}
+	if !isMember {
 		return auth.ErrAccessDenied
 	}
 	return nil
@@ -54,7 +57,7 @@ func ValidateUserAccessToProject(ctx context.Context, authService auth.AuthServi
 
 
 func (s *whiteboardService) GetOrCreateWhiteboardByProjectID(ctx context.Context, projectID uuid.UUID) (*models.Whiteboard, error) {
-	err := ValidateUserAccessToProject(ctx, s.authService, projectID)
+	err := ValidateUserAccessToProject(ctx, s.projectService, projectID)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +89,7 @@ func (s *whiteboardService) CreateWhiteboard(ctx context.Context, whiteboard *mo
 
 
 func (s *whiteboardService) UpdateWhiteboardByProjectID(ctx context.Context, projectID uuid.UUID, fields whiteboard.UpdateWhiteboardFields) (*models.Whiteboard, error) {
-    err := ValidateUserAccessToProject(ctx, s.authService, projectID)
+    err := ValidateUserAccessToProject(ctx, s.projectService, projectID)
 	if err != nil {
 		return nil, err
 	}
@@ -94,21 +97,21 @@ func (s *whiteboardService) UpdateWhiteboardByProjectID(ctx context.Context, pro
 }
 
 func (s *whiteboardService) GetElements(ctx context.Context, projectID uuid.UUID) ([]models.WhiteboardElement, error) {
-	if err := ValidateUserAccessToProject(ctx, s.authService, projectID); err != nil {
+	if err := ValidateUserAccessToProject(ctx, s.projectService, projectID); err != nil {
 		return nil, err
 	}
 	return s.store.GetElements(ctx, projectID)
 }
 
 func (s *whiteboardService) GetElement(ctx context.Context, projectID uuid.UUID, id uuid.UUID) (*models.WhiteboardElement, error) {
-	if err := ValidateUserAccessToProject(ctx, s.authService, projectID); err != nil {
+	if err := ValidateUserAccessToProject(ctx, s.projectService, projectID); err != nil {
 		return nil, err
 	}
 	return s.store.GetElement(ctx, projectID, id)
 }
 
 func (s *whiteboardService) CreateElement(ctx context.Context, projectID uuid.UUID, element *models.WhiteboardElement) (*models.WhiteboardElement, error) {
-	if err := ValidateUserAccessToProject(ctx, s.authService, projectID); err != nil {
+	if err := ValidateUserAccessToProject(ctx, s.projectService, projectID); err != nil {
 		return nil, err
 	}
 	wb, err := s.store.GetWhiteboardByProjectID(ctx, projectID)
@@ -120,14 +123,14 @@ func (s *whiteboardService) CreateElement(ctx context.Context, projectID uuid.UU
 }
 
 func (s *whiteboardService) UpdateElement(ctx context.Context, projectID uuid.UUID, id uuid.UUID, fields whiteboard.UpdateElementFields) (*models.WhiteboardElement, error) {
-	if err := ValidateUserAccessToProject(ctx, s.authService, projectID); err != nil {
+	if err := ValidateUserAccessToProject(ctx, s.projectService, projectID); err != nil {
 		return nil, err
 	}
 	return s.store.UpdateElement(ctx, projectID, id, fields)
 }
 
 func (s *whiteboardService) DeleteElement(ctx context.Context, projectID uuid.UUID, id uuid.UUID) error {
-	if err := ValidateUserAccessToProject(ctx, s.authService, projectID); err != nil {
+	if err := ValidateUserAccessToProject(ctx, s.projectService, projectID); err != nil {
 		return err
 	}
 	return s.store.DeleteElement(ctx, projectID, id)

@@ -2,21 +2,20 @@ package routes_test
 
 import (
 	"backend/db/project"
+	userStore "backend/db/user"
 	"backend/models"
 	"backend/routes"
-	projectService "backend/services/project"
-	userStore "backend/db/user"
-	userService "backend/services/user"
 	authService "backend/services/auth"
+	projectService "backend/services/project"
+	userService "backend/services/user"
 	"backend/testutils"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"testing"
-	"fmt"
 	"os"
-
+	"testing"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
@@ -67,7 +66,7 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 
 	uStore := userStore.NewUserStore(db)
     uServe := userService.NewUserService(uStore)
-    aServ := authService.NewAuthenticationService(uServe, service)
+    aServ := authService.NewAuthenticationService(uServe)
 
 	ctx := context.Background()
     email := "global@test.com"

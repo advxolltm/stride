@@ -222,7 +222,7 @@ func (h projectRouteHandler) projectPATCHHandle(c *echo.Context) error {
 	}
 
 	userId := h.authService.GetClaims(c).UserID
-	isOwner, err := h.authService.IsProjectOwner(ctx, userId, id)
+	isOwner, err := h.projectService.IsProjectOwner(ctx, userId, id)
 	if err != nil {
 		status, msg := mapServiceErrorProj(err)
 		return c.JSON(status, ErrorResponse{Error: msg})

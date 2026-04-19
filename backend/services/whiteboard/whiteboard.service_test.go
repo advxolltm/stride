@@ -2,12 +2,9 @@ package whiteboard_test
 
 import (
 	projectDB "backend/db/project"
-	userDB "backend/db/user"
 	whiteboardDB "backend/db/whiteboard"
 	"backend/models"
-	"backend/services/auth"
 	projectSvc "backend/services/project"
-	userSvc "backend/services/user"
 	whiteboardSvc "backend/services/whiteboard"
 	"backend/testutils"
 	"context"
@@ -25,7 +22,6 @@ import (
 var db *gorm.DB
 
 func TestMain(m *testing.M) {
-	os.Setenv("SESSION_SECRET", "test-secret-whiteboard-svc")
 	db = testutils.SetupDB()
 	db = db.Begin()
 	testutils.SeedDB(db)
@@ -37,12 +33,9 @@ func TestMain(m *testing.M) {
 
 func newTestService(db *gorm.DB) whiteboardSvc.WhiteboardService {
 	wbStore := whiteboardDB.NewWhiteboardStore(db)
-	uStore := userDB.NewUserStore(db)
-	uService := userSvc.NewUserService(uStore)
 	pStore := projectDB.NewProjectStore(db)
 	pService := projectSvc.NewProjectService(pStore)
-	authService := auth.NewAuthenticationService(uService, pService)
-	return whiteboardSvc.NewWhiteboardService(wbStore, authService)
+	return whiteboardSvc.NewWhiteboardService(wbStore, pService)
 }
 
 func ctxWithUser(userID uuid.UUID) context.Context {

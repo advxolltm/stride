@@ -26,7 +26,7 @@ import (
 	"backend/docs"
 	_ "backend/docs"
 
-	"github.com/swaggo/echo-swagger/v2"
+	echoSwagger "github.com/swaggo/echo-swagger/v2"
 )
 
 func getAPIBasePath() string {
@@ -100,7 +100,7 @@ func main() {
 	exampleService := exampleService.NewExampleService(exampleStore)
 	userService := userService.NewUserService(userStore)
 	projectService := projectService.NewProjectService(projectStore)
-	authService := authService.NewAuthenticationService(userService, projectService)
+	authService := authService.NewAuthenticationService(userService)
 
 	// Routes
 	// Register route handler by adding them to the array
