@@ -14,14 +14,15 @@ import (
 	exampleDB "backend/db/example"
 	projectDB "backend/db/project"
 	userDB "backend/db/user"
+	whiteboardDB "backend/db/whiteboard"
 	"backend/routes"
+	"backend/routes/projects"
 	authService "backend/services/auth"
 	exampleService "backend/services/example"
 	projectService "backend/services/project"
 	userService "backend/services/user"
+	whiteboardService "backend/services/whiteboard"
 	"backend/testutils"
-
-	_ "backend/routes"
 
 	"backend/docs"
 	_ "backend/docs"
@@ -95,12 +96,14 @@ func main() {
 
 	userStore := userDB.NewUserStore(mainDB)
 	projectStore := projectDB.NewProjectStore(mainDB)
+	whiteboardStore := whiteboardDB.NewWhiteboardStore(mainDB)
 
 	// Services
 	exampleService := exampleService.NewExampleService(exampleStore)
 	userService := userService.NewUserService(userStore)
 	projectService := projectService.NewProjectService(projectStore)
 	authService := authService.NewAuthenticationService(userService)
+	whiteboardService := whiteboardService.NewWhiteboardService(whiteboardStore, projectService)
 
 	// Routes
 	// Register route handler by adding them to the array
@@ -111,7 +114,7 @@ func main() {
 		routes.NewHealthRouteHandler(),
 		routes.NewAuthRouteHandler(authService),
 		routes.NewExampleRouteHandler(exampleService, authService),
-		routes.NewProjectRouteHandler(projectService, authService),
+		projects.NewProjectsGroup(projectService, whiteboardService, authService),
 		routes.NewUserRouteHandler(userService),
 	}
 

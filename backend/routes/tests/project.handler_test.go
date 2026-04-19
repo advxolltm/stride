@@ -3,11 +3,13 @@ package routes_test
 import (
 	"backend/db/project"
 	userStore "backend/db/user"
+	whiteboardDB "backend/db/whiteboard"
 	"backend/models"
-	"backend/routes"
+	"backend/routes/projects"
 	authService "backend/services/auth"
 	projectService "backend/services/project"
 	userService "backend/services/user"
+	whiteboardService "backend/services/whiteboard"
 	"backend/testutils"
 	"context"
 	"encoding/json"
@@ -77,7 +79,10 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 
     globalCookie := getCookie(t, aServ, email, pass)
 
-	handler := routes.NewProjectRouteHandler(service, aServ)
+	wbStore := whiteboardDB.NewWhiteboardStore(db)
+	wbService := whiteboardService.NewWhiteboardService(wbStore, service)
+
+	handler := projects.NewProjectsGroup(service, wbService, aServ)
 	
 	desc := "Handler Integration Test"
 	testProj, err := service.CreateProject(context.Background(), nil, "Handler Project", "handler-slug", &desc, "active")
