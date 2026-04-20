@@ -26,7 +26,7 @@ type UpdateProjectFields struct {
 
 type (
 	ProjectStore interface {
-		GetAllProjects(ctx context.Context) ([]models.Project, error)
+		GetAllProjects(ctx context.Context, userid *uuid.UUID) ([]models.Project, error)
 		GetProject(ctx context.Context, id uuid.UUID) (*models.Project, error)
 		GetProjectMembers(ctx context.Context, id uuid.UUID) ([]models.ProjectMember, error)
 		GetProjectSkills(ctx context.Context, id uuid.UUID) ([]models.ProjectSkill, error)
@@ -49,13 +49,13 @@ func NewProjectStore(db *gorm.DB) ProjectStore {
 	return &projectStore{db}
 }
 
-func (s *projectStore) GetAllProjects(ctx context.Context) ([]models.Project, error) {
-	var projects []models.Project
-	result := s.db.WithContext(ctx).Find(&projects)
+func (s *projectStore) GetAllProjects(ctx context.Context, userid *uuid.UUID) ([]models.Project, error) {
+	var user models.User
+	result := s.db.Preload("Projects").First(&user, userid)
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	return projects, nil
+	return user.Projects, nil
 }
 
 func (s *projectStore) GetProject(ctx context.Context, id uuid.UUID) (*models.Project, error) {

@@ -26,7 +26,7 @@ type AddMemberRequest struct {
 
 type (
 	ProjectService interface {
-		GetAllProjects(ctx context.Context) ([]models.Project, error)
+		GetAllProjects(ctx context.Context, userid *uuid.UUID) ([]models.Project, error)
 		GetProject(ctx context.Context, id uuid.UUID) (*models.Project, error)
 		GetProjectMembers(ctx context.Context, id uuid.UUID) ([]models.ProjectMember, error)
 		GetProjectSkills(ctx context.Context, id uuid.UUID) ([]models.ProjectSkill, error)
@@ -48,8 +48,8 @@ func NewProjectService(projectStore project.ProjectStore) ProjectService {
 	return &projectService{projectStore}
 }
 
-func (s projectService) GetAllProjects(ctx context.Context) ([]models.Project, error) {
-	project, err := s.projectStore.GetAllProjects(ctx)
+func (s projectService) GetAllProjects(ctx context.Context, userid *uuid.UUID) ([]models.Project, error) {
+	project, err := s.projectStore.GetAllProjects(ctx, userid)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrProjectStoreFailed, err)
 	}

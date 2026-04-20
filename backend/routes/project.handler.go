@@ -71,8 +71,9 @@ func mapServiceErrorProj(err error) (int, string) {
 // GET /projects
 func (h projectRouteHandler) projectsGETHandle(c *echo.Context) error {
 	// TODO: add user-check
+	userid := h.authService.GetClaims(c).UserID
 
-	projects, err := h.projectService.GetAllProjects(c.Request().Context())
+	projects, err := h.projectService.GetAllProjects(c.Request().Context(), &userid)
 	if err != nil {
 		status, msg := mapServiceErrorProj(err)
 		return c.JSON(status, ErrorResponse{Error: msg})

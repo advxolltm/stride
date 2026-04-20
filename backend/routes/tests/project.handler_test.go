@@ -90,6 +90,43 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 
 	handler.AddRoutes(api)
 
+	runTest(t, "Returns 200 and projects for current user", func(t *testing.T, tx *gorm.DB) {
+        newUser, err := uServe.CreateUser(ctx, "projectowner", "owner@test.com", "Password123!")
+        require.NoError(t, err)
+
+        ownerCookie := getCookie(t, aServ, "owner@test.com", "Password123!")
+
+        desc1 := "Project One"
+        _, err = service.CreateProject(ctx, &newUser.ID, "Alpha", "alpha", &desc1, "active")
+        require.NoError(t, err)
+
+        desc2 := "Project Two"
+        _, err = service.CreateProject(ctx, &newUser.ID, "Beta", "beta", &desc2, "active")
+        require.NoError(t, err)
+
+        req := httptest.NewRequest(http.MethodGet, "/api/projects", nil)
+        req.AddCookie(ownerCookie)
+        rec := httptest.NewRecorder()
+        e.ServeHTTP(rec, req)
+
+        assert.Equal(t, http.StatusOK, rec.Code)
+
+        var respProjects []models.Project
+        err = json.Unmarshal(rec.Body.Bytes(), &respProjects)
+        require.NoError(t, err)
+
+        assert.GreaterOrEqual(t, len(respProjects), 2)
+        
+        found := false
+        for _, p := range respProjects {
+            if p.Name == "Alpha" {
+                found = true
+                break
+            }
+        }
+        assert.True(t, found)
+    })
+
 	runTest(t, "Returns 200 on successful retrieval", func(t *testing.T, db *gorm.DB) {
 		req := httptest.NewRequest(http.MethodGet, "/api/projects/"+testProj.ID.String(), nil)
 		req.AddCookie(globalCookie)
