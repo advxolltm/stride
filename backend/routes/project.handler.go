@@ -4,9 +4,9 @@ import (
 	"errors"
 	"net/http"
 
+	"backend/models"
 	authService "backend/services/auth"
 	projectService "backend/services/project"
-	"backend/models"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
@@ -17,7 +17,6 @@ type projectRouteHandler struct {
 	projectService projectService.ProjectService
 	authService    authService.AuthService
 }
-
 
 func NewProjectRouteHandler(ps projectService.ProjectService, as authService.AuthService) *projectRouteHandler {
 	return &projectRouteHandler{projectService: ps, authService: as}
@@ -84,24 +83,24 @@ func mapToReturnProj(p models.Project) returnProj {
 
 	if p.Creator != nil {
 		res.Creator = &returnUser{
-			ID:       p.Creator.ID,
-			Username: p.Creator.Username,
-			Email:    p.Creator.Email,
-			FullName: p.Creator.FullName,
-			AvatarURL:p.Creator.AvatarURL,
+			ID:        p.Creator.ID,
+			Username:  p.Creator.Username,
+			Email:     p.Creator.Email,
+			FullName:  p.Creator.FullName,
+			AvatarURL: p.Creator.AvatarURL,
 		}
 	}
 
 	return res
 }
 
-
-
-
 // GET /projects
 //
 //	@Summary	Get all projects for the authenticated user
-//	@Success	200	{object}	any
+//	@Tags		project
+//	@Success	200	{object}	[]returnProj
+//	@Failure	404	{object}	ErrorResponse "project not found"
+//	@Failure	401 {object}	ErrorResponse "internal server error"
 //	@Router		/projects [get]
 func (h projectRouteHandler) projectsGETHandle(c *echo.Context) error {
 	// TODO: add user-check
@@ -117,6 +116,13 @@ func (h projectRouteHandler) projectsGETHandle(c *echo.Context) error {
 }
 
 // GET /projects/:id
+//
+// @Summary Get a project by its ID
+// @Param id path string true "Project ID"
+// @Success	200	{object}	returnProj
+// @Failure	404	{object}	ErrorResponse "project not found"
+// @Failure	401 {object}	ErrorResponse "internal server error"
+// @Router /projects/{id} [get]
 func (h projectRouteHandler) projectGETHandle(c *echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
