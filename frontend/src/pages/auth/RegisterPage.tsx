@@ -10,16 +10,39 @@ import {
 import { useNavigate } from 'react-router'
 import AuthContainer from '../../components/auth/AuthContainer'
 import PasswordInput from '../../components/auth/PasswordInput'
+import { getApiErrorMessage } from '../../shared/utils/api/errors'
+import { useCreateUserMutation } from '../../store/features/user/user.api'
 
 export default function RegisterPage() {
     const navigate = useNavigate()
-    const [isPending, setIsPending] = useState(false)
+    const [createUser, { isLoading }] = useCreateUserMutation()
+    const [submitError, setSubmitError] = useState<string | null>(null)
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
-        setIsPending(true)
-        await new Promise((res) => setTimeout(res, 1200))
-        setIsPending(false)
+        setSubmitError(null)
+
+        const formData = new FormData(e.currentTarget)
+        const username = String(formData.get('username') ?? '').trim()
+        const email = String(formData.get('email') ?? '').trim()
+        const password = String(formData.get('password') ?? '')
+
+        try {
+            await createUser({
+                username,
+                email,
+                password,
+            }).unwrap()
+
+            navigate('/login')
+        } catch (error: unknown) {
+            setSubmitError(
+                getApiErrorMessage(
+                    error,
+                    'Failed to create account. Please try again.',
+                ),
+            )
+        }
     }
 
     return (
@@ -91,10 +114,14 @@ export default function RegisterPage() {
                     autoComplete="new-password"
                 />
 
+                {submitError ? (
+                    <p className="text-sm text-red-500">{submitError}</p>
+                ) : null}
+
                 <Button
                     type="submit"
                     fullWidth
-                    isPending={isPending}
+                    isPending={isLoading}
                     className="mt-1 h-11 rounded-xl bg-[var(--accent)] text-base text-white transition-opacity hover:opacity-90"
                 >
                     Create account

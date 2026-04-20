@@ -2,18 +2,20 @@ import { Breadcrumbs } from '@heroui/react'
 import { Home } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useParams } from 'react-router-dom'
-import { PROJECTS } from '../../shared/data/mockProjectsData'
+import { useGetProjectByIdQuery } from '../../store/features/project/project.api'
 
 export function AppBreadcrumb() {
     const { t } = useTranslation()
     const { projectId } = useParams()
     const location = useLocation()
+    const { data: project } = useGetProjectByIdQuery(projectId ?? '', {
+        skip: !projectId,
+    })
 
     if (!projectId) {
         return null
     }
 
-    const project = PROJECTS.find((item) => item.id === projectId)
     const projectName = project?.name ?? projectId
 
     const path = location.pathname
