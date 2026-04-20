@@ -74,7 +74,7 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
     email := "global@test.com"
     pass := "Password123!"
     
-    _, err := uServe.CreateUser(ctx, "testuser", email, pass)
+    testuser, err := uServe.CreateUser(ctx, "testuser", email, pass)
     require.NoError(t, err)
 
     globalCookie := getCookie(t, aServ, email, pass)
@@ -82,7 +82,7 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 	handler := routes.NewProjectRouteHandler(service, aServ)
 	
 	desc := "Handler Integration Test"
-	testProj, err := service.CreateProject(context.Background(), nil, "Handler Project", "handler-slug", &desc, "active")
+	testProj, err := service.CreateProject(context.Background(), &testuser.ID, "Handler Project", "handler-slug", &desc, "active")
 	require.NoError(t, err)
 
 	e := echo.New()
@@ -139,7 +139,10 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 		err := json.Unmarshal(rec.Body.Bytes(), &respProject)
 		require.NoError(t, err)
 
+		fmt.Printf("User:%d, %d", testuser.ID, *respProject.CreatedBy)
+
 		assert.Equal(t, testProj.ID, respProject.ID)
+		assert.Equal(t, testuser.ID, *respProject.CreatedBy)
 		assert.Equal(t, "Handler Project", respProject.Name)
 	})
 
