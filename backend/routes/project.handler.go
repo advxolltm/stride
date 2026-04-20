@@ -3,7 +3,6 @@ package routes
 import (
 	"errors"
 	"net/http"
-	"time"
 	//"iter"
 
 	authService "backend/services/auth"
@@ -18,28 +17,6 @@ import (
 type projectRouteHandler struct {
 	projectService projectService.ProjectService
 	authService    authService.AuthService
-}
-
-type returnUser struct {
-	ID           uuid.UUID
-	Username     string
-	Email        string
-	FullName     *string
-	AvatarURL    *string
-}
-
-type returnProj struct {
-	ID           uuid.UUID
-	CreatedBy   *uuid.UUID
-	Name        string
-	Slug        string
-	Description *string
-	Status      string
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	JoinLink    *uuid.UUID
-
-	Creator     *returnUser
 }
 
 
@@ -119,13 +96,7 @@ func mapToReturnProj(p models.Project) returnProj {
 	return res
 }
 
-func Map[T any, V any](input []T, f func(T) V) []V {
-    result := make([]V, len(input))
-    for i, v := range input {
-        result[i] = f(v)
-    }
-    return result
-}
+
 
 
 // GET /projects
