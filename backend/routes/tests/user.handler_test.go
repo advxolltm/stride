@@ -26,6 +26,21 @@ import (
 	"gorm.io/gorm"
 )
 
+// userResponse mirrors routes.User for test deserialization
+type userResponse struct {
+	ID        string            `json:"id"`
+	Username  string            `json:"username"`
+	Email     string            `json:"email"`
+	FullName  *string           `json:"full_name"`
+	AvatarURL *avatarURLResponse `json:"avatar_url"`
+}
+
+type avatarURLResponse struct {
+	Small    string `json:"300"`
+	Medium   string `json:"600"`
+	Original string `json:"original"`
+}
+
 type userTestEnv struct {
 	ctx          context.Context
 	e            *echo.Echo
@@ -90,7 +105,7 @@ func TestUserRouteHandler_Integration(t *testing.T) {
 
 		require.Equal(t, http.StatusOK, rec.Code)
 
-		var users []models.User
+		var users []userResponse
 		err := json.Unmarshal(rec.Body.Bytes(), &users)
 		require.NoError(t, err)
 		assert.GreaterOrEqual(t, len(users), 1)
@@ -116,10 +131,10 @@ func TestUserRouteHandler_Integration(t *testing.T) {
 
 		require.Equal(t, http.StatusOK, rec.Code)
 
-		var u models.User
+		var u userResponse
 		err := json.Unmarshal(rec.Body.Bytes(), &u)
 		require.NoError(t, err)
-		assert.Equal(t, env.testUser.ID, u.ID)
+		assert.Equal(t, env.testUser.ID.String(), u.ID)
 	})
 
 	runTest(t, "GET /users/:id returns 400 on invalid UUID", func(t *testing.T, tx *gorm.DB) {
@@ -169,7 +184,7 @@ func TestUserRouteHandler_Integration(t *testing.T) {
 
 		require.Equal(t, http.StatusCreated, rec.Code)
 
-		var u models.User
+		var u userResponse
 		err := json.Unmarshal(rec.Body.Bytes(), &u)
 		require.NoError(t, err)
 		assert.Equal(t, "newuser123", u.Username)
@@ -218,7 +233,7 @@ func TestUserRouteHandler_Integration(t *testing.T) {
 
 		require.Equal(t, http.StatusOK, rec.Code)
 
-		var u models.User
+		var u userResponse
 		err := json.Unmarshal(rec.Body.Bytes(), &u)
 		require.NoError(t, err)
 		require.NotNil(t, u.FullName)
@@ -312,7 +327,7 @@ func TestUserRouteHandler_Integration(t *testing.T) {
 
 	// ── PATCH /users/:id with avatar ────────────────────────────────
 
-	runTest(t, "PATCH /users/:id returns 200 with avatar upload", func(t *testing.T, tx *gorm.DB) {
+	runTest(t, "PATCH /users/:id returns 200 with avatar upload and generates thumbnails", func(t *testing.T, tx *gorm.DB) {
 		t.Setenv("MEDIA_DIR", t.TempDir())
 		env := newUserTestEnv(t, tx)
 
@@ -347,13 +362,15 @@ func TestUserRouteHandler_Integration(t *testing.T) {
 
 		require.Equal(t, http.StatusOK, rec.Code)
 
-		var u models.User
+		var u userResponse
 		err = json.Unmarshal(rec.Body.Bytes(), &u)
 		require.NoError(t, err)
 		require.NotNil(t, u.AvatarURL)
 		require.NotNil(t, u.FullName)
-		assert.Contains(t, *u.AvatarURL, "/media/avatars/")
-		assert.Contains(t, *u.AvatarURL, ".png")
+		assert.Contains(t, u.AvatarURL.Small, "/media/avatars/")
+		assert.Contains(t, u.AvatarURL.Small, "/300.png")
+		assert.Contains(t, u.AvatarURL.Medium, "/600.png")
+		assert.Contains(t, u.AvatarURL.Original, "/original.png")
 		assert.Equal(t, "Avatar User", *u.FullName)
 	})
 
@@ -366,6 +383,27 @@ func TestUserRouteHandler_Integration(t *testing.T) {
 		part, err := writer.CreateFormFile("avatar", "malware.exe")
 		require.NoError(t, err)
 		_, err = part.Write([]byte("not an image"))
+		require.NoError(t, err)
+		require.NoError(t, writer.Close())
+
+		req := httptest.NewRequest(http.MethodPatch, "/api/users/"+env.testUser.ID.String(), &buf)
+		req.Header.Set(echo.HeaderContentType, writer.FormDataContentType())
+		req.AddCookie(env.globalCookie)
+		rec := httptest.NewRecorder()
+		env.e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+	})
+
+	runTest(t, "PATCH /users/:id returns 400 on corrupt image (valid extension, invalid content)", func(t *testing.T, tx *gorm.DB) {
+		t.Setenv("MEDIA_DIR", t.TempDir())
+		env := newUserTestEnv(t, tx)
+
+		var buf bytes.Buffer
+		writer := multipart.NewWriter(&buf)
+		part, err := writer.CreateFormFile("avatar", "fake.png")
+		require.NoError(t, err)
+		_, err = part.Write([]byte("this is not a valid PNG image file content"))
 		require.NoError(t, err)
 		require.NoError(t, writer.Close())
 
@@ -393,7 +431,7 @@ func TestUserRouteHandler_Integration(t *testing.T) {
 
 		require.Equal(t, http.StatusOK, rec.Code)
 
-		var u models.User
+		var u userResponse
 		err := json.Unmarshal(rec.Body.Bytes(), &u)
 		require.NoError(t, err)
 		require.NotNil(t, u.FullName)

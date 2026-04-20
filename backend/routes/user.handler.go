@@ -55,7 +55,8 @@ func (h userRouteHandler) mapServiceError(err error) (int, string) {
 			errors.Is(err, userService.ErrPasswordTooShort),
 			errors.Is(err, userService.ErrPasswordMissingSpecial),
 			errors.Is(err, userService.ErrAvatarTooLarge),
-			errors.Is(err, userService.ErrAvatarInvalidType):
+			errors.Is(err, userService.ErrAvatarInvalidType),
+			errors.Is(err, userService.ErrAvatarCorruptImage):
 			return http.StatusBadRequest, err.Error()
 	default:
 		return http.StatusInternalServerError, "internal server error"
@@ -80,7 +81,11 @@ func (h userRouteHandler) usersGETHandle(c *echo.Context) error {
 		return c.JSON(status, ErrorResponse{Error: msg})
 	}
 
-	return c.JSON(http.StatusOK, users)
+	mapped := make([]User, len(users))
+	for i, u := range users {
+		mapped[i] = mapUser(u)
+	}
+	return c.JSON(http.StatusOK, mapped)
 }
 
 // GET /users/:id
@@ -106,7 +111,7 @@ func (h userRouteHandler) userGETHandle(c *echo.Context) error {
 		return c.JSON(status, ErrorResponse{Error: msg})
 	}
 
-	return c.JSON(http.StatusOK, u)
+	return c.JSON(http.StatusOK, mapUser(*u))
 }
 
 // POST /users
@@ -134,12 +139,13 @@ func (h userRouteHandler) userPOSTHandle(c *echo.Context) error {
 		return c.JSON(status, ErrorResponse{Error: msg})
 	}
 
-	return c.JSON(http.StatusCreated, u)
+	return c.JSON(http.StatusCreated, mapUser(*u))
 }
 
 // PATCH /users/:id
 //
 //	@Summary	Update user (self only)
+//	@Description	Updates user fields. When an avatar is uploaded, thumbnails (300x300, 600x600) and the original are saved. The response includes avatar_url with URLs for each resolution.
 //	@Tags		users
 //	@Accept		multipart/form-data
 //	@Accept		json
@@ -148,9 +154,9 @@ func (h userRouteHandler) userPOSTHandle(c *echo.Context) error {
 //	@Param		email		formData	string			false	"New email"
 //	@Param		password	formData	string			false	"New password"
 //	@Param		full_name	formData	string			false	"Full name"
-//	@Param		avatar		formData	file			false	"Avatar image (jpeg, png, gif, webp; max 2MB)"
+//	@Param		avatar		formData	file			false	"Avatar image (jpeg, png, gif, webp; max 2MB). Generates 300x300, 600x600 thumbnails + original."
 //	@Success	200			{object}	User
-//	@Failure	400			{object}	ErrorResponse	"invalid user id, request body, or avatar"
+//	@Failure	400			{object}	ErrorResponse	"invalid user id, request body, avatar type, corrupt image, or file too large"
 //	@Failure	401			{object}	ErrorResponse	"unauthorized"
 //	@Failure	404			{object}	ErrorResponse	"user not found"
 //	@Failure	409			{object}	ErrorResponse	"email already in use"
@@ -197,7 +203,7 @@ func (h userRouteHandler) userPATCHHandle(c *echo.Context) error {
 		return c.JSON(status, ErrorResponse{Error: msg})
 	}
 
-	return c.JSON(http.StatusOK, u)
+	return c.JSON(http.StatusOK, mapUser(*u))
 }
 
 // DELETE /users/:id

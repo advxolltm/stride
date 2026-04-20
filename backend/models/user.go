@@ -12,8 +12,8 @@ type User struct {
 	Email        string
 	PasswordHash string
 	FullName     *string
-	AvatarURL    *string
-	CreatedAt    time.Time `gorm:"default:current_timestamp"`
+	AvatarURL    *AvatarURLMap `gorm:"type:jsonb"`
+	CreatedAt    time.Time     `gorm:"default:current_timestamp"`
 	UpdatedAt    time.Time `gorm:"default:current_timestamp"`
 
 	Projects           []Project           `gorm:"foreignKey:CreatedBy"`

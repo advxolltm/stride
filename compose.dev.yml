@@ -96,7 +96,7 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app
-      - media_data:/app/media
+      - ./backend/media:/app/media
     healthcheck:
       test:
         [
@@ -123,7 +123,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - media_data:/media:ro
+      - ./backend/media:/media:ro
     depends_on:
       - frontserver
       - backserver

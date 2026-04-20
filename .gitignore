@@ -12,7 +12,7 @@ backend/tmp/
 backend/cover.out
 backend/coverage.out
 backend/*.test
-
+backend/media
 
 frontend/node_modules/
 frontend/dist/
