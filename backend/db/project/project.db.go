@@ -17,11 +17,11 @@ import (
 
 // TODO: Tests project.db.go
 type UpdateProjectFields struct {
-	Name			*string `gorm:"column:name"`
-    Slug 			*string `gorm:"column:slug"`
-    Description 	*string `gorm:"column:description"`
-    Status 			*string `gorm:"column:status"`
-	UpdatedAt		time.Time `gorm:"column:updated_at"`
+	Name        *string   `gorm:"column:name"`
+	Slug        *string   `gorm:"column:slug"`
+	Description *string   `gorm:"column:description"`
+	Status      *string   `gorm:"column:status"`
+	UpdatedAt   time.Time `gorm:"column:updated_at"`
 }
 
 type (
@@ -37,7 +37,6 @@ type (
 		RemoveUserFromProject(ctx context.Context, userId uuid.UUID, projectId uuid.UUID) error
 		AddProjectSkill(ctx context.Context, projectSkill *models.ProjectSkill) error
 		RemoveProjectSkill(ctx context.Context, id uuid.UUID) error
-
 	}
 
 	projectStore struct {
@@ -90,22 +89,22 @@ func (s *projectStore) GetProjectSkills(ctx context.Context, id uuid.UUID) ([]mo
 func (s *projectStore) CreateProject(ctx context.Context, project *models.Project) error {
 	result := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(project).Error; err != nil {
-            if strings.Contains(err.Error(), "duplicate key") {
-                return ErrDuplicateSlug
-            }
-            return err
-        }
+			if strings.Contains(err.Error(), "duplicate key") {
+				return ErrDuplicateSlug
+			}
+			return err
+		}
 
 		if project.CreatedBy != nil {
-            member := &models.ProjectMember{
-                ProjectID: project.ID,
-                UserID:    *project.CreatedBy,
-                Role:      "owner",
-            }
-            if err := tx.Create(member).Error; err != nil {
-                return err
-            }
-        }
+			member := &models.ProjectMember{
+				ProjectID: project.ID,
+				UserID:    *project.CreatedBy,
+				Role:      "owner",
+			}
+			if err := tx.Create(member).Error; err != nil {
+				return err
+			}
+		}
 
 		return tx.Preload("Creator").First(project, "id = ?", project.ID).Error
 	})
@@ -147,13 +146,13 @@ func (s *projectStore) DeleteProject(ctx context.Context, id uuid.UUID) error {
 		return gorm.ErrRecordNotFound
 	}
 	if result.RowsAffected == 0 {
-    	return gorm.ErrRecordNotFound
+		return gorm.ErrRecordNotFound
 	}
 	return nil
 }
 
 func (s *projectStore) AddUsersToProject(ctx context.Context, projectmembers []*models.ProjectMember) error {
-	result := s.db.WithContext(ctx).Create(&projectmembers)
+	result := s.db.WithContext(ctx).Create(projectmembers)
 	if result.Error != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(result.Error, &pgErr) {
@@ -171,14 +170,13 @@ func (s *projectStore) AddUsersToProject(ctx context.Context, projectmembers []*
 	return nil
 }
 
-
 func (s *projectStore) RemoveUserFromProject(ctx context.Context, userId uuid.UUID, projectId uuid.UUID) error {
 	result := s.db.WithContext(ctx).Where("user_id = ? AND project_id = ?", userId, projectId).Delete(&models.ProjectMember{})
 	if result.Error != nil {
 		return gorm.ErrRecordNotFound
 	}
 	if result.RowsAffected == 0 {
-    	return gorm.ErrRecordNotFound
+		return gorm.ErrRecordNotFound
 	}
 	return nil
 }
@@ -197,7 +195,7 @@ func (s *projectStore) RemoveProjectSkill(ctx context.Context, id uuid.UUID) err
 		return gorm.ErrRecordNotFound
 	}
 	if result.RowsAffected == 0 {
-    	return gorm.ErrRecordNotFound
+		return gorm.ErrRecordNotFound
 	}
 	return nil
 }

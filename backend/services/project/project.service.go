@@ -12,12 +12,12 @@ import (
 	"gorm.io/gorm"
 )
 
-//TODO: Tests project.service.go
+// TODO: Tests project.service.go
 type UpdateProjectInput struct {
-	Name			*string
-    Slug 			*string
-    Description 	*string
-    Status 			*string
+	Name        *string
+	Slug        *string
+	Description *string
+	Status      *string
 }
 type AddMemberRequest struct {
 	UserId uuid.UUID `json:"userid"`
@@ -39,11 +39,11 @@ type (
 		RemoveProjectSkill(ctx context.Context, skillId uuid.UUID) error
 	}
 	projectService struct {
-		projectStore	project.ProjectStore
+		projectStore project.ProjectStore
 	}
 )
 
-//TODO ALL THE REST!!
+// TODO ALL THE REST!!
 func NewProjectService(projectStore project.ProjectStore) ProjectService {
 	return &projectService{projectStore}
 }
@@ -106,14 +106,13 @@ func (s projectService) CreateProject(ctx context.Context, createdBy *uuid.UUID,
 	return p, nil
 }
 
-
 func (s projectService) UpdateProject(ctx context.Context, id uuid.UUID, input UpdateProjectInput) (*models.Project, error) {
 	fields := project.UpdateProjectFields{
 		Name:        input.Name,
 		Slug:        input.Slug,
 		Description: input.Description,
 		Status:      input.Status,
-		UpdatedAt:	 time.Now(),
+		UpdatedAt:   time.Now(),
 	}
 
 	if *input.Status != "active" && *input.Status != "archived" {
@@ -146,16 +145,14 @@ func (s projectService) AddUsersToProject(ctx context.Context, members []AddMemb
 
 	for _, user := range members {
 		m := &models.ProjectMember{
-		UserID:   		user.UserId,
-		ProjectID:      projectId,
-		Role:        	user.Role,
+			UserID:    user.UserId,
+			ProjectID: projectId,
+			Role:      user.Role,
 		}
 		projectMembers = append(projectMembers, m)
 	}
-
 	err := s.projectStore.AddUsersToProject(ctx, projectMembers)
 	if err != nil {
-		fmt.Println("Fehler aufgetreten:", err)
 		switch err {
 		case project.ErrProjectNotFound:
 			return nil, ErrProjectNotFound
@@ -166,7 +163,7 @@ func (s projectService) AddUsersToProject(ctx context.Context, members []AddMemb
 	}
 	return projectMembers, nil
 }
-func (s projectService) RemoveUserFromProject(ctx context.Context, userId uuid.UUID, projectId uuid.UUID) error{
+func (s projectService) RemoveUserFromProject(ctx context.Context, userId uuid.UUID, projectId uuid.UUID) error {
 	err := s.projectStore.RemoveUserFromProject(ctx, userId, projectId)
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrProjectStoreFailed, err)
@@ -176,9 +173,9 @@ func (s projectService) RemoveUserFromProject(ctx context.Context, userId uuid.U
 
 func (s projectService) AddProjectSkill(ctx context.Context, projectId uuid.UUID, name string, description *string) (*models.ProjectSkill, error) {
 	ps := &models.ProjectSkill{
-		ProjectID:   	projectId,
-		Name:      		name,
-		Description:    description,
+		ProjectID:   projectId,
+		Name:        name,
+		Description: description,
 	}
 	err := s.projectStore.AddProjectSkill(ctx, ps)
 	if err != nil {
@@ -194,4 +191,3 @@ func (s projectService) RemoveProjectSkill(ctx context.Context, skillId uuid.UUI
 	}
 	return nil
 }
-

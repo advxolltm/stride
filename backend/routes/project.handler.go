@@ -4,7 +4,6 @@ import (
 	"errors"
 	"net/http"
 
-	"backend/models"
 	authService "backend/services/auth"
 	projectService "backend/services/project"
 
@@ -34,7 +33,7 @@ func (h projectRouteHandler) AddRoutes(api *echo.Group) {
 	g.POST("/:id/members", h.memberPOSTHandle)
 	g.POST("/:id/skills", h.skillsPOSTHandle)
 	g.DELETE("/:id/members/:userid", h.memberDELETEHandle)
-	g.POST("/skills/:id", h.skillsDELETEHandle)
+	g.DELETE("/skills/:id", h.skillsDELETEHandle)
 	g.PATCH("/:id", h.projectPATCHHandle)
 	g.DELETE("/:id", h.projectDELETEHandle)
 }
@@ -67,31 +66,6 @@ func mapServiceErrorProj(err error) (int, string) {
 	default:
 		return http.StatusInternalServerError, "internal server error"
 	}
-}
-func mapToReturnProj(p models.Project) returnProj {
-	res := returnProj{
-		ID:          p.ID,
-		CreatedBy:   p.CreatedBy,
-		Name:        p.Name,
-		Slug:        p.Slug,
-		Description: p.Description,
-		Status:      p.Status,
-		CreatedAt:   p.CreatedAt,
-		UpdatedAt:   p.UpdatedAt,
-		JoinLink:    p.JoinLink,
-	}
-
-	if p.Creator != nil {
-		res.Creator = &returnUser{
-			ID:        p.Creator.ID,
-			Username:  p.Creator.Username,
-			Email:     p.Creator.Email,
-			FullName:  p.Creator.FullName,
-			AvatarURL: p.Creator.AvatarURL,
-		}
-	}
-
-	return res
 }
 
 // GET /projects
@@ -155,7 +129,7 @@ func (h projectRouteHandler) membersGETHandle(c *echo.Context) error {
 		return c.JSON(status, ErrorResponse{Error: msg})
 	}
 
-	return c.JSON(http.StatusOK, members)
+	return c.JSON(http.StatusOK, Map(members, mapToReturnMember))
 }
 
 // GET /projects:id/skills
@@ -201,7 +175,6 @@ func (h projectRouteHandler) memberPOSTHandle(c *echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid project id"})
 	}
-
 	var req []projectService.AddMemberRequest
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid request body"})
@@ -213,7 +186,7 @@ func (h projectRouteHandler) memberPOSTHandle(c *echo.Context) error {
 		return c.JSON(status, ErrorResponse{Error: msg})
 	}
 
-	return c.JSON(http.StatusCreated, u)
+	return c.JSON(http.StatusCreated, Map(u, mapToReturnMemberP))
 
 }
 

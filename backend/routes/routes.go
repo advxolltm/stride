@@ -38,25 +38,72 @@ func mapUser(user models.User) User {
 		AvatarURL: user.AvatarURL,
 	}
 }
+func mapToReturnProj(p models.Project) ReturnProj {
+	res := ReturnProj{
+		ID:          p.ID,
+		CreatedBy:   p.CreatedBy,
+		Name:        p.Name,
+		Slug:        p.Slug,
+		Description: p.Description,
+		Status:      p.Status,
+		CreatedAt:   p.CreatedAt,
+		UpdatedAt:   p.UpdatedAt,
+		JoinLink:    p.JoinLink,
+	}
+
+	if p.Creator != nil {
+		res.Creator = &ReturnUser{
+			ID:        p.Creator.ID,
+			Username:  p.Creator.Username,
+			Email:     p.Creator.Email,
+			FullName:  p.Creator.FullName,
+			AvatarURL: p.Creator.AvatarURL,
+		}
+	}
+
+	return res
+}
+
+func mapToReturnMember(m models.ProjectMember) ReturnMember {
+	res := ReturnMember{
+		ID:        m.ID,
+		UserID:    m.UserID,
+		ProjectID: m.ProjectID,
+		Role:      m.Role,
+		JoinedAt:  m.JoinedAt,
+	}
+	return res
+}
+func mapToReturnMemberP(mp *models.ProjectMember) ReturnMember {
+	m := *mp
+	res := ReturnMember{
+		ID:        m.ID,
+		UserID:    m.UserID,
+		ProjectID: m.ProjectID,
+		Role:      m.Role,
+		JoinedAt:  m.JoinedAt,
+	}
+	return res
+}
 
 func Map[T any, V any](input []T, f func(T) V) []V {
-    result := make([]V, len(input))
-    for i, v := range input {
-        result[i] = f(v)
-    }
-    return result
+	result := make([]V, len(input))
+	for i, v := range input {
+		result[i] = f(v)
+	}
+	return result
 }
 
-type returnUser struct {
-	ID           uuid.UUID
-	Username     string
-	Email        string
-	FullName     *string
-	AvatarURL    *string
+type ReturnUser struct {
+	ID        uuid.UUID
+	Username  string
+	Email     string
+	FullName  *string
+	AvatarURL *string
 }
 
-type returnProj struct {
-	ID           uuid.UUID
+type ReturnProj struct {
+	ID          uuid.UUID
 	CreatedBy   *uuid.UUID
 	Name        string
 	Slug        string
@@ -66,5 +113,15 @@ type returnProj struct {
 	UpdatedAt   time.Time
 	JoinLink    *uuid.UUID
 
-	Creator     *returnUser
+	Creator *ReturnUser
+}
+
+type ReturnMember struct {
+	ID        uuid.UUID
+	UserID    uuid.UUID
+	ProjectID uuid.UUID
+	Role      string
+	JoinedAt  time.Time
+
+	//User          User           `gorm:"foreignKey:UserID"`
 }
