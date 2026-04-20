@@ -147,7 +147,7 @@ func (h projectRouteHandler) skillsGETHandle(c *echo.Context) error {
 		return c.JSON(status, ErrorResponse{Error: msg})
 	}
 
-	return c.JSON(http.StatusOK, skills)
+	return c.JSON(http.StatusOK, Map(skills, mapToReturnSkill))
 }
 
 // POST /projects
@@ -208,7 +208,7 @@ func (h projectRouteHandler) skillsPOSTHandle(c *echo.Context) error {
 		return c.JSON(status, ErrorResponse{Error: msg})
 	}
 
-	return c.JSON(http.StatusOK, s)
+	return c.JSON(http.StatusOK, mapToReturnSkill(*s))
 }
 
 // @Summary	Change general project data. Must be project owner.

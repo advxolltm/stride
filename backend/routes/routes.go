@@ -86,6 +86,16 @@ func mapToReturnMemberP(mp *models.ProjectMember) ReturnMember {
 	return res
 }
 
+func mapToReturnSkill(s models.ProjectSkill) ReturnSkill {
+	res := ReturnSkill{
+		ID:          s.ID,
+		ProjectID:   s.ProjectID,
+		Name:        s.Name,
+		Description: s.Description,
+	}
+	return res
+}
+
 func Map[T any, V any](input []T, f func(T) V) []V {
 	result := make([]V, len(input))
 	for i, v := range input {
@@ -100,6 +110,13 @@ type ReturnUser struct {
 	Email     string
 	FullName  *string
 	AvatarURL *string
+}
+
+type ReturnSkill struct {
+	ID          uuid.UUID
+	ProjectID   uuid.UUID
+	Name        string
+	Description *string
 }
 
 type ReturnProj struct {
