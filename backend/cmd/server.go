@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
@@ -74,14 +73,7 @@ func main() {
 	exampleStore := exampleDB.NewExampleStore("some-db-connection-string")
 
 	var migration *migrate.Migrate
-	dsn := fmt.Sprintf(
-		"postgresql://%s:%s@%s:%s/%s?sslmode=disable",
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASSWORD"),
-		os.Getenv("DB_HOST"),
-		os.Getenv("DB_PORT"),
-		os.Getenv("DB_NAME"),
-	)
+	dsn := mainDB.PostgresDSNFromEnv()
 
 	mainDB, migration, err := mainDB.InitDB(dsn)
 	defer migration.Down()

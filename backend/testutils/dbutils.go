@@ -20,14 +20,7 @@ var stack *compose.DockerCompose
 var ctx = context.Background()
 
 func SetupDBFromEnv() *gorm.DB {
-	dsn := fmt.Sprintf(
-		"postgresql://%s:%s@%s:%s/%s?sslmode=disable",
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASSWORD"),
-		os.Getenv("DB_HOST"),
-		os.Getenv("DB_PORT"),
-		os.Getenv("DB_NAME"),
-	)
+	dsn := db.PostgresDSNFromEnv()
 
 	testdb, _, err := db.InitDB(dsn)
 	AssertNoError(err)
