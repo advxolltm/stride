@@ -106,7 +106,7 @@ func (s *projectStore) CreateProject(ctx context.Context, project *models.Projec
 			}
 		}
 
-		return tx.Preload("Creator").First(project, "id = ?", project.ID).Error
+		return tx.Preload("Creator").Preload("Members").Preload("Skills").First(project, "id = ?", project.ID).Error
 	})
 
 	if result != nil {

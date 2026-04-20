@@ -114,7 +114,7 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 
 		assert.Equal(t, http.StatusCreated, rec.Code)
 
-		var created models.Project
+		var created routes.ReturnProj
 		err = json.Unmarshal(rec.Body.Bytes(), &created)
 		require.NoError(t, err)
 
@@ -126,6 +126,8 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 
 		assert.NotNil(t, created.CreatedBy)
 		assert.Equal(t, testuser.ID, *created.CreatedBy)
+		assert.Len(t, created.Members, 1)
+		assert.Len(t, created.Skills, 0)
 	})
 
 	runTest(t, "Returns 200 and projects for current user", func(t *testing.T, tx *gorm.DB) {
