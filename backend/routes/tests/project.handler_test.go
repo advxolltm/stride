@@ -16,6 +16,7 @@ import (
 	"testing"
 	"fmt"
 	"os"
+	"bytes"
 
 
 	"github.com/google/uuid"
@@ -122,4 +123,80 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 
 		assert.Equal(t, http.StatusNotFound, rec.Code)
 	})
+
+	runTest(t, "Returns 201 on successfully adding members", func(t *testing.T, tx *gorm.DB) {
+        newUser1, err := uServe.CreateUser(ctx, "member1", "member1@test.com", "Password123!")
+        require.NoError(t, err)
+        
+        newUser2, err := uServe.CreateUser(ctx, "member2", "member2@test.com", "Password123!")
+        require.NoError(t, err)
+
+        payload := []projectService.AddMemberRequest{
+            {UserId: newUser1.ID, Role: "boss"},
+            {UserId: newUser2.ID, Role: "gopher"},
+        }
+        
+        body, err := json.Marshal(payload)
+        require.NoError(t, err)
+
+        req := httptest.NewRequest(http.MethodPost, "/api/projects/"+testProj.ID.String()+"/members", bytes.NewBuffer(body))
+        req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+        req.AddCookie(globalCookie)
+        
+        rec := httptest.NewRecorder()
+        e.ServeHTTP(rec, req)
+
+        assert.Equal(t, http.StatusCreated, rec.Code)
+
+        var respMembers []models.ProjectMember
+        err = json.Unmarshal(rec.Body.Bytes(), &respMembers)
+        require.NoError(t, err)
+        
+        assert.Len(t, respMembers, 2)
+        assert.Equal(t, testProj.ID, respMembers[0].ProjectID)
+    })
+
+    runTest(t, "Returns 400 on invalid project UUID for members POST", func(t *testing.T, tx *gorm.DB) {
+        req := httptest.NewRequest(http.MethodPost, "/api/projects/invalid-uuid/members", nil)
+        req.AddCookie(globalCookie)
+        
+        rec := httptest.NewRecorder()
+        e.ServeHTTP(rec, req)
+
+        assert.Equal(t, http.StatusBadRequest, rec.Code)
+    })
+
+    runTest(t, "Returns 400 on invalid JSON body", func(t *testing.T, tx *gorm.DB) {
+        badBody := []byte(`{"user_id": "123", "role": "admin"}`)
+        
+        req := httptest.NewRequest(http.MethodPost, "/api/projects/"+testProj.ID.String()+"/members", bytes.NewBuffer(badBody))
+        req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+        req.AddCookie(globalCookie)
+        
+        rec := httptest.NewRecorder()
+        e.ServeHTTP(rec, req)
+
+        assert.Equal(t, http.StatusBadRequest, rec.Code)
+    })
+
+    runTest(t, "Returns handled error when target project does not exist", func(t *testing.T, tx *gorm.DB) {
+		newUser3, err := uServe.CreateUser(ctx, "member3", "member3@test.com", "Password123!")
+        require.NoError(t, err)
+
+        payload := []projectService.AddMemberRequest{
+            {UserId: newUser3.ID, Role: "chillin"},
+        }
+        body, err := json.Marshal(payload)
+        require.NoError(t, err)
+
+        fakeProjID := uuid.New().String()
+        req := httptest.NewRequest(http.MethodPost, "/api/projects/"+fakeProjID+"/members", bytes.NewBuffer(body))
+        req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+        req.AddCookie(globalCookie)
+        
+        rec := httptest.NewRecorder()
+        e.ServeHTTP(rec, req)
+
+        assert.Equal(t, http.StatusNotFound, rec.Code)
+    })
 }

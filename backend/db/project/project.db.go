@@ -33,7 +33,7 @@ type (
 		CreateProject(ctx context.Context, project *models.Project) error
 		UpdateProject(ctx context.Context, id uuid.UUID, input UpdateProjectFields) (*models.Project, error)
 		DeleteProject(ctx context.Context, id uuid.UUID) error
-		AddUserToProject(ctx context.Context, projectmember *models.ProjectMember) error
+		AddUsersToProject(ctx context.Context, projectmembers []*models.ProjectMember) error
 		RemoveUserFromProject(ctx context.Context, userId uuid.UUID, projectId uuid.UUID) error
 		AddProjectSkill(ctx context.Context, projectSkill *models.ProjectSkill) error
 		RemoveProjectSkill(ctx context.Context, id uuid.UUID) error
@@ -148,9 +148,20 @@ func (s *projectStore) DeleteProject(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func (s *projectStore) AddUserToProject(ctx context.Context, projectmember *models.ProjectMember) error {
-	result := s.db.WithContext(ctx).Create(projectmember)
+func (s *projectStore) AddUsersToProject(ctx context.Context, projectmembers []*models.ProjectMember) error {
+	result := s.db.WithContext(ctx).Create(&projectmembers)
 	if result.Error != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(result.Error, &pgErr) {
+			if pgErr.Code == "23503" { //Foreign key violation
+				switch pgErr.ConstraintName {
+				case "project_members_user_id_fkey":
+					return ErrNonExistentUser
+				case "project_members_project_id_fkey":
+					return ErrProjectNotFound
+				}
+			}
+		}
 		return result.Error
 	}
 	return nil

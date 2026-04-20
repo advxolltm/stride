@@ -19,6 +19,10 @@ type UpdateProjectInput struct {
     Description 	*string
     Status 			*string
 }
+type AddMemberRequest struct {
+	UserId uuid.UUID `json:"userid"`
+	Role   string    `json:"role"`
+}
 
 type (
 	ProjectService interface {
@@ -29,7 +33,7 @@ type (
 		CreateProject(ctx context.Context, createdBy *uuid.UUID, name string, slug string, description *string, status string) (*models.Project, error)
 		UpdateProject(ctx context.Context, id uuid.UUID, input UpdateProjectInput) (*models.Project, error)
 		DeleteProject(ctx context.Context, id uuid.UUID) error
-		AddUserToProject(ctx context.Context, userId uuid.UUID, projectId uuid.UUID, role string) (*models.ProjectMember, error)
+		AddUsersToProject(ctx context.Context, members []AddMemberRequest, projectId uuid.UUID) ([]*models.ProjectMember, error)
 		RemoveUserFromProject(ctx context.Context, userId uuid.UUID, projectId uuid.UUID) error
 		AddProjectSkill(ctx context.Context, projectId uuid.UUID, name string, description *string) (*models.ProjectSkill, error)
 		RemoveProjectSkill(ctx context.Context, skillId uuid.UUID) error
@@ -134,20 +138,33 @@ func (s projectService) DeleteProject(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func (s projectService) AddUserToProject(ctx context.Context, userId uuid.UUID, projectId uuid.UUID, role string) (*models.ProjectMember, error) {
+func (s projectService) AddUsersToProject(ctx context.Context, members []AddMemberRequest, projectId uuid.UUID) ([]*models.ProjectMember, error) {
 
 	//TODO: REFINE ERROR HANDLING
 
-	m := &models.ProjectMember{
-		UserID:   		userId,
+	var projectMembers []*models.ProjectMember
+
+	for _, user := range members {
+		m := &models.ProjectMember{
+		UserID:   		user.UserId,
 		ProjectID:      projectId,
-		Role:        	role,
+		Role:        	user.Role,
+		}
+		projectMembers = append(projectMembers, m)
 	}
-	err := s.projectStore.AddUserToProject(ctx, m)
+
+	err := s.projectStore.AddUsersToProject(ctx, projectMembers)
 	if err != nil {
+		fmt.Println("Fehler aufgetreten:", err)
+		switch err {
+		case project.ErrProjectNotFound:
+			return nil, ErrProjectNotFound
+		case project.ErrNonExistentUser:
+			return nil, ErrNonExistentUser
+		}
 		return nil, fmt.Errorf("%w: %w", ErrProjectStoreFailed, err)
 	}
-	return m, nil
+	return projectMembers, nil
 }
 func (s projectService) RemoveUserFromProject(ctx context.Context, userId uuid.UUID, projectId uuid.UUID) error{
 	err := s.projectStore.RemoveUserFromProject(ctx, userId, projectId)

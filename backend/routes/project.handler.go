@@ -50,11 +50,6 @@ type createSkillRequest struct {
 	Description	*string	`json:"description"`
 }
 
-type addMemberReqest struct {
-	UserId uuid.UUID `json:"userid"`
-	Role   string    `json:"role"`
-}
-
 type updateProjectRequest struct {
 	Name        *string `json:"name"`
 	Slug        *string `json:"slug"`
@@ -166,12 +161,12 @@ func (h projectRouteHandler) memberPOSTHandle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid project id"})
 	}
 
-	var req addMemberReqest
+	var req []projectService.AddMemberRequest
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid request body"})
 	}
 
-	p, err := h.projectService.AddUserToProject(c.Request().Context(), req.UserId, id, req.Role)
+	p, err := h.projectService.AddUsersToProject(c.Request().Context(), req, id)
 	if err != nil {
 		status, msg := mapServiceErrorProj(err)
 		return c.JSON(status, ErrorResponse{Error: msg})
