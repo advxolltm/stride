@@ -90,6 +90,45 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 
 	handler.AddRoutes(api)
 
+	runTest(t, "Returns 201 and correctly populates all fields on project creation", func(t *testing.T, tx *gorm.DB) {
+        projectName := "createProj"
+        projectSlug := "bloop-bleep"
+        projectDesc := "A project bloop bleep"
+        projectStatus := "active"
+
+        payload := routes.CreateProjectRequest{
+            Name:        projectName,
+            Slug:        projectSlug,
+            Description: &projectDesc,
+            Status:      projectStatus,
+        }
+
+        body, err := json.Marshal(payload)
+        require.NoError(t, err)
+
+        req := httptest.NewRequest(http.MethodPost, "/api/projects", bytes.NewBuffer(body))
+        req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+        req.AddCookie(globalCookie)
+        
+        rec := httptest.NewRecorder()
+        e.ServeHTTP(rec, req)
+
+        assert.Equal(t, http.StatusCreated, rec.Code)
+
+        var created models.Project
+        err = json.Unmarshal(rec.Body.Bytes(), &created)
+        require.NoError(t, err)
+
+        assert.NotEqual(t, uuid.Nil, created.ID)
+        assert.Equal(t, projectName, created.Name)
+        assert.Equal(t, projectSlug, created.Slug)
+        assert.Equal(t, projectDesc, *created.Description)
+        assert.Equal(t, projectStatus, created.Status)
+        
+        assert.NotNil(t, created.CreatedBy)
+        assert.Equal(t, testuser.ID, *created.CreatedBy)
+    })
+
 	runTest(t, "Returns 200 and projects for current user", func(t *testing.T, tx *gorm.DB) {
         newUser, err := uServe.CreateUser(ctx, "projectowner", "owner@test.com", "Password123!")
         require.NoError(t, err)

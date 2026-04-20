@@ -38,7 +38,7 @@ func (h projectRouteHandler) AddRoutes(api *echo.Group) {
 	g.DELETE("/:id", h.projectDELETEHandle)
 }
 
-type createProjectRequest struct { // createdBy *uuid.UUID, name string, slug string, description *string, status string
+type CreateProjectRequest struct { // createdBy *uuid.UUID, name string, slug string, description *string, status string
 	Name        string  `json:"name"`
 	Slug        string  `json:"slug"`
 	Description *string `json:"description"`
@@ -142,7 +142,7 @@ func (h projectRouteHandler) skillsGETHandle(c *echo.Context) error {
 
 // POST /projects
 func (h projectRouteHandler) projectPOSTHandle(c *echo.Context) error {
-	var req createProjectRequest
+	var req CreateProjectRequest
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid request body"})
 	}
