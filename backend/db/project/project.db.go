@@ -50,7 +50,7 @@ func NewProjectStore(db *gorm.DB) ProjectStore {
 
 func (s *projectStore) GetAllProjects(ctx context.Context, userid *uuid.UUID) ([]models.Project, error) {
 	var user models.User
-	result := s.db.Preload("Projects").Preload("Projects.Creator").First(&user, userid)
+	result := s.db.Preload("Projects").Preload("Projects.Creator").Preload("Projects.Members").Preload("Projects.Skills").First(&user, userid)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -59,7 +59,7 @@ func (s *projectStore) GetAllProjects(ctx context.Context, userid *uuid.UUID) ([
 
 func (s *projectStore) GetProject(ctx context.Context, id uuid.UUID) (*models.Project, error) {
 	var project models.Project
-	result := s.db.WithContext(ctx).Preload("Creator").First(&project, "id = ?", id)
+	result := s.db.WithContext(ctx).Preload("Creator").Preload("Members").Preload("Skills").First(&project, "id = ?", id)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -133,7 +133,7 @@ func (s *projectStore) UpdateProject(ctx context.Context, id uuid.UUID, fields U
 	if result.RowsAffected == 0 {
 		return nil, gorm.ErrRecordNotFound
 	}
-	err := s.db.WithContext(ctx).Preload("Creator").First(project, id).Error
+	err := s.db.WithContext(ctx).Preload("Creator").Preload("Members").Preload("Skills").First(project, id).Error
 	if err != nil {
 		return nil, err
 	}

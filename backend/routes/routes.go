@@ -60,6 +60,12 @@ func mapToReturnProj(p models.Project) ReturnProj {
 			AvatarURL: p.Creator.AvatarURL,
 		}
 	}
+	if p.Members != nil {
+		res.Members = Map(p.Members, mapToReturnMember)
+	}
+	if p.Skills != nil {
+		res.Skills = Map(p.Skills, mapToReturnSkill)
+	}
 
 	return res
 }
@@ -131,6 +137,8 @@ type ReturnProj struct {
 	JoinLink    *uuid.UUID
 
 	Creator *ReturnUser
+	Members []ReturnMember
+	Skills  []ReturnSkill
 }
 
 type ReturnMember struct {
