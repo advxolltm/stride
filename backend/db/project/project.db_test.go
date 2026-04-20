@@ -5,6 +5,8 @@ import (
 	"backend/models"
 	"backend/testutils"
 	"context"
+	"fmt"
+	"os"
 	"testing"
 
 	"github.com/google/uuid"
@@ -13,19 +15,36 @@ import (
 	"gorm.io/gorm"
 )
 
-func TestMain(m *testing.M) {
-	testutils.SetupDB()
-	defer testutils.TeardownDB()
+var db *gorm.DB
 
-	m.Run()
+func newTestProjectStore(db *gorm.DB) project.ProjectStore {
+	return project.NewProjectStore(db)
+}
+
+func TestMain(m *testing.M) {
+	db = testutils.SetupDB()
+	db = db.Begin()
+	testutils.SeedDB(db)
+	exitCode := m.Run()
+	db.Rollback()
+	testutils.TeardownDB()
+	os.Exit(exitCode)
+}
+
+func runTest(t *testing.T, db *gorm.DB, name string, f func(*testing.T, *gorm.DB, project.ProjectStore)) {
+	t.Run(name, func(t *testing.T) {
+		db.Transaction(func(tx *gorm.DB) error {
+			f(t, tx, newTestProjectStore(tx))
+			return fmt.Errorf("rollback %s", t.Name())
+		})
+	})
 }
 
 func TestProjectStore_CreateAndGetProject(t *testing.T) {
 	//TODO: WRITE MORE TESTS
-	store := project.NewProjectStore(testutils.DB)
 	ctx := context.Background()
 
-	t.Run("Create a new project successfully", func(t *testing.T) {
+	runTest(t, db, "Create a new project successfully", func(t *testing.T, db *gorm.DB, store project.ProjectStore) {
 		desc := "Test Description"
 		p := &models.Project{
 			Name:        "Test Project",
@@ -44,7 +63,7 @@ func TestProjectStore_CreateAndGetProject(t *testing.T) {
 		assert.Equal(t, p.Slug, fetchedProj.Slug)
 	})
 
-	t.Run("Create project with duplicate slug fails", func(t *testing.T) {
+	runTest(t, db, "Create project with duplicate slug fails", func(t *testing.T, db *gorm.DB, store project.ProjectStore) {
 		p1 := &models.Project{Name: "Proj 1", Slug: "duplicate-slug", Status: "active"}
 		err := store.CreateProject(ctx, p1)
 		require.NoError(t, err)
@@ -55,8 +74,12 @@ func TestProjectStore_CreateAndGetProject(t *testing.T) {
 		assert.ErrorIs(t, err, project.ErrDuplicateSlug)
 	})
 
-	t.Run("Get non-existent project returns error", func(t *testing.T) {
+	runTest(t, db, "Get non-existent project returns error", func(t *testing.T, db *gorm.DB, store project.ProjectStore) {
 		_, err := store.GetProject(ctx, uuid.New())
 		assert.ErrorIs(t, err, gorm.ErrRecordNotFound)
+	})
+
+	runTest(t, db, "Get project owner of project", func(t *testing.T, db *gorm.DB, store project.ProjectStore) {
+		// p := testutils.SelectRandomUser()
 	})
 }

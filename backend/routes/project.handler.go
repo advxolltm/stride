@@ -46,8 +46,8 @@ type createProjectRequest struct { // createdBy *uuid.UUID, name string, slug st
 }
 
 type createSkillRequest struct {
-	Name		string	`json:"name"`
-	Description	*string	`json:"description"`
+	Name        string  `json:"name"`
+	Description *string `json:"description"`
 }
 
 type updateProjectRequest struct {
@@ -69,6 +69,10 @@ func mapServiceErrorProj(err error) (int, string) {
 }
 
 // GET /projects
+//
+//	@Summary	Get all projects for the authenticated user
+//	@Success	200	{object}	any
+//	@Router		/projects [get]
 func (h projectRouteHandler) projectsGETHandle(c *echo.Context) error {
 	// TODO: add user-check
 	userid := h.authService.GetClaims(c).UserID
@@ -198,11 +202,29 @@ func (h projectRouteHandler) skillsPOSTHandle(c *echo.Context) error {
 	return c.JSON(http.StatusOK, s)
 }
 
-// PATCH /projects/:id
+// @Summary	Change general project data. Must be project owner.
+// @Tags		projects
+// @Param		id	path	string	true	"Project ID"
+// @Success	200
+// @Failure	400	{object}	ErrorResponse	"invalid project id"
+// @Failure	401	{object}	ErrorResponse	"unauthorized"
+// @Router		/projects/{id} [patch]
 func (h projectRouteHandler) projectPATCHHandle(c *echo.Context) error {
+	ctx := c.Request().Context()
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid project id"})
+	}
+
+	userId := h.authService.GetClaims(c).UserID
+	isOwner, err := h.authService.IsProjectOwner(ctx, userId, id)
+	if err != nil {
+		status, msg := mapServiceErrorProj(err)
+		return c.JSON(status, ErrorResponse{Error: msg})
+	}
+
+	if !isOwner {
+		return c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "unauthorized"})
 	}
 
 	var req updateProjectRequest
@@ -210,7 +232,7 @@ func (h projectRouteHandler) projectPATCHHandle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid request body"})
 	}
 
-	p, err := h.projectService.UpdateProject(c.Request().Context(), id, projectService.UpdateProjectInput{
+	p, err := h.projectService.UpdateProject(ctx, id, projectService.UpdateProjectInput{
 		Name:        req.Name,
 		Slug:        req.Slug,
 		Description: req.Description,

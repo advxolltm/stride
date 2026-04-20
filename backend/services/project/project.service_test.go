@@ -7,6 +7,7 @@ import (
 	userStore "backend/db/user"
 	"backend/testutils"
 	"context"
+	"os"
 	"testing"
 
 	"github.com/google/uuid"
@@ -14,11 +15,17 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 )
+
 var db *gorm.DB
+
 func TestMain(m *testing.M) {
 	db = testutils.SetupDB()
-	defer testutils.TeardownDB()
-	m.Run()
+	db = db.Begin()
+	testutils.SeedDB(db)
+	exitCode := m.Run()
+	db.Rollback()
+	testutils.TeardownDB()
+	os.Exit(exitCode)
 }
 
 func TestProjectService_Integration(t *testing.T) {

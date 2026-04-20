@@ -37,17 +37,14 @@
   },
   "createDialog": {
     "title": "Projekt erstellen",
-    "description": "Lege ein neues Projekt mit Titel, Beschreibung und den benoetigten Faehigkeiten an.",
+    "description": "Lege ein neues Projekt mit Titel und einer kurzen Beschreibung an.",
     "fields": {
       "title": "Titel",
-      "description": "Beschreibung",
-      "skills": "Faehigkeiten"
+      "description": "Beschreibung"
     },
     "placeholders": {
       "title": "Projekttitel eingeben",
-      "description": "Beschreibe das Ziel dieses Projekts",
-      "skills": "Faehigkeiten auswaehlen",
-      "skillsSearch": "Faehigkeiten suchen"
+      "description": "Beschreibe das Ziel dieses Projekts"
     },
     "actions": {
       "create": "Projekt erstellen"

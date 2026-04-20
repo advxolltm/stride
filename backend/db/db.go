@@ -30,7 +30,20 @@ func migrateDB(postgresURL string) (*migrate.Migrate, error) {
 		log.Fatal(err)
 	}
 
-	// Ensure that DB is in a consistent (empty) state first
+	// Check current version and dirty state
+	_, dirty, err := m.Version()
+	if err != nil && err != migrate.ErrNilVersion {
+		log.Fatal(err)
+	}
+
+	// If dirty, force reset to version 0 (clean state)
+	if dirty {
+		if err := m.Force(0); err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	// Drop everything (ensure empty DB)
 	if err := m.Down(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		log.Fatal(err)
 	}
