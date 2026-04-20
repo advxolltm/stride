@@ -3,9 +3,12 @@ package routes
 import (
 	"errors"
 	"net/http"
+	"time"
+	//"iter"
 
 	authService "backend/services/auth"
 	projectService "backend/services/project"
+	"backend/models"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
@@ -16,6 +19,29 @@ type projectRouteHandler struct {
 	projectService projectService.ProjectService
 	authService    authService.AuthService
 }
+
+type returnUser struct {
+	ID           uuid.UUID
+	Username     string
+	Email        string
+	FullName     *string
+	AvatarURL    *string
+}
+
+type returnProj struct {
+	ID           uuid.UUID
+	CreatedBy   *uuid.UUID
+	Name        string
+	Slug        string
+	Description *string
+	Status      string
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	JoinLink    *uuid.UUID
+
+	Creator     *returnUser
+}
+
 
 func NewProjectRouteHandler(ps projectService.ProjectService, as authService.AuthService) *projectRouteHandler {
 	return &projectRouteHandler{projectService: ps, authService: as}
@@ -67,6 +93,40 @@ func mapServiceErrorProj(err error) (int, string) {
 		return http.StatusInternalServerError, "internal server error"
 	}
 }
+func mapToReturnProj(p models.Project) returnProj {
+	res := returnProj{
+		ID:          p.ID,
+		CreatedBy:   p.CreatedBy,
+		Name:        p.Name,
+		Slug:        p.Slug,
+		Description: p.Description,
+		Status:      p.Status,
+		CreatedAt:   p.CreatedAt,
+		UpdatedAt:   p.UpdatedAt,
+		JoinLink:    p.JoinLink,
+	}
+
+	if p.Creator != nil {
+		res.Creator = &returnUser{
+			ID:       p.Creator.ID,
+			Username: p.Creator.Username,
+			Email:    p.Creator.Email,
+			FullName: p.Creator.FullName,
+			AvatarURL:p.Creator.AvatarURL,
+		}
+	}
+
+	return res
+}
+
+func Map[T any, V any](input []T, f func(T) V) []V {
+    result := make([]V, len(input))
+    for i, v := range input {
+        result[i] = f(v)
+    }
+    return result
+}
+
 
 // GET /projects
 //
@@ -83,7 +143,7 @@ func (h projectRouteHandler) projectsGETHandle(c *echo.Context) error {
 		return c.JSON(status, ErrorResponse{Error: msg})
 	}
 
-	return c.JSON(http.StatusOK, projects)
+	return c.JSON(http.StatusOK, Map(projects, mapToReturnProj))
 }
 
 // GET /projects/:id
@@ -101,7 +161,7 @@ func (h projectRouteHandler) projectGETHandle(c *echo.Context) error {
 		return c.JSON(status, ErrorResponse{Error: msg})
 	}
 
-	return c.JSON(http.StatusOK, p)
+	return c.JSON(http.StatusOK, mapToReturnProj(*p))
 }
 
 // GET /projects:id/members
@@ -156,7 +216,7 @@ func (h projectRouteHandler) projectPOSTHandle(c *echo.Context) error {
 		return c.JSON(status, ErrorResponse{Error: msg})
 	}
 
-	return c.JSON(http.StatusCreated, p)
+	return c.JSON(http.StatusCreated, mapToReturnProj(*p))
 }
 
 // POST /projects/:id/members
@@ -171,13 +231,13 @@ func (h projectRouteHandler) memberPOSTHandle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid request body"})
 	}
 
-	p, err := h.projectService.AddUsersToProject(c.Request().Context(), req, id)
+	u, err := h.projectService.AddUsersToProject(c.Request().Context(), req, id)
 	if err != nil {
 		status, msg := mapServiceErrorProj(err)
 		return c.JSON(status, ErrorResponse{Error: msg})
 	}
 
-	return c.JSON(http.StatusCreated, p)
+	return c.JSON(http.StatusCreated, u)
 
 }
 
@@ -243,7 +303,7 @@ func (h projectRouteHandler) projectPATCHHandle(c *echo.Context) error {
 		return c.JSON(status, ErrorResponse{Error: msg})
 	}
 
-	return c.JSON(http.StatusOK, p)
+	return c.JSON(http.StatusOK, mapToReturnProj(*p))
 }
 
 // DELETE /projects/:id
