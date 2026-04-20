@@ -1,39 +1,42 @@
 package scheduler
 
 import (
+	"fmt"
+	"slices"
 	"time"
+
 	"github.com/google/or-tools/ortools/sat/go/cpmodel"
 
 	cmpb "github.com/google/or-tools/ortools/sat/proto/cpmodel"
 )
 
-//SCHEDULER
+// SCHEDULER
 type skill struct {
-	name 	string
+	name string
 }
 
 type user struct {
-	name 	string
-	skills 	[]skill
-	weekyHours	int
+	name       string
+	skills     []skill
+	weekyHours int
 }
 
 type task struct {
-	name 			string
-	startat			time.Time
-	dueat			time.Time
-	needed_skills	[]skill
+	name          string
+	startat       time.Time
+	dueat         time.Time
+	needed_skills []skill
 }
 
 func weekday(d time.Time) int {
-    wd := d.Weekday()
-    if wd == time.Sunday {
-        return 6
-    }
-    return int(wd) - 1
+	wd := d.Weekday()
+	if wd == time.Sunday {
+		return 6
+	}
+	return int(wd) - 1
 }
 
-func calculateWorkingDays (start time.Time, end time.Time) int {
+func calculateWorkingDays(start time.Time, end time.Time) int {
 	//Round to days (for now at least)
 	d := 24 * time.Hour
 	start.Truncate(d)
@@ -42,7 +45,7 @@ func calculateWorkingDays (start time.Time, end time.Time) int {
 	startDay = weekday(start)
 	endDay = weekday(end)
 	fullWeeks = start.AddDate(0, 0, -startDay).Sub(end.AddDate(0, 0, endDay))
-	
+
 	return (fullWeeks * 5) - (min(startDay, 5) + min(endDay, 5))
 }
 
@@ -55,20 +58,36 @@ func scheduleTaskToMembers(users []user, tasks []task, skills []skill) {
 	numTasks := len(tasks)
 	numSkills := len(skills)
 
+	timeframeEnd := slices.MaxFunc(tasks, func(a, b task) int {
+		if b.dueat.After(a.dueat) {
+			// a < b
+			return -1
+		}
+		if b.dueat.Before(a.dueat) {
+			// a > b
+			return 1
+		}
+		return 0
+	})
 
-	let timeframeEnd = tasks.indices.max(by: 
-    	{ tasks[$0].dueat < tasks[$1].dueat }
-	)
-	let timeframeStart = tasks.indices.min(
-		{ tasks[$0].startat < tasks[$1].startat }
-	)
+	timeframeStart := slices.MinFunc(tasks, func(a, b task) int {
+		if b.startat.After(a.startat) {
+			// a < b
+			return -1
+		}
+		if b.startat.Before(a.startat) {
+			// a > b
+			return 1
+		}
+		return 0
+	})
 
-	workingDays = calculateWorkingDays(tasks[timeframeStart].startat, tasks[timeframeEnd].dueat)
+	workingDays := calculateWorkingDays(tasks[timeframeStart].startat, tasks[timeframeEnd].dueat)
 
 	var hoursPerMember [numMembers]int
 
 	for idx, member := range users {
-		hoursPerMember[idx] = int(member.weeklyHours * (workingDays/5))
+		hoursPerMember[idx] = int(member.weeklyHours * (workingDays / 5))
 	}
 
 	assignment := make([][][]cpmodel.BoolVar, numMembers)
@@ -83,7 +102,7 @@ func scheduleTaskToMembers(users []user, tasks []task, skills []skill) {
 			for k = 0; k < numTasks; k++ {
 				name := fmt.Sprintf("U%d_H%d_T%d", users[i].name, j, tasks[k].name)
 				assignment[i][j][k] = model.NewBoolVar().WithName(name) // BOOL for assigning a job to a user
-				
+
 				//check only once for job compatibility
 				if j == 0 {
 					compatibility := cpmodel.NewConstant(1)
@@ -100,9 +119,6 @@ func scheduleTaskToMembers(users []user, tasks []task, skills []skill) {
 			}
 		}
 	}
-
-
-	
 
 	m, err := model.Model()
 	if err != nil {
