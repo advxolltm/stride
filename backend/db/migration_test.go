@@ -9,6 +9,7 @@ import (
 
 var db *gorm.DB
 
+
 func TestMain(m *testing.M) {
 	testutils.RunTestMain(m, &db, true, false)
 }

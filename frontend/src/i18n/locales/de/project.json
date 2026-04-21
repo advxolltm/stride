@@ -1,0 +1,74 @@
+{
+  "header": {
+    "invite": "Mitglieder einladen",
+    "settings": "Einstellungen",
+    "projects": "PROJEKTE"
+  },
+  "home": {
+    "title": "Projekte",
+    "description": "Verwalte deine Projekte, arbeite mit deinem Team zusammen und organisiere deine Arbeitsbereiche."
+  },
+  "emptyState": {
+    "title": "Noch keine Projekte",
+    "description": "Erstelle dein erstes Projekt, um Arbeitsbereiche, Personen und Fortschritt an einem Ort zu organisieren."
+  },
+  "projectPage": {
+    "notFound": "Projekt nicht gefunden."
+  },
+  "spaces": {
+    "title": "Bereiche",
+    "whiteboard": "Whiteboard",
+    "tasks": "Aufgaben",
+    "chat": "Chat",
+    "whiteboardDescription": "Ideen visuell brainstormen",
+    "tasksDescription": "Arbeit verwalten und verfolgen",
+    "chatDescription": "Mit deinem Team kommunizieren"
+  },
+  "tasks": {
+    "title": "Aufgabenuebersicht"
+  },
+  "inviteDialog": {
+    "title": "Mitglieder einladen",
+    "description": "Lade Personen ein, an diesem Projekt mitzuarbeiten",
+    "emailPlaceholder": "E-Mail-Adressen eingeben...",
+    "copy": "Kopieren",
+    "send": "Einladung senden",
+    "inviteLinkLabel": "Einladungslink"
+  },
+  "createDialog": {
+    "title": "Projekt erstellen",
+    "description": "Lege ein neues Projekt mit Titel und einer kurzen Beschreibung an.",
+    "fields": {
+      "title": "Titel",
+      "description": "Beschreibung"
+    },
+    "placeholders": {
+      "title": "Projekttitel eingeben",
+      "description": "Beschreibe das Ziel dieses Projekts"
+    },
+    "actions": {
+      "create": "Projekt erstellen"
+    }
+  },
+  "generalSettings": {
+    "title": "Projektinformationen",
+    "edit": "Bearbeiten",
+    "projectName": "Projektname",
+    "projectDescription": "Projektbeschreibung",
+    "skills": "Faehigkeiten",
+    "nameLabel": "Name",
+    "descriptionLabel": "Beschreibung",
+    "skillsPlaceholder": "Faehigkeiten auswaehlen",
+    "skillsSearchPlaceholder": "Faehigkeiten suchen",
+    "projectSkills": "Projektfaehigkeiten",
+    "cancel": "Abbrechen",
+    "save": "Aenderungen speichern",
+    "defaultName": "Marketingkampagne Q2",
+    "defaultDescription": "Ein kollaboratives Projekt, bei dem das Team gemeinsam plant, organisiert und umsetzt."
+  },
+  "membersSettings": {
+    "title": "Teammitglieder",
+    "owner": "Inhaber",
+    "member": "Mitglied"
+  }
+}

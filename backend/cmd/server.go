@@ -12,11 +12,20 @@ import (
 	// NOTE: if you want to give multiple "layers" (route, service, db) the same package-name to group them together, you can provide a custom name on import to distinguish them like here
 	mainDB "backend/db"
 	exampleDB "backend/db/example"
+	projectDB "backend/db/project"
 	userDB "backend/db/user"
 	"backend/routes"
 	authService "backend/services/auth"
 	exampleService "backend/services/example"
+	projectService "backend/services/project"
 	userService "backend/services/user"
+	"backend/testutils"
+
+	_ "backend/routes"
+
+	"backend/docs"
+
+	"github.com/swaggo/echo-swagger/v2"
 )
 
 func getAPIBasePath() string {
@@ -36,10 +45,28 @@ func getAPIBasePath() string {
 	return apiBasePath
 }
 
+//	@title		STRIDE backend API
+//	@version	1.0
+
+//	@license.name	MIT
+//	@license.url	https://mit-license.org/
+
+//	@host	localhost:8000
+
+//	@securityDefinitions.bearerauth	Auth
+//	@description					Authentication via Bearer JWT. Since authentication works using cookies, simply use the /auth/login route to authenticate for subsequent requests!
+//	@bearerformat					JWT
+
+// @securityDefinitions.apikey	Auth
+// @in							cookie
+// @name						sessionToken
+// @description				DO NOT USE THIS, AUTHENTICATION HAPPENS AUTOMATICALLY (this is just needed to correctly generate the swagger ui config!)
 func main() {
 	e := echo.New()
 	e.Use(middleware.RequestLogger())
+
 	apiGroup := e.Group(getAPIBasePath())
+	docs.SwaggerInfo.BasePath = getAPIBasePath()
 
 	// NOTE: No automatic magic dependency injection
 	//		 We define everything we need here once and then just pass it to the handlers as necessary Stores
@@ -58,17 +85,21 @@ func main() {
 	mainDB, migration, err := mainDB.InitDB(dsn)
 	defer migration.Down()
 
+	testutils.SeedDB(mainDB)
+
 	if err != nil {
 		println("failed to initialize database", "error", err)
 	}
 	println("Database initialized successfully:", mainDB != nil)
 
 	userStore := userDB.NewUserStore(mainDB)
+	projectStore := projectDB.NewProjectStore(mainDB)
 
 	// Services
 	exampleService := exampleService.NewExampleService(exampleStore)
 	userService := userService.NewUserService(userStore)
-	authService := authService.NewAuthenticationService(userService)
+	projectService := projectService.NewProjectService(projectStore)
+	authService := authService.NewAuthenticationService(userService, projectService)
 
 	// Routes
 	// Register route handler by adding them to the array
@@ -77,14 +108,19 @@ func main() {
 	//		 In order to protect routes registered by a handler, pass the [authService] to the handler (see exampleRouteHandler).
 	handlers := []routes.RouteHandler{
 		routes.NewHealthRouteHandler(),
-		routes.NewAuthRouteHandler(authService),
+		routes.NewAuthRouteHandler(authService, userService),
 		routes.NewExampleRouteHandler(exampleService, authService),
+		routes.NewProjectRouteHandler(projectService, authService),
 		routes.NewUserRouteHandler(userService),
 	}
 
 	for _, handler := range handlers {
 		handler.AddRoutes(apiGroup)
 	}
+
+	e.GET("/swagger/*", echoSwagger.EchoWrapHandlerV3(
+		echoSwagger.PersistAuthorization(true),
+	))
 
 	port := os.Getenv("PORT")
 	if port == "" {

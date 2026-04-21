@@ -1,8 +1,0 @@
-{
-  "title": "Home",
-  "cardTitle": "Card",
-  "cardDescription": "This should adapt to light and dark mode.",
-  "primary": "Primary",
-  "danger": "Danger",
-  "tailwindMessage": "Tailwind + theme working"
-}

@@ -1,0 +1,25 @@
+{
+  "title": "Startseite",
+  "cardTitle": "Karte",
+  "cardDescription": "Dies sollte sich an den hellen und dunklen Modus anpassen.",
+  "actions": {
+    "cancel": "Abbrechen",
+    "createProject": "Projekt erstellen"
+  },
+  "navigation": {
+    "home": "Home",
+    "overview": "Uebersicht",
+    "projects": "Projekte",
+    "expandSidebar": "Seitenleiste erweitern"
+  },
+  "logout": {
+    "label": "Abmelden",
+    "title": "Abmelden?",
+    "message": "Sie muessen sich erneut anmelden, um fortzufahren.",
+    "confirm": "Abmelden",
+    "pending": "Abmeldung laeuft..."
+  },
+  "primary": "Primaer",
+  "danger": "Gefahr",
+  "tailwindMessage": "Tailwind + Theme funktioniert"
+}

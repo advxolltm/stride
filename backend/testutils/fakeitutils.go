@@ -184,6 +184,13 @@ func SelectRandomUsers(t *testing.T, db *gorm.DB, count int) []models.User {
 	return choiceN(users, count)
 }
 
+func SelectRandomProject(t *testing.T, db *gorm.DB) models.Project {
+	t.Helper()
+	projects, err := gorm.G[models.Project](db).Find(t.Context())
+	AssertNoError(err)
+	return choice(&projects)
+}
+
 func generateProjectMembers(users []models.User, projects []models.Project) {
 	for pidx := range projects {
 		membersCount := rng.Intn(len(users)) + 1

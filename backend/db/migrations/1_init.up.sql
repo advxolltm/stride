@@ -15,7 +15,7 @@ CREATE TABLE projects (
     name VARCHAR(255) NOT NULL,
     slug VARCHAR(255) UNIQUE NOT NULL,
     description TEXT,
-    status VARCHAR(100) NOT NULL,
+    status VARCHAR(100) NOT NULL CHECK (status in ('active', 'archived')),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     join_link UUID UNIQUE

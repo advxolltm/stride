@@ -45,14 +45,6 @@ func TAssertNoError(t interface{ Helper(); Fatalf(string, ...any) }, err error) 
 	}
 }
 
-// SetupDB starts a test database and returns a connected *gorm.DB.
-//
-// When CI="true" (CI environment) it connects to an existing database
-// configured via environment variables (DB_USER, DB_PASSWORD, DB_HOST,
-// DB_PORT, DB_NAME).
-//
-// Otherwise (local host) it spins up the "db" service from compose.dev.yml
-// using testcontainers and connects to the dynamically allocated port.
 func SetupDB() *gorm.DB {
 	if os.Getenv("CI") == "true" {
 		return SetupDBFromEnv()

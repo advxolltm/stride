@@ -1,7 +1,10 @@
 package auth
 
 import (
+	projectStore "backend/db/project"
 	userStore "backend/db/user"
+	"backend/models"
+	projectService "backend/services/project"
 	userService "backend/services/user"
 	"backend/testutils"
 	"errors"
@@ -12,6 +15,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/echotest"
 	"gorm.io/gorm"
@@ -25,12 +29,15 @@ var db *gorm.DB
 func newTestAuthService(db *gorm.DB) authService {
 	userStore := userStore.NewUserStore(db)
 	userService := userService.NewUserService(userStore)
+	projectStore := projectStore.NewProjectStore(db)
+	projectService := projectService.NewProjectService(projectStore)
 	cfg := authenticationConfig{
 		sessionExpiryHours: testSessionExpiryHours,
 		sessionSecret:      testSessionSecret,
 	}
 	return authService{
 		userService:               userService,
+		projectService:            projectService,
 		cfg:                       cfg,
 		isAuthenticatedMiddleware: createIsAuthenticatedMiddleware(cfg),
 	}
@@ -65,6 +72,46 @@ func TestAuthService(t *testing.T) {
 			Password: &realUser2Pwd,
 		})
 		testutils.AssertNoError(err)
+
+		runTest(t, db, "Project Owner Authorization", func(t *testing.T, db *gorm.DB, sut authService) {
+			runTest(t, db, "returns an error if the project does not exist", func(t *testing.T, db *gorm.DB, sut authService) {
+				newUuid, err := uuid.NewRandom()
+				testutils.TAssertNoError(t, err)
+				isOwner, err := sut.IsProjectOwner(t.Context(), realUser1.ID, newUuid)
+				if err == nil {
+					t.Errorf("expected error, got no error")
+				}
+
+				if isOwner {
+					t.Errorf("isOwner should be false, got true")
+				}
+			})
+
+			runTest(t, db, "returns false if the user is not the owner of the given project", func(t *testing.T, db *gorm.DB, sut authService) {
+				randomProject := testutils.SelectRandomProject(t, db)
+				var notOwner models.User
+				if *randomProject.CreatedBy == realUser1.ID {
+					notOwner = realUser2
+				} else {
+					notOwner = realUser1
+				}
+
+				isOwner, err := sut.IsProjectOwner(t.Context(), notOwner.ID, randomProject.ID)
+				testutils.TAssertNoError(t, err)
+				if isOwner {
+					t.Errorf("isOwner should be false, got true")
+				}
+			})
+
+			runTest(t, db, "returns true if the user is the owner of the given project", func(t *testing.T, db *gorm.DB, sut authService) {
+				randomProject := testutils.SelectRandomProject(t, db)
+				isOwner, err := sut.IsProjectOwner(t.Context(), *randomProject.CreatedBy, randomProject.ID)
+				testutils.TAssertNoError(t, err)
+				if !isOwner {
+					t.Errorf("isOwner should be true, got false")
+				}
+			})
+		})
 
 		runTest(t, db, "A non existent user should not get authenticated", func(t *testing.T, db *gorm.DB, sut authService) {
 			runTest(t, db, "non existent email and password", func(t *testing.T, db *gorm.DB, sut authService) {
