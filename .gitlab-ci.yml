@@ -35,7 +35,6 @@ build-backend:
   stage: build
   image: golang:1.26.1
   before_script:
-    - apk add --no-cache curl tar
     - cd backend
   script:
     - go mod download
