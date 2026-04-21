@@ -10,18 +10,18 @@ variables:
   POSTGRESQL_DATABASE: stride
   POSTGRESQL_USERNAME: stride
   POSTGRESQL_PASSWORD: stride
-  
+
   # Backend env vars matching SetupDBFromEnv()
   DB_HOST: postgres
   DB_PORT: "5432"
   DB_USER: stride
   DB_PASSWORD: stride
   DB_NAME: stride
-  
+
   # Redis
   REDIS_HOST: redis
   REDIS_PORT: "6379"
-  
+
   # App
   API_BASE_PATH: /api/v1
 
@@ -87,9 +87,11 @@ test-backend:
     - apk add --no-cache git bash postgresql-client
     - cd backend
   script:
+    - if [ -z "$CI" ]; then echo "CI variable is not set"; exit 1; fi
+    - echo "CI=$CI"
     - until PGPASSWORD=$DB_PASSWORD psql -h "postgres" -U stride -d stride -c "SELECT 'OK' AS status;"; do echo "Waiting for postgres..."; sleep 2; done
     - go mod download
-    - go test -p 1 ./... -v -count=1
+    - go test ./...
   cache:
     key:
       files:

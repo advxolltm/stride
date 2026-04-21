@@ -11,7 +11,9 @@ import (
 
 func TestMain(m *testing.M) {
 	testutils.SetupDB()
-	os.Exit(m.Run())
+	code := m.Run()
+	testutils.TeardownDB()
+	os.Exit(code)
 }
 
 // allTableNames returns the expected table names from the migration.

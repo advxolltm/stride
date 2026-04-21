@@ -3,6 +3,7 @@ package testutils
 import (
 	"backend/db"
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"io"
@@ -10,8 +11,10 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
+	"time"
 
-	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
+	_ "github.com/lib/pq"
 	"github.com/testcontainers/testcontainers-go/modules/compose"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"gorm.io/gorm"
@@ -19,7 +22,6 @@ import (
 
 var DB *gorm.DB
 var stack *compose.DockerCompose
-var embeddedPG *embeddedpostgres.EmbeddedPostgres
 var ctx = context.Background()
 
 func SetupDB() {
@@ -31,22 +33,60 @@ func SetupDB() {
 }
 
 func SetCICDTestDB() {
-	pg := embeddedpostgres.NewDatabase(embeddedpostgres.DefaultConfig().
-		Username("stride").
-		Password("stride").
-		Database("stride").
-		Port(5432).
-		Version(embeddedpostgres.V16))
+	dsn := buildCICDTestDSN()
+	waitForDatabase(dsn)
+	setupTestDBFromDSN(dsn)
+}
 
-	err := pg.Start()
-	AssertNoError(err)
-	embeddedPG = pg
-
-	dsn := "postgresql://stride:stride@localhost:5432/stride?sslmode=disable"
+func setupTestDBFromDSN(dsn string) {
 	testdb, _, err := db.InitDB(dsn)
 	AssertNoError(err)
 
 	DB = testdb
+	SeedDB()
+}
+
+func buildCICDTestDSN() string {
+	host := envOrDefault([]string{"DB_HOST"}, "db")
+	port := envOrDefault([]string{"DB_PORT"}, "5432")
+	user := envOrDefault([]string{"DB_USER", "POSTGRES_USER", "POSTGRESQL_USERNAME"}, "stride")
+	password := envOrDefault([]string{"DB_PASSWORD", "POSTGRES_PASSWORD", "POSTGRESQL_PASSWORD"}, "stride")
+	name := envOrDefault([]string{"DB_NAME", "POSTGRES_DB", "POSTGRESQL_DATABASE"}, "stride")
+
+	return fmt.Sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=disable", user, password, host, port, name)
+}
+
+func envOrDefault(keys []string, fallback string) string {
+	for _, key := range keys {
+		if value := strings.TrimSpace(os.Getenv(key)); value != "" {
+			return value
+		}
+	}
+
+	return fallback
+}
+
+func waitForDatabase(dsn string) {
+	sqlDB, err := sql.Open("postgres", dsn)
+	AssertNoError(err)
+	defer func() {
+		if closeErr := sqlDB.Close(); closeErr != nil {
+			log.Printf("Failed to close CI test database probe: %v", closeErr)
+		}
+	}()
+
+	var pingErr error
+	for attempt := 1; attempt <= 30; attempt++ {
+		pingErr = sqlDB.PingContext(ctx)
+		if pingErr == nil {
+			return
+		}
+
+		log.Printf("Waiting for CI test database (%d/30): %v", attempt, pingErr)
+		time.Sleep(time.Second)
+	}
+
+	AssertNoError(pingErr)
 }
 
 func SeedDB() {
@@ -83,22 +123,10 @@ func SetupDevTestDB() {
 	dbPort, err := dbContainer.MappedPort(ctx, "5432")
 
 	dsn := fmt.Sprintf("postgresql://stride:stride@%s:%s/stride?sslmode=disable", dbHost, dbPort.Port())
-
-	testdb, _, err := db.InitDB(dsn)
-	AssertNoError(err)
-
-	DB = testdb
-
-	fillDBWithRandomData()
+	setupTestDBFromDSN(dsn)
 }
 
 func TeardownDB() {
-	if embeddedPG != nil {
-		if err := embeddedPG.Stop(); err != nil {
-			log.Printf("Failed to stop embedded postgres: %v", err)
-		}
-		return
-	}
 	if stack != nil {
 		err := stack.Down(
 			ctx,
