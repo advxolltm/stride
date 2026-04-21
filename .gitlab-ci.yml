@@ -45,6 +45,7 @@ build-backend:
   artifacts:
     paths:
       - backend/bin/server
+      - backend/docs/
     expire_in: 1 hour
   cache:
     key:
