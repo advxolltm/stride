@@ -61,6 +61,14 @@ func mapServiceErrorProj(err error) (int, string) {
 	switch {
 	case errors.Is(err, projectService.ErrProjectNotFound):
 		return http.StatusNotFound, err.Error()
+	case errors.Is(err, projectService.ErrNonExistentUser):
+		return http.StatusNotFound, err.Error()
+	case errors.Is(err, projectService.ErrNonExistentMember):
+		return http.StatusNotFound, err.Error()
+	case errors.Is(err, projectService.ErrUserAlreadyMember):
+		return http.StatusConflict, err.Error()
+	case errors.Is(err, projectService.ErrNonExistentProjectSkill):
+		return http.StatusNotFound, err.Error()
 	case errors.Is(err, projectService.ErrDuplicateSlug):
 		return http.StatusConflict, err.Error()
 	default:
@@ -68,19 +76,19 @@ func mapServiceErrorProj(err error) (int, string) {
 	}
 }
 
-// GET /projects
-//
-//	@Summary	Get all projects for the authenticated user
-//	@Tags		project
-//	@Success	200	{object}	[]returnProj
-//	@Failure	404	{object}	ErrorResponse "project not found"
-//	@Failure	401 {object}	ErrorResponse "internal server error"
-//	@Router		/projects [get]
+// @Summary		Get all projects
+// @Description	Get all projects for the authenticated user
+// @Tags			projects
+// @Produce		json
+// @Success		200	{array}		ReturnProj
+// @Failure		404	{object}	ErrorResponse	"user not found"
+// @Failure		500	{object}	ErrorResponse	"internal server error"
+// @Router			/projects [get]
 func (h projectRouteHandler) projectsGETHandle(c *echo.Context) error {
 	// TODO: add user-check
 	userid := h.authService.GetClaims(c).UserID
 
-	projects, err := h.projectService.GetAllProjects(c.Request().Context(), &userid)
+	projects, err := h.projectService.GetAllProjects(c.Request().Context(), userid)
 	if err != nil {
 		status, msg := mapServiceErrorProj(err)
 		return c.JSON(status, ErrorResponse{Error: msg})
@@ -89,14 +97,16 @@ func (h projectRouteHandler) projectsGETHandle(c *echo.Context) error {
 	return c.JSON(http.StatusOK, Map(projects, mapToReturnProj))
 }
 
-// GET /projects/:id
-//
-// @Summary Get a project by its ID
-// @Param id path string true "Project ID"
-// @Success	200	{object}	returnProj
-// @Failure	404	{object}	ErrorResponse "project not found"
-// @Failure	401 {object}	ErrorResponse "internal server error"
-// @Router /projects/{id} [get]
+// @Summary		Get project by ID
+// @Description	Get a specific project's details including creator, members, and skills
+// @Tags			projects
+// @Produce		json
+// @Param			id	path		string	true	"Project ID"
+// @Success		200	{object}	ReturnProj
+// @Failure		400	{object}	ErrorResponse	"invalid project id"
+// @Failure		404	{object}	ErrorResponse	"project not found"
+// @Failure		500	{object}	ErrorResponse	"internal server error"
+// @Router			/projects/{id} [get]
 func (h projectRouteHandler) projectGETHandle(c *echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -114,7 +124,16 @@ func (h projectRouteHandler) projectGETHandle(c *echo.Context) error {
 	return c.JSON(http.StatusOK, mapToReturnProj(*p))
 }
 
-// GET /projects:id/members
+// @Summary		Get project members
+// @Description	List all members assigned to a project
+// @Tags			projects
+// @Produce		json
+// @Param			id	path		string	true	"Project ID"
+// @Success		200	{array}		ReturnMember
+// @Failure		400	{object}	ErrorResponse	"invalid project id"
+// @Failure		404	{object}	ErrorResponse	"project not found"
+// @Failure		500	{object}	ErrorResponse	"internal server error"
+// @Router			/projects/{id}/members [get]
 func (h projectRouteHandler) membersGETHandle(c *echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -132,7 +151,16 @@ func (h projectRouteHandler) membersGETHandle(c *echo.Context) error {
 	return c.JSON(http.StatusOK, Map(members, mapToReturnMember))
 }
 
-// GET /projects:id/skills
+// @Summary		Get project skills
+// @Description	List all skills associated with a specific project
+// @Tags			projects
+// @Produce		json
+// @Param			id	path		string	true	"Project ID"
+// @Success		200	{array}		ReturnSkill
+// @Failure		400	{object}	ErrorResponse	"invalid project id"
+// @Failure		404	{object}	ErrorResponse	"project not found"
+// @Failure		500	{object}	ErrorResponse	"internal server error"
+// @Router			/projects/{id}/skills [get]
 func (h projectRouteHandler) skillsGETHandle(c *echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -150,7 +178,17 @@ func (h projectRouteHandler) skillsGETHandle(c *echo.Context) error {
 	return c.JSON(http.StatusOK, Map(skills, mapToReturnSkill))
 }
 
-// POST /projects
+// @Summary		Create project
+// @Description	Create a new project for the authenticated user
+// @Tags			projects
+// @Accept			json
+// @Produce		json
+// @Param			request	body		CreateProjectRequest	true	"Project data"
+// @Success		201		{object}	ReturnProj
+// @Failure		400		{object}	ErrorResponse	"invalid request body"
+// @Failure		409		{object}	ErrorResponse	"duplicate slug"
+// @Failure		500		{object}	ErrorResponse	"internal server error"
+// @Router			/projects [post]
 func (h projectRouteHandler) projectPOSTHandle(c *echo.Context) error {
 	var req CreateProjectRequest
 	if err := c.Bind(&req); err != nil {
@@ -169,7 +207,18 @@ func (h projectRouteHandler) projectPOSTHandle(c *echo.Context) error {
 	return c.JSON(http.StatusCreated, mapToReturnProj(*p))
 }
 
-// POST /projects/:id/members
+// @Summary		Add members to project
+// @Description	Add one or multiple users to a project with specific roles
+// @Tags			projects
+// @Accept			json
+// @Produce		json
+// @Param			id		path		string						true	"Project ID"
+// @Param			request	body		[]project.AddMemberRequest	true	"List of users and roles"
+// @Success		201		{array}		ReturnMember
+// @Failure		400		{object}	ErrorResponse	"invalid request body | invalid project id"
+// @Failure		404		{object}	ErrorResponse	"user not found | project not found | user is already a member of the project"
+// @Failure		409		{object}	ErrorResponse	"user already member"
+// @Router			/projects/{id}/members [post]
 func (h projectRouteHandler) memberPOSTHandle(c *echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -186,10 +235,21 @@ func (h projectRouteHandler) memberPOSTHandle(c *echo.Context) error {
 		return c.JSON(status, ErrorResponse{Error: msg})
 	}
 
-	return c.JSON(http.StatusCreated, Map(u, mapToReturnMemberP))
+	return c.JSON(http.StatusCreated, Map(u, mapToReturnMember))
 
 }
 
+// @Summary		Add project skill
+// @Description	Create a new required skill for the project
+// @Tags			projects
+// @Accept			json
+// @Produce		json
+// @Param			id		path		string				true	"Project ID"
+// @Param			request	body		createSkillRequest	true	"Skill details"
+// @Success		200		{object}	ReturnSkill
+// @Failure		400		{object}	ErrorResponse	"invalid request  body | invalid project id"
+// @Failure		404		{object}	ErrorResponse	"project not found"
+// @Router			/projects/{id}/skills [post]
 func (h projectRouteHandler) skillsPOSTHandle(c *echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -211,13 +271,19 @@ func (h projectRouteHandler) skillsPOSTHandle(c *echo.Context) error {
 	return c.JSON(http.StatusOK, mapToReturnSkill(*s))
 }
 
-// @Summary	Change general project data. Must be project owner.
-// @Tags		projects
-// @Param		id	path	string	true	"Project ID"
-// @Success	200
-// @Failure	400	{object}	ErrorResponse	"invalid project id"
-// @Failure	401	{object}	ErrorResponse	"unauthorized"
-// @Router		/projects/{id} [patch]
+// @Summary		Update project
+// @Description	Change general project data. Must be project owner.
+// @Tags			projects
+// @Accept			json
+// @Produce		json
+// @Param			id		path		string					true	"Project ID"
+// @Param			request	body		updateProjectRequest	true	"Updated fields"
+// @Success		200		{object}	ReturnProj
+// @Failure		400		{object}	ErrorResponse	"invalid request body | invalid project id"
+// @Failure		401		{object}	ErrorResponse	"unauthorized"
+// @Failure		404		{object}	ErrorResponse	"project not found"
+// @Failure		409		{object}	ErrorResponse	"duplicate slug"
+// @Router			/projects/{id} [patch]
 func (h projectRouteHandler) projectPATCHHandle(c *echo.Context) error {
 	ctx := c.Request().Context()
 	id, err := uuid.Parse(c.Param("id"))
@@ -255,7 +321,15 @@ func (h projectRouteHandler) projectPATCHHandle(c *echo.Context) error {
 	return c.JSON(http.StatusOK, mapToReturnProj(*p))
 }
 
-// DELETE /projects/:id
+// @Summary		Delete project
+// @Description	Permanently delete a project
+// @Tags			projects
+// @Param			id	path	string	true	"Project ID"
+// @Success		204	"No Content"
+// @Failure		400	{object}	ErrorResponse	"invalid project id"
+// @Failure		404	{object}	ErrorResponse	"project not found"
+// @Failure		500	{object}	ErrorResponse	"internal server error"
+// @Router			/projects/{id} [delete]
 func (h projectRouteHandler) projectDELETEHandle(c *echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -270,7 +344,15 @@ func (h projectRouteHandler) projectDELETEHandle(c *echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-// DELETE /projects/:id/members/:userid
+// @Summary		Remove member
+// @Description	Remove a specific user from the project members
+// @Tags			projects
+// @Param			id		path	string	true	"Project ID"
+// @Param			userid	path	string	true	"User ID"
+// @Success		204	"No Content"
+// @Failure		400	{object}	ErrorResponse	"invalid id"
+// @Failure 	404 {object} 	ErrorResponse 	"project not found | user not found"
+// @Router			/projects/{id}/members/{userid} [delete]
 func (h projectRouteHandler) memberDELETEHandle(c *echo.Context) error {
 	projid, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -291,7 +373,14 @@ func (h projectRouteHandler) memberDELETEHandle(c *echo.Context) error {
 
 }
 
-// DELETE /projects/:id/skills/:skillid
+// @Summary		Delete project skill
+// @Description	Remove a skill from the project
+// @Tags			projects
+// @Param			id	path	string	true	"Skill ID"
+// @Success		204	"No Content"
+// @Failure		400	{object}	ErrorResponse	"invalid skill id"
+// @Failure		404	{object}	ErrorResponse	"skill not found"
+// @Router			/projects/skills/{id} [delete]
 func (h projectRouteHandler) skillsDELETEHandle(c *echo.Context) error {
 	skillid, err := uuid.Parse(c.Param("id"))
 	if err != nil {

@@ -80,17 +80,6 @@ func mapToReturnMember(m models.ProjectMember) ReturnMember {
 	}
 	return res
 }
-func mapToReturnMemberP(mp *models.ProjectMember) ReturnMember {
-	m := *mp
-	res := ReturnMember{
-		ID:        m.ID,
-		UserID:    m.UserID,
-		ProjectID: m.ProjectID,
-		Role:      m.Role,
-		JoinedAt:  m.JoinedAt,
-	}
-	return res
-}
 
 func mapToReturnSkill(s models.ProjectSkill) ReturnSkill {
 	res := ReturnSkill{

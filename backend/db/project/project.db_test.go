@@ -42,7 +42,7 @@ func runTest(t *testing.T, db *gorm.DB, name string, f func(*testing.T, *gorm.DB
 	})
 }
 
-func TestProjectStore_CreateAndGetProject(t *testing.T) {
+func TestProjectStore(t *testing.T) {
 	//TODO: WRITE MORE TESTS
 	ctx := context.Background()
 
@@ -218,7 +218,7 @@ func TestProjectStore_CreateAndGetProject(t *testing.T) {
 		assert.Equal(t, proj1.Skills, retSkills)
 	})
 
-	runTest(t, db, "Get projectmembers returns an empty list when no skills", func(t *testing.T, db *gorm.DB, store project.ProjectStore) {
+	runTest(t, db, "Get projectskills returns an empty list when no skills", func(t *testing.T, db *gorm.DB, store project.ProjectStore) {
 		proj1 := testutils.GenerateRandomProject([]models.User{testutils.SelectRandomUser(t, db)})
 		createErr := db.Create(&proj1)
 		require.NoError(t, createErr.Error)
@@ -236,7 +236,7 @@ func TestProjectStore_CreateAndGetProject(t *testing.T) {
 		assert.ErrorIs(t, getErr, project.ErrProjectNotFound)
 	})
 
-	runTest(t, db, "Get projectskills returns only owner when no members", func(t *testing.T, db *gorm.DB, store project.ProjectStore) {
+	runTest(t, db, "Get projectmembers returns only owner when no members", func(t *testing.T, db *gorm.DB, store project.ProjectStore) {
 		proj1 := testutils.GenerateRandomProject([]models.User{testutils.SelectRandomUser(t, db)})
 		createErr := db.Create(&proj1)
 		require.NoError(t, createErr.Error)
@@ -259,7 +259,7 @@ func TestProjectStore_CreateAndGetProject(t *testing.T) {
 		uStore := userStore.NewUserStore(db)
 		uStore.CreateUser(ctx, &user)
 
-		projects, err := store.GetAllProjects(ctx, &user.ID)
+		projects, err := store.GetAllProjects(ctx, user.ID)
 		require.NoError(t, err)
 		assert.Len(t, projects, 0)
 	})
@@ -267,7 +267,7 @@ func TestProjectStore_CreateAndGetProject(t *testing.T) {
 	runTest(t, db, "UserID does not exist returns error", func(t *testing.T, db *gorm.DB, store project.ProjectStore) {
 		user := testutils.GenerateRandomUser()
 
-		_, err := store.GetAllProjects(ctx, &user.ID)
+		_, err := store.GetAllProjects(ctx, user.ID)
 		assert.ErrorIs(t, err, project.ErrNonExistentUser)
 	})
 
@@ -285,7 +285,7 @@ func TestProjectStore_CreateAndGetProject(t *testing.T) {
 		createErr := db.Create(projes)
 		require.NoError(t, createErr.Error)
 
-		userProjects, getProjErr := store.GetAllProjects(ctx, &user.ID)
+		userProjects, getProjErr := store.GetAllProjects(ctx, user.ID)
 		require.NoError(t, getProjErr)
 		assert.Len(t, userProjects, 3)
 	})
@@ -304,7 +304,7 @@ func TestProjectStore_CreateAndGetProject(t *testing.T) {
 		require.NoError(t, createErr1.Error)
 		require.NoError(t, createErr2.Error)
 
-		membersToAdd := []*models.ProjectMember{
+		membersToAdd := []models.ProjectMember{
 			{
 				UserID:    user1.ID,
 				ProjectID: proj.ID,
@@ -335,35 +335,35 @@ func TestProjectStore_CreateAndGetProject(t *testing.T) {
 		createErr := db.Create(&user)
 		require.NoError(t, createErr.Error)
 
-		member := &models.ProjectMember{
+		member := models.ProjectMember{
 			UserID:    user.ID,
 			ProjectID: proj.ID,
 			Role:      "boss",
 		}
 
-		err := store.AddUsersToProject(ctx, []*models.ProjectMember{member})
+		err := store.AddUsersToProject(ctx, []models.ProjectMember{member})
 		require.NoError(t, err)
 
-		member = &models.ProjectMember{
+		member = models.ProjectMember{
 			UserID:    user.ID,
 			ProjectID: proj.ID,
 			Role:      "boss",
 		}
 
-		err = store.AddUsersToProject(ctx, []*models.ProjectMember{member})
+		err = store.AddUsersToProject(ctx, []models.ProjectMember{member})
 		assert.ErrorIs(t, err, project.ErrUserAlreadyMember)
 	})
 
 	runTest(t, db, "AddUsersToProject give ErrNonExistentUser error when user does not exist", func(t *testing.T, db *gorm.DB, store project.ProjectStore) {
 		proj := testutils.SelectRandomProject(t, db)
 
-		member := &models.ProjectMember{
+		member := models.ProjectMember{
 			UserID:    uuid.New(),
 			ProjectID: proj.ID,
 			Role:      "boss",
 		}
 
-		err := store.AddUsersToProject(ctx, []*models.ProjectMember{member})
+		err := store.AddUsersToProject(ctx, []models.ProjectMember{member})
 		assert.ErrorIs(t, err, project.ErrNonExistentUser)
 	})
 
@@ -373,13 +373,13 @@ func TestProjectStore_CreateAndGetProject(t *testing.T) {
 		createErr := db.Create(&user)
 		require.NoError(t, createErr.Error)
 
-		member := &models.ProjectMember{
+		member := models.ProjectMember{
 			UserID:    user.ID,
 			ProjectID: uuid.New(),
 			Role:      "boss",
 		}
 
-		err := store.AddUsersToProject(ctx, []*models.ProjectMember{member})
+		err := store.AddUsersToProject(ctx, []models.ProjectMember{member})
 		assert.ErrorIs(t, err, project.ErrProjectNotFound)
 	})
 
@@ -410,7 +410,7 @@ func TestProjectStore_CreateAndGetProject(t *testing.T) {
 		require.NoError(t, createErr.Error)
 
 		err := store.RemoveUserFromProject(ctx, user.ID, proj.ID)
-		assert.ErrorIs(t, err, project.ErrNonExistentUser)
+		assert.ErrorIs(t, err, project.ErrNonExistentMember)
 	})
 
 	runTest(t, db, "RemoveUserFromProject returns error when project does not exist", func(t *testing.T, db *gorm.DB, store project.ProjectStore) {

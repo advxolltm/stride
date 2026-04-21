@@ -26,14 +26,14 @@ type UpdateProjectFields struct {
 
 type (
 	ProjectStore interface {
-		GetAllProjects(ctx context.Context, userid *uuid.UUID) ([]models.Project, error)
+		GetAllProjects(ctx context.Context, userid uuid.UUID) ([]models.Project, error)
 		GetProject(ctx context.Context, id uuid.UUID) (*models.Project, error)
 		GetProjectMembers(ctx context.Context, id uuid.UUID) ([]models.ProjectMember, error)
 		GetProjectSkills(ctx context.Context, id uuid.UUID) ([]models.ProjectSkill, error)
 		CreateProject(ctx context.Context, project *models.Project) error
 		UpdateProject(ctx context.Context, id uuid.UUID, input UpdateProjectFields) (*models.Project, error)
 		DeleteProject(ctx context.Context, id uuid.UUID) error
-		AddUsersToProject(ctx context.Context, projectmembers []*models.ProjectMember) error
+		AddUsersToProject(ctx context.Context, projectmembers []models.ProjectMember) error
 		RemoveUserFromProject(ctx context.Context, userId uuid.UUID, projectId uuid.UUID) error
 		AddProjectSkill(ctx context.Context, projectSkill *models.ProjectSkill) error
 		RemoveProjectSkill(ctx context.Context, id uuid.UUID) error
@@ -48,7 +48,7 @@ func NewProjectStore(db *gorm.DB) ProjectStore {
 	return &projectStore{db}
 }
 
-func (s *projectStore) GetAllProjects(ctx context.Context, userid *uuid.UUID) ([]models.Project, error) {
+func (s *projectStore) GetAllProjects(ctx context.Context, userid uuid.UUID) ([]models.Project, error) {
 	var user models.User
 	result := s.db.Preload("Projects").Preload("Projects.Creator").Preload("Projects.Members").Preload("Projects.Skills").First(&user, userid)
 	if result.Error != nil {
@@ -163,7 +163,7 @@ func (s *projectStore) DeleteProject(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func (s *projectStore) AddUsersToProject(ctx context.Context, projectmembers []*models.ProjectMember) error {
+func (s *projectStore) AddUsersToProject(ctx context.Context, projectmembers []models.ProjectMember) error {
 	result := s.db.WithContext(ctx).Create(projectmembers)
 	if result.Error != nil {
 		var pgErr *pgconn.PgError
@@ -201,10 +201,10 @@ func (s *projectStore) RemoveUserFromProject(ctx context.Context, userId uuid.UU
 
 	result := s.db.WithContext(ctx).Where("user_id = ? AND project_id = ?", userId, projectId).Delete(&models.ProjectMember{})
 	if result.Error != nil {
-		return ErrNonExistentUser
+		return ErrNonExistentMember
 	}
 	if result.RowsAffected == 0 {
-		return ErrNonExistentUser
+		return ErrNonExistentMember
 	}
 	return nil
 }
