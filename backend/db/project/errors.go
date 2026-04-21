@@ -3,8 +3,9 @@ package project
 import "errors"
 
 var (
-    ErrProjectNotFound				= errors.New("project not found")
-	ErrDuplicateSlug                = errors.New("project slug is not unique")
-    ErrProjectStoreFailed			= errors.New("project store operation failed")
-    ErrNonExistentUser              = errors.New("the user(s) you are trying to insert do not exist")
+	ErrProjectNotFound    = errors.New("project not found")
+	ErrDuplicateSlug      = errors.New("project slug is not unique")
+	ErrProjectStoreFailed = errors.New("project store operation failed")
+	ErrNonExistentUser    = errors.New("the user(s) you are trying to insert do not exist")
+	ErrUserAlreadyMember  = errors.New("one or more users are already members of the project")
 )

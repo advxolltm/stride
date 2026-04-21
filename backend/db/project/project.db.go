@@ -52,6 +52,9 @@ func (s *projectStore) GetAllProjects(ctx context.Context, userid *uuid.UUID) ([
 	var user models.User
 	result := s.db.Preload("Projects").Preload("Projects.Creator").Preload("Projects.Members").Preload("Projects.Skills").First(&user, userid)
 	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, ErrNonExistentUser
+		}
 		return nil, result.Error
 	}
 	return user.Projects, nil
@@ -61,6 +64,9 @@ func (s *projectStore) GetProject(ctx context.Context, id uuid.UUID) (*models.Pr
 	var project models.Project
 	result := s.db.WithContext(ctx).Preload("Creator").Preload("Members").Preload("Skills").First(&project, "id = ?", id)
 	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, ErrProjectNotFound
+		}
 		return nil, result.Error
 	}
 	return &project, nil
@@ -71,6 +77,9 @@ func (s *projectStore) GetProjectMembers(ctx context.Context, id uuid.UUID) ([]m
 
 	result := s.db.Preload("Members").Preload("Members.User").First(&project, id)
 	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, ErrProjectNotFound
+		}
 		return nil, result.Error
 	}
 	return project.Members, nil
@@ -81,6 +90,9 @@ func (s *projectStore) GetProjectSkills(ctx context.Context, id uuid.UUID) ([]mo
 
 	result := s.db.Preload("Skills").First(&project, id)
 	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, ErrProjectNotFound
+		}
 		return nil, result.Error
 	}
 	return project.Skills, nil
@@ -131,9 +143,9 @@ func (s *projectStore) UpdateProject(ctx context.Context, id uuid.UUID, fields U
 		return nil, result.Error
 	}
 	if result.RowsAffected == 0 {
-		return nil, gorm.ErrRecordNotFound
+		return nil, ErrProjectNotFound
 	}
-	err := s.db.WithContext(ctx).Preload("Creator").Preload("Members").Preload("Skills").First(project, id).Error
+	err := s.db.WithContext(ctx).Preload("Creator").Preload("Members").Preload("Skills").First(&project, id).Error
 	if err != nil {
 		return nil, err
 	}
@@ -143,10 +155,10 @@ func (s *projectStore) UpdateProject(ctx context.Context, id uuid.UUID, fields U
 func (s *projectStore) DeleteProject(ctx context.Context, id uuid.UUID) error {
 	result := s.db.WithContext(ctx).Delete(&models.Project{}, "id = ?", id)
 	if result.Error != nil {
-		return gorm.ErrRecordNotFound
+		return ErrProjectNotFound
 	}
 	if result.RowsAffected == 0 {
-		return gorm.ErrRecordNotFound
+		return ErrProjectNotFound
 	}
 	return nil
 }
@@ -156,7 +168,7 @@ func (s *projectStore) AddUsersToProject(ctx context.Context, projectmembers []*
 	if result.Error != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(result.Error, &pgErr) {
-			if pgErr.Code == "23503" { //Foreign key violation
+			if pgErr.Code == db.ForeignKeyViolationCode {
 				switch pgErr.ConstraintName {
 				case "project_members_user_id_fkey":
 					return ErrNonExistentUser
@@ -164,6 +176,12 @@ func (s *projectStore) AddUsersToProject(ctx context.Context, projectmembers []*
 					return ErrProjectNotFound
 				}
 			}
+			if pgErr.Code == db.UniqueConstraintViolationCode {
+				if strings.Contains(pgErr.ConstraintName, "unique_user_project") {
+					return ErrUserAlreadyMember
+				}
+			}
+
 		}
 		return result.Error
 	}
@@ -171,17 +189,36 @@ func (s *projectStore) AddUsersToProject(ctx context.Context, projectmembers []*
 }
 
 func (s *projectStore) RemoveUserFromProject(ctx context.Context, userId uuid.UUID, projectId uuid.UUID) error {
+	var projectExists bool
+	s.db.WithContext(ctx).Model(&models.Project{}).
+		Select("count(*) > 0").
+		Where("id = ?", projectId).
+		Find(&projectExists)
+
+	if !projectExists {
+		return ErrProjectNotFound
+	}
+
 	result := s.db.WithContext(ctx).Where("user_id = ? AND project_id = ?", userId, projectId).Delete(&models.ProjectMember{})
 	if result.Error != nil {
-		return gorm.ErrRecordNotFound
+		return ErrNonExistentUser
 	}
 	if result.RowsAffected == 0 {
-		return gorm.ErrRecordNotFound
+		return ErrNonExistentUser
 	}
 	return nil
 }
 
 func (s *projectStore) AddProjectSkill(ctx context.Context, projectSkill *models.ProjectSkill) error {
+	var projectExists bool
+	s.db.WithContext(ctx).Model(&models.Project{}).
+		Select("count(*) > 0").
+		Where("id = ?", projectSkill.ProjectID).
+		Find(&projectExists)
+
+	if !projectExists {
+		return ErrProjectNotFound
+	}
 	result := s.db.WithContext(ctx).Create(projectSkill)
 	if result.Error != nil {
 		return result.Error
