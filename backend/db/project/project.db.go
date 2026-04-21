@@ -15,7 +15,6 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-// TODO: Tests project.db.go
 type UpdateProjectFields struct {
 	Name        *string   `gorm:"column:name"`
 	Slug        *string   `gorm:"column:slug"`
@@ -37,6 +36,7 @@ type (
 		RemoveUserFromProject(ctx context.Context, userId uuid.UUID, projectId uuid.UUID) error
 		AddProjectSkill(ctx context.Context, projectSkill *models.ProjectSkill) error
 		RemoveProjectSkill(ctx context.Context, id uuid.UUID) error
+		GetProjectIdBySkillId(ctx context.Context, skillId uuid.UUID) (uuid.UUID, error)
 	}
 
 	projectStore struct {
@@ -235,4 +235,16 @@ func (s *projectStore) RemoveProjectSkill(ctx context.Context, id uuid.UUID) err
 		return ErrNonExistentProjectSkill
 	}
 	return nil
+}
+
+func (s *projectStore) GetProjectIdBySkillId(ctx context.Context, skillId uuid.UUID) (uuid.UUID, error) {
+	var skill models.ProjectSkill
+	result := s.db.WithContext(ctx).First(&skill, "id = ?", skillId)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return uuid.Nil, ErrNonExistentProjectSkill
+		}
+		return uuid.Nil, result.Error
+	}
+	return skill.ProjectID, nil
 }

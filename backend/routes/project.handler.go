@@ -11,7 +11,6 @@ import (
 	"github.com/labstack/echo/v5"
 )
 
-// TODO: Tests user.handler.go
 type projectRouteHandler struct {
 	projectService projectService.ProjectService
 	authService    authService.AuthService
@@ -22,7 +21,6 @@ func NewProjectRouteHandler(ps projectService.ProjectService, as authService.Aut
 }
 
 func (h projectRouteHandler) AddRoutes(api *echo.Group) {
-	// TODO: add auth middleware
 	g := api.Group("/projects")
 	g.Use(h.authService.AuthenticatedMiddleware())
 	g.GET("", h.projectsGETHandle)
@@ -85,7 +83,6 @@ func mapServiceErrorProj(err error) (int, string) {
 // @Failure		500	{object}	ErrorResponse	"internal server error"
 // @Router			/projects [get]
 func (h projectRouteHandler) projectsGETHandle(c *echo.Context) error {
-	// TODO: add user-check
 	userid := h.authService.GetClaims(c).UserID
 
 	projects, err := h.projectService.GetAllProjects(c.Request().Context(), userid)
@@ -113,7 +110,7 @@ func (h projectRouteHandler) projectGETHandle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid project id"})
 	}
 
-	// TODO: add user-check - only admin and user himself can retrieve data
+	// TODO: add user-check to prevent users from accessing projects they are not members of
 
 	p, err := h.projectService.GetProject(c.Request().Context(), id)
 	if err != nil {
@@ -140,7 +137,7 @@ func (h projectRouteHandler) membersGETHandle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid project id"})
 	}
 
-	// TODO: add user-check
+	// TODO: add user-check to prevent users from accessing members of projects they are not part of
 
 	members, err := h.projectService.GetProjectMembers(c.Request().Context(), id)
 	if err != nil {
@@ -167,7 +164,7 @@ func (h projectRouteHandler) skillsGETHandle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid project id"})
 	}
 
-	// TODO: add user-check
+	// TODO: add user-check to prevent users from accessing skills of projects they are not part of
 
 	skills, err := h.projectService.GetProjectSkills(c.Request().Context(), id)
 	if err != nil {
@@ -197,7 +194,6 @@ func (h projectRouteHandler) projectPOSTHandle(c *echo.Context) error {
 
 	userId := h.authService.GetClaims(c).UserID
 
-	//createdBy *uuid.UUID, name string, slug string, description *string, status string
 	p, err := h.projectService.CreateProject(c.Request().Context(), &userId, req.Name, req.Slug, req.Description, req.Status)
 	if err != nil {
 		status, msg := mapServiceErrorProj(err)
@@ -216,6 +212,7 @@ func (h projectRouteHandler) projectPOSTHandle(c *echo.Context) error {
 // @Param			request	body		[]project.AddMemberRequest	true	"List of users and roles"
 // @Success		201		{array}		ReturnMember
 // @Failure		400		{object}	ErrorResponse	"invalid request body | invalid project id"
+// @Failure		401		{object}	ErrorResponse	"only the owner can add members to this project"
 // @Failure		404		{object}	ErrorResponse	"user not found | project not found | user is already a member of the project"
 // @Failure		409		{object}	ErrorResponse	"user already member"
 // @Router			/projects/{id}/members [post]
@@ -227,6 +224,15 @@ func (h projectRouteHandler) memberPOSTHandle(c *echo.Context) error {
 	var req []projectService.AddMemberRequest
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid request body"})
+	}
+
+	userId := h.authService.GetClaims(c).UserID
+	isOwner, err := h.authService.IsProjectOwner(c.Request().Context(), userId, id)
+	if err != nil {
+		return c.JSON(http.StatusNotFound, ErrorResponse{Error: err.Error()})
+	}
+	if !isOwner {
+		return c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "only the owner can add members to this project"})
 	}
 
 	u, err := h.projectService.AddUsersToProject(c.Request().Context(), req, id)
@@ -256,6 +262,8 @@ func (h projectRouteHandler) skillsPOSTHandle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid project id"})
 	}
 
+	// TODO: add user-check to prevent users from adding skills to projects they are not part of
+
 	var req createSkillRequest
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid request body"})
@@ -280,7 +288,7 @@ func (h projectRouteHandler) skillsPOSTHandle(c *echo.Context) error {
 // @Param			request	body		updateProjectRequest	true	"Updated fields"
 // @Success		200		{object}	ReturnProj
 // @Failure		400		{object}	ErrorResponse	"invalid request body | invalid project id"
-// @Failure		401		{object}	ErrorResponse	"unauthorized"
+// @Failure		401		{object}	ErrorResponse	"only the owner can update this project"
 // @Failure		404		{object}	ErrorResponse	"project not found"
 // @Failure		409		{object}	ErrorResponse	"duplicate slug"
 // @Router			/projects/{id} [patch]
@@ -294,12 +302,11 @@ func (h projectRouteHandler) projectPATCHHandle(c *echo.Context) error {
 	userId := h.authService.GetClaims(c).UserID
 	isOwner, err := h.authService.IsProjectOwner(ctx, userId, id)
 	if err != nil {
-		status, msg := mapServiceErrorProj(err)
-		return c.JSON(status, ErrorResponse{Error: msg})
+		return c.JSON(http.StatusNotFound, ErrorResponse{Error: err.Error()})
 	}
 
 	if !isOwner {
-		return c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "unauthorized"})
+		return c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "only the owner can update this project"})
 	}
 
 	var req updateProjectRequest
@@ -327,6 +334,7 @@ func (h projectRouteHandler) projectPATCHHandle(c *echo.Context) error {
 // @Param			id	path	string	true	"Project ID"
 // @Success		204	"No Content"
 // @Failure		400	{object}	ErrorResponse	"invalid project id"
+// @Failure		401	{object}	ErrorResponse	"only the owner can delete this project"
 // @Failure		404	{object}	ErrorResponse	"project not found"
 // @Failure		500	{object}	ErrorResponse	"internal server error"
 // @Router			/projects/{id} [delete]
@@ -334,6 +342,15 @@ func (h projectRouteHandler) projectDELETEHandle(c *echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid project id"})
+	}
+
+	userId := h.authService.GetClaims(c).UserID
+	isOwner, err := h.authService.IsProjectOwner(c.Request().Context(), userId, id)
+	if err != nil {
+		return c.JSON(http.StatusNotFound, ErrorResponse{Error: err.Error()})
+	}
+	if !isOwner {
+		return c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "only the owner can delete this project"})
 	}
 
 	if err := h.projectService.DeleteProject(c.Request().Context(), id); err != nil {
@@ -351,6 +368,7 @@ func (h projectRouteHandler) projectDELETEHandle(c *echo.Context) error {
 // @Param			userid	path	string	true	"User ID"
 // @Success		204	"No Content"
 // @Failure		400	{object}	ErrorResponse	"invalid id"
+// @Failure		401	{object}	ErrorResponse	"only the project owner can remove members"
 // @Failure 	404 {object} 	ErrorResponse 	"project not found | user not found"
 // @Router			/projects/{id}/members/{userid} [delete]
 func (h projectRouteHandler) memberDELETEHandle(c *echo.Context) error {
@@ -363,7 +381,15 @@ func (h projectRouteHandler) memberDELETEHandle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid user id"})
 	}
 
-	// TODO: ONLY PROJECT OWNER CAN REMOVE USERS
+	userId := h.authService.GetClaims(c).UserID
+	isOwner, err := h.authService.IsProjectOwner(c.Request().Context(), userId, projid)
+	if err != nil {
+		return c.JSON(http.StatusNotFound, ErrorResponse{Error: err.Error()})
+	}
+	if !isOwner {
+		return c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "only the owner can remove members from this project"})
+	}
+
 	if err := h.projectService.RemoveUserFromProject(c.Request().Context(), userid, projid); err != nil {
 		status, msg := mapServiceErrorProj(err)
 		return c.JSON(status, ErrorResponse{Error: msg})
@@ -385,6 +411,21 @@ func (h projectRouteHandler) skillsDELETEHandle(c *echo.Context) error {
 	skillid, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid skill id"})
+	}
+
+	projId, err := h.projectService.GetProjectIdBySkillId(c.Request().Context(), skillid)
+	if err != nil {
+		status, msg := mapServiceErrorProj(err)
+		return c.JSON(status, ErrorResponse{Error: msg})
+	}
+
+	userId := h.authService.GetClaims(c).UserID
+	isOwner, err := h.authService.IsProjectOwner(c.Request().Context(), userId, projId)
+	if err != nil {
+		return c.JSON(http.StatusNotFound, ErrorResponse{Error: err.Error()})
+	}
+	if !isOwner {
+		return c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "only the owner can delete this project"})
 	}
 
 	if err := h.projectService.RemoveProjectSkill(c.Request().Context(), skillid); err != nil {

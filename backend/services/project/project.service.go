@@ -11,7 +11,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// TODO: Tests project.service.go
 type UpdateProjectInput struct {
 	Name        *string
 	Slug        *string
@@ -36,13 +35,13 @@ type (
 		RemoveUserFromProject(ctx context.Context, userId uuid.UUID, projectId uuid.UUID) error
 		AddProjectSkill(ctx context.Context, projectId uuid.UUID, name string, description *string) (*models.ProjectSkill, error)
 		RemoveProjectSkill(ctx context.Context, skillId uuid.UUID) error
+		GetProjectIdBySkillId(ctx context.Context, skillId uuid.UUID) (uuid.UUID, error)
 	}
 	projectService struct {
 		projectStore project.ProjectStore
 	}
 )
 
-// TODO ALL THE REST!!
 func NewProjectService(projectStore project.ProjectStore) ProjectService {
 	return &projectService{projectStore}
 }
@@ -156,8 +155,6 @@ func (s projectService) DeleteProject(ctx context.Context, id uuid.UUID) error {
 
 func (s projectService) AddUsersToProject(ctx context.Context, members []AddMemberRequest, projectId uuid.UUID) ([]models.ProjectMember, error) {
 
-	//TODO: REFINE ERROR HANDLING
-
 	var projectMembers []models.ProjectMember
 
 	for _, user := range members {
@@ -223,4 +220,17 @@ func (s projectService) RemoveProjectSkill(ctx context.Context, skillId uuid.UUI
 		return fmt.Errorf("%w: %w", ErrProjectStoreFailed, err)
 	}
 	return nil
+}
+
+// GetProjectIdBySkillId(c.Request().Context(), skillid) create this func
+func (s projectService) GetProjectIdBySkillId(ctx context.Context, skillId uuid.UUID) (uuid.UUID, error) {
+	projId, err := s.projectStore.GetProjectIdBySkillId(ctx, skillId)
+	if err != nil {
+		switch err {
+		case project.ErrNonExistentProjectSkill:
+			return uuid.Nil, ErrNonExistentProjectSkill
+		}
+		return uuid.Nil, fmt.Errorf("%w: %w", ErrProjectStoreFailed, err)
+	}
+	return projId, nil
 }

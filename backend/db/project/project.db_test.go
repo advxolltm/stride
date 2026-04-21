@@ -43,7 +43,6 @@ func runTest(t *testing.T, db *gorm.DB, name string, f func(*testing.T, *gorm.DB
 }
 
 func TestProjectStore(t *testing.T) {
-	//TODO: WRITE MORE TESTS
 	ctx := context.Background()
 
 	runTest(t, db, "Create a new project successfully", func(t *testing.T, db *gorm.DB, store project.ProjectStore) {

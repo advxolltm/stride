@@ -394,4 +394,46 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 
 		assert.Equal(t, http.StatusNotFound, rec.Code)
 	})
+
+	runTest(t, "Delete Skill: Returns 204 when user is the project owner", func(t *testing.T, tx *gorm.DB, as authService.AuthService, ps projectService.ProjectService, us userService.UserService, e *echo.Echo, cookie *http.Cookie, loginUser models.User) {
+		proj, _ := ps.CreateProject(ctx, &loginUser.ID, "Owner Proj", "owner-slug", nil, "active")
+
+		desc := "test"
+		skill, err := ps.AddProjectSkill(ctx, proj.ID, "Go", &desc)
+		require.NoError(t, err)
+
+		req := httptest.NewRequest(http.MethodDelete, "/api/projects/skills/"+skill.ID.String(), nil)
+		req.AddCookie(cookie)
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusNoContent, rec.Code)
+	})
+
+	runTest(t, "Delete Skill: Returns 401 when user is NOT the project owner", func(t *testing.T, tx *gorm.DB, as authService.AuthService, ps projectService.ProjectService, us userService.UserService, e *echo.Echo, cookie *http.Cookie, loginUser models.User) {
+		otherUser, _ := us.CreateUser(ctx, "otherGuy", "other@guy.com", "Password123!")
+		proj, _ := ps.CreateProject(ctx, &otherUser.ID, "Other Proj", "other-slug", nil, "active")
+
+		desc := "test"
+		skill, _ := ps.AddProjectSkill(ctx, proj.ID, "Java", &desc)
+
+		req := httptest.NewRequest(http.MethodDelete, "/api/projects/skills/"+skill.ID.String(), nil)
+		req.AddCookie(cookie) // This cookie belongs to loginUser, not otherUser
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusUnauthorized, rec.Code)
+
+		skills, _ := ps.GetProjectSkills(ctx, proj.ID)
+		assert.Len(t, skills, 1)
+	})
+
+	runTest(t, "Delete Skill: Returns 404 when skill does not exist", func(t *testing.T, tx *gorm.DB, as authService.AuthService, ps projectService.ProjectService, us userService.UserService, e *echo.Echo, cookie *http.Cookie, loginUser models.User) {
+		req := httptest.NewRequest(http.MethodDelete, "/api/projects/skills/"+uuid.New().String(), nil)
+		req.AddCookie(cookie)
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusNotFound, rec.Code)
+	})
 }
