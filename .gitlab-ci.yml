@@ -1,0 +1,140 @@
+# GitLab CI/CD Pipeline — Stride Application
+
+stages:
+  - build
+  - test
+  - deploy
+
+variables:
+  # PostgreSQL service config (Updated to Bitnami's naming conventions)
+  POSTGRESQL_DATABASE: stride
+  POSTGRESQL_USERNAME: stride
+  POSTGRESQL_PASSWORD: stride
+
+  # Backend env vars matching SetupDBFromEnv()
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  DB_USER: stride
+  DB_PASSWORD: stride
+  DB_NAME: stride
+
+  # Redis
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+
+  # App
+  API_BASE_PATH: /api/v1
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "web"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "master"
+
+build-backend:
+  stage: build
+  image: golang:1.26.1
+  before_script:
+    - cd backend
+  script:
+    - go mod download
+    - curl -sSL https://github.com/swaggo/swag/releases/download/v2.0.0-rc5/swag_2.0.0-rc5_Linux_x86_64.tar.gz | tar -xz
+    - chmod +x swag
+    - ./swag init -g server.go -d ./cmd,./routes
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o bin/server cmd/server.go
+  artifacts:
+    paths:
+      - backend/bin/server
+      - backend/docs/
+    expire_in: 1 hour
+  cache:
+    key:
+      files:
+        - backend/go.sum
+    paths:
+      - backend/vendor/
+    policy: pull-push
+
+build-frontend:
+  stage: build
+  image: node:24-slim
+  before_script:
+    - cd frontend
+  script:
+    - npm ci --prefer-offline
+    - npm run build
+  artifacts:
+    paths:
+      - frontend/dist/
+    expire_in: 1 hour
+  cache:
+    key:
+      files:
+        - frontend/package-lock.json
+    paths:
+      - frontend/node_modules/
+    policy: pull-push
+
+test-backend:
+  stage: test
+  # Run the job natively in Go, rather than installing Go inside a DB image
+  image: golang:1.26.1-alpine
+  services:
+    # Use the non-root Bitnami image to bypass the CI environment's user restrictions
+    - name: bitnami/postgresql:latest
+      alias: postgres
+  needs:
+    - job: build-backend
+      artifacts: true
+  before_script:
+    # Install the psql client just for the DB health check, along with git/bash
+    - apk add --no-cache git bash postgresql-client
+    - cd backend
+  script:
+    - if [ -z "$CI" ]; then echo "CI variable is not set"; exit 1; fi
+    - echo "CI=$CI"
+    - until PGPASSWORD=$DB_PASSWORD psql -h "postgres" -U stride -d stride -c "SELECT 'OK' AS status;"; do echo "Waiting for postgres..."; sleep 2; done
+    - go mod download
+    - go test -count=1 -p 1 ./...
+  cache:
+    key:
+      files:
+        - backend/go.sum
+    paths:
+      - backend/vendor/
+    policy: pull
+
+test-frontend:
+  stage: test
+  image: node:24-slim
+  needs:
+    - job: build-frontend
+      artifacts: true
+  before_script:
+    - cd frontend
+  script:
+    - npm ci --prefer-offline
+    - npm run test:run
+    - npm run typecheck
+    - npm run lint
+  cache:
+    key:
+      files:
+        - frontend/package-lock.json
+    paths:
+      - frontend/node_modules/
+    policy: pull
+
+deploy:
+  stage: deploy
+  image: alpine:latest
+  needs:
+    - job: test-backend
+      artifacts: false
+    - job: test-frontend
+      artifacts: false
+  script:
+    - echo "Deploy stage placeholder — all build and test stages passed successfully."
+    - echo "Pipeline running for branch $CI_COMMIT_REF_NAME (commit $CI_COMMIT_SHORT_SHA)"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master"

@@ -1,22 +1,16 @@
 import { Button, Tooltip } from '@heroui/react'
 import { useState } from 'react'
 import {
-    Megaphone,
+    FolderKanban,
     PanelLeftClose,
     PanelLeftOpen,
-    Smartphone,
-    Users,
-    Wrench,
 } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { SidebarItems, type SidebarProject } from '../main/SidebarItems'
-import {
-    PROJECTS,
-    type ProjectSidebarIcon,
-} from '../../shared/data/mockProjectsData'
 import { LogoutButton } from '../../shared/components/LogoutButton'
 import { LogoutConfirmDialog } from '../../shared/components/LogoutConfirmDialog'
+import { useGetProjectsQuery } from '../../store/features/project/project.api'
 
 interface SidebarProps {
     collapsed: boolean
@@ -24,19 +18,8 @@ interface SidebarProps {
     onCreateProject: () => void
 }
 
-function getSidebarIcon(icon: ProjectSidebarIcon) {
-    switch (icon) {
-        case 'megaphone':
-            return <Megaphone size={14} />
-        case 'smartphone':
-            return <Smartphone size={14} />
-        case 'users':
-            return <Users size={14} />
-        case 'wrench':
-            return <Wrench size={14} />
-        default:
-            return <Wrench size={14} />
-    }
+function getSidebarIcon() {
+    return <FolderKanban size={14} />
 }
 
 export function Sidebar({
@@ -48,11 +31,12 @@ export function Sidebar({
     const location = useLocation()
     const { t } = useTranslation('common')
     const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false)
+    const { data: projects = [] } = useGetProjectsQuery()
 
-    const sidebarProjects: SidebarProject[] = PROJECTS.map((project) => ({
+    const sidebarProjects: SidebarProject[] = projects.map((project) => ({
         id: project.id,
         label: project.name,
-        icon: getSidebarIcon(project.sidebarIcon),
+        icon: getSidebarIcon(),
     }))
 
     const getActiveKey = () => {

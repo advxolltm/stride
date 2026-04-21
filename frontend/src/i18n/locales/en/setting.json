@@ -11,7 +11,10 @@
     "fullName": "Full name",
     "username": "Username",
     "email": "Email",
-    "save": "Save changes"
+    "save": "Save changes",
+    "reset": "Discard changes",
+    "updateSuccess": "Profile updated successfully",
+    "updateError": "Failed to update profile. Please try again."
   },
   "security": {
     "title": "Change Password",
@@ -22,7 +25,8 @@
     "newPasswordPlaceholder": "Enter new password",
     "confirmPassword": "Confirm new password",
     "confirmPasswordPlaceholder": "Confirm new password",
-    "update": "Update password"
+    "update": "Update password",
+    "reset": "Reset"
   },
   "skills": {
     "title": "Your Skills by Project",

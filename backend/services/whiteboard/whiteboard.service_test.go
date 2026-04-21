@@ -9,7 +9,6 @@ import (
 	"backend/testutils"
 	"context"
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/google/uuid"
@@ -22,13 +21,7 @@ import (
 var db *gorm.DB
 
 func TestMain(m *testing.M) {
-	db = testutils.SetupDB()
-	db = db.Begin()
-	testutils.SeedDB(db)
-	exitCode := m.Run()
-	db.Rollback()
-	testutils.TeardownDB()
-	os.Exit(exitCode)
+	testutils.RunTestMain(m, &db, true, true)
 }
 
 func newTestService(db *gorm.DB) whiteboardSvc.WhiteboardService {

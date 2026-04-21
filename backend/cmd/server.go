@@ -25,7 +25,6 @@ import (
 	"backend/testutils"
 
 	"backend/docs"
-	_ "backend/docs"
 
 	echoSwagger "github.com/swaggo/echo-swagger/v2"
 )

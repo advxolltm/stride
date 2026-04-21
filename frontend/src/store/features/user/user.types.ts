@@ -1,7 +1,12 @@
+export type ApiErrorResponse = {
+    error: string
+}
+
 export type ApiUser = {
     ID: string
     Username: string
     Email: string
+    PasswordHash: string
     FullName: string | null
     AvatarURL: string | null
     CreatedAt: string
@@ -17,6 +22,6 @@ export type CreateUserRequest = {
 export type UpdateUserRequest = Partial<{
     email: string
     password: string
-    fullName: string
-    avatarUrl: string
+    full_name: string
+    avatar_url: string
 }>

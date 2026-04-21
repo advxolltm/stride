@@ -1,6 +1,7 @@
 import type { Key, ReactNode } from 'react'
 import { Header, ListBox, Tooltip } from '@heroui/react'
-import { LayoutDashboard, Plus } from 'lucide-react'
+import { ChevronDown, ChevronRight, LayoutDashboard, Plus } from 'lucide-react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 export interface SidebarProject {
@@ -71,6 +72,7 @@ export function SidebarItems({
     onCreateProject,
 }: SidebarItemsProps) {
     const { t } = useTranslation('common')
+    const [projectsExpanded, setProjectsExpanded] = useState(true)
 
     const handleSelectionChange = (keys: 'all' | Set<Key>) => {
         if (keys === 'all') return
@@ -151,52 +153,77 @@ export function SidebarItems({
                 </ListBox.Section>
             </ListBox>
 
-            <ListBox
-                aria-label="Projects navigation"
-                selectionMode="single"
-                selectedKeys={new Set([activeKey])}
-                onSelectionChange={handleSelectionChange}
-                className={
-                    collapsed
-                        ? 'flex w-full min-w-0 items-center overflow-hidden'
-                        : 'w-full min-w-0 overflow-hidden'
-                }
-            >
-                <ListBox.Section>
-                    {!collapsed && (
-                        <Header className="px-3 pb-2 text-xs font-medium text-[var(--muted)]">
-                            {t('navigation.projects')}
-                        </Header>
-                    )}
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+                {!collapsed && (
+                    <button
+                        type="button"
+                        onClick={() =>
+                            setProjectsExpanded((current) => !current)
+                        }
+                        className="flex items-center justify-between rounded-xl px-3 py-2 text-left text-xs font-medium text-[var(--muted)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]"
+                    >
+                        <span>{t('navigation.projects')}</span>
+                        {projectsExpanded ? (
+                            <ChevronDown size={14} />
+                        ) : (
+                            <ChevronRight size={14} />
+                        )}
+                    </button>
+                )}
 
-                    {projects.map((project) => (
-                        <ListBox.Item
-                            key={project.id}
-                            id={project.id}
-                            textValue={project.label}
-                            className={itemClassName}
+                {(collapsed || projectsExpanded) && (
+                    <div className="min-h-0 flex-1 overflow-y-auto pb-2">
+                        <ListBox
+                            aria-label="Projects navigation"
+                            selectionMode="single"
+                            selectedKeys={new Set([activeKey])}
+                            onSelectionChange={handleSelectionChange}
+                            className={
+                                collapsed
+                                    ? 'flex w-full min-w-0 items-center overflow-visible'
+                                    : 'w-full min-w-0 overflow-visible'
+                            }
                         >
-                            {collapsed ? (
-                                <SidebarTooltip label={project.label}>
-                                    <div className="flex h-10 w-10 items-center justify-center">
-                                        <SidebarItemContent
-                                            icon={project.icon}
-                                            label={project.label}
-                                            collapsed
-                                        />
-                                    </div>
-                                </SidebarTooltip>
-                            ) : (
-                                <SidebarItemContent
-                                    icon={project.icon}
-                                    label={project.label}
-                                    collapsed={false}
-                                />
-                            )}
-                        </ListBox.Item>
-                    ))}
-                </ListBox.Section>
-            </ListBox>
+                            <ListBox.Section>
+                                {collapsed && (
+                                    <Header className="sr-only">
+                                        {t('navigation.projects')}
+                                    </Header>
+                                )}
+
+                                {projects.map((project) => (
+                                    <ListBox.Item
+                                        key={project.id}
+                                        id={project.id}
+                                        textValue={project.label}
+                                        className={itemClassName}
+                                    >
+                                        {collapsed ? (
+                                            <SidebarTooltip
+                                                label={project.label}
+                                            >
+                                                <div className="flex h-10 w-10 items-center justify-center">
+                                                    <SidebarItemContent
+                                                        icon={project.icon}
+                                                        label={project.label}
+                                                        collapsed
+                                                    />
+                                                </div>
+                                            </SidebarTooltip>
+                                        ) : (
+                                            <SidebarItemContent
+                                                icon={project.icon}
+                                                label={project.label}
+                                                collapsed={false}
+                                            />
+                                        )}
+                                    </ListBox.Item>
+                                ))}
+                            </ListBox.Section>
+                        </ListBox>
+                    </div>
+                )}
+            </div>
 
             {collapsed ? (
                 <SidebarTooltip label={t('actions.createProject')}>

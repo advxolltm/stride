@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"testing"
 	"testing/synctest"
 	"time"
@@ -38,13 +37,7 @@ func newTestAuthService(db *gorm.DB) authService {
 }
 
 func TestMain(m *testing.M) {
-	db = testutils.SetupDB()
-	db = db.Begin()
-	testutils.SeedDB(db)
-	exitCode := m.Run()
-	db.Rollback()
-	testutils.TeardownDB()
-	os.Exit(exitCode)
+	testutils.RunTestMain(m, &db, true, true)
 }
 
 func TestAuthService(t *testing.T) {
