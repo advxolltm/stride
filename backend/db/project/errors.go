@@ -3,9 +3,10 @@ package project
 import "errors"
 
 var (
-	ErrProjectNotFound    = errors.New("project not found")
-	ErrDuplicateSlug      = errors.New("project slug is not unique")
-	ErrProjectStoreFailed = errors.New("project store operation failed")
-	ErrNonExistentUser    = errors.New("the user(s) you are trying to insert do not exist")
-	ErrUserAlreadyMember  = errors.New("one or more users are already members of the project")
+	ErrProjectNotFound         = errors.New("project not found")
+	ErrDuplicateSlug           = errors.New("project slug is not unique")
+	ErrProjectStoreFailed      = errors.New("project store operation failed")
+	ErrNonExistentUser         = errors.New("the user(s) you are trying to insert do not exist")
+	ErrUserAlreadyMember       = errors.New("one or more users are already members of the project")
+	ErrNonExistentProjectSkill = errors.New("the project skill you are trying to delete does not exist")
 )

@@ -229,10 +229,10 @@ func (s *projectStore) AddProjectSkill(ctx context.Context, projectSkill *models
 func (s *projectStore) RemoveProjectSkill(ctx context.Context, id uuid.UUID) error {
 	result := s.db.WithContext(ctx).Where("id = ?", id).Delete(&models.ProjectSkill{})
 	if result.Error != nil {
-		return gorm.ErrRecordNotFound
+		return ErrNonExistentProjectSkill
 	}
 	if result.RowsAffected == 0 {
-		return gorm.ErrRecordNotFound
+		return ErrNonExistentProjectSkill
 	}
 	return nil
 }

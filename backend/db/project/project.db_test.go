@@ -439,16 +439,14 @@ func TestProjectStore_CreateAndGetProject(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotEqual(t, uuid.Nil, ps.ID)
 
-		skill := db.
-			assert.Equal(t, skillName, skill.Name)
-		assert.Equal(t, skillDesc, *skill.Description)
+		loadErr := db.Preload("Skills").First(&proj, "id = ?", proj.ID)
+		require.NoError(t, loadErr.Error)
 
-		skills, err := store.GetProjectSkills(ctx, proj.ID)
-		require.NoError(t, err)
+		skills := proj.Skills
 
 		found := false
 		for _, s := range skills {
-			if s.ID == skill.ID {
+			if s.ID == ps.ID {
 				found = true
 				assert.Equal(t, skillName, s.Name)
 				assert.Equal(t, skillDesc, *s.Description)
@@ -456,6 +454,48 @@ func TestProjectStore_CreateAndGetProject(t *testing.T) {
 			}
 		}
 		assert.True(t, found)
+	})
+
+	runTest(t, db, "AddProjectSkill returns error when project does not exist", func(t *testing.T, db *gorm.DB, store project.ProjectStore) {
+		skillName := "Golang"
+		skillDesc := "Go language"
+
+		ps := &models.ProjectSkill{
+			ProjectID:   uuid.New(),
+			Name:        skillName,
+			Description: &skillDesc,
+		}
+
+		err := store.AddProjectSkill(ctx, ps)
+		assert.ErrorIs(t, err, project.ErrProjectNotFound)
+	})
+
+	runTest(t, db, "RemoveProjectSkill removes the skill from the project", func(t *testing.T, db *gorm.DB, store project.ProjectStore) {
+		proj := testutils.SelectRandomProject(t, db)
+		desc := "Go language"
+		skill := &models.ProjectSkill{
+			ProjectID:   proj.ID,
+			Name:        "Golang",
+			Description: &desc,
+		}
+
+		createErr := store.AddProjectSkill(ctx, skill)
+		require.NoError(t, createErr)
+
+		err := store.RemoveProjectSkill(ctx, skill.ID)
+		require.NoError(t, err)
+
+		skills, err := store.GetProjectSkills(ctx, proj.ID)
+		require.NoError(t, err)
+
+		for _, s := range skills {
+			assert.NotEqual(t, skill.ID, s.ID)
+		}
+	})
+
+	runTest(t, db, "RemoveProjectSkill returns error when skill does not exist", func(t *testing.T, db *gorm.DB, store project.ProjectStore) {
+		err := store.RemoveProjectSkill(ctx, uuid.New())
+		assert.ErrorIs(t, err, project.ErrNonExistentProjectSkill)
 	})
 
 }
