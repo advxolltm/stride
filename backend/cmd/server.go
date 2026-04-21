@@ -24,7 +24,6 @@ import (
 	_ "backend/routes"
 
 	"backend/docs"
-	_ "backend/docs"
 
 	"github.com/swaggo/echo-swagger/v2"
 )
