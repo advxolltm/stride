@@ -3,89 +3,35 @@ package testutils
 import (
 	"backend/db"
 	"context"
-	"database/sql"
-	"errors"
 	"fmt"
-	"io"
 	"log"
 	"os"
-	"path/filepath"
-	"runtime"
-	"strings"
-	"time"
+	"testing"
 
-	_ "github.com/lib/pq"
-	"github.com/testcontainers/testcontainers-go/modules/compose"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"gorm.io/gorm"
 )
 
-var stack *compose.DockerCompose
 var ctx = context.Background()
 
-func SetupDB() {
-	if os.Getenv("CI") != "" {
-		SetCICDTestDB()
-	} else {
-		SetupDevTestDB()
-	}
-}
+// SetupDBFromEnv connects to an existing database using environment variables
+// (DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME).
+func SetupDBFromEnv() *gorm.DB {
+	dsn := fmt.Sprintf(
+		"postgresql://%s:%s@%s:%s/%s?sslmode=disable",
+		os.Getenv("DB_USER"),
+		os.Getenv("DB_PASSWORD"),
+		os.Getenv("DB_HOST"),
+		os.Getenv("DB_PORT"),
+		os.Getenv("DB_NAME"),
+	)
 
-func SetCICDTestDB() {
-	dsn := buildCICDTestDSN()
-	waitForDatabase(dsn)
-	setupTestDBFromDSN(dsn)
-}
-
-func setupTestDBFromDSN(dsn string) {
 	testdb, _, err := db.InitDB(dsn)
 	AssertNoError(err)
 
-	DB = testdb
-	SeedDB()
-}
-
-func buildCICDTestDSN() string {
-	host := envOrDefault([]string{"DB_HOST"}, "db")
-	port := envOrDefault([]string{"DB_PORT"}, "5432")
-	user := envOrDefault([]string{"DB_USER", "POSTGRES_USER", "POSTGRESQL_USERNAME"}, "stride")
-	password := envOrDefault([]string{"DB_PASSWORD", "POSTGRES_PASSWORD", "POSTGRESQL_PASSWORD"}, "stride")
-	name := envOrDefault([]string{"DB_NAME", "POSTGRES_DB", "POSTGRESQL_DATABASE"}, "stride")
-
-	return fmt.Sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=disable", user, password, host, port, name)
-}
-
-func envOrDefault(keys []string, fallback string) string {
-	for _, key := range keys {
-		if value := strings.TrimSpace(os.Getenv(key)); value != "" {
-			return value
-		}
-	}
-
-	return fallback
-}
-
-func waitForDatabase(dsn string) {
-	sqlDB, err := sql.Open("postgres", dsn)
-	AssertNoError(err)
-	defer func() {
-		if closeErr := sqlDB.Close(); closeErr != nil {
-			log.Printf("Failed to close CI test database probe: %v", closeErr)
-		}
-	}()
-
-	var pingErr error
-	for attempt := 1; attempt <= 30; attempt++ {
-		pingErr = sqlDB.PingContext(ctx)
-		if pingErr == nil {
-			return
-		}
-
-		log.Printf("Waiting for CI test database (%d/30): %v", attempt, pingErr)
-		time.Sleep(time.Second)
-	}
-
-	AssertNoError(pingErr)
+	return testdb
 }
 
 func SeedDB(db *gorm.DB) {
@@ -99,93 +45,84 @@ func TAssertNoError(t interface{ Helper(); Fatalf(string, ...any) }, err error) 
 	}
 }
 
-func SetupDevTestDB() *gorm.DB {
-	composeReader := openDevComposeFile()
-	newStack, err := compose.NewDockerComposeWith(
-		compose.WithStackReaders(composeReader),
+// SetupDB starts a test database and returns a connected *gorm.DB.
+//
+// When CI="true" (CI environment) it connects to an existing database
+// configured via environment variables (DB_USER, DB_PASSWORD, DB_HOST,
+// DB_PORT, DB_NAME).
+//
+// Otherwise (local host) it spins up the "db" service from compose.dev.yml
+// using testcontainers and connects to the dynamically allocated port.
+func SetupDB() *gorm.DB {
+	if os.Getenv("CI") == "true" {
+		return SetupDBFromEnv()
+	}
+	return setupDBWithTestcontainers()
+}
+
+func setupDBWithTestcontainers() *gorm.DB {
+	pgContainer, err := postgres.Run(
+		ctx,
+		"postgres:16-alpine",
+		postgres.WithDatabase("stride"),
+		postgres.WithUsername("stride"),
+		postgres.WithPassword("stride"),
+		testcontainers.WithWaitStrategy(
+			wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
+			wait.ForListeningPort("5432/tcp"),
+		),
 	)
-
-	stack = newStack
-
 	AssertNoError(err)
 
-	err = stack.
-		WithEnv(map[string]string{
-			"POSTGRES_DB": "",
-			"POSTGRES_USER": "",
-			"POSTGRES_PASSWORD": "",
-		}).
-		WaitForService("db", wait.ForListeningPort("5432/tcp")).
-		Up(ctx, compose.RunServices("db"), compose.Wait(true))
-
-	dbContainer, err := stack.ServiceContainer(ctx, "db")
+	connStr, err := pgContainer.ConnectionString(ctx, "sslmode=disable")
 	AssertNoError(err)
 
-	dbHost, err := dbContainer.Host(ctx)
+	testdb, _, err := db.InitDB(connStr)
 	AssertNoError(err)
 
-	dbPort, err := dbContainer.MappedPort(ctx, "5432")
-
-	dsn := fmt.Sprintf("postgresql://stride:stride@%s:%s/stride?sslmode=disable", dbHost, dbPort.Port())
-	setupTestDBFromDSN(dsn)
+	return testdb
 }
 
 func TeardownDB() {
-	if stack != nil {
-		err := stack.Down(
-			ctx,
-			compose.RemoveOrphans(true),
-			compose.RemoveVolumes(true),
-			compose.RemoveImagesLocal,
-		)
-		if err != nil {
-			log.Printf("Failed to stop stack: %v", err)
-		}
-	}
+	// the testcontainers ryuk container manages cleanup automatically
+	// therefore it is currently better not to do manual cleanup
+	// this also allows other tests from different packages to reuse the container
+	// which improves test-time
 }
 
-func findGoModuleRoot() string {
-	_, fileName, _, ok := runtime.Caller(0)
-	if !ok {
-		log.Fatal("findGoModuleRoot: failed to get current file")
+// RunTestMain is the generic TestMain helper for all test packages.
+//
+// pDB must point to the package-level *gorm.DB variable; it is set before
+// m.Run() so every test in the package can use it.
+//
+// seed: if true, fills the database with random fake data via SeedDB.
+//
+// withTransaction: if true, the whole test suite runs inside a database
+// transaction that is rolled back after m.Run() returns, giving full
+// isolation at zero cost.
+//
+// The function always calls os.Exit and therefore never returns.
+func RunTestMain(m *testing.M, pDB **gorm.DB, seed bool, withTransaction bool) {
+	testDB := SetupDB()
+
+	if withTransaction {
+		testDB = testDB.Begin()
 	}
 
-	dir := filepath.Dir(fileName)
+	*pDB = testDB
 
-	for {
-		modFile := filepath.Join(dir, "go.mod")
-		_, err := os.Stat(modFile)
-
-		if err == nil {
-			return dir
-		}
-
-		if !errors.Is(err, os.ErrNotExist) {
-			log.Fatal("failed to check go.mod file: %w", err.Error())
-		}
-
-		parent := filepath.Dir(dir)
-		// if we reached the root directory
-		if dir == parent {
-			log.Fatal("failed to find go.mod file")
-		}
-
-		dir = parent
+	if seed {
+		SeedDB(testDB)
 	}
-}
 
-func openDevComposeFile() io.Reader {
-	moduleRoot := findGoModuleRoot()
-	composeFilePath := fmt.Sprintf("%s/../compose.dev.yml", moduleRoot)
-	composeFilePath, err := filepath.Abs(composeFilePath)
-	AssertNoError(err)
+	code := m.Run()
 
-	log.Println("compose file path:", composeFilePath)
+	if withTransaction {
+		testDB.Rollback()
+	}
 
-	file, err := os.Open(composeFilePath)
-	AssertNoError(err)
-
-	return file
+	TeardownDB()
+	os.Exit(code)
 }
 
 func Assert(cond bool) {
