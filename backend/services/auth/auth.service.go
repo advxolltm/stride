@@ -29,6 +29,7 @@ type (
 	AuthService interface {
 		AuthenticateUser(ctx context.Context, email, password string) (jwtTokenString, time.Time, error)
 		IsProjectOwner(ctx context.Context, userId uuid.UUID, projectId uuid.UUID) (bool, error)
+		IsProjectMember(ctx context.Context, userId uuid.UUID, projectId uuid.UUID) (bool, error)
 		AuthenticatedMiddleware() echo.MiddlewareFunc
 
 		// should only be called in routes protected by [AuthenticatedMiddleware]
@@ -110,6 +111,21 @@ func (s authService) IsProjectOwner(ctx context.Context, userId uuid.UUID, proje
 	}
 
 	return *project.CreatedBy == userId, nil
+}
+
+func (s authService) IsProjectMember(ctx context.Context, userId uuid.UUID, projectId uuid.UUID) (bool, error) {
+	members, err := s.projectService.GetProjectMembers(ctx, projectId)
+	if err != nil {
+		return false, fmt.Errorf("Failed to get project members to check project membership: %w", err)
+	}
+
+	for _, member := range members {
+		if member.UserID == userId {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 func getClaims(ctx *echo.Context) jwtCustomClaims {

@@ -13,18 +13,20 @@ import (
 	mainDB "backend/db"
 	exampleDB "backend/db/example"
 	projectDB "backend/db/project"
+	taskDB "backend/db/task"
 	userDB "backend/db/user"
 	"backend/routes"
+	taskHandler "backend/routes/task"
 	authService "backend/services/auth"
 	exampleService "backend/services/example"
 	projectService "backend/services/project"
+	taskService "backend/services/task"
 	userService "backend/services/user"
 	"backend/testutils"
 
 	_ "backend/routes"
 
 	"backend/docs"
-	_ "backend/docs"
 
 	"github.com/swaggo/echo-swagger/v2"
 )
@@ -95,12 +97,14 @@ func main() {
 
 	userStore := userDB.NewUserStore(mainDB)
 	projectStore := projectDB.NewProjectStore(mainDB)
+	taskStore := taskDB.NewTaskStore(mainDB)
 
 	// Services
 	exampleService := exampleService.NewExampleService(exampleStore)
 	userService := userService.NewUserService(userStore)
 	projectService := projectService.NewProjectService(projectStore)
 	authService := authService.NewAuthenticationService(userService, projectService)
+	taskService := taskService.NewTaskService(taskStore)
 
 	// Routes
 	// Register route handler by adding them to the array
@@ -112,6 +116,7 @@ func main() {
 		routes.NewAuthRouteHandler(authService, userService),
 		routes.NewExampleRouteHandler(exampleService, authService),
 		routes.NewProjectRouteHandler(projectService, authService),
+		taskHandler.NewTaskRouteHandler(authService, taskService, projectService),
 		routes.NewUserRouteHandler(userService),
 	}
 

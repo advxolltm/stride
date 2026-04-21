@@ -28,13 +28,7 @@ import (
 var db *gorm.DB
 
 func TestMain(m *testing.M) {
-	db = testutils.SetupDB()
-	db.Begin()
-	testutils.SeedDB(db)
-	exitCode := m.Run()
-	db.Rollback()
-	defer testutils.TeardownDB()
-	os.Exit(exitCode)
+	testutils.RunTestMain(m, &db, false, true)
 }
 
 func getCookie(t *testing.T, authServ authService.AuthService, email string, password string) *http.Cookie {
