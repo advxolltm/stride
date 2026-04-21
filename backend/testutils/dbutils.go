@@ -3,6 +3,7 @@ package testutils
 import (
 	"backend/db"
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"io"
@@ -10,7 +11,10 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
+	"time"
 
+	_ "github.com/lib/pq"
 	"github.com/testcontainers/testcontainers-go/modules/compose"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"gorm.io/gorm"
@@ -19,28 +23,69 @@ import (
 var stack *compose.DockerCompose
 var ctx = context.Background()
 
-func SetupDB() *gorm.DB {
+func SetupDB() {
 	if os.Getenv("CI") != "" {
-		return SetupDBFromEnv()
+		SetCICDTestDB()
 	} else {
-		return SetupDevTestDB()
+		SetupDevTestDB()
 	}
 }
 
-func SetupDBFromEnv() *gorm.DB {
-	dsn := fmt.Sprintf(
-		"postgresql://%s:%s@%s:%s/%s?sslmode=disable",
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASSWORD"),
-		os.Getenv("DB_HOST"),
-		os.Getenv("DB_PORT"),
-		os.Getenv("DB_NAME"),
-	)
+func SetCICDTestDB() {
+	dsn := buildCICDTestDSN()
+	waitForDatabase(dsn)
+	setupTestDBFromDSN(dsn)
+}
 
+func setupTestDBFromDSN(dsn string) {
 	testdb, _, err := db.InitDB(dsn)
 	AssertNoError(err)
 
-	return testdb
+	DB = testdb
+	SeedDB()
+}
+
+func buildCICDTestDSN() string {
+	host := envOrDefault([]string{"DB_HOST"}, "db")
+	port := envOrDefault([]string{"DB_PORT"}, "5432")
+	user := envOrDefault([]string{"DB_USER", "POSTGRES_USER", "POSTGRESQL_USERNAME"}, "stride")
+	password := envOrDefault([]string{"DB_PASSWORD", "POSTGRES_PASSWORD", "POSTGRESQL_PASSWORD"}, "stride")
+	name := envOrDefault([]string{"DB_NAME", "POSTGRES_DB", "POSTGRESQL_DATABASE"}, "stride")
+
+	return fmt.Sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=disable", user, password, host, port, name)
+}
+
+func envOrDefault(keys []string, fallback string) string {
+	for _, key := range keys {
+		if value := strings.TrimSpace(os.Getenv(key)); value != "" {
+			return value
+		}
+	}
+
+	return fallback
+}
+
+func waitForDatabase(dsn string) {
+	sqlDB, err := sql.Open("postgres", dsn)
+	AssertNoError(err)
+	defer func() {
+		if closeErr := sqlDB.Close(); closeErr != nil {
+			log.Printf("Failed to close CI test database probe: %v", closeErr)
+		}
+	}()
+
+	var pingErr error
+	for attempt := 1; attempt <= 30; attempt++ {
+		pingErr = sqlDB.PingContext(ctx)
+		if pingErr == nil {
+			return
+		}
+
+		log.Printf("Waiting for CI test database (%d/30): %v", attempt, pingErr)
+		time.Sleep(time.Second)
+	}
+
+	AssertNoError(pingErr)
 }
 
 func SeedDB(db *gorm.DB) {
@@ -81,27 +126,22 @@ func SetupDevTestDB() *gorm.DB {
 
 	dbPort, err := dbContainer.MappedPort(ctx, "5432")
 
-
-	dsn := fmt.Sprintf(
-		"postgresql://%s:%s@%s:%s/%s?sslmode=disable",
-		"stride",
-		"stride",
-		dbHost,
-		dbPort.Port(),
-		"stride",
-	)
-
-	testdb, _, err := db.InitDB(dsn)
-	AssertNoError(err)
-
-	return testdb
+	dsn := fmt.Sprintf("postgresql://stride:stride@%s:%s/stride?sslmode=disable", dbHost, dbPort.Port())
+	setupTestDBFromDSN(dsn)
 }
 
 func TeardownDB() {
-	// the testcontainers ryuk container manages cleanup automatically
-	// therefore it is currently better not to do manual cleanup
-	// this also allows other tests from different packages to reuse the container
-	// which improves test-time
+	if stack != nil {
+		err := stack.Down(
+			ctx,
+			compose.RemoveOrphans(true),
+			compose.RemoveVolumes(true),
+			compose.RemoveImagesLocal,
+		)
+		if err != nil {
+			log.Printf("Failed to stop stack: %v", err)
+		}
+	}
 }
 
 func findGoModuleRoot() string {

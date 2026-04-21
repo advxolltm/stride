@@ -13,12 +13,10 @@ import (
 var db *gorm.DB
 
 func TestMain(m *testing.M) {
-	db = testutils.SetupDBFromEnv()
-	db = db.Begin()
-	testutils.SeedDB(db)
-	exitCode := m.Run()
-	db.Rollback()
-	os.Exit(exitCode)
+	testutils.SetupDB()
+	code := m.Run()
+	testutils.TeardownDB()
+	os.Exit(code)
 }
 
 // allTableNames returns the expected table names from the migration.
