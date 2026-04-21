@@ -105,7 +105,7 @@ func (h authRouteHandler) sessionGET(c *echo.Context) error {
 		return c.JSON(status, ErrorResponse{Error: msg})
 	}
 
-	mappedUser := mapUser(*user)
+	mappedUser := MapUser(*user)
 
 	return c.JSON(http.StatusOK, mappedUser)
 }

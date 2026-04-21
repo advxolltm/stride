@@ -24,6 +24,7 @@ type (
 	ProjectService interface {
 		GetAllProjects(ctx context.Context) ([]models.Project, error)
 		GetProject(ctx context.Context, id uuid.UUID) (*models.Project, error)
+		GetProjectMember(ctx context.Context, projectId uuid.UUID, userID uuid.UUID) (*models.ProjectMember, error)
 		GetProjectMembers(ctx context.Context, id uuid.UUID) ([]models.ProjectMember, error)
 		GetProjectSkills(ctx context.Context, id uuid.UUID) ([]models.ProjectSkill, error)
 		CreateProject(ctx context.Context, createdBy *uuid.UUID, name string, slug string, description *string, status string) (*models.Project, error)
@@ -61,6 +62,22 @@ func (s projectService) GetProject(ctx context.Context, id uuid.UUID) (*models.P
 		return nil, fmt.Errorf("%w: %w", ErrProjectNotFound, err)
 	}
 	return p, nil
+}
+
+func (s projectService) GetProjectMember(ctx context.Context, projectId uuid.UUID, userId uuid.UUID) (*models.ProjectMember, error) {
+	// TODO: make more efficient call
+	members, err := s.projectStore.GetProjectMembers(ctx, projectId)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrProjectStoreFailed, err)
+	}
+
+	for _, member := range members {
+		if member.UserID == userId {
+			return &member, nil
+		}
+	}
+
+	return nil, ErrProjectMemberNotFound
 }
 
 func (s projectService) GetProjectMembers(ctx context.Context, id uuid.UUID) ([]models.ProjectMember, error) {
