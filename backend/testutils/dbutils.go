@@ -3,7 +3,6 @@ package testutils
 import (
 	"backend/db"
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"testing"
