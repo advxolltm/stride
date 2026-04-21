@@ -78,6 +78,14 @@ func mapToReturnMember(m models.ProjectMember) ReturnMember {
 		Role:      m.Role,
 		JoinedAt:  m.JoinedAt,
 	}
+	res.User = &ReturnUser{
+		ID:        m.User.ID,
+		Username:  m.User.Username,
+		Email:     m.User.Email,
+		FullName:  m.User.FullName,
+		AvatarURL: m.User.AvatarURL,
+	}
+
 	return res
 }
 
@@ -100,42 +108,41 @@ func Map[T any, V any](input []T, f func(T) V) []V {
 }
 
 type ReturnUser struct {
-	ID        uuid.UUID
-	Username  string
-	Email     string
-	FullName  *string
-	AvatarURL *string
+	ID        uuid.UUID `json:"id"`
+	Username  string    `json:"username"`
+	Email     string    `json:"email"`
+	FullName  *string   `json:"full_name"`
+	AvatarURL *string   `json:"avatar_url"`
 }
 
 type ReturnSkill struct {
-	ID          uuid.UUID
-	ProjectID   uuid.UUID
-	Name        string
-	Description *string
+	ID          uuid.UUID `json:"id"`
+	ProjectID   uuid.UUID `json:"project_id"`
+	Name        string    `json:"name"`
+	Description *string   `json:"description"`
 }
 
 type ReturnProj struct {
-	ID          uuid.UUID
-	CreatedBy   *uuid.UUID
-	Name        string
-	Slug        string
-	Description *string
-	Status      string
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	JoinLink    *uuid.UUID
+	ID          uuid.UUID  `json:"id"`
+	CreatedBy   *uuid.UUID `json:"created_by"`
+	Name        string     `json:"name"`
+	Slug        string     `json:"slug"`
+	Description *string    `json:"description"`
+	Status      string     `json:"status"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+	JoinLink    *uuid.UUID `json:"join_link"`
 
-	Creator *ReturnUser
-	Members []ReturnMember
-	Skills  []ReturnSkill
+	Creator *ReturnUser    `json:"creator,omitempty"`
+	Members []ReturnMember `json:"members,omitempty"`
+	Skills  []ReturnSkill  `json:"skills,omitempty"`
 }
 
 type ReturnMember struct {
-	ID        uuid.UUID
-	UserID    uuid.UUID
-	ProjectID uuid.UUID
-	Role      string
-	JoinedAt  time.Time
-
-	//User          User           `gorm:"foreignKey:UserID"`
+	ID        uuid.UUID   `json:"id"`
+	UserID    uuid.UUID   `json:"user_id"`
+	ProjectID uuid.UUID   `json:"project_id"`
+	Role      string      `json:"role"`
+	JoinedAt  time.Time   `json:"joined_at"`
+	User      *ReturnUser `json:"user,omitempty"`
 }
