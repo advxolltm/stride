@@ -7,7 +7,6 @@ import (
 	"backend/testutils"
 	"context"
 	"fmt"
-	"os"
 	"testing"
 	"time"
 
@@ -24,13 +23,7 @@ func newTestProjectStore(db *gorm.DB) project.ProjectStore {
 }
 
 func TestMain(m *testing.M) {
-	db = testutils.SetupDB()
-	db = db.Begin()
-	testutils.SeedDB(db)
-	exitCode := m.Run()
-	db.Rollback()
-	testutils.TeardownDB()
-	os.Exit(exitCode)
+	testutils.RunTestMain(m, &db, true, true)
 }
 
 func runTest(t *testing.T, db *gorm.DB, name string, f func(*testing.T, *gorm.DB, project.ProjectStore)) {
@@ -177,6 +170,14 @@ func TestProjectStore(t *testing.T) {
 
 		result := db.WithContext(ctx).Preload("Creator").Preload("Members").Preload("Skills").First(&project, "id = ?", project.ID)
 		require.NoError(t, result.Error)
+
+		project.Tasks = nil
+		project.Messages = nil
+		project.Whiteboards = nil
+
+		retProj.Tasks = nil
+		retProj.Messages = nil
+		retProj.Whiteboards = nil
 
 		assert.Equal(t, project, *retProj)
 	})

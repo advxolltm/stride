@@ -15,7 +15,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/google/uuid"
@@ -28,7 +27,7 @@ import (
 var db *gorm.DB
 
 func TestMain(m *testing.M) {
-	testutils.RunTestMain(m, &db, false, true)
+	testutils.RunTestMain(m, &db, true, true)
 }
 
 func getCookie(t *testing.T, authServ authService.AuthService, email string, password string) *http.Cookie {

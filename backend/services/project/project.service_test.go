@@ -9,7 +9,6 @@ import (
 	"backend/testutils"
 	"context"
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/google/uuid"
@@ -181,6 +180,14 @@ func TestProjectService(t *testing.T) {
 		result := db.WithContext(ctx).Preload("Creator").Preload("Members").Preload("Skills").First(&project, "id = ?", project.ID)
 		require.NoError(t, result.Error)
 
+		project.Tasks = nil
+		project.Messages = nil
+		project.Whiteboards = nil
+
+		retProj.Tasks = nil
+		retProj.Messages = nil
+		retProj.Whiteboards = nil
+
 		assert.Equal(t, project, *retProj)
 	})
 
@@ -274,6 +281,10 @@ func TestProjectService(t *testing.T) {
 		proj1 := testutils.GenerateRandomProject([]models.User{user})
 		proj2 := testutils.GenerateRandomProject([]models.User{user})
 		proj3 := testutils.GenerateRandomProject([]models.User{user})
+
+		proj1.Slug = "proj1-slug"
+		proj2.Slug = "proj2-slug"
+		proj3.Slug = "proj3-slug"
 
 		projes := []*models.Project{&proj1, &proj2, &proj3}
 
