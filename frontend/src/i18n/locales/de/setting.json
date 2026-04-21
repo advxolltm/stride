@@ -11,7 +11,10 @@
     "fullName": "Vollständiger Name",
     "username": "Benutzername",
     "email": "E-Mail",
-    "save": "Änderungen speichern"
+    "save": "Änderungen speichern",
+    "reset": "Änderungen verwerfen",
+    "updateSuccess": "Profil erfolgreich aktualisiert",
+    "updateError": "Profil konnte nicht aktualisiert werden. Bitte versuchen Sie es erneut."
   },
   "security": {
     "title": "Passwort ändern",
@@ -22,7 +25,8 @@
     "newPasswordPlaceholder": "Neues Passwort eingeben",
     "confirmPassword": "Neues Passwort bestätigen",
     "confirmPasswordPlaceholder": "Neues Passwort bestätigen",
-    "update": "Passwort aktualisieren"
+    "update": "Passwort aktualisieren",
+    "reset": "Zurücksetzen"
   },
   "skills": {
     "title": "Ihre Fähigkeiten pro Projekt",

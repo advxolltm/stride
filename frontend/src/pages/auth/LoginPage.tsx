@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import {
     Button,
     FieldError,
@@ -7,19 +6,16 @@ import {
     Label,
     TextField,
 } from '@heroui/react'
+import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import AuthContainer from '../../components/auth/AuthContainer'
 import PasswordInput from '../../components/auth/PasswordInput'
-import { useAppDispatch } from '../../shared/hooks/redux'
 import { getApiErrorMessage } from '../../shared/utils/api/errors'
 import { useLoginMutation } from '../../store/features/auth/auth.api'
-import { setAuthenticated } from '../../store/features/auth/auth.slice'
-import { saveAuthState } from '../../store/features/auth/auth.storage'
 
 export default function LoginPage() {
     const navigate = useNavigate()
     const location = useLocation()
-    const dispatch = useAppDispatch()
     const [login, { isLoading }] = useLoginMutation()
     const [submitError, setSubmitError] = useState<string | null>(null)
     const redirectTarget =
@@ -47,8 +43,6 @@ export default function LoginPage() {
                 password,
             }).unwrap()
 
-            dispatch(setAuthenticated(true))
-            saveAuthState(true)
             navigate(redirectTarget, { replace: true })
         } catch (error: unknown) {
             setSubmitError(

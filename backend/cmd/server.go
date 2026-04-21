@@ -23,7 +23,6 @@ import (
 	_ "backend/routes"
 
 	"backend/docs"
-	_ "backend/docs"
 
 	echoSwagger "github.com/swaggo/echo-swagger/v2"
 )

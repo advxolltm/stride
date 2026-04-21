@@ -41,7 +41,6 @@ export function AppLayout() {
             <CreateProjectDialog
                 isOpen={isCreateDialogOpen}
                 setIsOpen={setIsCreateDialogOpen}
-                onCreate={(project) => console.log('Create project', project)}
             />
         </div>
     )

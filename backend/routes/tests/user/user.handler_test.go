@@ -1,4 +1,4 @@
-package routes_test
+package routes_user_test
 
 import (
 	"bytes"
@@ -18,6 +18,7 @@ import (
 	authService "backend/services/auth"
 	projectService "backend/services/project"
 	userService "backend/services/user"
+	"backend/testutils"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
@@ -26,12 +27,28 @@ import (
 	"gorm.io/gorm"
 )
 
+var db *gorm.DB
+
+func TestMain(m *testing.M) {
+	testutils.RunTestMain(m, &db, false, true)
+}
+
+func getCookie(t *testing.T, authServ authService.AuthService, email string, password string) *http.Cookie {
+	t.Helper()
+	jwt, _, err := authServ.AuthenticateUser(context.Background(), email, password)
+	require.NoError(t, err)
+	return &http.Cookie{
+		Name:  "sessionToken",
+		Value: string(jwt),
+	}
+}
+
 // userResponse mirrors routes.User for test deserialization
 type userResponse struct {
-	ID        string            `json:"id"`
-	Username  string            `json:"username"`
-	Email     string            `json:"email"`
-	FullName  *string           `json:"full_name"`
+	ID        string             `json:"id"`
+	Username  string             `json:"username"`
+	Email     string             `json:"email"`
+	FullName  *string            `json:"full_name"`
 	AvatarURL *avatarURLResponse `json:"avatar_url"`
 }
 
@@ -312,7 +329,6 @@ func TestUserRouteHandler_Integration(t *testing.T) {
 	// DELETE self tested last — destroys test user's session
 	runTest(t, "DELETE /users/:id returns 204 when deleting self", func(t *testing.T, tx *gorm.DB) {
 		env := newUserTestEnv(t, tx)
-		// Create a throwaway user to delete
 		delUser, err := env.uServe.CreateUser(env.ctx, "deleteMe", "deleteme@test.com", "Delete1!")
 		require.NoError(t, err)
 		delCookie := getCookie(t, env.aServ, "deleteme@test.com", "Delete1!")

@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -27,22 +26,17 @@ var db *gorm.DB
 func newTestAuthHandler(db *gorm.DB) authRouteHandler {
 	userStore := userStore.NewUserStore(db)
 	projectStore := projectStore.NewProjectStore(db)
-	userService := userService.NewUserService(userStore)	
+	userService := userService.NewUserService(userStore)
 	projectService := projectService.NewProjectService(projectStore)
 	authService := authService.NewAuthenticationService(userService, projectService)
 	return authRouteHandler{
 		authService,
+		userService,
 	}
 }
 
 func TestMain(m *testing.M) {
-	db = testutils.SetupDB()
-	db = db.Begin()
-	testutils.SeedDB(db)
-	exitCode := m.Run()
-	db.Rollback()
-	testutils.TeardownDB()
-	os.Exit(exitCode)
+	testutils.RunTestMain(m, &db, true, true)
 }
 
 func TestAuthHandler(t *testing.T) {

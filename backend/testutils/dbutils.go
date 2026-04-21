@@ -3,22 +3,21 @@ package testutils
 import (
 	"backend/db"
 	"context"
-	"errors"
 	"fmt"
-	"io"
 	"log"
 	"os"
-	"path/filepath"
-	"runtime"
+	"testing"
 
-	"github.com/testcontainers/testcontainers-go/modules/compose"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"gorm.io/gorm"
 )
 
-var stack *compose.DockerCompose
 var ctx = context.Background()
 
+// SetupDBFromEnv connects to an existing database using environment variables
+// (DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME).
 func SetupDBFromEnv() *gorm.DB {
 	dsn := db.PostgresDSNFromEnv()
 
@@ -40,43 +39,30 @@ func TAssertNoError(t interface{ Helper(); Fatalf(string, ...any) }, err error) 
 }
 
 func SetupDB() *gorm.DB {
-	composeReader := openDevComposeFile()
-	newStack, err := compose.NewDockerComposeWith(
-		compose.WithStackReaders(composeReader),
+	if os.Getenv("CI") == "true" {
+		return SetupDBFromEnv()
+	}
+	return setupDBWithTestcontainers()
+}
+
+func setupDBWithTestcontainers() *gorm.DB {
+	pgContainer, err := postgres.Run(
+		ctx,
+		"postgres:16-alpine",
+		postgres.WithDatabase("stride"),
+		postgres.WithUsername("stride"),
+		postgres.WithPassword("stride"),
+		testcontainers.WithWaitStrategy(
+			wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
+			wait.ForListeningPort("5432/tcp"),
+		),
 	)
-
-	stack = newStack
-
 	AssertNoError(err)
 
-	err = stack.
-		WithEnv(map[string]string{
-			"POSTGRES_DB": "",
-			"POSTGRES_USER": "",
-			"POSTGRES_PASSWORD": "",
-		}).
-		WaitForService("db", wait.ForListeningPort("5432/tcp")).
-		Up(ctx, compose.RunServices("db"), compose.Wait(true))
-
-	dbContainer, err := stack.ServiceContainer(ctx, "db")
+	connStr, err := pgContainer.ConnectionString(ctx, "sslmode=disable")
 	AssertNoError(err)
 
-	dbHost, err := dbContainer.Host(ctx)
-	AssertNoError(err)
-
-	dbPort, err := dbContainer.MappedPort(ctx, "5432")
-
-
-	dsn := fmt.Sprintf(
-		"postgresql://%s:%s@%s:%s/%s?sslmode=disable",
-		"stride",
-		"stride",
-		dbHost,
-		dbPort.Port(),
-		"stride",
-	)
-
-	testdb, _, err := db.InitDB(dsn)
+	testdb, _, err := db.InitDB(connStr)
 	AssertNoError(err)
 
 	return testdb
@@ -89,48 +75,39 @@ func TeardownDB() {
 	// which improves test-time
 }
 
-func findGoModuleRoot() string {
-	_, fileName, _, ok := runtime.Caller(0)
-	if !ok {
-		log.Fatal("findGoModuleRoot: failed to get current file")
+// RunTestMain is the generic TestMain helper for all test packages.
+//
+// pDB must point to the package-level *gorm.DB variable; it is set before
+// m.Run() so every test in the package can use it.
+//
+// seed: if true, fills the database with random fake data via SeedDB.
+//
+// withTransaction: if true, the whole test suite runs inside a database
+// transaction that is rolled back after m.Run() returns, giving full
+// isolation at zero cost.
+//
+// The function always calls os.Exit and therefore never returns.
+func RunTestMain(m *testing.M, pDB **gorm.DB, seed bool, withTransaction bool) {
+	testDB := SetupDB()
+
+	if withTransaction {
+		testDB = testDB.Begin()
 	}
 
-	dir := filepath.Dir(fileName)
+	*pDB = testDB
 
-	for {
-		modFile := filepath.Join(dir, "go.mod")
-		_, err := os.Stat(modFile)
-
-		if err == nil {
-			return dir
-		}
-
-		if !errors.Is(err, os.ErrNotExist) {
-			log.Fatal("failed to check go.mod file: %w", err.Error())
-		}
-
-		parent := filepath.Dir(dir)
-		// if we reached the root directory
-		if dir == parent {
-			log.Fatal("failed to find go.mod file")
-		}
-
-		dir = parent
+	if seed {
+		SeedDB(testDB)
 	}
-}
 
-func openDevComposeFile() io.Reader {
-	moduleRoot := findGoModuleRoot()
-	composeFilePath := fmt.Sprintf("%s/../compose.dev.yml", moduleRoot)
-	composeFilePath, err := filepath.Abs(composeFilePath)
-	AssertNoError(err)
+	code := m.Run()
 
-	log.Println("compose file path:", composeFilePath)
+	if withTransaction {
+		testDB.Rollback()
+	}
 
-	file, err := os.Open(composeFilePath)
-	AssertNoError(err)
-
-	return file
+	TeardownDB()
+	os.Exit(code)
 }
 
 func Assert(cond bool) {

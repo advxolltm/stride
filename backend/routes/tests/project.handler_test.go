@@ -2,21 +2,20 @@ package routes_test
 
 import (
 	"backend/db/project"
+	userStore "backend/db/user"
 	"backend/models"
 	"backend/routes"
-	projectService "backend/services/project"
-	userStore "backend/db/user"
-	userService "backend/services/user"
 	authService "backend/services/auth"
+	projectService "backend/services/project"
+	userService "backend/services/user"
 	"backend/testutils"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"testing"
-	"fmt"
 	"os"
-
+	"testing"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
@@ -28,13 +27,7 @@ import (
 var db *gorm.DB
 
 func TestMain(m *testing.M) {
-	db = testutils.SetupDB()
-	db.Begin()
-	//testutils.SeedDB()
-	exitCode := m.Run()
-	db.Rollback()
-	defer testutils.TeardownDB()
-	os.Exit(exitCode)
+	testutils.RunTestMain(m, &db, false, true)
 }
 
 func getCookie(t *testing.T, authServ authService.AuthService, email string, password string) *http.Cookie {
