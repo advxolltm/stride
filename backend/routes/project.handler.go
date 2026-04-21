@@ -110,7 +110,14 @@ func (h projectRouteHandler) projectGETHandle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid project id"})
 	}
 
-	// TODO: add user-check to prevent users from accessing projects they are not members of
+	userid := h.authService.GetClaims(c).UserID
+	isMember, err := h.authService.IsProjectMember(c.Request().Context(), userid, id)
+	if err != nil {
+		return c.JSON(http.StatusNotFound, ErrorResponse{Error: err.Error()})
+	}
+	if !isMember {
+		return c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "only project members can access this project"})
+	}
 
 	p, err := h.projectService.GetProject(c.Request().Context(), id)
 	if err != nil {
@@ -137,7 +144,14 @@ func (h projectRouteHandler) membersGETHandle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid project id"})
 	}
 
-	// TODO: add user-check to prevent users from accessing members of projects they are not part of
+	userid := h.authService.GetClaims(c).UserID
+	isMember, err := h.authService.IsProjectMember(c.Request().Context(), userid, id)
+	if err != nil {
+		return c.JSON(http.StatusNotFound, ErrorResponse{Error: err.Error()})
+	}
+	if !isMember {
+		return c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "only project members can access this project"})
+	}
 
 	members, err := h.projectService.GetProjectMembers(c.Request().Context(), id)
 	if err != nil {
@@ -164,7 +178,14 @@ func (h projectRouteHandler) skillsGETHandle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid project id"})
 	}
 
-	// TODO: add user-check to prevent users from accessing skills of projects they are not part of
+	userid := h.authService.GetClaims(c).UserID
+	isMember, err := h.authService.IsProjectMember(c.Request().Context(), userid, id)
+	if err != nil {
+		return c.JSON(http.StatusNotFound, ErrorResponse{Error: err.Error()})
+	}
+	if !isMember {
+		return c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "only project members can access this project"})
+	}
 
 	skills, err := h.projectService.GetProjectSkills(c.Request().Context(), id)
 	if err != nil {
@@ -262,7 +283,14 @@ func (h projectRouteHandler) skillsPOSTHandle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid project id"})
 	}
 
-	// TODO: add user-check to prevent users from adding skills to projects they are not part of
+	userid := h.authService.GetClaims(c).UserID
+	isMember, err := h.authService.IsProjectMember(c.Request().Context(), userid, id)
+	if err != nil {
+		return c.JSON(http.StatusNotFound, ErrorResponse{Error: err.Error()})
+	}
+	if !isMember {
+		return c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "only project members can add skills to this project"})
+	}
 
 	var req createSkillRequest
 	if err := c.Bind(&req); err != nil {

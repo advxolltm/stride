@@ -138,9 +138,10 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 	})
 
 	runTest(t, "Returns 200 on successful retrieval", func(t *testing.T, tx *gorm.DB, as authService.AuthService, ps projectService.ProjectService, us userService.UserService, e *echo.Echo, cookie *http.Cookie, loginUser models.User) {
-		testProj := testutils.GenerateRandomProject([]models.User{loginUser})
-		txErr := tx.Create(&testProj).Error
-		require.NoError(t, txErr)
+		testProjObj := testutils.GenerateRandomProject([]models.User{loginUser})
+		testProj, err := ps.CreateProject(ctx, &loginUser.ID, testProjObj.Name, testProjObj.Slug, testProjObj.Description, testProjObj.Status)
+		require.NoError(t, err)
+
 		req := httptest.NewRequest(http.MethodGet, "/api/projects/"+testProj.ID.String(), nil)
 		req.AddCookie(cookie)
 		rec := httptest.NewRecorder()
@@ -149,8 +150,8 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 
 		var respProject routes.ReturnProj
-		err := json.Unmarshal(rec.Body.Bytes(), &respProject)
-		require.NoError(t, err)
+		err1 := json.Unmarshal(rec.Body.Bytes(), &respProject)
+		require.NoError(t, err1)
 
 		assert.Equal(t, testProj.ID, respProject.ID)
 		assert.Equal(t, loginUser.ID, *respProject.CreatedBy)
