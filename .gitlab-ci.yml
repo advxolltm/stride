@@ -77,7 +77,7 @@ test-backend:
   image: golang:1.26.1-alpine
   services:
     # Use the non-root Bitnami image to bypass the CI environment's user restrictions
-    - name: bitnami/postgresql:latest
+    - name: public.ecr.aws/bitnami/postgresql:16
       alias: postgres
   needs:
     - job: build-backend
