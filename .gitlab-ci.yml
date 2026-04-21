@@ -1,5 +1,4 @@
 # GitLab CI/CD Pipeline — Stride Application
-# Triggers: MR pipelines only (+ master for deploy)
 
 stages:
   - build
@@ -7,17 +6,23 @@ stages:
   - deploy
 
 variables:
-  POSTGRES_DB: stride
-  POSTGRES_USER: stride
-  POSTGRES_PASSWORD: stride
-  DB_HOST: localhost
+  # PostgreSQL service config (Updated to Bitnami's naming conventions)
+  POSTGRESQL_DATABASE: stride
+  POSTGRESQL_USERNAME: stride
+  POSTGRESQL_PASSWORD: stride
+  
+  # Backend env vars matching SetupDBFromEnv()
+  DB_HOST: postgres
   DB_PORT: "5432"
   DB_USER: stride
   DB_PASSWORD: stride
   DB_NAME: stride
-  REDIS_HOST: localhost
-  CI: "true"
+  
+  # Redis
+  REDIS_HOST: redis
   REDIS_PORT: "6379"
+  
+  # App
   API_BASE_PATH: /api/v1
 
 workflow:
@@ -67,18 +72,24 @@ build-frontend:
 
 test-backend:
   stage: test
+  # Run the job natively in Go, rather than installing Go inside a DB image
   image: golang:1.26.1-alpine
+  services:
+    # Use the non-root Bitnami image to bypass the CI environment's user restrictions
+    - name: bitnami/postgresql:16
+      alias: postgres
   needs:
     - job: build-backend
       artifacts: true
   before_script:
-    - apk add --no-cache util-linux
-    - mkdir -p /tmp/test-home
-    - chmod -R 777 /go /tmp/test-home
+    # Install the psql client just for the DB health check, along with git/bash
+    - apk add --no-cache git bash postgresql-client
     - cd backend
   script:
+    # Adding a small retry loop. Bitnami images take a few seconds to initialize
+    - until psql -h "postgres" -U stride -d stride -c "SELECT 'OK' AS status;"; do echo "Waiting for postgres..."; sleep 2; done
     - go mod download
-    - unshare --user --map-user=1000 --map-group=1000 -- env HOME=/tmp/test-home go test ./... -v -count=1
+    - go test -p 1 ./... -v -count=1
   cache:
     key:
       files:
