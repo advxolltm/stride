@@ -22,7 +22,7 @@ const apiBasePath = normalizeApiBasePath(
 
 export const baseApi = createApi({
     reducerPath: 'baseApi',
-    tagTypes: ['User', 'Auth', 'Project'],
+    tagTypes: ['User', 'Auth', 'Project', 'ProjectMember', 'ProjectSkill'],
     baseQuery: fetchBaseQuery({
         baseUrl: apiBasePath,
         credentials: 'include',

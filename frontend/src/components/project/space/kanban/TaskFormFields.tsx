@@ -124,8 +124,9 @@ export function TaskFormFields({
                 selectionMode="multiple"
                 placeholder={t('tasks.form.labelsPlaceholder')}
                 value={labels}
-                onChange={(keys) =>
-                    onLabelsChange(Array.from(keys as Set<string>))//FIXME: Fix later the skills type
+                onChange={
+                    (keys) =>
+                        onLabelsChange(Array.from(keys as Iterable<string>)) //FIXME: Fix later the skills type
                 }
             >
                 <Label>{t('tasks.form.labels')}</Label>

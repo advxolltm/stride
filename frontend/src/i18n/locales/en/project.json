@@ -1,6 +1,6 @@
 {
   "header": {
-    "invite": "Invite Members",
+    "add": "Add members",
     "settings": "Settings",
     "projects": "PROJECTS"
   },
@@ -27,13 +27,16 @@
   "tasks": {
     "title": "Tasks Board"
   },
-  "inviteDialog": {
-    "title": "Invite Members",
-    "description": "Invite people to collaborate on this project",
-    "emailPlaceholder": "Enter email addresses...",
-    "copy": "Copy",
-    "send": "Send Invite",
-    "inviteLinkLabel": "Invite link"
+  "addMembersDialog": {
+    "title": "Add members",
+    "description": "Add people from your workspace to {{project}}",
+    "searchPlaceholder": "Search by name or email...",
+    "noResults": "No users found",
+    "alreadyMember": "Already a member",
+    "selectedCount": "{{count}} selected",
+    "add": "Add",
+    "cancel": "Cancel",
+    "membersAdded": "Members added successfully"
   },
   "createDialog": {
     "title": "Create Project",
@@ -61,12 +64,63 @@
     "skillsPlaceholder": "Select skills",
     "skillsSearchPlaceholder": "Search skills",
     "projectSkills": "Project Skills",
+    "createdBy": "Created by",
+    "createdAt": "Created at",
+    "updatedAt": "Updated at",
     "cancel": "Cancel",
-    "save": "Save changes"
+    "save": "Save changes",
+    "saveSuccess": "Project updated successfully",
+    "saveError": "Failed to update project",
+    "nameRequired": "Project name is required",
+    "delete": "Delete",
+    "deleteTitle": "Delete Project",
+    "deleteDescription": "Once you delete a project, there is no going back. Please be certain.",
+    "deleteConfirmTitle": "Delete Project?",
+    "deleteConfirmMessage": "Are you sure you want to delete the project '{{name}}'? This action cannot be undone.",
+    "deleteConfirm": "Delete Project",
+    "deleteConfirmPending": "Deleting...",
+    "deleteCancel": "Cancel",
+    "deleteSuccess": "Project deleted successfully",
+    "deleteError": "Failed to delete project"
   },
   "membersSettings": {
     "title": "Team Members",
     "owner": "Owner",
-    "member": "Member"
+    "member": "Member",
+    "removeTitle": "Remove Member",
+    "removeMessage": "Are you sure you want to remove this member from the project?",
+    "removeConfirm": "Remove",
+    "removeConfirmPending": "Removing...",
+    "removeCancel": "Cancel"
+  },
+  "skillsSettings": {
+    "title": "Skills",
+    "description": "Manage the skills required for this project.",
+    "addSuccess": "Skill added successfully",
+    "addError": "Failed to add skill",
+    "addSkill": "Add Skill",
+    "nameLabel": "Name",
+    "namePlaceholder": "Enter skill name",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Enter skill description",
+    "empty": "No skills added yet",
+    "save": "Save skill",
+    "cancel": "Cancel",
+    "nameRequired": "Skill name is required",
+    "deleteTitle": "Delete Skill",
+    "deleteMessage": "Are you sure you want to delete \"{{name}}\"?",
+    "deleteConfirm": "Delete",
+    "deleteConfirmPending": "Deleting...",
+    "deleteCancel": "Cancel",
+    "deleteSuccess": "Skill deleted successfully",
+    "deleteError": "Failed to delete skill"
+  },
+  "settingsSidebar": {
+    "title": "Project settings",
+    "tabs": {
+      "general": "General",
+      "members": "Team",
+      "skills": "Skills"
+    }
   }
 }

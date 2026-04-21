@@ -7,12 +7,15 @@ export function ProjectPage() {
     const { projectId } = useParams()
     const { t } = useTranslation('project')
 
-    const { data: project, isLoading } = useGetProjectByIdQuery(projectId ?? '', {
-        skip: !projectId,
-    })
+    const { data: project, isLoading } = useGetProjectByIdQuery(
+        projectId ?? '',
+        {
+            skip: !projectId,
+        },
+    )
 
     if (isLoading) {
-        return <div className="p-6 text-sm text-[var(--muted)]">Loading project...</div>
+        return <div className="text-muted p-6 text-sm">Loading project...</div>
     }
 
     if (!project) {
@@ -21,7 +24,7 @@ export function ProjectPage() {
 
     return (
         <div className="flex flex-col gap-8 p-6">
-            <ProjectOverviewHeader name={project.name} />
+            <ProjectOverviewHeader project={project} />
             <ProjectSpacesGrid />
         </div>
     )
