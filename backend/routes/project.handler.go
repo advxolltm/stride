@@ -268,7 +268,7 @@ func (h projectRouteHandler) skillsPOSTHandle(c *echo.Context) error {
 		return c.JSON(status, ErrorResponse{Error: msg})
 	}
 
-	return c.JSON(http.StatusOK, mapToReturnSkill(*s))
+	return c.JSON(http.StatusCreated, mapToReturnSkill(*s))
 }
 
 // @Summary		Update project

@@ -262,4 +262,136 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 
 		assert.Equal(t, http.StatusNotFound, rec.Code)
 	})
+
+	runTest(t, "Returns 200 and updated fields on project update", func(t *testing.T, tx *gorm.DB, as authService.AuthService, ps projectService.ProjectService, us userService.UserService, e *echo.Echo, cookie *http.Cookie, loginUser models.User) {
+		desc := "Original"
+		proj, _ := ps.CreateProject(ctx, &loginUser.ID, "Old Name", "old-slug", &desc, "active")
+
+		newName := "New Name"
+		newSlug := "new-slug"
+		payload := projectService.UpdateProjectInput{
+			Name: &newName,
+			Slug: &newSlug,
+		}
+
+		body, _ := json.Marshal(payload)
+		req := httptest.NewRequest(http.MethodPatch, "/api/projects/"+proj.ID.String(), bytes.NewBuffer(body))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		req.AddCookie(cookie)
+
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var updated routes.ReturnProj
+		json.Unmarshal(rec.Body.Bytes(), &updated)
+		assert.Equal(t, newName, updated.Name)
+		assert.Equal(t, newSlug, updated.Slug)
+	})
+
+	runTest(t, "Returns 409 Conflict on duplicate slug during update", func(t *testing.T, tx *gorm.DB, as authService.AuthService, ps projectService.ProjectService, us userService.UserService, e *echo.Echo, cookie *http.Cookie, loginUser models.User) {
+		ps.CreateProject(ctx, &loginUser.ID, "Existing", "taken-slug", nil, "active")
+		proj, _ := ps.CreateProject(ctx, &loginUser.ID, "Target", "target-slug", nil, "active")
+
+		newSlug := "taken-slug"
+		payload := projectService.UpdateProjectInput{Slug: &newSlug}
+		body, _ := json.Marshal(payload)
+
+		req := httptest.NewRequest(http.MethodPatch, "/api/projects/"+proj.ID.String(), bytes.NewBuffer(body))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		req.AddCookie(cookie)
+
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusConflict, rec.Code)
+	})
+
+	runTest(t, "Returns 204 on successful project deletion", func(t *testing.T, tx *gorm.DB, as authService.AuthService, ps projectService.ProjectService, us userService.UserService, e *echo.Echo, cookie *http.Cookie, loginUser models.User) {
+		proj, _ := ps.CreateProject(ctx, &loginUser.ID, "To Delete", "delete-me", nil, "active")
+
+		req := httptest.NewRequest(http.MethodDelete, "/api/projects/"+proj.ID.String(), nil)
+		req.AddCookie(cookie)
+
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusNoContent, rec.Code)
+
+		_, err := ps.GetProject(ctx, proj.ID)
+		assert.ErrorIs(t, err, projectService.ErrProjectNotFound)
+	})
+
+	runTest(t, "Returns 201 on successfully adding a project skill", func(t *testing.T, tx *gorm.DB, as authService.AuthService, ps projectService.ProjectService, us userService.UserService, e *echo.Echo, cookie *http.Cookie, loginUser models.User) {
+		proj, _ := ps.CreateProject(ctx, &loginUser.ID, "Skill Project", "skill-slug", nil, "active")
+
+		payload := map[string]string{
+			"name":        "Go",
+			"description": "Backend language",
+		}
+		body, _ := json.Marshal(payload)
+
+		req := httptest.NewRequest(http.MethodPost, "/api/projects/"+proj.ID.String()+"/skills", bytes.NewBuffer(body))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		req.AddCookie(cookie)
+
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusCreated, rec.Code)
+
+		skills, _ := ps.GetProjectSkills(ctx, proj.ID)
+		assert.Len(t, skills, 1)
+		assert.Equal(t, "Go", skills[0].Name)
+	})
+
+	runTest(t, "Returns 204 on successfully removing a project skill", func(t *testing.T, tx *gorm.DB, as authService.AuthService, ps projectService.ProjectService, us userService.UserService, e *echo.Echo, cookie *http.Cookie, loginUser models.User) {
+		proj, _ := ps.CreateProject(ctx, &loginUser.ID, "Skill Project", "skill-slug", nil, "active")
+		desc := "desc"
+		skill, _ := ps.AddProjectSkill(ctx, proj.ID, "React", &desc)
+
+		req := httptest.NewRequest(http.MethodDelete, "/api/projects/skills/"+skill.ID.String(), nil)
+		req.AddCookie(cookie)
+
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusNoContent, rec.Code)
+
+		skills, _ := ps.GetProjectSkills(ctx, proj.ID)
+		assert.Len(t, skills, 0)
+	})
+
+	runTest(t, "Returns 204 on successful member removal", func(t *testing.T, tx *gorm.DB, as authService.AuthService, ps projectService.ProjectService, us userService.UserService, e *echo.Echo, cookie *http.Cookie, loginUser models.User) {
+		proj, _ := ps.CreateProject(ctx, &loginUser.ID, "Team Project", "team-slug", nil, "active")
+		otherUser, _ := us.CreateUser(ctx, "other", "other@test.com", "Password123!")
+		ps.AddUsersToProject(ctx, []projectService.AddMemberRequest{{UserId: otherUser.ID, Role: "developer"}}, proj.ID)
+
+		req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/projects/%s/members/%s", proj.ID, otherUser.ID), nil)
+		req.AddCookie(cookie)
+
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusNoContent, rec.Code)
+
+		members, _ := ps.GetProjectMembers(ctx, proj.ID)
+		// Only owner should remain
+		for _, m := range members {
+			assert.NotEqual(t, otherUser.ID, m.UserID)
+		}
+	})
+
+	runTest(t, "Returns 404 when removing non-existent member", func(t *testing.T, tx *gorm.DB, as authService.AuthService, ps projectService.ProjectService, us userService.UserService, e *echo.Echo, cookie *http.Cookie, loginUser models.User) {
+		proj, _ := ps.CreateProject(ctx, &loginUser.ID, "Team Project", "team-slug", nil, "active")
+		randomID := uuid.New().String()
+
+		req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/projects/%s/members/%s", proj.ID, randomID), nil)
+		req.AddCookie(cookie)
+
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusNotFound, rec.Code)
+	})
 }
