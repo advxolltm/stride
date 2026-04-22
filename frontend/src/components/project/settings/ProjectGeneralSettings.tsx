@@ -34,7 +34,8 @@ export function ProjectGeneralSettings({
 
     const formattedCreatedAt = new Date(project.createdAt).toLocaleDateString()
     const formattedUpdatedAt = new Date(project.updatedAt).toLocaleDateString()
-    const createdByDisplay = project.createdBy || 'Unknown'
+    const createdByDisplay =
+        project.creator.fullName ?? project.creator.username
 
     function hasChanges(): boolean {
         return (

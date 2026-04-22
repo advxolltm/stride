@@ -1,12 +1,20 @@
-import { Button, Input, ListBox, Modal, Surface, toast } from '@heroui/react'
+import {
+    Button,
+    Input,
+    ListBox,
+    Modal,
+    Spinner,
+    Surface,
+    toast,
+} from '@heroui/react'
 import { UserPlus } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import type { Selection } from 'react-aria-components'
 import { useTranslation } from 'react-i18next'
-import { useAddProjectMemberMutation } from '../../../../store/features/project/project.api'
 import { useGetUsersQuery } from '../../../../store/features/user/user.api'
 import { UserChip } from './UserChip'
 import { UserListItem } from './UserListItem'
+import { useAddProjectMembersMutation } from '../../../../store/features/project/project.api'
 
 interface AddMembersDialogProps {
     isOpen: boolean
@@ -30,7 +38,7 @@ export function AddMembersDialog({
     const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set())
 
     const { data: allUsers = [] } = useGetUsersQuery()
-    const [addMember, { isLoading }] = useAddProjectMemberMutation()
+    const [addMember, { isLoading }] = useAddProjectMembersMutation()
 
     // Filter out users who are already members or the current user
     const availableUsers = useMemo(
@@ -75,16 +83,19 @@ export function AddMembersDialog({
 
     // Handle adding selected users as project members
     const handleAdd = async () => {
-        await Promise.all(
-            selectedUsers.map((u) =>
-                addMember({
-                    projectId,
-                    body: { userid: u.id, role: 'member' },
-                }).unwrap(),
-            ),
-        )
-        toast.success(t('addMembersDialog.membersAdded'))
-        handleOpenChange(false)
+        try {
+            await addMember({
+                projectId,
+                body: selectedUsers.map((u) => ({
+                    userid: u.id,
+                    role: 'member' as const,
+                })),
+            }).unwrap()
+            toast.success(t('addMembersDialog.membersAdded'))
+            handleOpenChange(false)
+        } catch {
+            toast.danger(t('addMembersDialog.membersAddError'))
+        }
     }
 
     const handleOpenChange = (open: boolean) => {
@@ -195,6 +206,13 @@ export function AddMembersDialog({
                                 isDisabled={selectedUsers.length === 0}
                                 isPending={isLoading}
                             >
+                                {isLoading && (
+                                    <Spinner
+                                        color="current"
+                                        size="sm"
+                                        className="mr-2"
+                                    />
+                                )}
                                 <UserPlus size={15} />
                                 {t('addMembersDialog.add')}
                                 {selectedUsers.length > 0 &&

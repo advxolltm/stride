@@ -36,7 +36,8 @@
     "selectedCount": "{{count}} selected",
     "add": "Add",
     "cancel": "Cancel",
-    "membersAdded": "Members added successfully"
+    "membersAdded": "Members added successfully",
+    "membersAddError": "Failed to add members"
   },
   "createDialog": {
     "title": "Create Project",
@@ -78,7 +79,6 @@
     "deleteConfirmTitle": "Delete Project?",
     "deleteConfirmMessage": "Are you sure you want to delete the project '{{name}}'? This action cannot be undone.",
     "deleteConfirm": "Delete Project",
-    "deleteConfirmPending": "Deleting...",
     "deleteCancel": "Cancel",
     "deleteSuccess": "Project deleted successfully",
     "deleteError": "Failed to delete project"
@@ -110,7 +110,6 @@
     "deleteTitle": "Delete Skill",
     "deleteMessage": "Are you sure you want to delete \"{{name}}\"?",
     "deleteConfirm": "Delete",
-    "deleteConfirmPending": "Deleting...",
     "deleteCancel": "Cancel",
     "deleteSuccess": "Skill deleted successfully",
     "deleteError": "Failed to delete skill"

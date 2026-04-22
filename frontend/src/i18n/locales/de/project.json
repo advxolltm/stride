@@ -33,10 +33,11 @@
     "searchPlaceholder": "Nach Name oder E-Mail suchen...",
     "noResults": "Keine Benutzer gefunden",
     "alreadyMember": "Bereits ein Mitglied",
-    "selectedCount": "{{count}} selected",
+    "selectedCount": "{{count}} ausgewählt",
     "add": "Hinzufügen",
     "cancel": "Abbrechen",
-    "membersAdded": "Mitglieder erfolgreich hinzugefügt"
+    "membersAdded": "Mitglieder erfolgreich hinzugefügt",
+    "membersAddError": "Fehler beim Hinzufügen der Mitglieder"
   },
   "createDialog": {
     "title": "Projekt erstellen",
@@ -78,7 +79,6 @@
     "deleteConfirmTitle": "Projekt loeschen?",
     "deleteConfirmMessage": "Sind Sie sicher, dass Sie das Projekt '{{name}}' loeschen moechten? Diese Aktion kann nicht rueckgaengig gemacht werden.",
     "deleteConfirm": "Projekt loeschen",
-    "deleteConfirmPending": "Wird geloescht...",
     "deleteCancel": "Abbrechen",
     "deleteSuccess": "Projekt erfolgreich geloescht",
     "deleteError": "Projekt konnte nicht geloescht werden"
@@ -110,7 +110,6 @@
     "deleteTitle": "Fähigkeit löschen",
     "deleteMessage": "Möchten Sie \"{{name}}\" wirklich löschen?",
     "deleteConfirm": "Löschen",
-    "deleteConfirmPending": "Wird gelöscht...",
     "deleteCancel": "Abbrechen",
     "deleteSuccess": "Fähigkeit erfolgreich gelöscht",
     "deleteError": "Fähigkeit konnte nicht gelöscht werden"

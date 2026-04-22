@@ -21,7 +21,7 @@ export function SkillCard({
         >
             <Sparkles size={15} className="text-primary" />
             <div className="flex min-w-0 flex-1 flex-col">
-                <span className="text-sm font-medium">{name}</span>
+                <span className="text-sm font-medium truncate">{name}</span>
                 {description && (
                     <span className="text-muted-foreground truncate text-xs">
                         {description}

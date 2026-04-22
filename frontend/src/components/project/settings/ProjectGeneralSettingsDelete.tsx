@@ -64,7 +64,6 @@ export function ProjectGeneralSettingsDelete({
                     name: project.name,
                 })}
                 confirmLabel={t('generalSettings.deleteConfirm')}
-                pendingConfirmLabel={t('generalSettings.deleteConfirmPending')}
                 cancelLabel={t('generalSettings.deleteCancel')}
                 confirmVariant="danger"
                 isConfirmPending={isDeleting}

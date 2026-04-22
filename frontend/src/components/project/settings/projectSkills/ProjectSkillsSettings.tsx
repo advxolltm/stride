@@ -3,10 +3,7 @@ import { Plus } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ConfirmDialog } from '../../../../shared/components'
-import {
-    useGetProjectSkillsQuery,
-    useRemoveProjectSkillMutation,
-} from '../../../../store/features/project/project.api'
+import { useRemoveProjectSkillMutation } from '../../../../store/features/project/project.api'
 import type {
     Project,
     ProjectSkill,
@@ -27,11 +24,6 @@ export function ProjectSkillsSettings({
     const [isAdding, setIsAdding] = useState(false)
     const [skillToDelete, setSkillToDelete] = useState<ProjectSkill | null>(
         null,
-    )
-
-    //TODO: Should be removed once we have skills are part of the project details query
-    const { data: skills = [], isLoading } = useGetProjectSkillsQuery(
-        project.id,
     )
 
     const [removeSkill, { isLoading: isRemoving }] =
@@ -85,13 +77,9 @@ export function ProjectSkillsSettings({
                 />
             )}
 
-            {isLoading ? (
-                <p className="text-muted-foreground py-4 text-center text-sm">
-                    {t('skillsSettings.loading')}
-                </p>
-            ) : (
-                <div className="flex flex-col gap-3">
-                    {skills.map((skill) => (
+            <div className="flex flex-col gap-3">
+                {(project.skills?.length ?? 0) > 0 && (
+                    project.skills!.map((skill) => (
                         <SkillCard
                             key={skill.id}
                             name={skill.name}
@@ -99,15 +87,15 @@ export function ProjectSkillsSettings({
                             isOwner={isOwner}
                             onDelete={() => setSkillToDelete(skill)}
                         />
-                    ))}
+                    ))
+                )}
 
-                    {skills.length === 0 && !isAdding && (
-                        <p className="py-4 text-center text-sm">
-                            {t('skillsSettings.empty')}
-                        </p>
-                    )}
-                </div>
-            )}
+                {(project.skills?.length ?? 0) === 0 && !isAdding && (
+                    <p className="py-4 text-center text-sm">
+                        {t('skillsSettings.empty')}
+                    </p>
+                )}
+            </div>
 
             <ConfirmDialog
                 isOpen={!!skillToDelete}
@@ -117,7 +105,6 @@ export function ProjectSkillsSettings({
                     name: skillToDelete?.name,
                 })}
                 confirmLabel={t('skillsSettings.deleteConfirm')}
-                pendingConfirmLabel={t('skillsSettings.deleteConfirmPending')}
                 cancelLabel={t('skillsSettings.deleteCancel')}
                 confirmVariant="danger"
                 isConfirmPending={isRemoving}

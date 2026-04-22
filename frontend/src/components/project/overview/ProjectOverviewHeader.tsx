@@ -22,7 +22,7 @@ export function ProjectOverviewHeader({
     const { data: sessionUser } = useGetSessionQuery()
 
     const existingMemberIds = project.members.map((m) => m.userId)
-    const isOwner = project.createdBy === sessionUser?.id
+    const isOwner = project.creator?.id === sessionUser?.id
 
     return (
         <>

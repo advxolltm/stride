@@ -2,10 +2,7 @@ import { toast } from '@heroui/react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ConfirmDialog } from '../../../../shared/components'
-import {
-    useGetProjectMembersQuery,
-    useRemoveProjectMemberMutation,
-} from '../../../../store/features/project/project.api'
+import { useRemoveProjectMemberMutation } from '../../../../store/features/project/project.api'
 import type {
     Project,
     ProjectMember,
@@ -24,11 +21,6 @@ export function ProjectMembersSettings({
     const { t } = useTranslation('project')
     const [memberToRemove, setMemberToRemove] = useState<ProjectMember | null>(
         null,
-    )
-
-    //TODO: Should be removed once we have members are part of the project details query
-    const { data: members = [], isLoading } = useGetProjectMembersQuery(
-        project.id,
     )
 
     const [removeMember, { isLoading: isRemoving }] =
@@ -56,24 +48,18 @@ export function ProjectMembersSettings({
                 {t('membersSettings.title')}
             </h2>
 
-            {isLoading ? (
-                <p className="text-muted-foreground py-4 text-center text-sm">
-                    {t('membersSettings.loading')}
-                </p>
-            ) : (
-                <div className="space-y-2">
-                    {members.map((member) => (
-                        <MemberCard
-                            key={member.id}
-                            role={member.role}
-                            isOwner={isOwner}
-                            onDelete={() => setMemberToRemove(member)}
-                            name={member.user.fullName ?? member.user.username}
-                            email={member.user.email}
-                        />
-                    ))}
-                </div>
-            )}
+            <div className="space-y-2">
+                {project.members.map((member) => (
+                    <MemberCard
+                        key={member.id}
+                        role={member.role}
+                        isOwner={isOwner}
+                        onDelete={() => setMemberToRemove(member)}
+                        name={member.user.fullName ?? member.user.username}
+                        email={member.user.email}
+                    />
+                ))}
+            </div>
 
             <ConfirmDialog
                 isOpen={!!memberToRemove}
