@@ -41,19 +41,24 @@ type CreateProjectRequest struct { // createdBy *uuid.UUID, name string, slug st
 	Slug        string  `json:"slug"`
 	Description *string `json:"description"`
 	Status      string  `json:"status"`
-}
+} // @name CreateProjectRequest
 
 type createSkillRequest struct {
 	Name        string  `json:"name"`
 	Description *string `json:"description"`
-}
+} // @name CreateSkillRequest
 
 type updateProjectRequest struct {
 	Name        *string `json:"name"`
 	Slug        *string `json:"slug"`
 	Description *string `json:"description"`
 	Status      *string `json:"status"`
-}
+} // @name UpdateProjectRequest
+
+type AddMemberRequest struct {
+	UserId uuid.UUID `json:"userid"`
+	Role   string    `json:"role"`
+} // @name AddMemberRequest
 
 func mapServiceErrorProj(err error) (int, string) {
 	switch {
@@ -230,7 +235,7 @@ func (h projectRouteHandler) projectPOSTHandle(c *echo.Context) error {
 // @Accept			json
 // @Produce		json
 // @Param			id		path		string						true	"Project ID"
-// @Param			request	body		[]project.AddMemberRequest	true	"List of users and roles"
+// @Param			request	body		[]AddMemberRequest	true	"List of users and roles"
 // @Success		201		{array}		ReturnMember
 // @Failure		400		{object}	ErrorResponse	"invalid request body | invalid project id"
 // @Failure		401		{object}	ErrorResponse	"only the owner can add members to this project"
@@ -242,7 +247,7 @@ func (h projectRouteHandler) memberPOSTHandle(c *echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid project id"})
 	}
-	var req []projectService.AddMemberRequest
+	var req []AddMemberRequest
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid request body"})
 	}
@@ -256,7 +261,17 @@ func (h projectRouteHandler) memberPOSTHandle(c *echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "only the owner can add members to this project"})
 	}
 
-	u, err := h.projectService.AddUsersToProject(c.Request().Context(), req, id)
+	var projectMembers []projectService.AddMemberRequest
+
+	for _, user := range req {
+		m := projectService.AddMemberRequest{
+			UserId: user.UserId,
+			Role:   user.Role,
+		}
+		projectMembers = append(projectMembers, m)
+	}
+
+	u, err := h.projectService.AddUsersToProject(c.Request().Context(), projectMembers, id)
 	if err != nil {
 		status, msg := mapServiceErrorProj(err)
 		return c.JSON(status, ErrorResponse{Error: msg})

@@ -17,9 +17,10 @@ type UpdateProjectInput struct {
 	Description *string
 	Status      *string
 }
+
 type AddMemberRequest struct {
-	UserId uuid.UUID `json:"userid"`
-	Role   string    `json:"role"`
+	UserId uuid.UUID
+	Role   string
 }
 
 type (
@@ -171,14 +172,13 @@ func (s projectService) DeleteProject(ctx context.Context, id uuid.UUID) error {
 }
 
 func (s projectService) AddUsersToProject(ctx context.Context, members []AddMemberRequest, projectId uuid.UUID) ([]models.ProjectMember, error) {
-
 	var projectMembers []models.ProjectMember
 
 	for _, user := range members {
 		m := models.ProjectMember{
-			UserID:    user.UserId,
+			UserID: user.UserId,
+			Role:   user.Role,
 			ProjectID: projectId,
-			Role:      user.Role,
 		}
 		projectMembers = append(projectMembers, m)
 	}

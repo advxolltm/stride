@@ -184,7 +184,7 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 		memberProj, err := ps.CreateProject(ctx, &loginUser.ID, "AddMembers Project", "add-members", &desc, "active")
 		require.NoError(t, err)
 
-		payload := []projectService.AddMemberRequest{
+		payload := []routes.AddMemberRequest{
 			{UserId: newUser2.ID, Role: "gopher"},
 		}
 
@@ -240,7 +240,7 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 		newUser3, err := us.CreateUser(ctx, "member3", "member3@test.com", "Password123!")
 		require.NoError(t, err)
 
-		payload := []projectService.AddMemberRequest{
+		payload := []routes.AddMemberRequest{
 			{UserId: newUser3.ID, Role: "chillin"},
 		}
 		body, err := json.Marshal(payload)
