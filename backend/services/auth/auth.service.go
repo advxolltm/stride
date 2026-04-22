@@ -104,7 +104,6 @@ func (s authService) expiresAtTime() time.Time {
 	return time.Now().Add(time.Hour * time.Duration(s.cfg.sessionExpiryHours))
 }
 
-
 func (s authService) IsProjectOwner(ctx context.Context, userId uuid.UUID, projectId uuid.UUID) (bool, error) {
 	project, err := s.projectService.GetProject(ctx, projectId)
 	if err != nil {

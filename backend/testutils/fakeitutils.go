@@ -228,9 +228,12 @@ func generateProjectMembers(users []models.User, projects []models.Project) {
 	for pidx := range projects {
 		membersCount := rng.Intn(len(users)) + 1
 		memberUsers := ChoiceN(users, membersCount-1)
-
+		isOwnerInMembers := false
 		members := make([]models.ProjectMember, 0, membersCount)
 		for _, memberUser := range memberUsers {
+			if memberUser.ID == *projects[pidx].CreatedBy {
+				isOwnerInMembers = true
+			}
 			pm := models.ProjectMember{
 				JoinedAt: f.PastDate(),
 				User:     memberUser,
@@ -245,7 +248,9 @@ func generateProjectMembers(users []models.User, projects []models.Project) {
 			User:     *projects[pidx].Creator,
 			Project:  projects[pidx],
 		}
-		members = append(members, powner)
+		if !isOwnerInMembers {
+			members = append(members, powner)
+		}
 
 		projects[pidx].Members = members
 	}
