@@ -35,7 +35,7 @@ type createUserRequest struct {
 	Username	string	`json:"username"`
 	Email		string	`json:"email"`
 	Password	string	`json:"password"`
-}
+} // @name CreateUserRequest
 
 type updateUserRequest struct {
 	Email		*string	`json:"email" form:"email"`
@@ -83,7 +83,7 @@ func (h userRouteHandler) usersGETHandle(c *echo.Context) error {
 
 	mapped := make([]User, len(users))
 	for i, u := range users {
-		mapped[i] = mapUser(u)
+		mapped[i] = MapUser(u)
 	}
 	return c.JSON(http.StatusOK, mapped)
 }
@@ -111,7 +111,7 @@ func (h userRouteHandler) userGETHandle(c *echo.Context) error {
 		return c.JSON(status, ErrorResponse{Error: msg})
 	}
 
-	return c.JSON(http.StatusOK, mapUser(*u))
+	return c.JSON(http.StatusOK, MapUser(*u))
 }
 
 // POST /users
@@ -139,7 +139,7 @@ func (h userRouteHandler) userPOSTHandle(c *echo.Context) error {
 		return c.JSON(status, ErrorResponse{Error: msg})
 	}
 
-	return c.JSON(http.StatusCreated, mapUser(*u))
+	return c.JSON(http.StatusCreated, MapUser(*u))
 }
 
 // PATCH /users/:id
@@ -203,7 +203,7 @@ func (h userRouteHandler) userPATCHHandle(c *echo.Context) error {
 		return c.JSON(status, ErrorResponse{Error: msg})
 	}
 
-	return c.JSON(http.StatusOK, mapUser(*u))
+	return c.JSON(http.StatusOK, MapUser(*u))
 }
 
 // DELETE /users/:id

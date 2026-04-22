@@ -10,7 +10,7 @@ type User struct {
 	ID           uuid.UUID `gorm:"primaryKey;default:gen_random_uuid()"`
 	Username     string
 	Email        string
-	PasswordHash string
+	PasswordHash string    `json:"-"`
 	FullName     *string
 	AvatarURL    *AvatarURLMap `gorm:"type:jsonb"`
 	CreatedAt    time.Time     `gorm:"default:current_timestamp"`

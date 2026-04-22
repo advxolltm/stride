@@ -37,6 +37,14 @@ func TAssertNoError(t interface{ Helper(); Fatalf(string, ...any) }, err error) 
 	}
 }
 
+
+func TAssertError(t interface{ Helper(); Fatalf(string, ...any) }, err error) {
+	t.Helper()
+	if err == nil {
+		t.Fatalf("expected error: %v", err)
+	}
+}
+
 func SetupDB() *gorm.DB {
 	if os.Getenv("CI") == "true" {
 		return SetupDBFromEnv()
