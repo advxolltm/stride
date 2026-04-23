@@ -3,5 +3,7 @@ package auth
 import "errors"
 
 var (
-	ErrUnauthorized = errors.New("unauthorized")
+	ErrUnauthorized       = errors.New("unauthorized")
+	ErrUserIDNotInContext = errors.New("userID not found in context")
+	ErrAccessDenied      = errors.New("user does not have access to this project")
 )

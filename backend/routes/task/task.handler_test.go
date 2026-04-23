@@ -38,7 +38,7 @@ func newTestTaskHandler(db *gorm.DB) taskRouteHandler {
 
 	userService := userService.NewUserService(userStore)
 	projectService := projectService.NewProjectService(projectStore)
-	authService := authService.NewAuthenticationService(userService, projectService)
+	authService := authService.NewAuthenticationService(userService)
 	taskService := taskService.NewTaskService(taskStore)
 
 	return taskRouteHandler{

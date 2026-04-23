@@ -15,20 +15,21 @@ import (
 	projectDB "backend/db/project"
 	taskDB "backend/db/task"
 	userDB "backend/db/user"
+	whiteboardDB "backend/db/whiteboard"
 	"backend/routes"
+	"backend/routes/projects"
 	taskHandler "backend/routes/task"
 	authService "backend/services/auth"
 	exampleService "backend/services/example"
 	projectService "backend/services/project"
 	taskService "backend/services/task"
 	userService "backend/services/user"
+	whiteboardService "backend/services/whiteboard"
 	"backend/testutils"
-
-	_ "backend/routes"
 
 	"backend/docs"
 
-	"github.com/swaggo/echo-swagger/v2"
+	echoSwagger "github.com/swaggo/echo-swagger/v2"
 )
 
 func getAPIBasePath() string {
@@ -97,13 +98,15 @@ func main() {
 
 	userStore := userDB.NewUserStore(mainDB)
 	projectStore := projectDB.NewProjectStore(mainDB)
+	whiteboardStore := whiteboardDB.NewWhiteboardStore(mainDB)
 	taskStore := taskDB.NewTaskStore(mainDB)
 
 	// Services
 	exampleService := exampleService.NewExampleService(exampleStore)
 	userService := userService.NewUserService(userStore)
 	projectService := projectService.NewProjectService(projectStore)
-	authService := authService.NewAuthenticationService(userService, projectService)
+	authService := authService.NewAuthenticationService(userService)
+	whiteboardService := whiteboardService.NewWhiteboardService(whiteboardStore, projectService)
 	taskService := taskService.NewTaskService(taskStore)
 
 	// Routes
@@ -115,7 +118,7 @@ func main() {
 		routes.NewHealthRouteHandler(),
 		routes.NewAuthRouteHandler(authService, userService),
 		routes.NewExampleRouteHandler(exampleService, authService),
-		routes.NewProjectRouteHandler(projectService, authService),
+		projects.NewProjectsGroup(projectService, whiteboardService, authService),
 		taskHandler.NewTaskRouteHandler(authService, taskService, projectService),
 		routes.NewUserRouteHandler(userService),
 	}

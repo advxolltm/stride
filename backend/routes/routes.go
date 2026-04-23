@@ -169,7 +169,7 @@ func MapUser(user models.User) User {
 		AvatarURL: user.AvatarURL,
 	}
 }
-func mapToReturnProj(p models.Project) ReturnProj {
+func MapToReturnProj(p models.Project) ReturnProj {
 	res := ReturnProj{
 		ID:          p.ID,
 		CreatedBy:   p.CreatedBy,
@@ -192,16 +192,16 @@ func mapToReturnProj(p models.Project) ReturnProj {
 		}
 	}
 	if p.Members != nil {
-		res.Members = Map(p.Members, mapToReturnMember)
+		res.Members = Map(p.Members, MapToReturnMember)
 	}
 	if p.Skills != nil {
-		res.Skills = Map(p.Skills, mapToReturnSkill)
+		res.Skills = Map(p.Skills, MapToReturnSkill)
 	}
 
 	return res
 }
 
-func mapToReturnMember(m models.ProjectMember) ReturnMember {
+func MapToReturnMember(m models.ProjectMember) ReturnMember {
 	res := ReturnMember{
 		ID:        m.ID,
 		UserID:    m.UserID,
@@ -220,7 +220,7 @@ func mapToReturnMember(m models.ProjectMember) ReturnMember {
 	return res
 }
 
-func mapToReturnSkill(s models.ProjectSkill) ReturnSkill {
+func MapToReturnSkill(s models.ProjectSkill) ReturnSkill {
 	res := ReturnSkill{
 		ID:          s.ID,
 		ProjectID:   s.ProjectID,

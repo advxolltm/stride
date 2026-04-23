@@ -8,15 +8,15 @@ import (
 )
 
 type WhiteboardElement struct {
-	ID           uuid.UUID      `gorm:"primaryKey;default:gen_random_uuid()"`
-	WhiteboardID uuid.UUID
-	CreatedBy    *uuid.UUID
-	ElementType  string
-	Props        datatypes.JSON
-	ZIndex       int
-	CreatedAt    time.Time `gorm:"default:current_timestamp"`
-	UpdatedAt    time.Time `gorm:"default:current_timestamp"`
+	ID           uuid.UUID      `gorm:"primaryKey;default:gen_random_uuid()" json:"id"`
+	WhiteboardID uuid.UUID      `json:"whiteboardId"`
+	CreatedBy    *uuid.UUID     `json:"createdBy"`
+	ElementType  string         `json:"elementType"`
+	Props        datatypes.JSON `json:"props"`
+	ZIndex       int            `json:"zIndex"`
+	CreatedAt    time.Time      `gorm:"default:current_timestamp" json:"createdAt"`
+	UpdatedAt    time.Time      `gorm:"default:current_timestamp" json:"updatedAt"`
 
-	Whiteboard Whiteboard `gorm:"foreignKey:WhiteboardID"`
-	Creator    *User      `gorm:"foreignKey:CreatedBy"`
+	Whiteboard Whiteboard `gorm:"foreignKey:WhiteboardID" json:"-"`
+	Creator    *User      `gorm:"foreignKey:CreatedBy" json:"-"`
 }

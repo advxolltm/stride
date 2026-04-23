@@ -71,7 +71,7 @@ func (h taskRouteHandler) taskGET(c *echo.Context) error {
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
 	}
 
-	isProjectMember, err := h.authService.IsProjectMember(ctx, userID, task.ProjectID)
+	isProjectMember, err := h.projectService.IsProjectMember(ctx, userID, task.ProjectID)
 	if err != nil {
 		status, msg := h.mapServiceError(err)
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
@@ -113,7 +113,7 @@ func (h taskRouteHandler) taskPOST(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, routes.BadRequestErrResponse(err))
 	}
 
-	isProjectMember, err := h.authService.IsProjectMember(ctx, userID, req.ProjectID)
+	isProjectMember, err := h.projectService.IsProjectMember(ctx, userID, req.ProjectID)
 	if err != nil {
 		status, msg := h.mapServiceError(err)
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
@@ -188,7 +188,7 @@ func (h taskRouteHandler) taskPATCH(c *echo.Context) error {
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
 	}
 
-	isProjectMember, err := h.authService.IsProjectMember(ctx, userID, task.ProjectID)
+	isProjectMember, err := h.projectService.IsProjectMember(ctx, userID, task.ProjectID)
 	if err != nil {
 		status, msg := h.mapServiceError(err)
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
@@ -243,7 +243,7 @@ func (h taskRouteHandler) taskDELETE(c *echo.Context) error {
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
 	}
 
-	isProjectMember, err := h.authService.IsProjectMember(ctx, userID, task.ProjectID)
+	isProjectMember, err := h.projectService.IsProjectMember(ctx, userID, task.ProjectID)
 	if err != nil {
 		status, msg := h.mapServiceError(err)
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
@@ -289,7 +289,7 @@ func (h taskRouteHandler) taskAssignPOST(c *echo.Context) error {
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
 	}
 
-	isProjectMember, err := h.authService.IsProjectMember(ctx, userID, task.ProjectID)
+	isProjectMember, err := h.projectService.IsProjectMember(ctx, userID, task.ProjectID)
 	if err != nil {
 		status, msg := h.mapServiceError(err)
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
@@ -342,7 +342,7 @@ func (h taskRouteHandler) taskUnassignPOST(c *echo.Context) error {
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
 	}
 
-	isProjectMember, err := h.authService.IsProjectMember(ctx, userID, task.ProjectID)
+	isProjectMember, err := h.projectService.IsProjectMember(ctx, userID, task.ProjectID)
 	if err != nil {
 		status, msg := h.mapServiceError(err)
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
@@ -393,7 +393,7 @@ func (h taskRouteHandler) taskMovePOST(c *echo.Context) error {
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
 	}
 
-	isProjectMember, err := h.authService.IsProjectMember(ctx, userID, task.ProjectID)
+	isProjectMember, err := h.projectService.IsProjectMember(ctx, userID, task.ProjectID)
 	if err != nil {
 		status, msg := h.mapServiceError(err)
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
@@ -441,7 +441,7 @@ func (h taskRouteHandler) tasksForProjectGET(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid project id"})
 	}
 
-	isProjectMember, err := h.authService.IsProjectMember(ctx, userID, projectID)
+	isProjectMember, err := h.projectService.IsProjectMember(ctx, userID, projectID)
 	if err != nil {
 		status, msg := h.mapServiceError(err)
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
@@ -478,7 +478,7 @@ func (h taskRouteHandler) tasksForProjectAssignedToMeGET(c *echo.Context) error 
 		return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid project id"})
 	}
 
-	isProjectMember, err := h.authService.IsProjectMember(ctx, userID, projectID)
+	isProjectMember, err := h.projectService.IsProjectMember(ctx, userID, projectID)
 	if err != nil {
 		status, msg := h.mapServiceError(err)
 		return c.JSON(status, routes.ErrorResponse{Error: msg})

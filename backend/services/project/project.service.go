@@ -30,6 +30,8 @@ type (
 		GetProjectMember(ctx context.Context, projectId uuid.UUID, userID uuid.UUID) (*models.ProjectMember, error)
 		GetProjectMembers(ctx context.Context, id uuid.UUID) ([]models.ProjectMember, error)
 		GetProjectSkills(ctx context.Context, id uuid.UUID) ([]models.ProjectSkill, error)
+		IsProjectOwner(ctx context.Context, userId uuid.UUID, projectId uuid.UUID) (bool, error)
+		IsProjectMember(ctx context.Context, userID uuid.UUID, projectID uuid.UUID) (bool, error)
 		CreateProject(ctx context.Context, createdBy *uuid.UUID, name string, slug string, description *string, status string) (*models.Project, error)
 		UpdateProject(ctx context.Context, id uuid.UUID, input UpdateProjectInput) (*models.Project, error)
 		DeleteProject(ctx context.Context, id uuid.UUID) error
@@ -38,6 +40,7 @@ type (
 		AddProjectSkill(ctx context.Context, projectId uuid.UUID, name string, description *string) (*models.ProjectSkill, error)
 		RemoveProjectSkill(ctx context.Context, skillId uuid.UUID) error
 		GetProjectIdBySkillId(ctx context.Context, skillId uuid.UUID) (uuid.UUID, error)
+
 	}
 	projectService struct {
 		projectStore project.ProjectStore
@@ -47,6 +50,22 @@ type (
 func NewProjectService(projectStore project.ProjectStore) ProjectService {
 	return &projectService{projectStore}
 }
+
+func (s projectService) IsProjectOwner(ctx context.Context, userId uuid.UUID, projectId uuid.UUID) (bool, error) {
+	p, err := s.projectStore.GetProject(ctx, projectId)
+	if err != nil {
+		return false, fmt.Errorf("failed to get project to check project owner: %w", err)
+	}
+	if p.CreatedBy == nil {
+		return false, nil
+	}
+	return *p.CreatedBy == userId, nil
+}
+
+func (s projectService) IsProjectMember(ctx context.Context, userID uuid.UUID, projectID uuid.UUID) (bool, error) {
+	return s.projectStore.IsProjectMember(ctx, userID, projectID)
+}
+
 
 func (s projectService) GetAllProjects(ctx context.Context, userid uuid.UUID) ([]models.Project, error) {
 	p, err := s.projectStore.GetAllProjects(ctx, userid)

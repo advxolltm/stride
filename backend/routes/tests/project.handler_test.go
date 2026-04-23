@@ -5,6 +5,7 @@ import (
 	userStore "backend/db/user"
 	"backend/models"
 	"backend/routes"
+	projectsHandler "backend/routes/projects"
 	authService "backend/services/auth"
 	projectService "backend/services/project"
 	userService "backend/services/user"
@@ -45,8 +46,8 @@ func runTest(t *testing.T, name string, f func(t *testing.T, tx *gorm.DB, as aut
 			pServ := projectService.NewProjectService(pStore)
 			uStore := userStore.NewUserStore(tx)
 			uServ := userService.NewUserService(uStore)
-			aServ := authService.NewAuthenticationService(uServ, pServ)
-			handler := routes.NewProjectRouteHandler(pServ, aServ)
+			aServ := authService.NewAuthenticationService(uServ)
+			handler := projectsHandler.NewProjectsGroup(pServ, nil, aServ)
 
 			e := echo.New()
 			handler.AddRoutes(e.Group("/api"))
@@ -70,7 +71,7 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 		projectDesc := "A project bloop bleep"
 		projectStatus := "active"
 
-		payload := routes.CreateProjectRequest{
+		payload := projectsHandler.CreateProjectRequest{
 			Name:        projectName,
 			Slug:        projectSlug,
 			Description: &projectDesc,
@@ -184,7 +185,7 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 		memberProj, err := ps.CreateProject(ctx, &loginUser.ID, "AddMembers Project", "add-members", &desc, "active")
 		require.NoError(t, err)
 
-		payload := []routes.AddMemberRequest{
+		payload := []projectsHandler.AddMemberRequest{
 			{UserId: newUser2.ID, Role: "gopher"},
 		}
 
@@ -240,7 +241,7 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 		newUser3, err := us.CreateUser(ctx, "member3", "member3@test.com", "Password123!")
 		require.NoError(t, err)
 
-		payload := []routes.AddMemberRequest{
+		payload := []projectsHandler.AddMemberRequest{
 			{UserId: newUser3.ID, Role: "chillin"},
 		}
 		body, err := json.Marshal(payload)
