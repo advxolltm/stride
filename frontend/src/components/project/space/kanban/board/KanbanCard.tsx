@@ -1,9 +1,10 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Avatar, Button, Card, Chip, Dropdown, Label } from '@heroui/react'
+import { Avatar, Button, Card, Dropdown, Label } from '@heroui/react'
 import { Calendar, MoreHorizontal } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import type { Task } from './types'
+import type { Task } from '../../../../../store/features/tasks/task.types'
+import { getInitials } from '../../../../../shared/utils'
 
 interface KanbanCardProps {
     task: Task
@@ -34,12 +35,13 @@ export function KanbanCard({
         transition,
     }
 
-    const formattedDate = task.due_date
-        ? new Date(task.due_date).toLocaleDateString(i18n.language, {
+    const formattedDate = task.dueDate
+        ? new Date(task.dueDate).toLocaleDateString(i18n.language, {
               month: 'short',
               day: 'numeric',
           })
         : null
+    const assignee = task.assignees[0]
 
     function handleEdit() {
         if (onEdit) {
@@ -70,7 +72,7 @@ export function KanbanCard({
             >
                 <Card.Content className="flex flex-col gap-3">
                     <div className="flex items-start justify-between gap-2">
-                        <p className="text-default-900 text-sm font-medium">
+                        <p className="text-default-900 truncate text-sm font-medium">
                             {task.title}
                         </p>
 
@@ -121,14 +123,6 @@ export function KanbanCard({
                         </Dropdown>
                     </div>
 
-                    {task.labels && task.labels.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                            {task.labels.map((label) => (
-                                <Chip color="accent">{label}</Chip>
-                            ))}
-                        </div>
-                    )}
-
                     <div className="flex items-center justify-between">
                         <div className="text-default-400 flex items-center gap-1">
                             {formattedDate && (
@@ -142,10 +136,10 @@ export function KanbanCard({
                         </div>
 
                         <div className="flex items-center gap-1">
-                            {task.assignee && (
+                            {assignee && (
                                 <Avatar className="h-7 w-7 text-sm">
                                     <Avatar.Fallback className="bg-accent text-white">
-                                        {task.assignee.initials}
+                                        {getInitials(assignee.projectMemberId)}
                                     </Avatar.Fallback>
                                 </Avatar>
                             )}

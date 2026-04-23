@@ -11,20 +11,34 @@
       "add": "Add Task",
       "menuAria": "Task actions",
       "edit": "Edit task",
-      "delete": "Delete task"
+      "delete": "Delete task",
+      "createTask": "Create Task",
+      "cancel": "Cancel"
     },
     "columns": {
       "todo": "To Do",
       "inProgress": "In Progress",
-      "done": "Done"
+      "done": "Done",
+      "addTask": "Add Task"
     },
     "messages": {
-      "listComingSoon": "List view is coming soon."
+      "listComingSoon": "List view is coming soon.",
+      "loading": "Loading tasks...",
+      "taskUpdateSuccess": "Task updated.",
+      "taskUpdateError": "Could not update task.",
+      "moveSuccess": "Task moved.",
+      "moveError": "Could not move task.",
+      "dueDateUpdateSuccess": "Due date updated.",
+      "dueDateUpdateError": "Could not update due date.",
+      "createSuccess": "Task created.",
+      "createError": "Could not create task."
     },
     "drawer": {
       "detailsTitle": "Task Details",
       "cancel": "Cancel",
-      "save": "Save changes"
+      "save": "Save changes",
+      "close": "Close",
+      "unassigned": "Unassigned"
     },
     "modal": {
       "createTitle": "New Task",
@@ -34,6 +48,7 @@
     "form": {
       "title": "Task name",
       "titlePlaceholder": "Enter task name",
+      "titleRequired": "Task name is required.",
       "description": "Description",
       "descriptionPlaceholder": "Describe the task",
       "status": "Status",
@@ -42,7 +57,14 @@
       "labelsPlaceholder": "Select labels",
       "labelsSearch": "Search labels",
       "assignee": "Assignee",
-      "assigneePlaceholder": "Select assignee"
+      "assigneePlaceholder": "Select assignee",
+      "dueDate": "Due Date",
+      "noDueDate": "No due date",
+      "skills": "Skills",
+      "skillsPlaceholder": "Add skills...",
+      "skillsSearch": "Search skills...",
+      "skillsEmpty": "No skills found",
+      "assigneeSearch": "Search users..."
     }
   }
 }

@@ -1,14 +1,20 @@
-import { Button } from '@heroui/react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { Button } from '@heroui/react'
 import { CheckCircle2, Circle, Clock3, Plus } from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import type {
+    Column,
+    Task,
+} from '../../../../../store/features/tasks/task.types'
+import { AddTaskForm } from './AddTaskForm'
 import { KanbanCard } from './KanbanCard'
-import type { Column, Task } from './types'
+
 interface KanbanColumnProps {
     column: Column
-    onAddTask?: (status: Column['id']) => void
-    onTaskClick?: (task: Task) => void
-    onTaskDelete?: (task: Task) => void
+    onTaskClick: (task: Task) => void
+    onTaskDelete: (task: Task) => void
 }
 
 const columnIcons: Record<Column['id'], typeof Circle> = {
@@ -19,16 +25,16 @@ const columnIcons: Record<Column['id'], typeof Circle> = {
 
 export function KanbanColumn({
     column,
-    onAddTask,
     onTaskClick,
     onTaskDelete,
 }: KanbanColumnProps) {
+    const { t } = useTranslation('space')
     const { setNodeRef } = useDroppable({ id: column.id })
+    const [isAddingTask, setIsAddingTask] = useState(false)
     const Icon = columnIcons[column.id]
 
     return (
         <div className="bg-surface-secondary border-border flex h-full min-h-0 min-w-0 flex-1 flex-col gap-3 rounded-xl border p-3 shadow-sm">
-            {/* Column header */}
             <div className="border-border/70 -mx-3 border-b pb-2">
                 <div className="flex items-center gap-2 px-3">
                     <Icon
@@ -44,6 +50,14 @@ export function KanbanColumn({
                     </span>
                 </div>
             </div>
+
+            {/* Add Task Form (NOT scrollable anymore) */}
+            {isAddingTask && (
+                <AddTaskForm
+                    columnId={column.id}
+                    onCancel={() => setIsAddingTask(false)}
+                />
+            )}
 
             <SortableContext
                 items={column.tasks.map((task) => task.id)}
@@ -68,11 +82,11 @@ export function KanbanColumn({
             <Button
                 variant="ghost"
                 size="sm"
-                onPress={() => onAddTask?.(column.id)}
+                onPress={() => setIsAddingTask(true)}
                 className="text-muted hover:text-foreground mt-auto w-full justify-start gap-2"
             >
                 <Plus size={14} />
-                Add task
+                {t('tasks.columns.addTask')}
             </Button>
         </div>
     )

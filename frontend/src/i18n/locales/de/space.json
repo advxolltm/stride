@@ -11,15 +11,27 @@
       "add": "Aufgabe hinzufügen",
       "menuAria": "Aufgabenaktionen",
       "edit": "Aufgabe bearbeiten",
-      "delete": "Aufgabe löschen"
+      "delete": "Aufgabe löschen",
+      "createTask": "Aufgabe erstellen",
+      "cancel": "Abbrechen"
     },
     "columns": {
       "todo": "Zu erledigen",
       "inProgress": "In Bearbeitung",
-      "done": "Erledigt"
+      "done": "Erledigt",
+      "addTask": "Aufgabe hinzufügen"
     },
     "messages": {
-      "listComingSoon": "Listenansicht kommt bald."
+      "listComingSoon": "Listenansicht kommt bald.",
+      "taskUpdateSuccess": "Aufgabe aktualisiert.",
+      "taskUpdateError": "Aufgabe konnte nicht aktualisiert werden.",
+      "moveSuccess": "Aufgabe verschoben.",
+      "moveError": "Aufgabe konnte nicht verschoben werden.",
+      "dueDateUpdateSuccess": "Faelligkeitsdatum aktualisiert.",
+      "dueDateUpdateError": "Faelligkeitsdatum konnte nicht aktualisiert werden.",
+      "loading": "Aufgaben werden geladen...",
+      "createSuccess": "Aufgabe erstellt.",
+      "createError": "Aufgabe konnte nicht erstellt werden."
     },
     "drawer": {
       "detailsTitle": "Aufgabendetails",
@@ -34,6 +46,7 @@
     "form": {
       "title": "Aufgabenname",
       "titlePlaceholder": "Aufgabenname eingeben",
+      "titleRequired": "Aufgabenname ist erforderlich.",
       "description": "Beschreibung",
       "descriptionPlaceholder": "Aufgabe beschreiben",
       "status": "Status",
@@ -42,7 +55,14 @@
       "labelsPlaceholder": "Labels auswählen",
       "labelsSearch": "Labels suchen",
       "assignee": "Zuständiger",
-      "assigneePlaceholder": "Zuständigen auswählen"
+      "assigneePlaceholder": "Zuständigen auswählen",
+      "dueDate": "Fälligkeitsdatum",
+      "noDueDate": "Kein Fälligkeitsdatum",
+      "skills": "Fähigkeiten",
+      "skillsPlaceholder": "Fähigkeiten hinzufügen...",
+      "skillsSearch": "Fähigkeiten suchen",
+      "skillsEmpty": "Keine Fähigkeiten gefunden",
+      "assigneeSearch": "Benutzer suchen..."
     }
   }
 }
