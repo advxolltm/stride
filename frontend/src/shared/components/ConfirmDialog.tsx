@@ -1,4 +1,4 @@
-import { Button, Modal } from '@heroui/react'
+import { Button, Modal, Spinner } from '@heroui/react'
 import type { ReactNode } from 'react'
 
 interface ConfirmDialogProps {
@@ -62,6 +62,9 @@ export function ConfirmDialog({
                                     }
                                 }}
                             >
+                                {isConfirmPending && (
+                                    <Spinner color="current" size="sm" />
+                                )}
                                 {isConfirmPending
                                     ? pendingConfirmLabel || confirmLabel
                                     : confirmLabel}

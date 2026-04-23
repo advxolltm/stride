@@ -1,25 +1,37 @@
 import { Avatar, Button, Dropdown, Label, Separator } from '@heroui/react'
-import { useState } from 'react'
 import { ChevronDown, User } from 'lucide-react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { LogoutButton } from '../../shared/components/LogoutButton'
 import { LogoutConfirmDialog } from '../../shared/components/LogoutConfirmDialog'
+import { useGetSessionQuery } from '../../store/features/auth/auth.api'
+import { getInitials } from '../../shared/utils'
+import { useGetUserByIdQuery } from '../../store/features/user/user.api'
 
 export function UserMenu() {
+    const { data: user } = useGetSessionQuery()
+    const { data: userData } = useGetUserByIdQuery(user!.id)
+
     const navigate = useNavigate()
     const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false)
+
+    const displayName = userData?.fullName || user?.username
 
     return (
         <>
             <Dropdown>
-                <Button aria-label="Menu" variant="ghost" className="rounded-lg">
+                <Button
+                    aria-label="Menu"
+                    variant="ghost"
+                    className="rounded-lg"
+                >
                     <Avatar size="sm">
                         <Avatar.Fallback className="bg-accent text-white">
-                            JD
+                            {getInitials(displayName || 'User')}
                         </Avatar.Fallback>
                     </Avatar>
 
-                    <span className="text-sm font-medium">John Doe</span>
+                    <span className="text-sm font-medium">{displayName}</span>
 
                     <ChevronDown size={16} className="text-foreground/60" />
                 </Button>

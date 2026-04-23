@@ -6,7 +6,7 @@ export type ApiUser = {
     ID: string
     Username: string
     Email: string
-    PasswordHash: string
+    PasswordHash?: string
     FullName: string | null
     AvatarURL: string | null
     CreatedAt: string

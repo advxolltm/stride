@@ -1,6 +1,6 @@
 {
   "header": {
-    "invite": "Mitglieder einladen",
+    "add": "Mitglieder hinzufügen",
     "settings": "Einstellungen",
     "projects": "PROJEKTE"
   },
@@ -27,13 +27,17 @@
   "tasks": {
     "title": "Aufgabenuebersicht"
   },
-  "inviteDialog": {
-    "title": "Mitglieder einladen",
-    "description": "Lade Personen ein, an diesem Projekt mitzuarbeiten",
-    "emailPlaceholder": "E-Mail-Adressen eingeben...",
-    "copy": "Kopieren",
-    "send": "Einladung senden",
-    "inviteLinkLabel": "Einladungslink"
+  "addMembersDialog": {
+    "title": "Mitglieder hinzufügen",
+    "description": "Füge Personen aus deinem Arbeitsbereich zu {{project}} hinzu",
+    "searchPlaceholder": "Nach Name oder E-Mail suchen...",
+    "noResults": "Keine Benutzer gefunden",
+    "alreadyMember": "Bereits ein Mitglied",
+    "selectedCount": "{{count}} ausgewählt",
+    "add": "Hinzufügen",
+    "cancel": "Abbrechen",
+    "membersAdded": "Mitglieder erfolgreich hinzugefügt",
+    "membersAddError": "Fehler beim Hinzufügen der Mitglieder"
   },
   "createDialog": {
     "title": "Projekt erstellen",
@@ -61,14 +65,61 @@
     "skillsPlaceholder": "Faehigkeiten auswaehlen",
     "skillsSearchPlaceholder": "Faehigkeiten suchen",
     "projectSkills": "Projektfaehigkeiten",
+    "createdBy": "Erstellt von",
+    "createdAt": "Erstellt am",
+    "updatedAt": "Aktualisiert am",
     "cancel": "Abbrechen",
     "save": "Aenderungen speichern",
-    "defaultName": "Marketingkampagne Q2",
-    "defaultDescription": "Ein kollaboratives Projekt, bei dem das Team gemeinsam plant, organisiert und umsetzt."
+    "saveSuccess": "Projekt erfolgreich aktualisiert",
+    "saveError": "Projekt konnte nicht aktualisiert werden",
+    "nameRequired": "Projektname ist erforderlich",
+    "delete": "Loeschen",
+    "deleteTitle": "Projekt loeschen",
+    "deleteDescription": "Sobald Sie ein Projekt loeschen, kann es nicht wiederhergestellt werden. Bitte seien Sie sicher.",
+    "deleteConfirmTitle": "Projekt loeschen?",
+    "deleteConfirmMessage": "Sind Sie sicher, dass Sie das Projekt '{{name}}' loeschen moechten? Diese Aktion kann nicht rueckgaengig gemacht werden.",
+    "deleteConfirm": "Projekt loeschen",
+    "deleteCancel": "Abbrechen",
+    "deleteSuccess": "Projekt erfolgreich geloescht",
+    "deleteError": "Projekt konnte nicht geloescht werden"
   },
   "membersSettings": {
     "title": "Teammitglieder",
-    "owner": "Inhaber",
-    "member": "Mitglied"
+    "owner": "Eigentümer",
+    "member": "Mitglied",
+    "removeTitle": "Mitglied entfernen",
+    "removeMessage": "Möchten Sie dieses Mitglied wirklich aus dem Projekt entfernen?",
+    "removeConfirm": "Entfernen",
+    "removeConfirmPending": "Wird entfernt...",
+    "removeCancel": "Abbrechen"
+  },
+  "skillsSettings": {
+    "title": "Fähigkeiten",
+    "description": "Verwalten Sie die für dieses Projekt erforderlichen Fähigkeiten.",
+    "addSuccess": "Fähigkeit erfolgreich hinzugefügt",
+    "addError": "Fähigkeit konnte nicht hinzugefügt werden",
+    "addSkill": "Fähigkeit hinzufügen",
+    "nameLabel": "Name",
+    "namePlaceholder": "Fähigkeitsname eingeben",
+    "descriptionLabel": "Beschreibung",
+    "descriptionPlaceholder": "Fähigkeitsbeschreibung eingeben",
+    "empty": "Noch keine Fähigkeiten hinzugefügt",
+    "save": "Fähigkeit speichern",
+    "cancel": "Abbrechen",
+    "nameRequired": "Fähigkeitsname ist erforderlich",
+    "deleteTitle": "Fähigkeit löschen",
+    "deleteMessage": "Möchten Sie \"{{name}}\" wirklich löschen?",
+    "deleteConfirm": "Löschen",
+    "deleteCancel": "Abbrechen",
+    "deleteSuccess": "Fähigkeit erfolgreich gelöscht",
+    "deleteError": "Fähigkeit konnte nicht gelöscht werden"
+  },
+  "settingsSidebar": {
+    "title": "Projekteinstellungen",
+    "tabs": {
+      "general": "Allgemein",
+      "members": "Team",
+      "skills": "Fähigkeiten"
+    }
   }
 }

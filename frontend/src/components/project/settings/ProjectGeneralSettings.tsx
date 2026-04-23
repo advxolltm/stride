@@ -3,26 +3,74 @@ import {
     FieldError,
     Input,
     Label,
+    Spinner,
     TextArea,
     TextField,
+    toast,
 } from '@heroui/react'
 import { Pencil } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { AVAILABLE_PROJECT_SKILLS } from '../../../shared/data/mockProjectsData'
-import { SkillsAutocomplete } from '../../shared/SkillsAutocomplete'
+import { useUpdateProjectMutation } from '../../../store/features/project/project.api'
+import type { Project } from '../../../store/features/project/project.types'
+import { ProjectGeneralSettingsDelete } from './ProjectGeneralSettingsDelete'
 
-export function ProjectGeneralSettings({ isOwner }: { isOwner: boolean }) {
+interface ProjectGeneralSettingsProps {
+    isOwner: boolean
+    project: Project
+}
+
+export function ProjectGeneralSettings({
+    isOwner,
+    project,
+}: Readonly<ProjectGeneralSettingsProps>) {
     const { t } = useTranslation('project')
-
     const [isEditing, setIsEditing] = useState(false)
+    const [name, setName] = useState(project.name)
+    const [description, setDescription] = useState(project.description || '')
+    const [nameError, setNameError] = useState('')
 
-    const [name, setName] = useState('Marketing Campaign Q2')
-    const [description, setDescription] = useState(
-        'A collaborative project for the team to plan, organize, and execute together.',
-    )
+    const [updateProject, { isLoading }] = useUpdateProjectMutation()
 
-    const [skills, setSkills] = useState(['React', 'TypeScript', 'Design'])
+    const formattedCreatedAt = new Date(project.createdAt).toLocaleDateString()
+    const formattedUpdatedAt = new Date(project.updatedAt).toLocaleDateString()
+    const createdByDisplay =
+        project.creator.fullName ?? project.creator.username
+
+    function hasChanges(): boolean {
+        return (
+            name.trim() !== project.name ||
+            description.trim() !== (project.description || '')
+        )
+    }
+    const handleCancel = () => {
+        setName(project.name)
+        setDescription(project.description || '')
+        setNameError('')
+        setIsEditing(false)
+    }
+
+    const handleSave = async () => {
+        if (!name.trim()) {
+            setNameError(t('generalSettings.nameRequired'))
+            return
+        }
+
+        try {
+            await updateProject({
+                projectId: project.id,
+                body: {
+                    name: name.trim(),
+                    description: description.trim(),
+                    status: 'active',
+                },
+            }).unwrap()
+            toast.success(t('generalSettings.saveSuccess'))
+            setIsEditing(false)
+        } catch {
+            toast.danger(t('generalSettings.saveError'))
+        }
+    }
 
     return (
         <div className="flex flex-col gap-8 p-2">
@@ -72,38 +120,54 @@ export function ProjectGeneralSettings({ isOwner }: { isOwner: boolean }) {
 
                     <div>
                         <p
-                            className="mb-2 text-xs"
+                            className="mb-1 text-xs"
                             style={{ color: 'var(--muted)' }}
                         >
-                            {t('generalSettings.skills')}
+                            {t('generalSettings.createdBy')}
                         </p>
-
-                        <div className="flex flex-wrap gap-2">
-                            {skills.map((skill) => (
-                                <span
-                                    key={skill}
-                                    className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium"
-                                    style={{
-                                        background: 'var(--surface-secondary)',
-                                        color: 'var(--surface-secondary-foreground)',
-                                    }}
-                                >
-                                    {skill}
-                                </span>
-                            ))}
-                        </div>
+                        <p className="text-sm">{createdByDisplay}</p>
                     </div>
+
+                    <div>
+                        <p
+                            className="mb-1 text-xs"
+                            style={{ color: 'var(--muted)' }}
+                        >
+                            {t('generalSettings.createdAt')}
+                        </p>
+                        <p className="text-sm">{formattedCreatedAt}</p>
+                    </div>
+
+                    <div>
+                        <p
+                            className="mb-1 text-xs"
+                            style={{ color: 'var(--muted)' }}
+                        >
+                            {t('generalSettings.updatedAt')}
+                        </p>
+                        <p className="text-sm">{formattedUpdatedAt}</p>
+                    </div>
+
+                    {isOwner && (
+                        <>
+                            <ProjectGeneralSettingsDelete project={project} />
+                        </>
+                    )}
                 </div>
             ) : (
                 <div className="flex flex-col gap-4">
                     <TextField
                         value={name}
-                        onChange={setName}
+                        onChange={(val) => {
+                            setName(val)
+                            if (nameError) setNameError('')
+                        }}
+                        isInvalid={!!nameError}
                         className="w-full"
                     >
                         <Label>{t('generalSettings.nameLabel')}</Label>
                         <Input variant="secondary" />
-                        <FieldError />
+                        <FieldError>{nameError}</FieldError>
                     </TextField>
 
                     <TextField
@@ -116,22 +180,30 @@ export function ProjectGeneralSettings({ isOwner }: { isOwner: boolean }) {
                         <FieldError />
                     </TextField>
 
-                    <SkillsAutocomplete
-                        label={t('generalSettings.projectSkills')}
-                        placeholder={t('generalSettings.skillsPlaceholder')}
-                        searchPlaceholder={t(
-                            'generalSettings.skillsSearchPlaceholder',
-                        )}
-                        options={AVAILABLE_PROJECT_SKILLS}
-                        selectedSkills={skills}
-                        onChange={setSkills}
-                    />
+                    <TextField isDisabled className="w-full">
+                        <Label>{t('generalSettings.createdBy')}</Label>
+                        <Input variant="secondary" value={createdByDisplay} />
+                        <FieldError />
+                    </TextField>
+
+                    <TextField isDisabled className="w-full">
+                        <Label>{t('generalSettings.createdAt')}</Label>
+                        <Input variant="secondary" value={formattedCreatedAt} />
+                        <FieldError />
+                    </TextField>
+
+                    <TextField isDisabled className="w-full">
+                        <Label>{t('generalSettings.updatedAt')}</Label>
+                        <Input variant="secondary" value={formattedUpdatedAt} />
+                        <FieldError />
+                    </TextField>
 
                     <div className="flex gap-2 pt-1">
                         <Button
                             variant="outline"
                             size="sm"
-                            onPress={() => setIsEditing(false)}
+                            onPress={handleCancel}
+                            isDisabled={isLoading}
                         >
                             {t('generalSettings.cancel')}
                         </Button>
@@ -139,8 +211,11 @@ export function ProjectGeneralSettings({ isOwner }: { isOwner: boolean }) {
                         <Button
                             variant="primary"
                             size="sm"
-                            onPress={() => setIsEditing(false)}
+                            onPress={handleSave}
+                            isPending={isLoading}
+                            isDisabled={!hasChanges()}
                         >
+                            {isLoading && <Spinner color="current" size="sm" />}
                             {t('generalSettings.save')}
                         </Button>
                     </div>

@@ -40,13 +40,7 @@ export function HomePage() {
                         {projects.map((project) => (
                             <MainPageCard
                                 key={project.id}
-                                project={{
-                                    id: project.id,
-                                    initials: project.initials,
-                                    name: project.name,
-                                    description: project.description,
-                                    members: project.members.length,
-                                }}
+                                project={project}
                                 onClick={() =>
                                     navigate(`/project/${project.id}`)
                                 }

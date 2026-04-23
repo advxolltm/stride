@@ -2,19 +2,27 @@ import { Button } from '@heroui/react'
 import { Settings, UserPlus } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { InviteMembersDialog } from './InviteMembersDialog'
+
+import { useGetSessionQuery } from '../../../store/features/auth/auth.api'
+import type { Project } from '../../../store/features/project/project.types'
 import { ProjectSettingsModal } from '../settings/ProjectSettingsModal'
+import { AddMembersDialog } from './addMembersDialog/AddMembersDialog'
 
 interface ProjectOverviewHeaderProps {
-    name: string
+    project: Project
 }
 
 export function ProjectOverviewHeader({
-    name,
+    project,
 }: Readonly<ProjectOverviewHeaderProps>) {
     const { t } = useTranslation('project')
     const [isInviteOpen, setIsInviteOpen] = useState(false)
     const [isSettingsOpen, setSettingsOpen] = useState(false)
+
+    const { data: sessionUser } = useGetSessionQuery()
+
+    const existingMemberIds = project.members.map((m) => m.userId)
+    const isOwner = project.creator?.id === sessionUser?.id
 
     return (
         <>
@@ -25,18 +33,20 @@ export function ProjectOverviewHeader({
                             {t('header.projects')}
                         </span>
                         <h1 className="text-2xl font-bold tracking-tight">
-                            {name}
+                            {project.name}
                         </h1>
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <Button
-                            onPress={() => setIsInviteOpen(true)}
-                            className="flex items-center gap-2"
-                        >
-                            <UserPlus size={16} />
-                            {t('header.invite')}
-                        </Button>
+                        {isOwner && (
+                            <Button
+                                onPress={() => setIsInviteOpen(true)}
+                                className="flex items-center gap-2"
+                            >
+                                <UserPlus size={16} />
+                                {t('header.add')}
+                            </Button>
+                        )}
 
                         <Button
                             onPress={() => setSettingsOpen(true)}
@@ -48,15 +58,20 @@ export function ProjectOverviewHeader({
                 </div>
             </div>
 
-            <InviteMembersDialog
+            <AddMembersDialog
                 isOpen={isInviteOpen}
                 setIsOpen={setIsInviteOpen}
+                projectId={project.id}
+                projectName={project.name}
+                existingMemberIds={existingMemberIds}
+                currentUserId={sessionUser?.id ?? ''}
             />
 
             <ProjectSettingsModal
                 isOpen={isSettingsOpen}
                 setIsOpen={setSettingsOpen}
-                isOwner={true}
+                isOwner={isOwner}
+                project={project}
             />
         </>
     )

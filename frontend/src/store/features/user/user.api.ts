@@ -7,7 +7,7 @@ import type {
 } from './user.types';
 
 
-const mapApiUserToUser = ({
+export const mapApiUserToUser = ({
     ID,
     Username,
     Email,

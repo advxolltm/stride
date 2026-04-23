@@ -1,46 +1,58 @@
 import { baseApi } from '../../api/base.api'
 import type {
+    AddProjectMembersRequest,
     ApiProject,
+    ApiProjectMember,
+    ApiProjectSkill,
+    ApiProjectUser,
     CreateProjectRequest,
     CreateProjectSkillRequest,
     Project,
+    ProjectMember,
+    ProjectSkill,
+    ProjectUser,
+    UpdateProjectRequest,
 } from './project.types'
 
-const getProjectInitials = (name: string) => {
-    const parts = name.trim().split(/\s+/).filter(Boolean).slice(0, 2)
+// Transformation functions
+const transformApiUser = (user: ApiProjectUser): ProjectUser => ({
+    id: user.id,
+    username: user.username,
+    email: user.email,
+    fullName: user.full_name,
+    avatarUrl: user.avatar_url,
+})
 
-    if (parts.length === 0) {
-        return 'PR'
-    }
+// Transformation functions
+const transformProjectSkill = (skill: ApiProjectSkill): ProjectSkill => ({
+    id: skill.id,
+    projectId: skill.project_id,
+    name: skill.name,
+    description: skill.description,
+})
 
-    return parts.map((part) => part[0]?.toUpperCase() ?? '').join('')
-}
+const transformProjectMember = (member: ApiProjectMember): ProjectMember => ({
+    id: member.id,
+    userId: member.user_id,
+    projectId: member.project_id,
+    role: member.role,
+    joinedAt: member.joined_at,
+    user: transformApiUser(member.user),
+})
 
-const mapApiProjectToProject = ({
-    ID,
-    CreatedBy,
-    Name,
-    Slug,
-    Description,
-    Status,
-    CreatedAt,
-    UpdatedAt,
-    JoinLink,
-    Members,
-    Skills,
-}: ApiProject): Project => ({
-    id: ID,
-    createdBy: CreatedBy,
-    name: Name,
-    slug: Slug,
-    description: Description ?? '',
-    status: Status,
-    createdAt: CreatedAt,
-    updatedAt: UpdatedAt,
-    joinLink: JoinLink,
-    initials: getProjectInitials(Name),
-    members: Members ?? [],
-    skills: Skills ?? [],
+const transformProject = (project: ApiProject): Project => ({
+    id: project.id,
+    createdBy: project.created_by,
+    name: project.name,
+    slug: project.slug,
+    description: project.description,
+    status: project.status,
+    createdAt: project.created_at,
+    updatedAt: project.updated_at,
+    joinLink: project.join_link,
+    creator: transformApiUser(project.creator),
+    members: project.members.map(transformProjectMember),
+    skills: project.skills?.map(transformProjectSkill) ?? [],
 })
 
 export const projectApi = baseApi.injectEndpoints({
@@ -48,7 +60,7 @@ export const projectApi = baseApi.injectEndpoints({
         getProjects: builder.query<Project[], void>({
             query: () => '/projects',
             transformResponse: (response: ApiProject[]) =>
-                response.map(mapApiProjectToProject),
+                response.map(transformProject),
             providesTags: (result) =>
                 result
                     ? [
@@ -60,27 +72,53 @@ export const projectApi = baseApi.injectEndpoints({
                       ]
                     : [{ type: 'Project', id: 'LIST' }],
         }),
+
         getProjectById: builder.query<Project, string>({
             query: (id) => `/projects/${id}`,
             transformResponse: (response: ApiProject) =>
-                mapApiProjectToProject(response),
+                transformProject(response),
             providesTags: (_result, _error, id) => [{ type: 'Project', id }],
         }),
+
+        getProjectMembers: builder.query<ProjectMember[], string>({
+            query: (projectId) => `/projects/${projectId}/members`,
+            transformResponse: (response: ApiProjectMember[]) =>
+                response.map(transformProjectMember),
+            providesTags: (_result, _error, projectId) => [
+                { type: 'ProjectMember' as const, id: projectId },
+            ],
+        }),
+
         createProject: builder.mutation<Project, CreateProjectRequest>({
             query: (body) => ({
                 url: '/projects',
                 method: 'POST',
-                body: {
-                    ...body,
-                    description: body.description || null,
-                },
+                body: { ...body, description: body.description || null },
             }),
             transformResponse: (response: ApiProject) =>
-                mapApiProjectToProject(response),
+                transformProject(response),
             invalidatesTags: [{ type: 'Project', id: 'LIST' }],
         }),
+
+        addProjectMembers: builder.mutation<
+            ProjectMember[],
+            { projectId: string; body: AddProjectMembersRequest }
+        >({
+            query: ({ projectId, body }) => ({
+                url: `/projects/${projectId}/members`,
+                method: 'POST',
+                body,
+            }),
+            transformResponse: (response: ApiProjectMember[]) =>
+                response.map(transformProjectMember),
+            invalidatesTags: (_result, _error, { projectId }) => [
+                { type: 'ProjectMember' as const, id: projectId },
+                { type: 'Project' as const, id: projectId },
+            ],
+        }),
+
         addProjectSkill: builder.mutation<
-            void,
+            ProjectSkill,
             { projectId: string; body: CreateProjectSkillRequest }
         >({
             query: ({ projectId, body }) => ({
@@ -88,7 +126,74 @@ export const projectApi = baseApi.injectEndpoints({
                 method: 'POST',
                 body,
             }),
+            transformResponse: (response: ApiProjectSkill) =>
+                transformProjectSkill(response),
             invalidatesTags: (_result, _error, { projectId }) => [
+                { type: 'Project' as const, id: projectId },
+                { type: 'Project' as const, id: 'LIST' },
+                { type: 'ProjectSkill' as const, id: projectId },
+            ],
+        }),
+
+        updateProject: builder.mutation<
+            Project,
+            { projectId: string; body: UpdateProjectRequest }
+        >({
+            query: ({ projectId, body }) => ({
+                url: `/projects/${projectId}`,
+                method: 'PATCH',
+                body,
+            }),
+            transformResponse: (response: ApiProject) =>
+                transformProject(response),
+            invalidatesTags: (_result, _error, { projectId }) => [
+                { type: 'Project' as const, id: projectId },
+            ],
+        }),
+
+        getProjectSkills: builder.query<ProjectSkill[], string>({
+            query: (projectId) => `/projects/${projectId}/skills`,
+            transformResponse: (response: ApiProjectSkill[]) =>
+                response.map(transformProjectSkill),
+            providesTags: (_result, _error, projectId) => [
+                { type: 'ProjectSkill' as const, id: projectId },
+            ],
+        }),
+
+        removeProjectSkill: builder.mutation<
+            void,
+            { projectId: string; skillId: string }
+        >({
+            query: ({ skillId }) => ({
+                url: `/projects/skills/${skillId}`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: (_result, _error, { projectId }) => [
+                { type: 'ProjectSkill' as const, id: projectId },
+                { type: 'Project' as const, id: projectId },
+            ],
+        }),
+
+        removeProjectMember: builder.mutation<
+            void,
+            { projectId: string; memberId: string }
+        >({
+            query: ({ projectId, memberId }) => ({
+                url: `/projects/${projectId}/members/${memberId}`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: (_result, _error, { projectId }) => [
+                { type: 'ProjectMember' as const, id: projectId },
+                { type: 'Project' as const, id: projectId },
+            ],
+        }),
+
+        deleteProject: builder.mutation<void, string>({
+            query: (projectId) => ({
+                url: `/projects/${projectId}`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: (_result, _error, projectId) => [
                 { type: 'Project', id: projectId },
                 { type: 'Project', id: 'LIST' },
             ],
@@ -99,6 +204,13 @@ export const projectApi = baseApi.injectEndpoints({
 export const {
     useGetProjectsQuery,
     useGetProjectByIdQuery,
+    useGetProjectMembersQuery,
     useCreateProjectMutation,
+    useAddProjectMembersMutation,
     useAddProjectSkillMutation,
+    useUpdateProjectMutation,
+    useGetProjectSkillsQuery,
+    useRemoveProjectSkillMutation,
+    useRemoveProjectMemberMutation,
+    useDeleteProjectMutation,
 } = projectApi
