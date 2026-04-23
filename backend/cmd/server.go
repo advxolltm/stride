@@ -109,7 +109,7 @@ func main() {
 		routes.NewExampleRouteHandler(exampleService, authService),
 		routes.NewProjectRouteHandler(projectService, authService),
 		taskHandler.NewTaskRouteHandler(authService, taskService, projectService),
-		routes.NewUserRouteHandler(userService),
+		routes.NewUserRouteHandler(userService, authService),
 	}
 
 	for _, handler := range handlers {
