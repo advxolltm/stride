@@ -26,7 +26,8 @@ CREATE TABLE project_members (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
     role VARCHAR(255) NOT NULL,
-    joined_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    joined_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_user_project UNIQUE(user_id, project_id)
 );
 
 CREATE TABLE project_skills (
@@ -51,14 +52,14 @@ CREATE TABLE messages (
 CREATE TABLE tasks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_by UUID REFERENCES project_members(id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
     description TEXT,
     status VARCHAR(255) NOT NULL,
     start_date DATE,
     due_date DATE,
     expected_duration_minutes INT,
-    position INT,
+    position INT NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     completed_at TIMESTAMP DEFAULT NULL
@@ -68,7 +69,8 @@ CREATE TABLE task_assignees (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
     project_member_id UUID NOT NULL REFERENCES project_members(id) ON DELETE CASCADE,
-    assigned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    assigned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	UNIQUE (task_id, project_member_id)
 );
 
 CREATE TABLE whiteboards (

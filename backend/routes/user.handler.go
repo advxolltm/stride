@@ -34,7 +34,7 @@ type createUserRequest struct {
 	Username	string	`json:"username"`
 	Email		string	`json:"email"`
 	Password	string	`json:"password"`
-}
+} // @name CreateUserRequest
 
 type updateUserRequest struct {
 	Email		*string	`json:"email"`

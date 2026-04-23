@@ -27,7 +27,7 @@ type (
 
 	AuthService interface {
 		AuthenticateUser(ctx context.Context, email, password string) (jwtTokenString, time.Time, error)
-		AuthenticatedMiddleware() echo.MiddlewareFunc
+		AuthenticatedMiddleware() echo.MiddlewareFunc	
 		// should only be called in routes protected by [AuthenticatedMiddleware]
 		// panics if no claims are found
 		GetClaims(ctx *echo.Context) jwtCustomClaims
@@ -97,8 +97,6 @@ func (s authService) GetClaims(ctx *echo.Context) jwtCustomClaims {
 func (s authService) expiresAtTime() time.Time {
 	return time.Now().Add(time.Hour * time.Duration(s.cfg.sessionExpiryHours))
 }
-
-
 
 func getClaims(ctx *echo.Context) jwtCustomClaims {
 	token, err := echo.ContextGet[*jwt.Token](ctx, "user")

@@ -15,18 +15,17 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-// TODO: Tests project.db.go
 type UpdateProjectFields struct {
-	Name			*string `gorm:"column:name"`
-    Slug 			*string `gorm:"column:slug"`
-    Description 	*string `gorm:"column:description"`
-    Status 			*string `gorm:"column:status"`
-	UpdatedAt		time.Time `gorm:"column:updated_at"`
+	Name        *string   `gorm:"column:name"`
+	Slug        *string   `gorm:"column:slug"`
+	Description *string   `gorm:"column:description"`
+	Status      *string   `gorm:"column:status"`
+	UpdatedAt   time.Time `gorm:"column:updated_at"`
 }
 
 type (
 	ProjectStore interface {
-		GetAllProjects(ctx context.Context) ([]models.Project, error)
+		GetAllProjects(ctx context.Context, userid uuid.UUID) ([]models.Project, error)
 		GetProject(ctx context.Context, id uuid.UUID) (*models.Project, error)
 		GetProjectMembers(ctx context.Context, id uuid.UUID) ([]models.ProjectMember, error)
 		GetProjectSkills(ctx context.Context, id uuid.UUID) ([]models.ProjectSkill, error)
@@ -34,11 +33,11 @@ type (
 		CreateProject(ctx context.Context, project *models.Project) error
 		UpdateProject(ctx context.Context, id uuid.UUID, input UpdateProjectFields) (*models.Project, error)
 		DeleteProject(ctx context.Context, id uuid.UUID) error
-		AddUserToProject(ctx context.Context, projectmember *models.ProjectMember) error
+		AddUsersToProject(ctx context.Context, projectmembers []models.ProjectMember) error
 		RemoveUserFromProject(ctx context.Context, userId uuid.UUID, projectId uuid.UUID) error
 		AddProjectSkill(ctx context.Context, projectSkill *models.ProjectSkill) error
 		RemoveProjectSkill(ctx context.Context, id uuid.UUID) error
-
+		GetProjectIdBySkillId(ctx context.Context, skillId uuid.UUID) (uuid.UUID, error)
 	}
 
 	projectStore struct {
@@ -50,19 +49,25 @@ func NewProjectStore(db *gorm.DB) ProjectStore {
 	return &projectStore{db}
 }
 
-func (s *projectStore) GetAllProjects(ctx context.Context) ([]models.Project, error) {
-	var projects []models.Project
-	result := s.db.WithContext(ctx).Find(&projects)
+func (s *projectStore) GetAllProjects(ctx context.Context, userid uuid.UUID) ([]models.Project, error) {
+	var user models.User
+	result := s.db.Preload("Projects").Preload("Projects.Creator").Preload("Projects.Members").Preload("Projects.Skills").First(&user, userid)
 	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, ErrNonExistentUser
+		}
 		return nil, result.Error
 	}
-	return projects, nil
+	return user.Projects, nil
 }
 
 func (s *projectStore) GetProject(ctx context.Context, id uuid.UUID) (*models.Project, error) {
 	var project models.Project
-	result := s.db.WithContext(ctx).First(&project, "id = ?", id)
+	result := s.db.WithContext(ctx).Preload("Creator").Preload("Members").Preload("Skills").First(&project, "id = ?", id)
 	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, ErrProjectNotFound
+		}
 		return nil, result.Error
 	}
 	return &project, nil
@@ -73,6 +78,9 @@ func (s *projectStore) GetProjectMembers(ctx context.Context, id uuid.UUID) ([]m
 
 	result := s.db.Preload("Members").Preload("Members.User").First(&project, id)
 	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, ErrProjectNotFound
+		}
 		return nil, result.Error
 	}
 	return project.Members, nil
@@ -95,6 +103,9 @@ func (s *projectStore) GetProjectSkills(ctx context.Context, id uuid.UUID) ([]mo
 
 	result := s.db.Preload("Skills").First(&project, id)
 	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, ErrProjectNotFound
+		}
 		return nil, result.Error
 	}
 	return project.Skills, nil
@@ -103,24 +114,24 @@ func (s *projectStore) GetProjectSkills(ctx context.Context, id uuid.UUID) ([]mo
 func (s *projectStore) CreateProject(ctx context.Context, project *models.Project) error {
 	result := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(project).Error; err != nil {
-            if strings.Contains(err.Error(), "duplicate key") {
-                return ErrDuplicateSlug
-            }
-            return err
-        }
+			if strings.Contains(err.Error(), "duplicate key") {
+				return ErrDuplicateSlug
+			}
+			return err
+		}
 
 		if project.CreatedBy != nil {
-            member := &models.ProjectMember{
-                ProjectID: project.ID,
-                UserID:    *project.CreatedBy,
-                Role:      "owner",
-            }
-            if err := tx.Create(member).Error; err != nil {
-                return err
-            }
-        }
+			member := &models.ProjectMember{
+				ProjectID: project.ID,
+				UserID:    *project.CreatedBy,
+				Role:      "owner",
+			}
+			if err := tx.Create(member).Error; err != nil {
+				return err
+			}
+		}
 
-        return nil
+		return tx.Preload("Creator").Preload("Members").Preload("Skills").First(project, "id = ?", project.ID).Error
 	})
 
 	if result != nil {
@@ -145,7 +156,11 @@ func (s *projectStore) UpdateProject(ctx context.Context, id uuid.UUID, fields U
 		return nil, result.Error
 	}
 	if result.RowsAffected == 0 {
-		return nil, gorm.ErrRecordNotFound
+		return nil, ErrProjectNotFound
+	}
+	err := s.db.WithContext(ctx).Preload("Creator").Preload("Members").Preload("Skills").First(&project, id).Error
+	if err != nil {
+		return nil, err
 	}
 	return &project, nil
 }
@@ -153,35 +168,70 @@ func (s *projectStore) UpdateProject(ctx context.Context, id uuid.UUID, fields U
 func (s *projectStore) DeleteProject(ctx context.Context, id uuid.UUID) error {
 	result := s.db.WithContext(ctx).Delete(&models.Project{}, "id = ?", id)
 	if result.Error != nil {
-		return gorm.ErrRecordNotFound
+		return ErrProjectNotFound
 	}
 	if result.RowsAffected == 0 {
-    	return gorm.ErrRecordNotFound
+		return ErrProjectNotFound
 	}
 	return nil
 }
 
-func (s *projectStore) AddUserToProject(ctx context.Context, projectmember *models.ProjectMember) error {
-	result := s.db.WithContext(ctx).Create(projectmember)
+func (s *projectStore) AddUsersToProject(ctx context.Context, projectmembers []models.ProjectMember) error {
+	result := s.db.WithContext(ctx).Create(projectmembers)
 	if result.Error != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(result.Error, &pgErr) {
+			if pgErr.Code == db.ForeignKeyViolationCode {
+				switch pgErr.ConstraintName {
+				case "project_members_user_id_fkey":
+					return ErrNonExistentUser
+				case "project_members_project_id_fkey":
+					return ErrProjectNotFound
+				}
+			}
+			if pgErr.Code == db.UniqueConstraintViolationCode {
+				if strings.Contains(pgErr.ConstraintName, "unique_user_project") {
+					return ErrUserAlreadyMember
+				}
+			}
+
+		}
 		return result.Error
 	}
 	return nil
 }
 
-
 func (s *projectStore) RemoveUserFromProject(ctx context.Context, userId uuid.UUID, projectId uuid.UUID) error {
+	var projectExists bool
+	s.db.WithContext(ctx).Model(&models.Project{}).
+		Select("count(*) > 0").
+		Where("id = ?", projectId).
+		Find(&projectExists)
+
+	if !projectExists {
+		return ErrProjectNotFound
+	}
+
 	result := s.db.WithContext(ctx).Where("user_id = ? AND project_id = ?", userId, projectId).Delete(&models.ProjectMember{})
 	if result.Error != nil {
-		return gorm.ErrRecordNotFound
+		return ErrNonExistentMember
 	}
 	if result.RowsAffected == 0 {
-    	return gorm.ErrRecordNotFound
+		return ErrNonExistentMember
 	}
 	return nil
 }
 
 func (s *projectStore) AddProjectSkill(ctx context.Context, projectSkill *models.ProjectSkill) error {
+	var projectExists bool
+	s.db.WithContext(ctx).Model(&models.Project{}).
+		Select("count(*) > 0").
+		Where("id = ?", projectSkill.ProjectID).
+		Find(&projectExists)
+
+	if !projectExists {
+		return ErrProjectNotFound
+	}
 	result := s.db.WithContext(ctx).Create(projectSkill)
 	if result.Error != nil {
 		return result.Error
@@ -192,10 +242,22 @@ func (s *projectStore) AddProjectSkill(ctx context.Context, projectSkill *models
 func (s *projectStore) RemoveProjectSkill(ctx context.Context, id uuid.UUID) error {
 	result := s.db.WithContext(ctx).Where("id = ?", id).Delete(&models.ProjectSkill{})
 	if result.Error != nil {
-		return gorm.ErrRecordNotFound
+		return ErrNonExistentProjectSkill
 	}
 	if result.RowsAffected == 0 {
-    	return gorm.ErrRecordNotFound
+		return ErrNonExistentProjectSkill
 	}
 	return nil
+}
+
+func (s *projectStore) GetProjectIdBySkillId(ctx context.Context, skillId uuid.UUID) (uuid.UUID, error) {
+	var skill models.ProjectSkill
+	result := s.db.WithContext(ctx).First(&skill, "id = ?", skillId)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return uuid.Nil, ErrNonExistentProjectSkill
+		}
+		return uuid.Nil, result.Error
+	}
+	return skill.ProjectID, nil
 }

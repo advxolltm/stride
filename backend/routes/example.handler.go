@@ -35,7 +35,8 @@ func (h ExampleRouteHandler) AddRoutes(api *echo.Group) {
 func (h ExampleRouteHandler) DataGETHandle(c *echo.Context) error {
 	type dataResponse struct {
 		Value string
-	}
+	} // @name DataResponse
+
 	value, err := h.exampleService.GetData()
 	if err != nil {
 		return c.String(http.StatusInternalServerError, fmt.Errorf("you are using the application wrong >:( -> error: %w", err).Error())
