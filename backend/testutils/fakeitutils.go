@@ -99,7 +99,11 @@ func generateNOfType[T any](count int, producer func(idx int) T) []T {
 
 func fakeUser(idx int) models.User {
 	name := f.Name()
-	avatarUrl := "todo: set avatar url in fakeUser"
+	avatarUrl := models.AvatarURLMap{
+		Small:    "/media/avatars/fake/300.png",
+		Medium:   "/media/avatars/fake/600.png",
+		Original: "/media/avatars/fake/original.png",
+	}
 	return models.User{
 		Username:     f.Username(),
 		Email:        f.Email(),

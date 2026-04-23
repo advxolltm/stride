@@ -151,22 +151,48 @@ func MapMany[T, V any](from []T, toFunc func(T) V) []V {
 
 // Response types
 type (
+	AvatarURL struct {
+		Small    string `json:"300"`
+		Medium   string `json:"600"`
+		Original string `json:"original"`
+	}
+
 	User struct {
-		ID        uuid.UUID `json:"id"`
-		Username  string    `json:"username"`
-		Email     string    `json:"email"`
-		FullName  *string   `json:"full_name"`
-		AvatarURL *string   `json:"avatar_url"`
+		ID        uuid.UUID  `json:"id"`
+		Username  string     `json:"username"`
+		Email     string     `json:"email"`
+		FullName  *string    `json:"full_name"`
+		AvatarURL *AvatarURL `json:"avatar_url"`
 	}
 )
 
+
+func mapAvatarURL(a *models.AvatarURLMap) *AvatarURL {
+	if a == nil {
+		return nil
+	}
+	return &AvatarURL{
+		Small:    a.Small,
+		Medium:   a.Medium,
+		Original: a.Original,
+	}
+}
+
 func MapUser(user models.User) User {
+	var avatar *AvatarURL
+	if user.AvatarURL != nil {
+		avatar = &AvatarURL{
+			Small:    user.AvatarURL.Small,
+			Medium:   user.AvatarURL.Medium,
+			Original: user.AvatarURL.Original,
+		}
+	}
 	return User{
 		ID:        user.ID,
 		Username:  user.Username,
 		Email:     user.Email,
 		FullName:  user.FullName,
-		AvatarURL: user.AvatarURL,
+		AvatarURL: avatar,
 	}
 }
 func MapToReturnProj(p models.Project) ReturnProj {
@@ -188,7 +214,7 @@ func MapToReturnProj(p models.Project) ReturnProj {
 			Username:  p.Creator.Username,
 			Email:     p.Creator.Email,
 			FullName:  p.Creator.FullName,
-			AvatarURL: p.Creator.AvatarURL,
+			AvatarURL: mapAvatarURL(p.Creator.AvatarURL),
 		}
 	}
 	if p.Members != nil {
@@ -209,12 +235,13 @@ func MapToReturnMember(m models.ProjectMember) ReturnMember {
 		Role:      m.Role,
 		JoinedAt:  m.JoinedAt,
 	}
+
 	res.User = &ReturnUser{
 		ID:        m.User.ID,
 		Username:  m.User.Username,
 		Email:     m.User.Email,
 		FullName:  m.User.FullName,
-		AvatarURL: m.User.AvatarURL,
+		AvatarURL: mapAvatarURL(m.User.AvatarURL),
 	}
 
 	return res
@@ -239,11 +266,11 @@ func Map[T any, V any](input []T, f func(T) V) []V {
 }
 
 type ReturnUser struct {
-	ID        uuid.UUID `json:"id"`
-	Username  string    `json:"username"`
-	Email     string    `json:"email"`
-	FullName  *string   `json:"full_name"`
-	AvatarURL *string   `json:"avatar_url"`
+	ID        uuid.UUID  `json:"id"`
+	Username  string     `json:"username"`
+	Email     string     `json:"email"`
+	FullName  *string    `json:"full_name"`
+	AvatarURL *AvatarURL `json:"avatar_url"`
 }
 
 type ReturnSkill struct {

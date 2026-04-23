@@ -4,15 +4,22 @@ import (
 	"backend/config"
 	"backend/db/user"
 	"backend/models"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"image"
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
+	"io"
+	"net/http"
 	"net/mail"
-
-	//"os"
-	//"strconv"
+	"os"
+	"path/filepath"
 	"strings"
 
+	"github.com/disintegration/imaging"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -20,11 +27,17 @@ import (
 
 //TODO: Tests user.service.go
 
+type AvatarInput struct {
+	Filename string
+	File     io.Reader
+	Size     int64
+}
+
 type UpdateUserInput struct {
-	Email     *string
-	Password  *string
-	FullName  *string
-	AvatarURL *string
+	Email    *string
+	Password *string
+	FullName *string
+	Avatar   *AvatarInput
 }
 
 type (
@@ -39,11 +52,19 @@ type (
 	userService struct {
 		userStore user.UserStore
 		cfg       validationConfig
+		mediaDir  string
 	}
 )
 
+const maxAvatarSize = 2 << 20 // 2MB
+
+var allowedAvatarTypes = map[string]bool{
+	".jpg": true, ".jpeg": true, ".png": true, ".gif": true, ".webp": true,
+}
+
 func NewUserService(userStore user.UserStore) UserService {
-	return &userService{userStore, loadValidationConfig()}
+	mediaDir := config.EnvStr("MEDIA_DIR", "media")
+	return &userService{userStore, loadValidationConfig(), mediaDir}
 }
 
 type validationConfig struct {
@@ -167,9 +188,8 @@ func (s userService) CreateUser(ctx context.Context, username string, email stri
 
 func (s userService) UpdateUser(ctx context.Context, id uuid.UUID, input UpdateUserInput) (*models.User, error) {
 	fields := user.UpdateUserFields{
-		Email:     input.Email,
-		FullName:  input.FullName,
-		AvatarURL: input.AvatarURL,
+		Email:    input.Email,
+		FullName: input.FullName,
 	}
 
 	if input.Email != nil {
@@ -185,6 +205,17 @@ func (s userService) UpdateUser(ctx context.Context, id uuid.UUID, input UpdateU
 		}
 		hashStr := string(hash)
 		fields.PasswordHash = &hashStr
+	}
+
+	if input.Avatar != nil {
+		if err := validateAvatarFile(input.Avatar.Filename, input.Avatar.Size); err != nil {
+			return nil, err
+		}
+		avatarURLMap, err := s.processAndSaveAvatar(id, input.Avatar)
+		if err != nil {
+			return nil, err
+		}
+		fields.AvatarURL = avatarURLMap
 	}
 
 	u, err := s.userStore.UpdateUser(ctx, id, fields)
@@ -219,4 +250,84 @@ func (s userService) GetByEmailAndPassword(ctx context.Context, email, password 
 	}
 
 	return userId, nil
+}
+
+func validateAvatarFile(filename string, size int64) error {
+	if size > maxAvatarSize {
+		return ErrAvatarTooLarge
+	}
+	ext := strings.ToLower(filepath.Ext(filename))
+	if !allowedAvatarTypes[ext] {
+		return ErrAvatarInvalidType
+	}
+	return nil
+}
+
+
+func validateImageContent(data []byte) (image.Image, error) {
+	mimeType := http.DetectContentType(data)
+	if !strings.HasPrefix(mimeType, "image/") {
+		return nil, ErrAvatarCorruptImage
+	}
+
+	img, _, err := image.Decode(bytes.NewReader(data))
+	if err != nil {
+		return nil, ErrAvatarCorruptImage
+	}
+
+	return img, nil
+}
+
+var thumbnailSizes = []int{300, 600}
+
+func (s userService) processAndSaveAvatar(userID uuid.UUID, avatar *AvatarInput) (*models.AvatarURLMap, error) {
+
+	data, err := io.ReadAll(avatar.File)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrAvatarSaveFailed, err)
+	}
+
+
+	img, err := validateImageContent(data)
+	if err != nil {
+		return nil, err
+	}
+
+	userDir := filepath.Join(s.mediaDir, "avatars", userID.String())
+	if err := os.MkdirAll(userDir, 0o755); err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrAvatarSaveFailed, err)
+	}
+
+	ext := strings.ToLower(filepath.Ext(avatar.Filename))
+	basePath := fmt.Sprintf("/media/avatars/%s", userID.String())
+
+	originalName := "original" + ext
+	originalPath := filepath.Join(userDir, originalName)
+	if err := os.WriteFile(originalPath, data, 0o644); err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrAvatarSaveFailed, err)
+	}
+
+	result := &models.AvatarURLMap{
+		Original: basePath + "/" + originalName,
+	}
+
+	for _, size := range thumbnailSizes {
+		thumb := imaging.Fill(img, size, size, imaging.Center, imaging.Lanczos)
+
+		thumbName := fmt.Sprintf("%d%s", size, ext)
+		thumbPath := filepath.Join(userDir, thumbName)
+
+		if err := imaging.Save(thumb, thumbPath); err != nil {
+			return nil, fmt.Errorf("%w: %w", ErrAvatarProcessingFailed, err)
+		}
+
+		switch size {
+		case 300:
+			result.Small = basePath + "/" + thumbName
+		case 600:
+			result.Medium = basePath + "/" + thumbName
+		}
+	}
+
+	return result, nil
 }
