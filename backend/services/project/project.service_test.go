@@ -177,7 +177,7 @@ func TestProjectService(t *testing.T) {
 		assert.Equal(t, project.CreatedAt, retProj.CreatedAt)
 		assert.Equal(t, project.CreatedBy, retProj.CreatedBy)
 
-		result := db.WithContext(ctx).Preload("Creator").Preload("Members").Preload("Skills").First(&project, "id = ?", project.ID)
+		result := db.WithContext(ctx).Preload("Creator").Preload("Members").Preload("Members.User").Preload("Skills").First(&project, "id = ?", project.ID)
 		require.NoError(t, result.Error)
 
 		project.Tasks = nil
