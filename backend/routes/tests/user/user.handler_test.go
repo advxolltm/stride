@@ -13,12 +13,10 @@ import (
 	"os"
 	"testing"
 
-	projectStore "backend/db/project"
 	userStore "backend/db/user"
 	"backend/models"
 	"backend/routes"
 	authService "backend/services/auth"
-	projectService "backend/services/project"
 	userService "backend/services/user"
 	"backend/testutils"
 
@@ -72,11 +70,9 @@ type userTestEnv struct {
 func newUserTestEnv(t *testing.T, tx *gorm.DB) userTestEnv {
 	t.Helper()
 
-	pStore := projectStore.NewProjectStore(tx)
-	pServe := projectService.NewProjectService(pStore)
 	uStore := userStore.NewUserStore(tx)
 	uServe := userService.NewUserService(uStore)
-	aServ := authService.NewAuthenticationService(uServe, pServe)
+	aServ := authService.NewAuthenticationService(uServe)
 
 	ctx := context.Background()
 	email := fmt.Sprintf("userhandler-%s@test.com", uuid.NewString())

@@ -51,7 +51,7 @@ func NewProjectStore(db *gorm.DB) ProjectStore {
 
 func (s *projectStore) GetAllProjects(ctx context.Context, userid uuid.UUID) ([]models.Project, error) {
 	var user models.User
-	result := s.db.Preload("Projects").Preload("Projects.Creator").Preload("Projects.Members").Preload("Projects.Skills").First(&user, userid)
+	result := s.db.Preload("Projects").Preload("Projects.Creator").Preload("Projects.Members").Preload("Projects.Members.User").Preload("Projects.Skills").First(&user, userid)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, ErrNonExistentUser
@@ -63,7 +63,7 @@ func (s *projectStore) GetAllProjects(ctx context.Context, userid uuid.UUID) ([]
 
 func (s *projectStore) GetProject(ctx context.Context, id uuid.UUID) (*models.Project, error) {
 	var project models.Project
-	result := s.db.WithContext(ctx).Preload("Creator").Preload("Members").Preload("Skills").First(&project, "id = ?", id)
+	result := s.db.WithContext(ctx).Preload("Creator").Preload("Members").Preload("Members.User").Preload("Skills").First(&project, "id = ?", id)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, ErrProjectNotFound
@@ -131,7 +131,7 @@ func (s *projectStore) CreateProject(ctx context.Context, project *models.Projec
 			}
 		}
 
-		return tx.Preload("Creator").Preload("Members").Preload("Skills").First(project, "id = ?", project.ID).Error
+		return tx.Preload("Creator").Preload("Members").Preload("Members.User").Preload("Skills").First(project, "id = ?", project.ID).Error
 	})
 
 	if result != nil {
@@ -158,7 +158,7 @@ func (s *projectStore) UpdateProject(ctx context.Context, id uuid.UUID, fields U
 	if result.RowsAffected == 0 {
 		return nil, ErrProjectNotFound
 	}
-	err := s.db.WithContext(ctx).Preload("Creator").Preload("Members").Preload("Skills").First(&project, id).Error
+	err := s.db.WithContext(ctx).Preload("Creator").Preload("Members").Preload("Members.User").Preload("Skills").First(&project, id).Error
 	if err != nil {
 		return nil, err
 	}
