@@ -9,6 +9,7 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -82,3 +83,8 @@ func InitDB(postgresURL string) (*gorm.DB, *migrate.Migrate, error) {
 	return gormDB, m, nil
 }
 
+func InitRedis(redisURL string) *redis.Client {
+	return redis.NewClient(&redis.Options{
+		Addr: redisURL,
+	})
+}

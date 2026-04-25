@@ -9,17 +9,19 @@ import (
 	"testing"
 	"time"
 
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
 
 var db *gorm.DB
+var rdb *redis.Client
+
+func TestMain(m *testing.M) {
+	testutils.RunTestMain(m, &db, &rdb, true, true)
+}
 
 func newTestTaskStore(db *gorm.DB) task.TaskStore {
 	return task.NewTaskStore(db)
-}
-
-func TestMain(m *testing.M) {
-	testutils.RunTestMain(m, &db, true, true)
 }
 
 func runTest(t *testing.T, db *gorm.DB, name string, f func(*testing.T, *gorm.DB, task.TaskStore)) {

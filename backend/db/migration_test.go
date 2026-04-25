@@ -4,14 +4,15 @@ import (
 	"backend/testutils"
 	"testing"
 
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
 
 var db *gorm.DB
-
+var rdb *redis.Client
 
 func TestMain(m *testing.M) {
-	testutils.RunTestMain(m, &db, true, false)
+	testutils.RunTestMain(m, &db, &rdb, true, false)
 }
 
 // allTableNames returns the expected table names from the migration.

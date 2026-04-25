@@ -14,6 +14,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/echotest"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
 
@@ -21,6 +22,11 @@ const testSessionExpiryHours = 1
 const testSessionSecret = "test-secret"
 
 var db *gorm.DB
+var rdb *redis.Client
+
+func TestMain(m *testing.M) {
+	testutils.RunTestMain(m, &db, &rdb, true, true)
+}
 
 func newTestAuthService(db *gorm.DB) authService {
 	userStore := userStore.NewUserStore(db)
@@ -34,10 +40,6 @@ func newTestAuthService(db *gorm.DB) authService {
 		cfg:                       cfg,
 		isAuthenticatedMiddleware: createIsAuthenticatedMiddleware(cfg),
 	}
-}
-
-func TestMain(m *testing.M) {
-	testutils.RunTestMain(m, &db, true, true)
 }
 
 func TestAuthService(t *testing.T) {

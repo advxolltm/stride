@@ -3,27 +3,33 @@ package testutils
 import (
 	"backend/db"
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"testing"
 
+	"github.com/redis/go-redis/v9"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
+	redisTestcontainers "github.com/testcontainers/testcontainers-go/modules/redis"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"gorm.io/gorm"
 )
 
 var ctx = context.Background()
 
-// SetupDBFromEnv connects to an existing database using environment variables
+// SetupDBAndRedisFromEnv connects to an existing database using environment variables
 // (DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME).
-func SetupDBFromEnv() *gorm.DB {
-	dsn := db.PostgresDSNFromEnv()
+func SetupDBAndRedisFromEnv() (*gorm.DB, *redis.Client) {
+	postgresDSN := db.PostgresDSNFromEnv()
 
-	testdb, _, err := db.InitDB(dsn)
+	testdb, _, err := db.InitDB(postgresDSN)
 	AssertNoError(err)
 
-	return testdb
+	redisDSN := db.RedisDSNFromEnv()
+	testRedis := db.InitRedis(redisDSN)
+
+	return testdb, testRedis
 }
 
 func SeedDB(db *gorm.DB) {
@@ -45,11 +51,34 @@ func TAssertError(t interface{ Helper(); Fatalf(string, ...any) }, err error) {
 	}
 }
 
-func SetupDB() *gorm.DB {
+func SetupDB() (*gorm.DB, *redis.Client) {
 	if os.Getenv("CI") == "true" {
-		return SetupDBFromEnv()
+		return SetupDBAndRedisFromEnv()
 	}
-	return setupDBWithTestcontainers()
+	return setupDBAndRedisWithTestcontainers()
+}
+
+func setupDBAndRedisWithTestcontainers() (*gorm.DB, *redis.Client) {
+	return setupDBWithTestcontainers(), setupRedisWithTestcontainers()
+}
+
+func setupRedisWithTestcontainers() *redis.Client {
+	redisContainer, err := redisTestcontainers.Run(
+		ctx,
+		"redis:8.4-alpine",
+		testcontainers.WithWaitStrategy(
+			wait.ForListeningPort("6379/tcp"),
+		),
+	)
+	AssertNoError(err)
+
+	rHost, err := redisContainer.Host(ctx)
+	AssertNoError(err)
+
+	rPort, err := redisContainer.MappedPort(ctx, "6379")
+	AssertNoError(err)
+
+	return db.InitRedis(fmt.Sprintf("%s:%s", rHost, rPort.Port()))
 }
 
 func setupDBWithTestcontainers() *gorm.DB {
@@ -94,8 +123,8 @@ func TeardownDB() {
 // isolation at zero cost.
 //
 // The function always calls os.Exit and therefore never returns.
-func RunTestMain(m *testing.M, pDB **gorm.DB, seed bool, withTransaction bool) {
-	testDB := SetupDB()
+func RunTestMain(m *testing.M, pDB **gorm.DB, rdb **redis.Client, seed bool, withTransaction bool) {
+	testDB, testRedis := SetupDB()
 
 	if withTransaction {
 		testDB = testDB.Begin()
@@ -106,6 +135,8 @@ func RunTestMain(m *testing.M, pDB **gorm.DB, seed bool, withTransaction bool) {
 	if seed {
 		SeedDB(testDB)
 	}
+
+	*rdb = testRedis
 
 	code := m.Run()
 

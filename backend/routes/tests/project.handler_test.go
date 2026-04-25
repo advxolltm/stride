@@ -20,15 +20,17 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 )
 
 var db *gorm.DB
+var rdb *redis.Client
 
 func TestMain(m *testing.M) {
-	testutils.RunTestMain(m, &db, true, true)
+	testutils.RunTestMain(m, &db, &rdb, true, true)
 }
 
 func getCookie(t *testing.T, authServ authService.AuthService, email string, password string) *http.Cookie {
