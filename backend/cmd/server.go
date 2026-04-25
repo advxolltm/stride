@@ -9,7 +9,7 @@ import (
 	"github.com/labstack/echo/v5/middleware"
 
 	// NOTE: if you want to give multiple "layers" (route, service, db) the same package-name to group them together, you can provide a custom name on import to distinguish them like here
-	mainDB "backend/db"
+	"backend/db"
 	exampleDB "backend/db/example"
 	projectDB "backend/db/project"
 	taskDB "backend/db/task"
@@ -76,9 +76,9 @@ func main() {
 	exampleStore := exampleDB.NewExampleStore("some-db-connection-string")
 
 	var migration *migrate.Migrate
-	dsn := mainDB.PostgresDSNFromEnv()
+	dsn := db.PostgresDSNFromEnv()
 
-	mainDB, migration, err := mainDB.InitDB(dsn)
+	mainDB, migration, err := db.InitDB(dsn)
 	defer migration.Down()
 
 	testutils.SeedDB(mainDB)
@@ -87,6 +87,9 @@ func main() {
 		println("failed to initialize database", "error", err)
 	}
 	println("Database initialized successfully:", mainDB != nil)
+
+	rdb := db.InitRedis(db.RedisDSNFromEnv())
+	defer rdb.Close()
 
 	userStore := userDB.NewUserStore(mainDB)
 	projectStore := projectDB.NewProjectStore(mainDB)
@@ -109,10 +112,11 @@ func main() {
 	handlers := []routes.RouteHandler{
 		routes.NewHealthRouteHandler(),
 		routes.NewAuthRouteHandler(authService, userService),
-		routes.NewExampleRouteHandler(exampleService, authService),
+		routes.NewExampleRouteHandler(exampleService, authService, rdb),
 		projects.NewProjectsGroup(projectService, whiteboardService, authService),
-		taskHandler.NewTaskRouteHandler(authService, taskService, projectService),
+		taskHandler.NewTaskRouteHandler(authService, taskService, projectService, rdb),
 		routes.NewUserRouteHandler(userService, authService),
+		routes.NewWSRouteHandler(authService, projectService, rdb),
 	}
 
 	for _, handler := range handlers {

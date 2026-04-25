@@ -15,3 +15,11 @@ func PostgresDSNFromEnv() string {
 		config.EnvStrMust("DB_NAME"),
 	)
 }
+
+func RedisDSNFromEnv() string {
+	return fmt.Sprintf(
+		"%s:%s", 
+		config.EnvStrMust("REDIS_HOST"),
+		config.EnvStrMust("REDIS_PORT"),
+	)
+}

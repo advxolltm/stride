@@ -2,13 +2,17 @@ package routes
 
 import (
 	"backend/models"
+	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
+	"github.com/redis/go-redis/v9"
 )
 
 // A general RouteHandler interface.
@@ -303,4 +307,91 @@ type ReturnMember struct {
 	Role      string      `json:"role"`
 	JoinedAt  time.Time   `json:"joined_at"`
 	User      *ReturnUser `json:"user,omitempty"`
+}
+
+// Websocket Messages for live updates
+type WSMessageType int
+
+const (
+	// Chat message types
+	ChatMessageCreate WSMessageType = iota
+
+	// Task message types
+	TaskCreate
+	TaskUpdate
+	TaskDelete
+	TaskMove
+	TaskAssign
+	TaskUnassign
+
+	// Project message types
+	ProjectMemberAdd
+	ProjectMemberRemove
+)
+
+type WSMessage[T any] struct {
+	Type    WSMessageType `json:"type"`
+	Payload T             `json:"payload"`
+}
+
+func validateWSMessageStruct(v reflect.Value) {
+	c := v.Type()
+	if !strings.HasPrefix(c.PkgPath(), "backend/routes") {
+		panic(fmt.Sprintf("invalid type used for WSUpdate: %s", c.Name()))
+	}
+
+	for field := range c.Fields() {
+		if !field.IsExported() {
+			continue
+		}
+
+		jsonTag := field.Tag.Get("json")
+		if jsonTag == "" {
+			panic(fmt.Sprintf("field in type for WSUpdate does not have a json tag: %s->%s", c.Name(), field.Name))
+		}
+	}
+}
+
+func validateWSMessage[T any](payload T) {
+	c := reflect.TypeOf(payload)
+	if c.Kind() != reflect.Struct && c.Kind() != reflect.Array && c.Kind() != reflect.Slice {
+		panic(fmt.Sprintf("WSUpdate payload must be a valid struct (or valid array of structs), but was: %s", c.Kind().String()))
+	}
+
+	v := reflect.ValueOf(payload)
+	
+	if v.Kind() == reflect.Slice || v.Kind() == reflect.Array {
+		for i := 0; i < v.Len(); i++ {
+			e := v.Index(i)
+			validateWSMessageStruct(e)
+		}
+	} else {
+		validateWSMessageStruct(v)
+	}
+}
+
+func SendWSUpdate[T any](
+	ctx context.Context,
+	rdb *redis.Client,
+	projectID uuid.UUID,
+	t WSMessageType,
+	payload T,
+) error {
+	validateWSMessage(payload)
+
+	wsMsg := WSMessage[T]{
+		Type:    t,
+		Payload: payload,
+	}
+	msg, err := json.Marshal(wsMsg)
+	if err != nil {
+		return fmt.Errorf("failed to send ws update: %w", err)
+	}
+
+	res := rdb.Publish(ctx, projectID.String(), msg)
+	if res.Err() != nil {
+		return fmt.Errorf("failed to send ws update: %w", res.Err())
+	}
+
+	return nil
 }

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v5"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
 	userStore "backend/db/user"
@@ -20,6 +21,11 @@ import (
 )
 
 var db *gorm.DB
+var rdb *redis.Client
+
+func TestMain(m *testing.M) {
+	testutils.RunTestMain(m, &db, &rdb, true, true)
+}
 
 func newTestAuthHandler(db *gorm.DB) authRouteHandler {
 	userStore := userStore.NewUserStore(db)
@@ -29,10 +35,6 @@ func newTestAuthHandler(db *gorm.DB) authRouteHandler {
 		authService,
 		userService,
 	}
-}
-
-func TestMain(m *testing.M) {
-	testutils.RunTestMain(m, &db, true, true)
 }
 
 func TestAuthHandler(t *testing.T) {

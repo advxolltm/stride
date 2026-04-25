@@ -16,6 +16,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
@@ -30,8 +31,13 @@ import (
 )
 
 var db *gorm.DB
+var rdb *redis.Client
 
-func newTestTaskHandler(db *gorm.DB) taskRouteHandler {
+func TestMain(m *testing.M) {
+	testutils.RunTestMain(m, &db, &rdb, true, true)
+}
+
+func newTestTaskHandler(db *gorm.DB, rdb *redis.Client) taskRouteHandler {
 	userStore := userStore.NewUserStore(db)
 	projectStore := projectStore.NewProjectStore(db)
 	taskStore := taskStore.NewTaskStore(db)
@@ -45,11 +51,8 @@ func newTestTaskHandler(db *gorm.DB) taskRouteHandler {
 		authService,
 		taskService,
 		projectService,
+		rdb,
 	}
-}
-
-func TestMain(m *testing.M) {
-	testutils.RunTestMain(m, &db, true, true)
 }
 
 func loginUser(t *testing.T, aService authService.AuthService, c *echo.Context, user models.User) {
@@ -97,7 +100,7 @@ func TestAuthHandler(t *testing.T) {
 	runTest := func(t *testing.T, db *gorm.DB, name string, f func(*testing.T, *gorm.DB, taskRouteHandler)) {
 		t.Run(name, func(t *testing.T) {
 			db.Transaction(func(tx *gorm.DB) error {
-				f(t, tx, newTestTaskHandler(tx))
+				f(t, tx, newTestTaskHandler(tx, rdb))
 				return fmt.Errorf("rollback %s", t.Name())
 			})
 		})

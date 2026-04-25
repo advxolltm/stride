@@ -6,10 +6,10 @@ import (
 	"backend/testutils"
 	"context"
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
@@ -17,15 +17,10 @@ import (
 )
 
 var db *gorm.DB
+var rdb *redis.Client
 
 func TestMain(m *testing.M) {
-	db = testutils.SetupDB()
-	db = db.Begin()
-	testutils.SeedDB(db)
-	exitCode := m.Run()
-	db.Rollback()
-	testutils.TeardownDB()
-	os.Exit(exitCode)
+	testutils.RunTestMain(m, &db, &rdb, true, true)
 }
 
 func newStore(tx *gorm.DB) userStore.UserStore {
