@@ -276,26 +276,37 @@ func TestProjectService(t *testing.T) {
 	})
 
 	runTest(t, db, "User with multiple projects gets them all returned", func(t *testing.T, db *gorm.DB, service projectService.ProjectService, userServ userService.UserService) {
-		user := testutils.GenerateRandomUser()
-		uStore := userStore.NewUserStore(db)
-		uStore.CreateUser(ctx, &user)
+		user_gen := testutils.GenerateRandomUser()
+		user2_gen := testutils.GenerateRandomUser()
+		user, _ := userServ.CreateUser(ctx, user_gen.Username, user_gen.Email, "Password123!")
+		user2, _ := userServ.CreateUser(ctx, user2_gen.Username, user2_gen.Email, "Password123!")
 
-		proj1 := testutils.GenerateRandomProject([]models.User{user})
-		proj2 := testutils.GenerateRandomProject([]models.User{user})
-		proj3 := testutils.GenerateRandomProject([]models.User{user})
+		proj1_create := testutils.GenerateRandomProject([]models.User{*user})
+		proj2_create := testutils.GenerateRandomProject([]models.User{*user})
+		proj3_create := testutils.GenerateRandomProject([]models.User{*user})
+		proj4_create := testutils.GenerateRandomProject([]models.User{*user2})
 
-		proj1.Slug = "proj1-slug"
-		proj2.Slug = "proj2-slug"
-		proj3.Slug = "proj3-slug"
+		_, createErr1 := service.CreateProject(ctx, &user.ID, proj1_create.Name, "proj1-slug-test", proj1_create.Description, proj1_create.Status)
+		_, createErr2 := service.CreateProject(ctx, &user.ID, proj2_create.Name, "proj2-slug-test", proj2_create.Description, proj2_create.Status)
+		_, createErr3 := service.CreateProject(ctx, &user.ID, proj3_create.Name, "proj3-slug-test", proj3_create.Description, proj3_create.Status)
+		proj4, createErr4 := service.CreateProject(ctx, &user2.ID, proj4_create.Name, "proj4-slug-test", proj4_create.Description, proj4_create.Status)
 
-		projes := []*models.Project{&proj1, &proj2, &proj3}
+		require.NoError(t, createErr1)
+		require.NoError(t, createErr2)
+		require.NoError(t, createErr3)
+		require.NoError(t, createErr4)
 
-		createErr := db.Create(projes)
-		require.NoError(t, createErr.Error)
+		_, addErr := service.AddUsersToProject(ctx, []projectService.AddMemberRequest{
+			{
+				UserId: user.ID,
+				Role:   "plebian",
+			},
+		}, proj4.ID)
+		require.NoError(t, addErr)
 
 		userProjects, getProjErr := service.GetAllProjects(ctx, user.ID)
 		require.NoError(t, getProjErr)
-		assert.Len(t, userProjects, 3)
+		assert.Len(t, userProjects, 4)
 	})
 
 	runTest(t, db, "AddUsersToProject adds users to the project", func(t *testing.T, db *gorm.DB, service projectService.ProjectService, userServ userService.UserService) {

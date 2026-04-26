@@ -275,21 +275,36 @@ func TestProjectStore(t *testing.T) {
 
 	runTest(t, db, "User with multiple projects gets them all returned", func(t *testing.T, db *gorm.DB, store project.ProjectStore) {
 		user := testutils.GenerateRandomUser()
+		user2 := testutils.GenerateRandomUser()
 		uStore := userStore.NewUserStore(db)
 		uStore.CreateUser(ctx, &user)
 
 		proj1 := testutils.GenerateRandomProject([]models.User{user})
 		proj2 := testutils.GenerateRandomProject([]models.User{user})
 		proj3 := testutils.GenerateRandomProject([]models.User{user})
+		proj4 := testutils.GenerateRandomProject([]models.User{user2})
 
-		projes := []*models.Project{&proj1, &proj2, &proj3}
+		createErr1 := store.CreateProject(ctx, &proj1)
+		require.NoError(t, createErr1)
+		createErr2 := store.CreateProject(ctx, &proj2)
+		require.NoError(t, createErr2)
+		createErr3 := store.CreateProject(ctx, &proj3)
+		require.NoError(t, createErr3)
+		createErr4 := store.CreateProject(ctx, &proj4)
+		require.NoError(t, createErr4)
 
-		createErr := db.Create(projes)
-		require.NoError(t, createErr.Error)
+		addErr := store.AddUsersToProject(ctx, []models.ProjectMember{
+			{
+				UserID:    user.ID,
+				ProjectID: proj4.ID,
+				Role:      "plebian",
+			},
+		})
+		require.NoError(t, addErr)
 
 		userProjects, getProjErr := store.GetAllProjects(ctx, user.ID)
 		require.NoError(t, getProjErr)
-		assert.Len(t, userProjects, 3)
+		assert.Len(t, userProjects, 4)
 	})
 
 	runTest(t, db, "AddUsersToProject adds users to the project", func(t *testing.T, db *gorm.DB, store project.ProjectStore) {
