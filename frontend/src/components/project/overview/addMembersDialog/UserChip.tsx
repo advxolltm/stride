@@ -8,7 +8,6 @@ interface UserChipProps {
     onRemove: (id: string) => void
 }
 
-
 export function UserChip({
     id,
     displayName,

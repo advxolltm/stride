@@ -1,8 +1,44 @@
+import type { User } from '../../../shared/types'
+
+// --- Api types ---
+
 export type ApiTaskAssignee = {
     id: string
     task_id: string
     project_member_id: string
     assigned_at: string
+    project_member: {
+        id: string
+        user_id: string
+        project_id: string
+        role: string
+        joined_at: string
+        user: {
+            id: string
+            username: string
+            email: string
+            full_name: string | null
+            avatar_url: {
+                '300': string
+                '600': string
+                original: string
+            } | null
+        }
+    }
+}
+
+export type ApiProjectSkill = {
+    id: string
+    project_id: string
+    name: string
+    description: string | null
+}
+
+export type ApiTaskSkill = {
+    id: string
+    task_id: string
+    project_skill_id: string
+    project_skill: ApiProjectSkill
 }
 
 export type ApiTask = {
@@ -18,8 +54,12 @@ export type ApiTask = {
     position: number
     created_at: string
     updated_at: string
-    assignees?: ApiTaskAssignee[]
+    completed_at: string | null
+    task_assignees: ApiTaskAssignee[]
+    task_skills: ApiTaskSkill[]
 }
+
+// --- Domain types ---
 
 export type TaskStatus = 'todo' | 'in_progress' | 'done'
 
@@ -28,6 +68,15 @@ export type TaskAssignee = {
     taskId: string
     projectMemberId: string
     assignedAt: string
+    user: User
+}
+
+export type TaskSkill = {
+    id: string
+    taskId: string
+    projectSkillId: string
+    name: string
+    description: string | null
 }
 
 export type Task = {
@@ -43,7 +92,9 @@ export type Task = {
     position: number
     createdAt: string
     updatedAt: string
-    assignees: TaskAssignee[]
+    completedAt: string | null
+    assignees?: TaskAssignee[]
+    skills?: TaskSkill[]
 }
 
 export type Column = {

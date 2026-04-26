@@ -6,6 +6,7 @@ import { TaskDescriptionField } from './fields/TaskDescriptionField'
 import { TaskDueDateField } from './fields/TaskDueDateField'
 import { TaskStatusField } from './fields/TaskStatusField'
 import { TaskTitleField } from './fields/TaskTitleField'
+import { TaskSkillsField } from './fields/TaskSkillsField'
 interface TaskEditDrawerProps {
     task: Task | null
     isOpen: boolean
@@ -37,8 +38,7 @@ export function TaskEditDrawer({
                             <TaskDueDateField task={task} />
                             <TaskStatusField task={task} />
                             <TaskAssigneeField task={task} />
-                            {/**TODO: Task skills are not implemented yet */}
-                            {/* <TaskSkillsField task={task} /> */}
+                            <TaskSkillsField task={task} />
                         </Drawer.Body>
                     </Drawer.Dialog>
                 </Drawer.Content>

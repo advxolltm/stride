@@ -37,8 +37,7 @@
       "detailsTitle": "Task Details",
       "cancel": "Cancel",
       "save": "Save changes",
-      "close": "Close",
-      "unassigned": "Unassigned"
+      "close": "Close"
     },
     "modal": {
       "createTitle": "New Task",
@@ -64,7 +63,8 @@
       "skillsPlaceholder": "Add skills...",
       "skillsSearch": "Search skills...",
       "skillsEmpty": "No skills found",
-      "assigneeSearch": "Search users..."
+      "assigneeSearch": "Search users...",
+      "assigneeEmpty": "No assignee"
     }
   }
 }

@@ -3,14 +3,12 @@ export type ApiErrorResponse = {
 }
 
 export type ApiUser = {
-    ID: string
-    Username: string
-    Email: string
-    PasswordHash?: string
-    FullName: string | null
-    AvatarURL: string | null
-    CreatedAt: string
-    UpdatedAt: string
+    id: string
+    username: string
+    email: string
+    password_hash?: string
+    full_name: string | null
+    avatar_url: { 300: string; 600: string; original: string } | null
 }
 
 export type CreateUserRequest = {

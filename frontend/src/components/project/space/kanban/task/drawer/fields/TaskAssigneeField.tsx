@@ -28,7 +28,7 @@ export function TaskAssigneeField({ task }: { task: Task }) {
 
     const isSaving = isAssigning || isRemovingAssignee
 
-    const currentAssignee = task.assignees[0]
+    const currentAssignee = task.assignees?.[0] 
     const selectedKey = currentAssignee?.projectMemberId ?? null
 
     const items = members.map((m) => ({
@@ -37,7 +37,6 @@ export function TaskAssigneeField({ task }: { task: Task }) {
     }))
 
     async function handleChange(key: Key | null) {
-        // 👉 cleared → unassign
         if (!key) {
             if (!currentAssignee) return
             await unassignTask({
@@ -48,7 +47,7 @@ export function TaskAssigneeField({ task }: { task: Task }) {
             return
         }
 
-        // 👉 assign new (replace existing if any)
+        // A member was selected — unassign current first if any, then assign new
         if (currentAssignee) {
             await unassignTask({
                 taskId: task.id,
@@ -56,7 +55,6 @@ export function TaskAssigneeField({ task }: { task: Task }) {
                 body: { project_member_id: currentAssignee.projectMemberId },
             })
         }
-
         await assignTask({
             taskId: task.id,
             projectId,
@@ -73,7 +71,7 @@ export function TaskAssigneeField({ task }: { task: Task }) {
 
             <Autocomplete
                 variant="secondary"
-                placeholder={t('tasks.drawer.unassigned')}
+                placeholder={t('tasks.form.assigneeEmpty')}
                 selectionMode="single"
                 value={selectedKey}
                 isDisabled={isSaving}
@@ -82,19 +80,20 @@ export function TaskAssigneeField({ task }: { task: Task }) {
                 <Autocomplete.Trigger>
                     <Autocomplete.Value>
                         {({ defaultChildren, isPlaceholder, state }) => {
+                            // No selection → show placeholder
                             if (isPlaceholder || !state.selectedItems.length) {
                                 return (
                                     <span className="text-muted">
-                                        {t('tasks.drawer.unassigned')}
+                                        {t('tasks.form.assigneeEmpty')}
                                     </span>
                                 )
                             }
 
+                            // Selection → show avatar + name
                             const selected = state.selectedItems[0]
                             const member = members.find(
                                 (m) => m.id === selected.key,
                             )
-
                             if (!member) return defaultChildren
 
                             return (
@@ -117,17 +116,14 @@ export function TaskAssigneeField({ task }: { task: Task }) {
                             )
                         }}
                     </Autocomplete.Value>
-                    <Autocomplete.ClearButton />
+                    {/* Only show the X when someone is assigned */}
+                    {selectedKey && <Autocomplete.ClearButton />}
                     <Autocomplete.Indicator />
                 </Autocomplete.Trigger>
 
                 <Autocomplete.Popover>
                     <Autocomplete.Filter filter={contains}>
-                        <SearchField
-                            autoFocus
-                            name="search"
-                            variant="secondary"
-                        >
+                        <SearchField autoFocus name="search" variant="secondary">
                             <SearchField.Group>
                                 <SearchField.SearchIcon />
                                 <SearchField.Input

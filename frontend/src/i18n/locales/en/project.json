@@ -91,7 +91,9 @@
     "removeMessage": "Are you sure you want to remove this member from the project?",
     "removeConfirm": "Remove",
     "removeConfirmPending": "Removing...",
-    "removeCancel": "Cancel"
+    "removeCancel": "Cancel",
+    "removeSuccess": "Member removed successfully",
+    "removeError": "Failed to remove member"
   },
   "skillsSettings": {
     "title": "Skills",

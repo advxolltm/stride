@@ -2,20 +2,37 @@ import { baseApi } from '../../api/base.api'
 import type {
     ApiTask,
     ApiTaskAssignee,
+    ApiTaskSkill,
     AssignTaskRequest,
     CreateTaskRequest,
     MoveTaskRequest,
     Task,
     TaskAssignee,
+    TaskSkill,
     UnassignTaskRequest,
     UpdateTaskRequest,
 } from './task.types'
 
-const transformTaskAssignee = (a: ApiTaskAssignee): TaskAssignee => ({
+const mapApiTaskAssigneeToAssignee = (a: ApiTaskAssignee): TaskAssignee => ({
     id: a.id,
     taskId: a.task_id,
     projectMemberId: a.project_member_id,
     assignedAt: a.assigned_at,
+    user: {
+        id: a.project_member.user.id,
+        username: a.project_member.user.username,
+        email: a.project_member.user.email,
+        fullName: a.project_member.user.full_name,
+        avatarUrl: a.project_member.user.avatar_url?.original ?? null,
+    },
+})
+
+const mapApiTaskSkillToSkill = (skill: ApiTaskSkill): TaskSkill => ({
+    id: skill.id,
+    taskId: skill.task_id,
+    projectSkillId: skill.project_skill_id,
+    name: skill.project_skill.name,
+    description: skill.project_skill.description,
 })
 
 const transformTask = (task: ApiTask): Task => ({
@@ -31,7 +48,9 @@ const transformTask = (task: ApiTask): Task => ({
     position: task.position,
     createdAt: task.created_at,
     updatedAt: task.updated_at,
-    assignees: task.assignees?.map(transformTaskAssignee) ?? [],
+    completedAt: task.completed_at,
+    assignees: task.task_assignees?.map(mapApiTaskAssigneeToAssignee) ?? [],
+    skills: task.task_skills?.map(mapApiTaskSkillToSkill) ?? [],
 })
 
 const hasOwn = <T extends object>(object: T, key: keyof T) =>
@@ -140,13 +159,9 @@ export const taskApi = baseApi.injectEndpoints({
                     ),
                 )
                 const patchTask = dispatch(
-                    taskApi.util.updateQueryData(
-                        'getTask',
-                        taskId,
-                        (draft) => {
-                            applyTaskUpdate(draft, body)
-                        },
-                    ),
+                    taskApi.util.updateQueryData('getTask', taskId, (draft) => {
+                        applyTaskUpdate(draft, body)
+                    }),
                 )
 
                 try {
@@ -158,7 +173,10 @@ export const taskApi = baseApi.injectEndpoints({
             },
         }),
 
-        deleteTask: builder.mutation<void, { taskId: string; projectId: string }>({
+        deleteTask: builder.mutation<
+            void,
+            { taskId: string; projectId: string }
+        >({
             query: ({ taskId }) => ({
                 url: `/tasks/task/${taskId}`,
                 method: 'DELETE',
@@ -168,7 +186,10 @@ export const taskApi = baseApi.injectEndpoints({
             ],
         }),
 
-        assignTask: builder.mutation<TaskAssignee, { taskId: string; projectId: string; body: AssignTaskRequest }>({
+        assignTask: builder.mutation<
+            TaskAssignee,
+            { taskId: string; projectId: string; body: AssignTaskRequest }
+        >({
             query: ({ taskId, body }) => ({
                 url: `/tasks/task/${taskId}/assign`,
                 method: 'POST',
@@ -179,7 +200,10 @@ export const taskApi = baseApi.injectEndpoints({
             ],
         }),
 
-        unassignTask: builder.mutation<void, { taskId: string; projectId: string; body: UnassignTaskRequest }>({
+        unassignTask: builder.mutation<
+            void,
+            { taskId: string; projectId: string; body: UnassignTaskRequest }
+        >({
             query: ({ taskId, body }) => ({
                 url: `/tasks/task/${taskId}/unassign`,
                 method: 'POST',
@@ -190,7 +214,10 @@ export const taskApi = baseApi.injectEndpoints({
             ],
         }),
 
-        moveTask: builder.mutation<Task[], { taskId: string; projectId: string; body: MoveTaskRequest }>({
+        moveTask: builder.mutation<
+            Task[],
+            { taskId: string; projectId: string; body: MoveTaskRequest }
+        >({
             query: ({ taskId, body }) => ({
                 url: `/tasks/task/${taskId}/move`,
                 method: 'POST',
@@ -215,13 +242,9 @@ export const taskApi = baseApi.injectEndpoints({
                     ),
                 )
                 const patchTask = dispatch(
-                    taskApi.util.updateQueryData(
-                        'getTask',
-                        taskId,
-                        (draft) => {
-                            draft.position = body.position
-                        },
-                    ),
+                    taskApi.util.updateQueryData('getTask', taskId, (draft) => {
+                        draft.position = body.position
+                    }),
                 )
 
                 try {
