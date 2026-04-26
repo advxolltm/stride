@@ -22,11 +22,10 @@ func NewUserRouteHandler(us userService.UserService, as authService.AuthService)
 }
 
 func (h userRouteHandler) AddRoutes(api *echo.Group) {
-	g := api.Group("/users")
-	g.Use(h.authService.AuthenticatedMiddleware())
+	api.POST("/users", h.userPOSTHandle)
+	g := api.Group("/users", h.authService.AuthenticatedMiddleware())
 	g.GET("", h.usersGETHandle)
 	g.GET("/:id", h.userGETHandle)
-	g.POST("", h.userPOSTHandle)
 	g.PATCH("/:id", h.userPATCHHandle)
 	g.DELETE("/:id", h.userDELETEHandle)
 }
@@ -123,7 +122,6 @@ func (h userRouteHandler) userGETHandle(c *echo.Context) error {
 //	@Param		data	body		createUserRequest	true	"Create user data"
 //	@Success	201	{object}	User
 //	@Failure	400	{object}	ErrorResponse	"invalid request body"
-//	@Failure	401	{object}	ErrorResponse	"unauthorized"
 //	@Failure	409	{object}	ErrorResponse	"email or username already in use"
 //	@Router		/users [post]
 func (h userRouteHandler) userPOSTHandle(c *echo.Context) error {

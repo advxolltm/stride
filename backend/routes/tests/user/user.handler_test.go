@@ -219,7 +219,7 @@ func TestUserRouteHandler_Integration(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 	})
 
-	runTest(t, "POST /users returns 401 without auth", func(t *testing.T, tx *gorm.DB) {
+	runTest(t, "POST /users returns 201 without auth", func(t *testing.T, tx *gorm.DB) {
 		env := newUserTestEnv(t, tx)
 		body := map[string]string{
 			"username": "noauth",
@@ -232,7 +232,13 @@ func TestUserRouteHandler_Integration(t *testing.T) {
 		rec := httptest.NewRecorder()
 		env.e.ServeHTTP(rec, req)
 
-		assert.Equal(t, http.StatusUnauthorized, rec.Code)
+		require.Equal(t, http.StatusCreated, rec.Code)
+
+		var u userResponse
+		err := json.Unmarshal(rec.Body.Bytes(), &u)
+		require.NoError(t, err)
+		assert.Equal(t, "noauth", u.Username)
+		assert.Equal(t, "noauth@test.com", u.Email)
 	})
 
 	// ── PATCH /users/:id ────────────────────────────────────────────
