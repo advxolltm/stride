@@ -12,21 +12,23 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 )
 
 var db *gorm.DB
+var rdb *redis.Client
+
+func TestMain(m *testing.M) {
+	testutils.RunTestMain(m, &db, &rdb, true, true)
+}
 
 func newTestProjectService(db *gorm.DB) (projectService.ProjectService, userService.UserService) {
 	store := project.NewProjectStore(db)
 	uStore := userStore.NewUserStore(db)
 	return projectService.NewProjectService(store), userService.NewUserService(uStore)
-}
-
-func TestMain(m *testing.M) {
-	testutils.RunTestMain(m, &db, true, true)
 }
 
 func runTest(t *testing.T, db *gorm.DB, name string, f func(*testing.T, *gorm.DB, projectService.ProjectService, userService.UserService)) {

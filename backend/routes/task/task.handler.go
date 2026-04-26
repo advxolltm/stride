@@ -12,16 +12,18 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
+	"github.com/redis/go-redis/v9"
 )
 
 type taskRouteHandler struct {
 	authService    authService.AuthService
 	taskService    taskService.TaskService
 	projectService projectService.ProjectService
+	rdb            *redis.Client
 }
 
-func NewTaskRouteHandler(authService authService.AuthService, taskService taskService.TaskService, projectService projectService.ProjectService) *taskRouteHandler {
-	return &taskRouteHandler{authService, taskService, projectService}
+func NewTaskRouteHandler(authService authService.AuthService, taskService taskService.TaskService, projectService projectService.ProjectService, rdb *redis.Client) *taskRouteHandler {
+	return &taskRouteHandler{authService, taskService, projectService, rdb}
 }
 
 func (h taskRouteHandler) AddRoutes(api *echo.Group) {
@@ -153,6 +155,10 @@ func (h taskRouteHandler) taskPOST(c *echo.Context) error {
 	}
 
 	mappedTask := routes.MapTask(task)
+	if err := routes.SendWSUpdate(ctx, h.rdb, task.ProjectID, routes.TaskCreate, mappedTask); err != nil {
+		slog.Error("taskPOST: Failed to send ws update", "error", err)
+	}
+
 	return c.JSON(http.StatusCreated, mappedTask)
 }
 
@@ -218,13 +224,17 @@ func (h taskRouteHandler) taskPATCH(c *echo.Context) error {
 	}
 
 	mappedTask := routes.MapTask(*updatedTask)
+	if err := routes.SendWSUpdate(ctx, h.rdb, task.ProjectID, routes.TaskUpdate, mappedTask); err != nil {
+		slog.Error("taskPATCH: Failed to send ws update", "error", err)
+	}
+
 	return c.JSON(http.StatusOK, mappedTask)
 }
 
 // @Summary Delete a specific task. Must be part of the project of the task.
 // @Tags task
 // @Param id path string true "Task ID"
-// @Success 200 {object} Task "the updated task"
+// @Success 200
 // @Failure 404 {object} ErrorResponse "task not found"
 // @Failure 401 {object} ErrorResponse "unauthorized"
 // @Router /tasks/task/{id} [delete]
@@ -257,6 +267,16 @@ func (h taskRouteHandler) taskDELETE(c *echo.Context) error {
 	if err != nil {
 		status, msg := h.mapServiceError(err)
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
+	}
+
+	type taskDeleteWSUpdate struct {
+		DeletedTaskID uuid.UUID `json:"deletedTaskID"`
+	} // @name TaskDeleteWSUpdate
+
+	if err := routes.SendWSUpdate(ctx, h.rdb, task.ProjectID, routes.TaskDelete, taskDeleteWSUpdate{
+		DeletedTaskID: task.ID,
+	}); err != nil {
+		slog.Error("taskDELETE: Failed to send ws update", "error", err)
 	}
 
 	return c.NoContent(http.StatusOK)
@@ -311,6 +331,9 @@ func (h taskRouteHandler) taskAssignPOST(c *echo.Context) error {
 	}
 
 	mappedTaskAssignee := routes.MapTaskAssignee(*taskAssignee)
+	if err := routes.SendWSUpdate(ctx, h.rdb, task.ProjectID, routes.TaskAssign, mappedTaskAssignee); err != nil {
+		slog.Error("taskAssignPOST: Failed to send ws update", "error", err)
+	}
 
 	return c.JSON(http.StatusCreated, mappedTaskAssignee)
 }
@@ -361,6 +384,18 @@ func (h taskRouteHandler) taskUnassignPOST(c *echo.Context) error {
 	if err != nil {
 		status, msg := h.mapServiceError(err)
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
+	}
+
+	type taskUnassignWSUpdate struct {
+		TaskID          uuid.UUID `json:"taskID"`
+		ProjectMemberID uuid.UUID `json:"projectMemberID"`
+	} // @name TaskUnassignWSUpdate
+
+	if err := routes.SendWSUpdate(ctx, h.rdb, task.ProjectID, routes.TaskUnassign, taskUnassignWSUpdate{
+		TaskID:          taskID,
+		ProjectMemberID: req.ProjectMemberID,
+	}); err != nil {
+		slog.Error("taskUnassignPOST: Failed to send ws update", "error", err)
 	}
 
 	return c.NoContent(http.StatusOK)
@@ -421,6 +456,9 @@ func (h taskRouteHandler) taskMovePOST(c *echo.Context) error {
 	}
 
 	mappedTasksOfProject := routes.MapMany(tasksOfProject, routes.MapTask)
+	if err := routes.SendWSUpdate(ctx, h.rdb, task.ProjectID, routes.TaskMove, mappedTasksOfProject); err != nil {
+		slog.Error("taskMovePOST: Failed to send ws update", "error", err)
+	}
 
 	return c.JSON(http.StatusOK, mappedTasksOfProject)
 }
