@@ -51,14 +51,20 @@ func NewProjectStore(db *gorm.DB) ProjectStore {
 
 func (s *projectStore) GetAllProjects(ctx context.Context, userid uuid.UUID) ([]models.Project, error) {
 	var user models.User
-	result := s.db.Preload("Projects").Preload("Projects.Creator").Preload("Projects.Members").Preload("Projects.Members.User").Preload("Projects.Skills").First(&user, userid)
+	//result := s.db.Preload("Projects").Preload("Projects.Creator").Preload("Projects.Members").Preload("Projects.Members.User").Preload("Projects.Skills").First(&user, userid)
+	result := s.db.WithContext(ctx).Preload("ProjectMemberships").Preload("ProjectMemberships.Project").Preload("ProjectMemberships.Project.Creator").Preload("ProjectMemberships.Project.Members").Preload("ProjectMemberships.Project.Members.User").Preload("ProjectMemberships.Project.Skills").First(&user, userid)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, ErrNonExistentUser
 		}
 		return nil, result.Error
 	}
-	return user.Projects, nil
+	//map each ProjectMembership to Project struct
+	var projects []models.Project
+	for _, projMember := range user.ProjectMemberships {
+		projects = append(projects, projMember.Project)
+	}
+	return projects, nil
 }
 
 func (s *projectStore) GetProject(ctx context.Context, id uuid.UUID) (*models.Project, error) {
