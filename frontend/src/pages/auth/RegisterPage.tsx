@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import {
     Button,
     FieldError,
@@ -6,6 +5,7 @@ import {
     Input,
     Label,
     TextField,
+    toast,
 } from '@heroui/react'
 import { useNavigate } from 'react-router'
 import AuthContainer from '../../components/auth/AuthContainer'
@@ -16,11 +16,9 @@ import { useCreateUserMutation } from '../../store/features/user/user.api'
 export default function RegisterPage() {
     const navigate = useNavigate()
     const [createUser, { isLoading }] = useCreateUserMutation()
-    const [submitError, setSubmitError] = useState<string | null>(null)
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
-        setSubmitError(null)
 
         const formData = new FormData(e.currentTarget)
         const username = String(formData.get('username') ?? '').trim()
@@ -36,11 +34,8 @@ export default function RegisterPage() {
 
             navigate('/login')
         } catch (error: unknown) {
-            setSubmitError(
-                getApiErrorMessage(
-                    error,
-                    'Failed to create account. Please try again.',
-                ),
+            toast.danger(
+                getApiErrorMessage(error) || 'Failed to create account',
             )
         }
     }
@@ -113,10 +108,6 @@ export default function RegisterPage() {
                     placeholder="Create a password"
                     autoComplete="new-password"
                 />
-
-                {submitError ? (
-                    <p className="text-sm text-red-500">{submitError}</p>
-                ) : null}
 
                 <Button
                     type="submit"

@@ -357,6 +357,17 @@ func TestUserService_GetByEmailAndPassword(t *testing.T) {
 		assert.ErrorIs(t, err, ErrUserNotFound)
 	})
 
+	runServiceTest(t, "maps bcrypt mismatch to ErrInvalidPassword", func(t *testing.T, service userService, store *stubUserStore) {
+		store.getByEmailAndPasswordFn = func(_ context.Context, _, _ string) (uuid.UUID, error) {
+			return uuid.Nil, bcrypt.ErrMismatchedHashAndPassword
+		}
+
+		id, err := service.GetByEmailAndPassword(context.Background(), "user@test.com", "Wrong!123")
+
+		assert.Equal(t, uuid.Nil, id)
+		assert.ErrorIs(t, err, ErrInvalidPassword)
+	})
+
 	runServiceTest(t, "wraps store lookup errors", func(t *testing.T, service userService, store *stubUserStore) {
 		store.getByEmailAndPasswordFn = func(_ context.Context, _, _ string) (uuid.UUID, error) {
 			return uuid.Nil, errors.New("auth lookup failed")
