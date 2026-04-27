@@ -6,14 +6,12 @@ import (
 	"strconv"
 )
 
-
 func EnvBool(key string, fallback bool) bool {
 	if val, ok := os.LookupEnv(key); ok {
 		return val == "true"
 	}
 	return fallback
 }
-
 
 func EnvInt(key string, fallback int) int {
 	if val, ok := os.LookupEnv(key); ok {

@@ -284,6 +284,11 @@ func TestProjectStore(t *testing.T) {
 		proj3 := testutils.GenerateRandomProject([]models.User{user})
 		proj4 := testutils.GenerateRandomProject([]models.User{user2})
 
+		proj1.Slug += uuid.NewString()
+		proj2.Slug += uuid.NewString()
+		proj3.Slug += uuid.NewString()
+		proj4.Slug += uuid.NewString()
+
 		createErr1 := store.CreateProject(ctx, &proj1)
 		require.NoError(t, createErr1)
 		createErr2 := store.CreateProject(ctx, &proj2)

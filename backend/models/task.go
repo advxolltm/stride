@@ -21,8 +21,8 @@ type Task struct {
 	UpdatedAt               time.Time  `gorm:"default:current_timestamp"`
 	CompletedAt             *time.Time `gorm:"default:NULL"`
 
-	Project   Project        `gorm:"foreignKey:ProjectID"`
-	Creator   ProjectMember  `gorm:"foreignKey:CreatedBy"`
-	Assignees []TaskAssignee `gorm:"foreignKey:TaskID"`
+	Project    Project        `gorm:"foreignKey:ProjectID"`
+	Creator    ProjectMember  `gorm:"foreignKey:CreatedBy"`
+	Assignees  []TaskAssignee `gorm:"foreignKey:TaskID"`
+	TaskSkills []TaskSkill    `gorm:"foreignKey:TaskID"`
 }
-

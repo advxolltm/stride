@@ -51,13 +51,13 @@ func (h taskRouteHandler) mapServiceError(err error) (int, string) {
 	}
 }
 
-// @Summary Get a specific task. Must be part of the project of the task.
-// @Tags task
-// @Param id path string true "Task ID"
-// @Success 200 {object} Task "the returned task"
-// @Failure 404 {object} ErrorResponse "task not found"
-// @Failure 401 {object} ErrorResponse "unauthorized"
-// @Router /tasks/task/{id} [get]
+//	@Summary	Get a specific task. Must be part of the project of the task.
+//	@Tags		task
+//	@Param		id	path		string			true	"Task ID"
+//	@Success	200	{object}	Task			"the returned task"
+//	@Failure	404	{object}	ErrorResponse	"task not found"
+//	@Failure	401	{object}	ErrorResponse	"unauthorized"
+//	@Router		/tasks/task/{id} [get]
 func (h taskRouteHandler) taskGET(c *echo.Context) error {
 	ctx := c.Request().Context()
 	userID := h.authService.GetClaims(c).UserID
@@ -96,16 +96,16 @@ type createTaskRequest struct {
 	DueDate                 *routes.DateOnly `json:"due_date" swaggertype:"string" format:"date"`
 	ExpectedDurationMinutes *int             `json:"expected_duration_minutes"`
 	Position                *int             `json:"position"`
-} // @name CreateTaskRequest
+} //	@name	CreateTaskRequest
 
-// @Summary Create a new task. Must be part of the project of the task.
-// @Tags task
-// @Param task body createTaskRequest true "Create task data. Note: leaving out the position (or setting it null) appends the task at the end automatically."
-// @Success 201 {object} Task "the created task"
-// @Failure 400 {object} ErrorResponse "bad request"
-// @Failure 404 {object} ErrorResponse "project not found"
-// @Failure 401 {object} ErrorResponse "unauthorized"
-// @Router /tasks/task [post]
+//	@Summary	Create a new task. Must be part of the project of the task.
+//	@Tags		task
+//	@Param		task	body		createTaskRequest	true	"Create task data. Note: leaving out the position (or setting it null) appends the task at the end automatically."
+//	@Success	201		{object}	Task				"the created task"
+//	@Failure	400		{object}	ErrorResponse		"bad request"
+//	@Failure	404		{object}	ErrorResponse		"project not found"
+//	@Failure	401		{object}	ErrorResponse		"unauthorized"
+//	@Router		/tasks/task [post]
 func (h taskRouteHandler) taskPOST(c *echo.Context) error {
 	ctx := c.Request().Context()
 	userID := h.authService.GetClaims(c).UserID
@@ -169,16 +169,16 @@ type updateTaskFieldsRequest struct {
 	StartDate               routes.Nullable[routes.DateOnly] `json:"start_date,omitempty" swaggertype:"string" format:"date"`
 	DueDate                 routes.Nullable[routes.DateOnly] `json:"due_date,omitempty" swaggertype:"string" format:"date"`
 	ExpectedDurationMinutes routes.Nullable[int]             `json:"expected_duration_minutes,omitempty"`
-} // @name UpdateTaskFieldsRequest
+} //	@name	UpdateTaskFieldsRequest
 
-// @Summary Update a specific task. Must be part of the project of the task.
-// @Tags task
-// @Param id path string true "Task ID"
-// @Param data body updateTaskFieldsRequest true "Fields to update a task"
-// @Success 200 {object} Task "the updated task"
-// @Failure 404 {object} ErrorResponse "task not found"
-// @Failure 401 {object} ErrorResponse "unauthorized"
-// @Router /tasks/task/{id} [patch]
+//	@Summary	Update a specific task. Must be part of the project of the task.
+//	@Tags		task
+//	@Param		id		path		string					true	"Task ID"
+//	@Param		data	body		updateTaskFieldsRequest	true	"Fields to update a task"
+//	@Success	200		{object}	Task					"the updated task"
+//	@Failure	404		{object}	ErrorResponse			"task not found"
+//	@Failure	401		{object}	ErrorResponse			"unauthorized"
+//	@Router		/tasks/task/{id} [patch]
 func (h taskRouteHandler) taskPATCH(c *echo.Context) error {
 	ctx := c.Request().Context()
 	userID := h.authService.GetClaims(c).UserID
@@ -231,13 +231,13 @@ func (h taskRouteHandler) taskPATCH(c *echo.Context) error {
 	return c.JSON(http.StatusOK, mappedTask)
 }
 
-// @Summary Delete a specific task. Must be part of the project of the task.
-// @Tags task
-// @Param id path string true "Task ID"
-// @Success 200
-// @Failure 404 {object} ErrorResponse "task not found"
-// @Failure 401 {object} ErrorResponse "unauthorized"
-// @Router /tasks/task/{id} [delete]
+//	@Summary	Delete a specific task. Must be part of the project of the task.
+//	@Tags		task
+//	@Param		id	path		string			true	"Task ID"
+//	@Success	200	{object}	Task			"the updated task"
+//	@Failure	404	{object}	ErrorResponse	"task not found"
+//	@Failure	401	{object}	ErrorResponse	"unauthorized"
+//	@Router		/tasks/task/{id} [delete]
 func (h taskRouteHandler) taskDELETE(c *echo.Context) error {
 	ctx := c.Request().Context()
 	userID := h.authService.GetClaims(c).UserID
@@ -284,16 +284,16 @@ func (h taskRouteHandler) taskDELETE(c *echo.Context) error {
 
 type assignProjectMemberToTaskRequest struct {
 	ProjectMemberID uuid.UUID `json:"project_member_id"`
-} // @name AssignProjectMemberToTaskRequest
+} //	@name	AssignProjectMemberToTaskRequest
 
-// @Summary Assigns a task to a project member. Both the assigner (authenticated user) and the assignee must be part of the project.
-// @Tags task
-// @Param id path string true "Task ID"
-// @Param data body assignProjectMemberToTaskRequest true "The project member to assign"
-// @Success 201 {object} TaskAssignee "the created task assignment"
-// @Failure 404 {object} ErrorResponse "task not found"
-// @Failure 401 {object} ErrorResponse "unauthorized"
-// @Router /tasks/task/{id}/assign [post]
+//	@Summary	Assigns a task to a project member. Both the assigner (authenticated user) and the assignee must be part of the project.
+//	@Tags		task
+//	@Param		id		path		string								true	"Task ID"
+//	@Param		data	body		assignProjectMemberToTaskRequest	true	"The project member to assign"
+//	@Success	201		{object}	TaskAssignee						"the created task assignment"
+//	@Failure	404		{object}	ErrorResponse						"task not found"
+//	@Failure	401		{object}	ErrorResponse						"unauthorized"
+//	@Router		/tasks/task/{id}/assign [post]
 func (h taskRouteHandler) taskAssignPOST(c *echo.Context) error {
 	ctx := c.Request().Context()
 	userID := h.authService.GetClaims(c).UserID
@@ -340,16 +340,16 @@ func (h taskRouteHandler) taskAssignPOST(c *echo.Context) error {
 
 type unassignProjectMemberToTaskRequest struct {
 	ProjectMemberID uuid.UUID `json:"project_member_id"`
-} // @name UnassignProjectMemberToTaskRequest
+} //	@name	UnassignProjectMemberToTaskRequest
 
-// @Summary Unassigns a task from a project member. Both the assigner (authenticated user) and the assignee must be part of the project.
-// @Tags task
-// @Param id path string true "Task ID"
-// @Param data body unassignProjectMemberToTaskRequest true "Member to unassign"
-// @Success 200
-// @Failure 404 {object} ErrorResponse "task not found"
-// @Failure 401 {object} ErrorResponse "unauthorized"
-// @Router /tasks/task/{id}/unassign [post]
+//	@Summary	Unassigns a task from a project member. Both the assigner (authenticated user) and the assignee must be part of the project.
+//	@Tags		task
+//	@Param		id		path	string								true	"Task ID"
+//	@Param		data	body	unassignProjectMemberToTaskRequest	true	"Member to unassign"
+//	@Success	200
+//	@Failure	404	{object}	ErrorResponse	"task not found"
+//	@Failure	401	{object}	ErrorResponse	"unauthorized"
+//	@Router		/tasks/task/{id}/unassign [post]
 func (h taskRouteHandler) taskUnassignPOST(c *echo.Context) error {
 	ctx := c.Request().Context()
 	userID := h.authService.GetClaims(c).UserID
@@ -405,14 +405,14 @@ type moveTaskRequest struct {
 	Position int `json:"position"`
 }
 
-// @Summary Changes the position of the task. Must be part of the project.
-// @Tags task
-// @Param id path string true "Task ID"
-// @Success 200 {array} Task "all tasks of the project with their positions updated"
-// @Failure 404 {object} ErrorResponse "task not found"
-// @Failure 401 {object} ErrorResponse "unauthorized"
-// @Failure 400 {object} ErrorResponse "invalid position"
-// @Router /tasks/task/{id}/move [post]
+//	@Summary	Changes the position of the task. Must be part of the project.
+//	@Tags		task
+//	@Param		id	path		string			true	"Task ID"
+//	@Success	200	{array}		Task			"all tasks of the project with their positions updated"
+//	@Failure	404	{object}	ErrorResponse	"task not found"
+//	@Failure	401	{object}	ErrorResponse	"unauthorized"
+//	@Failure	400	{object}	ErrorResponse	"invalid position"
+//	@Router		/tasks/task/{id}/move [post]
 func (h taskRouteHandler) taskMovePOST(c *echo.Context) error {
 	ctx := c.Request().Context()
 	userID := h.authService.GetClaims(c).UserID
@@ -455,7 +455,7 @@ func (h taskRouteHandler) taskMovePOST(c *echo.Context) error {
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
 	}
 
-	mappedTasksOfProject := routes.MapMany(tasksOfProject, routes.MapTask)
+	mappedTasksOfProject := routes.Map(tasksOfProject, routes.MapTask)
 	if err := routes.SendWSUpdate(ctx, h.rdb, task.ProjectID, routes.TaskMove, mappedTasksOfProject); err != nil {
 		slog.Error("taskMovePOST: Failed to send ws update", "error", err)
 	}
@@ -463,13 +463,13 @@ func (h taskRouteHandler) taskMovePOST(c *echo.Context) error {
 	return c.JSON(http.StatusOK, mappedTasksOfProject)
 }
 
-// @Summary Get all tasks of a project. Must be part of the project.
-// @Tags task
-// @Param id path string true "Project ID"
-// @Success 200 {array} Task "Tasks of a project"
-// @Failure 404 {object} ErrorResponse "project not found"
-// @Failure 401 {object} ErrorResponse "unauthorized"
-// @Router /tasks/for-project/{id} [get]
+//	@Summary	Get all tasks of a project. Must be part of the project.
+//	@Tags		task
+//	@Param		id	path		string			true	"Project ID"
+//	@Success	200	{array}		Task			"Tasks of a project"
+//	@Failure	404	{object}	ErrorResponse	"project not found"
+//	@Failure	401	{object}	ErrorResponse	"unauthorized"
+//	@Router		/tasks/for-project/{id} [get]
 func (h taskRouteHandler) tasksForProjectGET(c *echo.Context) error {
 	ctx := c.Request().Context()
 	userID := h.authService.GetClaims(c).UserID
@@ -495,18 +495,18 @@ func (h taskRouteHandler) tasksForProjectGET(c *echo.Context) error {
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
 	}
 
-	mappedTasksOfProject := routes.MapMany(tasksOfProject, routes.MapTask)
+	mappedTasksOfProject := routes.Map(tasksOfProject, routes.MapTask)
 
 	return c.JSON(http.StatusOK, mappedTasksOfProject)
 }
 
-// @Summary Get all tasks of a project that are assigned to the authenticated user. Must be part of the project.
-// @Tags task
-// @Param id path string true "Project ID"
-// @Success 200 {array} TaskAssigneeWithTask "Tasks of a project assigned to me"
-// @Failure 404 {object} ErrorResponse "project not found"
-// @Failure 401 {object} ErrorResponse "unauthorized"
-// @Router /tasks/for-project/{id}/my-tasks [get]
+//	@Summary	Get all tasks of a project that are assigned to the authenticated user. Must be part of the project.
+//	@Tags		task
+//	@Param		id	path		string					true	"Project ID"
+//	@Success	200	{array}		TaskAssigneeWithTask	"Tasks of a project assigned to me"
+//	@Failure	404	{object}	ErrorResponse			"project not found"
+//	@Failure	401	{object}	ErrorResponse			"unauthorized"
+//	@Router		/tasks/for-project/{id}/my-tasks [get]
 func (h taskRouteHandler) tasksForProjectAssignedToMeGET(c *echo.Context) error {
 	ctx := c.Request().Context()
 	userID := h.authService.GetClaims(c).UserID
@@ -538,7 +538,7 @@ func (h taskRouteHandler) tasksForProjectAssignedToMeGET(c *echo.Context) error 
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
 	}
 
-	mappedTasksOfProject := routes.MapMany(tasksOfProject, routes.MapTaskAssigneeWithTask)
+	mappedTasksOfProject := routes.Map(tasksOfProject, routes.MapTaskAssigneeWithTask)
 
 	return c.JSON(http.StatusOK, mappedTasksOfProject)
 }

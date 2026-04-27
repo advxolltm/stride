@@ -39,7 +39,7 @@ type (
 )
 
 // AssignTask implements [TaskService].
-func (t *taskService) AssignTask(ctx context.Context, taskID uuid.UUID, projectMemberID uuid.UUID) (*models.TaskAssignee, error){
+func (t *taskService) AssignTask(ctx context.Context, taskID uuid.UUID, projectMemberID uuid.UUID) (*models.TaskAssignee, error) {
 	return t.taskStore.AssignTask(ctx, taskID, projectMemberID)
 }
 

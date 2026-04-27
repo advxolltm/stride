@@ -151,7 +151,7 @@ func TestAuthHandler(t *testing.T) {
 					if cookie.Name != authService.SessionTokenName {
 						t.Errorf("expected sessionToken cookie to be set")
 					}
-				} 
+				}
 			})
 
 			runTest(t, db, "logout should return a cookie with expiry set in the past", func(t *testing.T, db *gorm.DB, sut authRouteHandler) {
@@ -169,7 +169,7 @@ func TestAuthHandler(t *testing.T) {
 
 				if len(rec.Result().Cookies()) != 1 {
 					t.Errorf("expected cookie to be set")
-				} 
+				}
 
 				cookie := rec.Result().Cookies()[0]
 				if cookie.Name != auth.SessionTokenName {

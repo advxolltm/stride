@@ -17,9 +17,9 @@ import (
 // TODO: Tests user.db.go
 
 type UpdateUserFields struct {
-	Email        *string            `gorm:"column:email"`
-	PasswordHash *string            `gorm:"column:password_hash"`
-	FullName     *string            `gorm:"column:full_name"`
+	Email        *string              `gorm:"column:email"`
+	PasswordHash *string              `gorm:"column:password_hash"`
+	FullName     *string              `gorm:"column:full_name"`
 	AvatarURL    *models.AvatarURLMap `gorm:"column:avatar_url;type:jsonb"`
 }
 

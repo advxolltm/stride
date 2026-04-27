@@ -13,8 +13,6 @@ import (
 	"gorm.io/gorm"
 )
 
-
-
 type (
 	WhiteboardService interface {
 		GetOrCreateWhiteboardByProjectID(ctx context.Context, projectID uuid.UUID) (*models.Whiteboard, error)
@@ -28,11 +26,11 @@ type (
 		UpdateElement(ctx context.Context, projectID uuid.UUID, id uuid.UUID, fields whiteboard.UpdateElementFields) (*models.WhiteboardElement, error)
 		DeleteElement(ctx context.Context, projectID uuid.UUID, id uuid.UUID) error
 	}
-		
+
 	whiteboardService struct {
-		store whiteboard.WhiteboardStore
+		store          whiteboard.WhiteboardStore
 		projectService project.ProjectService
-	}	
+	}
 )
 
 func NewWhiteboardService(store whiteboard.WhiteboardStore, projectService project.ProjectService) WhiteboardService {
@@ -55,7 +53,6 @@ func ValidateUserAccessToProject(ctx context.Context, projectService project.Pro
 	return nil
 }
 
-
 func (s *whiteboardService) GetOrCreateWhiteboardByProjectID(ctx context.Context, projectID uuid.UUID) (*models.Whiteboard, error) {
 	err := ValidateUserAccessToProject(ctx, s.projectService, projectID)
 	if err != nil {
@@ -75,25 +72,20 @@ func (s *whiteboardService) GetOrCreateWhiteboardByProjectID(ctx context.Context
 	return whiteboard, nil
 }
 
-
-func (s *whiteboardService) GetWhiteboardByProjectID(ctx context.Context, projectUUID uuid.UUID) (*models.Whiteboard, error){
+func (s *whiteboardService) GetWhiteboardByProjectID(ctx context.Context, projectUUID uuid.UUID) (*models.Whiteboard, error) {
 	return s.store.GetWhiteboardByProjectID(ctx, projectUUID)
 }
-
 
 func (s *whiteboardService) CreateWhiteboard(ctx context.Context, whiteboard *models.Whiteboard) error {
 	return s.store.CreateWhiteboard(ctx, whiteboard)
 }
 
-
-
-
 func (s *whiteboardService) UpdateWhiteboardByProjectID(ctx context.Context, projectID uuid.UUID, fields whiteboard.UpdateWhiteboardFields) (*models.Whiteboard, error) {
-    err := ValidateUserAccessToProject(ctx, s.projectService, projectID)
+	err := ValidateUserAccessToProject(ctx, s.projectService, projectID)
 	if err != nil {
 		return nil, err
 	}
-    return s.store.UpdateWhiteboardByProjectID(ctx, projectID, fields)
+	return s.store.UpdateWhiteboardByProjectID(ctx, projectID, fields)
 }
 
 func (s *whiteboardService) GetElements(ctx context.Context, projectID uuid.UUID) ([]models.WhiteboardElement, error) {
@@ -135,4 +127,3 @@ func (s *whiteboardService) DeleteElement(ctx context.Context, projectID uuid.UU
 	}
 	return s.store.DeleteElement(ctx, projectID, id)
 }
-

@@ -20,4 +20,3 @@ var (
 	ErrAvatarCorruptImage     = errors.New("uploaded file is not a valid image")
 	ErrAvatarProcessingFailed = errors.New("failed to process avatar thumbnails")
 )
-

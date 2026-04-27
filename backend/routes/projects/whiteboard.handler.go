@@ -111,8 +111,8 @@ func (h *whiteboardRouteHandler) whiteboardGETHandle(c *echo.Context) error {
 //
 //	@Summary	Update whiteboard canvas state
 //	@Tags		whiteboard
-//	@Param		id		path	string					true	"Project ID"
-//	@Param		body	body	updateWhiteboardRequest	true	"Whiteboard update data"
+//	@Param		id		path		string					true	"Project ID"
+//	@Param		body	body		updateWhiteboardRequest	true	"Whiteboard update data"
 //	@Success	200		{object}	whiteboardResponse
 //	@Failure	400		{object}	routes.ErrorResponse	"invalid request body"
 //	@Failure	401		{object}	routes.ErrorResponse	"unauthorized"
@@ -206,8 +206,8 @@ func (h *whiteboardRouteHandler) elementGETHandle(c *echo.Context) error {
 //
 //	@Summary	Create a new whiteboard element
 //	@Tags		whiteboard
-//	@Param		id		path	string					true	"Project ID"
-//	@Param		body	body	createElementRequest	true	"Element data"
+//	@Param		id		path		string					true	"Project ID"
+//	@Param		body	body		createElementRequest	true	"Element data"
 //	@Success	201		{object}	whiteboardElementResponse
 //	@Failure	400		{object}	routes.ErrorResponse	"invalid request body"
 //	@Failure	401		{object}	routes.ErrorResponse	"unauthorized"
@@ -245,9 +245,9 @@ func (h *whiteboardRouteHandler) elementPOSTHandle(c *echo.Context) error {
 //
 //	@Summary	Update a whiteboard element
 //	@Tags		whiteboard
-//	@Param		id			path	string					true	"Project ID"
-//	@Param		elementId	path	string					true	"Element ID"
-//	@Param		body		body	updateElementRequest	true	"Element update data"
+//	@Param		id			path		string					true	"Project ID"
+//	@Param		elementId	path		string					true	"Element ID"
+//	@Param		body		body		updateElementRequest	true	"Element update data"
 //	@Success	200			{object}	whiteboardElementResponse
 //	@Failure	400			{object}	routes.ErrorResponse	"invalid request body or id"
 //	@Failure	401			{object}	routes.ErrorResponse	"unauthorized"
@@ -291,10 +291,10 @@ func (h *whiteboardRouteHandler) elementPATCHHandle(c *echo.Context) error {
 //	@Param		id			path	string	true	"Project ID"
 //	@Param		elementId	path	string	true	"Element ID"
 //	@Success	204
-//	@Failure	400			{object}	routes.ErrorResponse	"invalid project or element id"
-//	@Failure	401			{object}	routes.ErrorResponse	"unauthorized"
-//	@Failure	404			{object}	routes.ErrorResponse	"element not found"
-//	@Failure	500			{object}	routes.ErrorResponse	"internal server error"
+//	@Failure	400	{object}	routes.ErrorResponse	"invalid project or element id"
+//	@Failure	401	{object}	routes.ErrorResponse	"unauthorized"
+//	@Failure	404	{object}	routes.ErrorResponse	"element not found"
+//	@Failure	500	{object}	routes.ErrorResponse	"internal server error"
 //	@Security	Auth
 //	@Router		/projects/{id}/whiteboard/elements/{elementId} [delete]
 func (h *whiteboardRouteHandler) elementDELETEHandle(c *echo.Context) error {

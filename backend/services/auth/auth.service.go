@@ -27,7 +27,7 @@ type (
 
 	AuthService interface {
 		AuthenticateUser(ctx context.Context, email, password string) (jwtTokenString, time.Time, error)
-		AuthenticatedMiddleware() echo.MiddlewareFunc	
+		AuthenticatedMiddleware() echo.MiddlewareFunc
 		// should only be called in routes protected by [AuthenticatedMiddleware]
 		// panics if no claims are found
 		GetClaims(ctx *echo.Context) jwtCustomClaims

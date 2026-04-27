@@ -35,15 +35,15 @@ func (h authRouteHandler) mapServiceError(err error) (int, string) {
 	}
 }
 
-//	@Summary	Login using email and password
-//	@Tags		auth
-//	@Param		email		formData	string	true	"User email"
-//	@Param		password	formData	string	true	"User password"
-//	@Success	200
-//	@Failure	400	{object}	ErrorResponse	"bad request"
-//	@Failure	401	{object}	ErrorResponse	"unauthorized"
-//	@Header		200	{string}	Set-Cookie		"sessionToken=<some-token>"
-//	@Router		/auth/login [post]
+// @Summary	Login using email and password
+// @Tags		auth
+// @Param		email		formData	string	true	"User email"
+// @Param		password	formData	string	true	"User password"
+// @Success	200
+// @Failure	400	{object}	ErrorResponse	"bad request"
+// @Failure	401	{object}	ErrorResponse	"unauthorized"
+// @Header		200	{string}	Set-Cookie		"sessionToken=<some-token>"
+// @Router		/auth/login [post]
 func (h authRouteHandler) loginPOST(c *echo.Context) error {
 	ctx := c.Request().Context()
 	email := c.FormValue("email")
@@ -72,11 +72,11 @@ func (h authRouteHandler) loginPOST(c *echo.Context) error {
 	return c.NoContent(http.StatusOK)
 }
 
-//	@Summary	Logout
-//	@Tags		auth
-//	@Success	200
-//	@Header		200	{string}	Set-Cookie	"sessionToken=<empty>,expires=1970-01-01"
-//	@Router		/auth/logout [post]
+// @Summary	Logout
+// @Tags		auth
+// @Success	200
+// @Header		200	{string}	Set-Cookie	"sessionToken=<empty>,expires=1970-01-01"
+// @Router		/auth/logout [post]
 func (h authRouteHandler) logoutPOST(c *echo.Context) error {
 	cookie := http.Cookie{
 		Name:     auth.SessionTokenName,
@@ -91,11 +91,11 @@ func (h authRouteHandler) logoutPOST(c *echo.Context) error {
 	return c.NoContent(http.StatusOK)
 }
 
-//	@Summary	Get the currently logged-in user
-//	@Tags		auth
-//	@Success	200	{object}	User			"return the authenticated user"
-//	@Failure	401	{object}	ErrorResponse	"unauthorized"
-//	@Router		/auth/session [get]
+// @Summary	Get the currently logged-in user
+// @Tags		auth
+// @Success	200	{object}	User			"return the authenticated user"
+// @Failure	401	{object}	ErrorResponse	"unauthorized"
+// @Router		/auth/session [get]
 func (h authRouteHandler) sessionGET(c *echo.Context) error {
 	ctx := c.Request().Context()
 	userID := h.authService.GetClaims(c).UserID

@@ -67,7 +67,6 @@ func TestWhiteboardService_GetOrCreate_CreatesNewWhiteboard(t *testing.T) {
 	})
 }
 
-
 func TestWhiteboardService_GetOrCreate_IsIdempotent(t *testing.T) {
 	runTest(t, db, "returns existing whiteboard on second call", func(t *testing.T, db *gorm.DB, svc whiteboardSvc.WhiteboardService) {
 		project, member := selectProjectMember(t, db)
@@ -82,7 +81,6 @@ func TestWhiteboardService_GetOrCreate_IsIdempotent(t *testing.T) {
 		assert.Equal(t, first.ID, second.ID, "second call must return the same whiteboard")
 	})
 }
-
 
 func TestWhiteboardService_CreateElement_SetsWhiteboardID(t *testing.T) {
 	runTest(t, db, "element receives WhiteboardID resolved from project", func(t *testing.T, db *gorm.DB, svc whiteboardSvc.WhiteboardService) {
@@ -229,7 +227,6 @@ func TestWhiteboardService_GetWhiteboardByProjectID_NotFound(t *testing.T) {
 		assert.ErrorIs(t, err, gorm.ErrRecordNotFound)
 	})
 }
-
 
 func TestWhiteboardService_GetElements_EmptyForFreshWhiteboard(t *testing.T) {
 	runTest(t, db, "empty element list for fresh whiteboard", func(t *testing.T, db *gorm.DB, svc whiteboardSvc.WhiteboardService) {

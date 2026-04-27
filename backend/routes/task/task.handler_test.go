@@ -193,7 +193,7 @@ func TestAuthHandler(t *testing.T) {
 		randomUserOfProject := testutils.Choice(&usersOfProject)
 		tasksOfProject := randomProject.Tasks
 
-		userRequest := map[string]any {
+		userRequest := map[string]any{
 			"project_member_id": randomUserOfProject.ID,
 		}
 		userRequestJson, err := json.Marshal(userRequest)
@@ -275,7 +275,7 @@ func TestAuthHandler(t *testing.T) {
 
 		member := testutils.Choice(&project.Members)
 
-		moveRequest := map[string]any {
+		moveRequest := map[string]any{
 			"position": to.Position,
 		}
 		moveRequestJson, err := json.Marshal(moveRequest)
@@ -298,8 +298,8 @@ func TestAuthHandler(t *testing.T) {
 		for _, tsk := range returnedMovedTasks {
 			if tsk.ID == from.ID {
 				require.Equal(t, tsk.Position, to.Position)
-			}	
-		} 
+			}
+		}
 	})
 
 	runTest(t, db, "tasks assigned to me response should include a task object", func(t *testing.T, db *gorm.DB, sut taskRouteHandler) {
@@ -317,7 +317,7 @@ func TestAuthHandler(t *testing.T) {
 		require.Equal(t, http.StatusOK, rec.Code)
 		returnedMyTaskAssignments := parse[[]routes.TaskAssigneeWithTask](t, rec.Body)
 
-		myTaskAssignments, err := sut.taskService.GetTasksAssignedToProjectMember(t.Context(), member.UserID)
+		myTaskAssignments, err := sut.taskService.GetTasksAssignedToProjectMember(t.Context(), member.ID)
 		require.NoError(t, err)
 
 		require.Len(t, returnedMyTaskAssignments, len(myTaskAssignments))
