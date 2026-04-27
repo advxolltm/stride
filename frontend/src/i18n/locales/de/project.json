@@ -91,7 +91,9 @@
     "removeMessage": "Möchten Sie dieses Mitglied wirklich aus dem Projekt entfernen?",
     "removeConfirm": "Entfernen",
     "removeConfirmPending": "Wird entfernt...",
-    "removeCancel": "Abbrechen"
+    "removeCancel": "Abbrechen",
+    "removeSuccess": "Mitglied erfolgreich entfernt",
+    "removeError": "Mitglied konnte nicht entfernt werden"
   },
   "skillsSettings": {
     "title": "Fähigkeiten",
