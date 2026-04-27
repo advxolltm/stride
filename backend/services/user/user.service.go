@@ -263,7 +263,6 @@ func validateAvatarFile(filename string, size int64) error {
 	return nil
 }
 
-
 func validateImageContent(data []byte) (image.Image, error) {
 	mimeType := http.DetectContentType(data)
 	if !strings.HasPrefix(mimeType, "image/") {
@@ -286,7 +285,6 @@ func (s userService) processAndSaveAvatar(userID uuid.UUID, avatar *AvatarInput)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrAvatarSaveFailed, err)
 	}
-
 
 	img, err := validateImageContent(data)
 	if err != nil {

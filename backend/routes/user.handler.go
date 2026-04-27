@@ -11,7 +11,6 @@ import (
 	"github.com/labstack/echo/v5"
 )
 
-
 type userRouteHandler struct {
 	userService userService.UserService
 	authService authService.AuthService
@@ -31,32 +30,32 @@ func (h userRouteHandler) AddRoutes(api *echo.Group) {
 }
 
 type createUserRequest struct {
-	Username	string	`json:"username"`
-	Email		string	`json:"email"`
-	Password	string	`json:"password"`
-} // @name CreateUserRequest
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+} //	@name	CreateUserRequest
 
 type updateUserRequest struct {
-	Email		*string	`json:"email" form:"email"`
-	Password	*string	`json:"password" form:"password"`
-	FullName	*string	`json:"full_name" form:"full_name"`
+	Email    *string `json:"email" form:"email"`
+	Password *string `json:"password" form:"password"`
+	FullName *string `json:"full_name" form:"full_name"`
 }
 
 func (h userRouteHandler) mapServiceError(err error) (int, string) {
 	switch {
-		case errors.Is(err, userService.ErrUserNotFound):
-			return http.StatusNotFound, err.Error()
-		case errors.Is(err, userService.ErrDuplicateEmail),
-			errors.Is(err, userService.ErrDuplicateUsername):
-			return http.StatusConflict, err.Error()
-		case errors.Is(err, userService.ErrInvalidEmail),
-			errors.Is(err, userService.ErrInvalidUsername),
-			errors.Is(err, userService.ErrPasswordTooShort),
-			errors.Is(err, userService.ErrPasswordMissingSpecial),
-			errors.Is(err, userService.ErrAvatarTooLarge),
-			errors.Is(err, userService.ErrAvatarInvalidType),
-			errors.Is(err, userService.ErrAvatarCorruptImage):
-			return http.StatusBadRequest, err.Error()
+	case errors.Is(err, userService.ErrUserNotFound):
+		return http.StatusNotFound, err.Error()
+	case errors.Is(err, userService.ErrDuplicateEmail),
+		errors.Is(err, userService.ErrDuplicateUsername):
+		return http.StatusConflict, err.Error()
+	case errors.Is(err, userService.ErrInvalidEmail),
+		errors.Is(err, userService.ErrInvalidUsername),
+		errors.Is(err, userService.ErrPasswordTooShort),
+		errors.Is(err, userService.ErrPasswordMissingSpecial),
+		errors.Is(err, userService.ErrAvatarTooLarge),
+		errors.Is(err, userService.ErrAvatarInvalidType),
+		errors.Is(err, userService.ErrAvatarCorruptImage):
+		return http.StatusBadRequest, err.Error()
 	default:
 		return http.StatusInternalServerError, "internal server error"
 	}
@@ -120,16 +119,16 @@ func (h userRouteHandler) userGETHandle(c *echo.Context) error {
 //	@Accept		json
 //	@Produce	json
 //	@Param		data	body		createUserRequest	true	"Create user data"
-//	@Success	201	{object}	User
-//	@Failure	400	{object}	ErrorResponse	"invalid request body"
-//	@Failure	409	{object}	ErrorResponse	"email or username already in use"
+//	@Success	201		{object}	User
+//	@Failure	400		{object}	ErrorResponse	"invalid request body"
+//	@Failure	401		{object}	ErrorResponse	"unauthorized"
+//	@Failure	409		{object}	ErrorResponse	"email or username already in use"
 //	@Router		/users [post]
 func (h userRouteHandler) userPOSTHandle(c *echo.Context) error {
 	var req createUserRequest
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid request body"})
 	}
-
 
 	u, err := h.userService.CreateUser(c.Request().Context(), req.Username, req.Email, req.Password)
 	if err != nil {
@@ -142,23 +141,23 @@ func (h userRouteHandler) userPOSTHandle(c *echo.Context) error {
 
 // PATCH /users/:id
 //
-//	@Summary	Update user (self only)
+//	@Summary		Update user (self only)
 //	@Description	Updates user fields. When an avatar is uploaded, thumbnails (300x300, 600x600) and the original are saved. The response includes avatar_url with URLs for each resolution.
-//	@Tags		users
-//	@Accept		multipart/form-data
-//	@Accept		json
-//	@Produce	json
-//	@Param		id			path		string			true	"User ID (UUID)"
-//	@Param		email		formData	string			false	"New email"
-//	@Param		password	formData	string			false	"New password"
-//	@Param		full_name	formData	string			false	"Full name"
-//	@Param		avatar		formData	file			false	"Avatar image (jpeg, png, gif, webp; max 2MB). Generates 300x300, 600x600 thumbnails + original."
-//	@Success	200			{object}	User
-//	@Failure	400			{object}	ErrorResponse	"invalid user id, request body, avatar type, corrupt image, or file too large"
-//	@Failure	401			{object}	ErrorResponse	"unauthorized"
-//	@Failure	404			{object}	ErrorResponse	"user not found"
-//	@Failure	409			{object}	ErrorResponse	"email already in use"
-//	@Router		/users/{id} [patch]
+//	@Tags			users
+//	@Accept			multipart/form-data
+//	@Accept			json
+//	@Produce		json
+//	@Param			id			path		string	true	"User ID (UUID)"
+//	@Param			email		formData	string	false	"New email"
+//	@Param			password	formData	string	false	"New password"
+//	@Param			full_name	formData	string	false	"Full name"
+//	@Param			avatar		formData	file	false	"Avatar image (jpeg, png, gif, webp; max 2MB). Generates 300x300, 600x600 thumbnails + original."
+//	@Success		200			{object}	User
+//	@Failure		400			{object}	ErrorResponse	"invalid user id, request body, avatar type, corrupt image, or file too large"
+//	@Failure		401			{object}	ErrorResponse	"unauthorized"
+//	@Failure		404			{object}	ErrorResponse	"user not found"
+//	@Failure		409			{object}	ErrorResponse	"email already in use"
+//	@Router			/users/{id} [patch]
 func (h userRouteHandler) userPATCHHandle(c *echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {

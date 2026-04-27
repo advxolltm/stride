@@ -39,7 +39,7 @@ func TestWhiteboardStore_CreateAndGet(t *testing.T) {
 		project := testutils.SelectRandomProject(t, db)
 
 		wb := &models.Whiteboard{
-			ProjectID:   project.ID,
+			ProjectID: project.ID,
 		}
 		err := store.CreateWhiteboard(ctx, wb)
 		require.NoError(t, err)
@@ -65,7 +65,7 @@ func TestWhiteboardStore_Elements(t *testing.T) {
 		user := testutils.SelectRandomUser(t, db)
 
 		wb := &models.Whiteboard{
-			ProjectID:   project.ID,
+			ProjectID: project.ID,
 		}
 		err := store.CreateWhiteboard(ctx, wb)
 		require.NoError(t, err)
@@ -90,7 +90,7 @@ func TestWhiteboardStore_Elements(t *testing.T) {
 		project := testutils.SelectRandomProject(t, db)
 
 		wb := &models.Whiteboard{
-			ProjectID:   project.ID,
+			ProjectID: project.ID,
 		}
 		err := store.CreateWhiteboard(ctx, wb)
 		require.NoError(t, err)
@@ -117,7 +117,7 @@ func TestWhiteboardStore_Elements(t *testing.T) {
 		project := testutils.SelectRandomProject(t, db)
 
 		wb := &models.Whiteboard{
-			ProjectID:   project.ID,
+			ProjectID: project.ID,
 		}
 		err := store.CreateWhiteboard(ctx, wb)
 		require.NoError(t, err)

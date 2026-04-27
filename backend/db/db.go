@@ -2,7 +2,6 @@ package db
 
 import (
 	"embed"
-	"errors"
 	"log"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -31,26 +30,24 @@ func migrateDB(postgresURL string) (*migrate.Migrate, error) {
 		log.Fatal(err)
 	}
 
-	// Check current version and dirty state
-	_, dirty, err := m.Version()
-	if err != nil && err != migrate.ErrNilVersion {
+	if err := m.Drop(); err != nil && err != migrate.ErrNoChange {
+		log.Fatalf("failed to drop database: %s", err.Error())
+	}
+
+	if srcErr, dbErr := m.Close(); srcErr != nil || dbErr != nil {
+		log.Fatalf("failed to close migrate: src=%s, db=%s", srcErr.Error(), dbErr.Error())
+	}
+
+	m, err = migrate.NewWithSourceInstance(
+		"iofs",
+		d,
+		postgresURL)
+	if err != nil {
 		log.Fatal(err)
 	}
 
-	// If dirty, force reset to version 0 (clean state)
-	if dirty {
-		if err := m.Force(0); err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	// Drop everything (ensure empty DB)
-	if err := m.Down(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
-		log.Fatal(err)
-	}
-
-	if err := m.Up(); err != nil {
-		log.Fatal(err)
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		log.Fatalf("failed to run up migrations: %s", err.Error())
 	}
 	return m, nil
 }

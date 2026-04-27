@@ -115,7 +115,7 @@ func TestTaskStore(t *testing.T) {
 
 					assignee, err := sut.AssignTask(t.Context(), randomTask.ID, randomProjectMember.ID)
 					testutils.TAssertNoError(t, err)
-					
+
 					y1, m1, d1 := assignee.AssignedAt.Date()
 					y2, m2, d2 := time.Now().Date()
 
@@ -159,8 +159,8 @@ func TestTaskStore(t *testing.T) {
 
 				tsk := testutils.SelectRandomTask(t, db)
 				updatedTask, err := sut.UpdateTask(t.Context(), tsk.ID, taskService.UpdateTaskFields{
-					Title:                   &newTitle, // changing non-optional title
-					Description:             new(&newDescription), // changing optional description
+					Title:       &newTitle,            // changing non-optional title
+					Description: new(&newDescription), // changing optional description
 					// Status: ..., not changing non-optional status
 					// StartDate: ..., not changing optional startdate
 					ExpectedDurationMinutes: new(newExpectedDurationMinutes), // setting optional value to nil
@@ -264,5 +264,3 @@ func TestTaskStore(t *testing.T) {
 		})
 	})
 }
-
-

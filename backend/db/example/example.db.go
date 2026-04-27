@@ -6,7 +6,7 @@ import (
 )
 
 type (
-	ExampleStore interface { 
+	ExampleStore interface {
 		FetchData() (int, error)
 	}
 

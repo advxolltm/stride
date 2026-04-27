@@ -42,11 +42,19 @@ type (
 	}
 )
 
+func withTaskSkill(db *gorm.DB) *gorm.DB {
+	return db.Preload("TaskSkills").Preload("TaskSkills.ProjectSkill")
+}
+
 // GetTask implements [TaskStore].
 func (t *taskStore) GetTask(ctx context.Context, id uuid.UUID) (*models.Task, error) {
 	var task models.Task
 
-	result := t.db.WithContext(ctx).First(&task, id)
+	result := t.db.
+		WithContext(ctx).
+		Preload("TaskSkills.ProjectSkill").
+		Preload("Assignees.ProjectMember.User").
+		First(&task, id)
 	if result.Error != nil {
 		return nil, fmt.Errorf("failed to get task %s: %w", id, result.Error)
 	}
@@ -58,7 +66,11 @@ func (t *taskStore) GetTask(ctx context.Context, id uuid.UUID) (*models.Task, er
 func (t *taskStore) GetTasksForProject(ctx context.Context, projectID uuid.UUID) ([]models.Task, error) {
 	var project models.Project
 
-	result := t.db.WithContext(ctx).Preload("Tasks").First(&project, projectID)
+	result := t.db.
+		WithContext(ctx).
+		Preload("Tasks.TaskSkills.ProjectSkill").
+		Preload("Tasks.Assignees.ProjectMember.User").
+		First(&project, projectID)
 	if result.Error != nil {
 		return nil, fmt.Errorf("failed to get tasks for project %s: %w", projectID, result.Error)
 	}
@@ -71,9 +83,8 @@ func (t *taskStore) GetTasksAssignedToProjectMember(ctx context.Context, project
 	var projectMember models.ProjectMember
 
 	result := t.db.WithContext(ctx).
-		Preload("TaskAssignees").
-		Preload("TaskAssignees.Task").
 		Preload("TaskAssignees.ProjectMember").
+		Preload("TaskAssignees.Task.TaskSkills.ProjectSkill").
 		First(&projectMember, projectMemberID)
 	if result.Error != nil {
 		// not found is not an error-case

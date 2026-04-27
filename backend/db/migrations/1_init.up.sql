@@ -37,6 +37,12 @@ CREATE TABLE project_skills (
     description VARCHAR(255)
 );
 
+CREATE TABLE user_skills (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+	user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+	project_skill_id UUID NOT NULL REFERENCES project_skills(id) ON DELETE CASCADE
+);
+
 CREATE TABLE messages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     sender_id UUID REFERENCES users(id) ON DELETE SET NULL,
@@ -71,6 +77,12 @@ CREATE TABLE task_assignees (
     project_member_id UUID NOT NULL REFERENCES project_members(id) ON DELETE CASCADE,
     assigned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	UNIQUE (task_id, project_member_id)
+);
+
+CREATE TABLE task_skills (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+	task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+	project_skill_id UUID NOT NULL REFERENCES project_skills(id) ON DELETE CASCADE
 );
 
 CREATE TABLE whiteboards (

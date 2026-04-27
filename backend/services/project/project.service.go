@@ -40,7 +40,6 @@ type (
 		AddProjectSkill(ctx context.Context, projectId uuid.UUID, name string, description *string) (*models.ProjectSkill, error)
 		RemoveProjectSkill(ctx context.Context, skillId uuid.UUID) error
 		GetProjectIdBySkillId(ctx context.Context, skillId uuid.UUID) (uuid.UUID, error)
-
 	}
 	projectService struct {
 		projectStore project.ProjectStore
@@ -65,7 +64,6 @@ func (s projectService) IsProjectOwner(ctx context.Context, userId uuid.UUID, pr
 func (s projectService) IsProjectMember(ctx context.Context, userID uuid.UUID, projectID uuid.UUID) (bool, error) {
 	return s.projectStore.IsProjectMember(ctx, userID, projectID)
 }
-
 
 func (s projectService) GetAllProjects(ctx context.Context, userid uuid.UUID) ([]models.Project, error) {
 	p, err := s.projectStore.GetAllProjects(ctx, userid)
@@ -195,8 +193,8 @@ func (s projectService) AddUsersToProject(ctx context.Context, members []AddMemb
 
 	for _, user := range members {
 		m := models.ProjectMember{
-			UserID: user.UserId,
-			Role:   user.Role,
+			UserID:    user.UserId,
+			Role:      user.Role,
 			ProjectID: projectId,
 		}
 		projectMembers = append(projectMembers, m)
