@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import { AppBreadcrumb, AppHeader } from '../components/layout'
 import { Sidebar } from '../components/layout/SideBar'
 import { CreateProjectDialog } from '../components/project/CreateProjectDialog'
@@ -9,8 +9,10 @@ export interface AppLayoutOutletContext {
 }
 
 export function AppLayout() {
+    const location = useLocation()
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+    const isWhiteboardRoute = location.pathname.endsWith('/whiteboard')
 
     const handleOpenCreateProjectDialog = () => {
         setIsCreateDialogOpen(true)
@@ -18,17 +20,24 @@ export function AppLayout() {
 
     return (
         <div className="flex min-h-screen flex-col">
-            <AppHeader />
+            {!isWhiteboardRoute && <AppHeader />}
 
-            <main className="flex h-screen overflow-hidden pt-14">
-                <Sidebar
-                    collapsed={sidebarCollapsed}
-                    onToggle={() => setSidebarCollapsed((prev) => !prev)}
-                    onCreateProject={handleOpenCreateProjectDialog}
-                />
+            <main
+                className={[
+                    'flex h-screen overflow-hidden',
+                    isWhiteboardRoute ? 'pt-0' : 'pt-14',
+                ].join(' ')}
+            >
+                {!isWhiteboardRoute && (
+                    <Sidebar
+                        collapsed={sidebarCollapsed}
+                        onToggle={() => setSidebarCollapsed((prev) => !prev)}
+                        onCreateProject={handleOpenCreateProjectDialog}
+                    />
+                )}
 
                 <div className="flex min-w-0 flex-1 flex-col overflow-auto bg-[var(--background)]">
-                    <AppBreadcrumb />
+                    {!isWhiteboardRoute && <AppBreadcrumb />}
                     <Outlet
                         context={{
                             openCreateProjectDialog:

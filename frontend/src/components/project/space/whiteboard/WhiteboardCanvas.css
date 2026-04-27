@@ -1,0 +1,44 @@
+.whiteboard-excalidraw .excalidraw .shapes-section {
+  position: fixed;
+  right: auto;
+  bottom: 1rem;
+  left: 50%;
+  z-index: var(--zIndex-layerUI);
+  max-width: calc(100vw - 2rem);
+  transform: translateX(-50%);
+}
+
+.whiteboard-excalidraw .excalidraw .shapes-section .Island {
+  background-color: var(--color-surface-low);
+  box-shadow: 0 0 0 1px var(--color-surface-lowest);
+}
+
+.whiteboard-excalidraw .excalidraw .shapes-section .App-toolbar-container {
+  max-width: calc(100vw - 2rem);
+  overflow-x: auto;
+}
+
+.whiteboard-excalidraw .excalidraw .shapes-section .App-toolbar-content {
+  padding: 0;
+}
+
+.whiteboard-excalidraw .excalidraw .shapes-section .HintViewer {
+  top: auto;
+  bottom: 100%;
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
+.whiteboard-excalidraw .excalidraw .App-menu_top > *:first-child {
+  position: fixed;
+  top: 4.75rem;
+  left: 1rem;
+  justify-self: auto;
+}
+
+.whiteboard-excalidraw .excalidraw .App-menu_top > *:last-child {
+  position: fixed;
+  right: 4.25rem;
+  bottom: 1rem;
+  justify-self: auto;
+}
