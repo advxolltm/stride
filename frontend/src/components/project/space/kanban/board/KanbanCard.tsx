@@ -41,7 +41,7 @@ export function KanbanCard({
               day: 'numeric',
           })
         : null
-    const assignee = task.assignees[0]
+    const assignee = task.assignees?.[0]
 
     function handleEdit() {
         if (onEdit) {
