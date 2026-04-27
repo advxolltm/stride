@@ -10,6 +10,7 @@ import {
     useFilter,
 } from '@heroui/react'
 import { useTranslation } from 'react-i18next'
+import { getInitials } from '../../../../../../../shared/utils'
 import {
     useAssignTaskMutation,
     useUnassignTaskMutation,
@@ -28,7 +29,7 @@ export function TaskAssigneeField({ task }: { task: Task }) {
 
     const isSaving = isAssigning || isRemovingAssignee
 
-    const currentAssignee = task.assignees?.[0] 
+    const currentAssignee = task.assignees?.[0]
     const selectedKey = currentAssignee?.projectMemberId ?? null
 
     const items = members.map((m) => ({
@@ -70,17 +71,18 @@ export function TaskAssigneeField({ task }: { task: Task }) {
             </div>
 
             <Autocomplete
+                fullWidth
                 variant="secondary"
                 placeholder={t('tasks.form.assigneeEmpty')}
                 selectionMode="single"
                 value={selectedKey}
                 isDisabled={isSaving}
                 onChange={handleChange}
+                aria-label={t('tasks.form.assignee')}
             >
                 <Autocomplete.Trigger>
                     <Autocomplete.Value>
                         {({ defaultChildren, isPlaceholder, state }) => {
-                            // No selection → show placeholder
                             if (isPlaceholder || !state.selectedItems.length) {
                                 return (
                                     <span className="text-muted">
@@ -89,7 +91,6 @@ export function TaskAssigneeField({ task }: { task: Task }) {
                                 )
                             }
 
-                            // Selection → show avatar + name
                             const selected = state.selectedItems[0]
                             const member = members.find(
                                 (m) => m.id === selected.key,
@@ -98,14 +99,12 @@ export function TaskAssigneeField({ task }: { task: Task }) {
 
                             return (
                                 <div className="flex items-center gap-2">
-                                    <Avatar className="h-5 w-5 text-xs">
-                                        <Avatar.Fallback>
-                                            {(
+                                    <Avatar className="h-6 w-6 text-xs">
+                                        <Avatar.Fallback className="bg-accent text-white">
+                                            {getInitials(
                                                 member.user.fullName ??
-                                                member.user.username
-                                            )
-                                                .slice(0, 2)
-                                                .toUpperCase()}
+                                                    member.user.username,
+                                            )}
                                         </Avatar.Fallback>
                                     </Avatar>
                                     <span>
@@ -116,14 +115,18 @@ export function TaskAssigneeField({ task }: { task: Task }) {
                             )
                         }}
                     </Autocomplete.Value>
-                    {/* Only show the X when someone is assigned */}
-                    {selectedKey && <Autocomplete.ClearButton />}
+                    <Autocomplete.ClearButton />
                     <Autocomplete.Indicator />
                 </Autocomplete.Trigger>
 
                 <Autocomplete.Popover>
                     <Autocomplete.Filter filter={contains}>
-                        <SearchField autoFocus name="search" variant="secondary">
+                        <SearchField
+                            autoFocus
+                            name="search"
+                            variant="secondary"
+                            aria-label={t('tasks.form.assigneeSearch')}
+                        >
                             <SearchField.Group>
                                 <SearchField.SearchIcon />
                                 <SearchField.Input
@@ -148,10 +151,8 @@ export function TaskAssigneeField({ task }: { task: Task }) {
                                 >
                                     <div className="flex items-center gap-2">
                                         <Avatar className="h-6 w-6 text-xs">
-                                            <Avatar.Fallback>
-                                                {item.label
-                                                    .slice(0, 2)
-                                                    .toUpperCase()}
+                                            <Avatar.Fallback className="bg-accent text-white">
+                                                {getInitials(item.label)}
                                             </Avatar.Fallback>
                                         </Avatar>
                                         <span className="text-sm">

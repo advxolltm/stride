@@ -50,15 +50,17 @@ export function TaskSkillsField({ task }: { task: Task }) {
             </div>
 
             <Autocomplete
+                fullWidth
                 variant="secondary"
-                className="w-full"
+                allowsEmptyCollection
                 placeholder={t('tasks.form.skillsPlaceholder')}
                 selectionMode="multiple"
                 value={selectedKeys}
                 isDisabled={isSaving}
                 onChange={(keys) => handleChange(keys as Key[])}
+                aria-label={t('tasks.form.skills')}
             >
-                <Autocomplete.Trigger className="w-full">
+                <Autocomplete.Trigger>
                     <Autocomplete.Value>
                         {({ defaultChildren, isPlaceholder, state }) => {
                             if (
@@ -99,6 +101,7 @@ export function TaskSkillsField({ task }: { task: Task }) {
                             name="search"
                             variant="secondary"
                             className="w-full"
+                            aria-label={t('tasks.form.skillsSearch')}
                         >
                             <SearchField.Group>
                                 <SearchField.SearchIcon />

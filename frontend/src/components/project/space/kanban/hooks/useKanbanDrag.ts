@@ -1,6 +1,6 @@
-import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
+import type { DragEndEvent, DragOverEvent, DragStartEvent } from '@dnd-kit/core'
 import { arrayMove } from '@dnd-kit/sortable'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type {
     Column,
     Task,
@@ -20,6 +20,10 @@ export function useKanbanDrag(
 ) {
     const [localColumns, setLocalColumns] = useState<Column[]>(initialColumns)
     const [activeTask, setActiveTask] = useState<Task | null>(null)
+    const dragStartRef = useRef<{
+        columns: Column[]
+        fromStatus: TaskStatus
+    } | null>(null)
 
     function findColumn(taskId: string) {
         return localColumns.find((col) =>
@@ -28,18 +32,21 @@ export function useKanbanDrag(
     }
 
     function handleDragStart({ active }: DragStartEvent) {
-        const task = findColumn(active.id as string)?.tasks.find(
-            (t) => t.id === active.id,
-        )
+        const column = findColumn(active.id as string)
+        const task = column?.tasks.find((t) => t.id === active.id)
+        dragStartRef.current = column
+            ? {
+                  columns: localColumns.map((col) => ({
+                      ...col,
+                      tasks: [...col.tasks],
+                  })),
+                  fromStatus: column.id,
+              }
+            : null
         setActiveTask(task ?? null)
     }
 
-    function handleDragEnd({ active, over }: DragEndEvent) {
-        setActiveTask(null)
-        if (!over) return
-
-        const activeId = active.id as string
-        const overId = over.id as string
+    function moveTaskBetweenColumns(activeId: string, overId: string) {
         const activeCol = findColumn(activeId)
         const overCol =
             localColumns.find((c) => c.id === overId) ?? findColumn(overId)
@@ -52,6 +59,8 @@ export function useKanbanDrag(
         const fromCol = next.find((c) => c.id === activeCol.id)!
         const toCol = next.find((c) => c.id === overCol.id)!
         const activeIndex = fromCol.tasks.findIndex((t) => t.id === activeId)
+        if (activeIndex === -1) return
+
         const task = {
             ...fromCol.tasks[activeIndex],
             status: overCol.id as TaskStatus,
@@ -62,7 +71,19 @@ export function useKanbanDrag(
             const targetIndex =
                 overIndex === -1 ? fromCol.tasks.length - 1 : overIndex
 
-            if (activeIndex === targetIndex) return
+            if (activeIndex === targetIndex) {
+                const fromStatus = dragStartRef.current?.fromStatus
+
+                if (fromStatus && fromStatus !== activeCol.id) {
+                    return {
+                        columns: localColumns,
+                        fromStatus,
+                        toStatus: activeCol.id,
+                    }
+                }
+
+                return
+            }
 
             fromCol.tasks = arrayMove(fromCol.tasks, activeIndex, targetIndex)
         } else {
@@ -76,11 +97,53 @@ export function useKanbanDrag(
         }
 
         setLocalColumns(next)
-        void onPersist?.({
-            taskId: activeId,
-            fromStatus: activeCol.id,
-            toStatus: overCol.id,
+        return {
             columns: next,
+            fromStatus: dragStartRef.current?.fromStatus ?? activeCol.id,
+            toStatus: overCol.id,
+        }
+    }
+
+    function handleDragOver({ active, over }: DragOverEvent) {
+        if (!over) return
+
+        const activeId = active.id as string
+        const overId = over.id as string
+        const activeCol = findColumn(activeId)
+        const overCol =
+            localColumns.find((c) => c.id === overId) ?? findColumn(overId)
+
+        if (!activeCol || !overCol || activeCol.id === overCol.id) return
+
+        moveTaskBetweenColumns(activeId, overId)
+    }
+
+    function handleDragEnd({ active, over }: DragEndEvent) {
+        setActiveTask(null)
+
+        if (!over) {
+            if (dragStartRef.current) {
+                setLocalColumns(dragStartRef.current.columns)
+            }
+            dragStartRef.current = null
+            return
+        }
+
+        const activeId = active.id as string
+        const result = moveTaskBetweenColumns(activeId, over.id as string)
+        dragStartRef.current = null
+
+        if (!result) return
+
+        void Promise.resolve(
+            onPersist?.({
+                taskId: activeId,
+                fromStatus: result.fromStatus,
+                toStatus: result.toStatus,
+                columns: result.columns,
+            }),
+        ).catch(() => {
+            setLocalColumns(initialColumns)
         })
     }
 
@@ -89,6 +152,7 @@ export function useKanbanDrag(
         setLocalColumns,
         activeTask,
         handleDragStart,
+        handleDragOver,
         handleDragEnd,
     }
 }

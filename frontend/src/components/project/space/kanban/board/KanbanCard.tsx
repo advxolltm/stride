@@ -1,6 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Avatar, Button, Card, Dropdown, Label } from '@heroui/react'
+import { Avatar, Button, Card, Dropdown, Label, Tooltip } from '@heroui/react'
 import { Calendar, MoreHorizontal } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { Task } from '../../../../../store/features/tasks/task.types'
@@ -42,6 +42,9 @@ export function KanbanCard({
           })
         : null
     const assignee = task.assignees?.[0]
+    const assigneeName = assignee
+        ? (assignee.user.fullName ?? assignee.user.username)
+        : ''
 
     function handleEdit() {
         if (onEdit) {
@@ -137,11 +140,22 @@ export function KanbanCard({
 
                         <div className="flex items-center gap-1">
                             {assignee && (
-                                <Avatar className="h-7 w-7 text-sm">
-                                    <Avatar.Fallback className="bg-accent text-white">
-                                        {getInitials(assignee.projectMemberId)}
-                                    </Avatar.Fallback>
-                                </Avatar>
+                                <Tooltip delay={0}>
+                                    <Tooltip.Trigger>
+                                        <Avatar className="h-7 w-7 text-sm">
+                                            <Avatar.Fallback className="bg-accent text-white">
+                                                {getInitials(assigneeName)}
+                                            </Avatar.Fallback>
+                                        </Avatar>
+                                    </Tooltip.Trigger>
+                                    <Tooltip.Content
+                                        showArrow
+                                        placement="bottom"
+                                    >
+                                        <Tooltip.Arrow />
+                                        {assigneeName}
+                                    </Tooltip.Content>
+                                </Tooltip>
                             )}
                         </div>
                     </div>

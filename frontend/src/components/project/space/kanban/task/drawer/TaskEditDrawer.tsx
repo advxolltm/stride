@@ -27,6 +27,7 @@ export function TaskEditDrawer({
             <Drawer.Backdrop>
                 <Drawer.Content placement="right" className="w-full max-w-md">
                     <Drawer.Dialog>
+                        <Drawer.CloseTrigger />
                         <Drawer.Header>
                             <Drawer.Heading>
                                 {t('tasks.drawer.detailsTitle')}
