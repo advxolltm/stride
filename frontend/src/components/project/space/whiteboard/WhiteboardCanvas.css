@@ -31,14 +31,24 @@
 
 .whiteboard-excalidraw .excalidraw .App-menu_top > *:first-child {
   position: fixed;
-  top: 4.75rem;
-  left: 1rem;
-  justify-self: auto;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: var(--zIndex-layerUI);
 }
 
 .whiteboard-excalidraw .excalidraw .App-menu_top > *:last-child {
-  position: fixed;
-  right: 4.25rem;
-  bottom: 1rem;
-  justify-self: auto;
+  display: none;
+}
+
+.whiteboard-excalidraw .excalidraw .main-menu-trigger {
+  color: var(--color-on-surface);
+  border: 1px solid var(--color-gray-30);
+  border-radius: 9999px;
+  background-color: var(--island-bg-color);
+  box-shadow: var(--shadow-island), 0 0 0 1px var(--color-surface-lowest);
+}
+
+.whiteboard-excalidraw .excalidraw .main-menu-trigger svg {
+  color: var(--color-on-surface);
+  stroke-width: 2.25;
 }
