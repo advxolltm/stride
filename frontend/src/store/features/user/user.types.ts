@@ -21,5 +21,4 @@ export type UpdateUserRequest = Partial<{
     email: string
     password: string
     full_name: string
-    avatar_url: string
 }>

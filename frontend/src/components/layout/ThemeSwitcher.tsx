@@ -1,36 +1,17 @@
 import { Button } from '@heroui/react'
 import { Moon, Sun } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useAppDispatch, useAppSelector } from '../../shared/hooks/redux'
+import { toggleTheme } from '../../store/themeSlice'
 
 export function ThemeSwitcher() {
-    const [isDark, setIsDark] = useState(() => {
-        const saved = localStorage.getItem('theme')
-
-        if (saved) return saved === 'dark'
-
-        return window.matchMedia('(prefers-color-scheme: dark)').matches
-    })
-
-    // Apply theme when it changes
-    useEffect(() => {
-        const root = document.documentElement
-
-        if (isDark) {
-            root.classList.add('dark')
-            root.setAttribute('data-theme', 'dark')
-            localStorage.setItem('theme', 'dark')
-        } else {
-            root.classList.remove('dark')
-            root.setAttribute('data-theme', 'light')
-            localStorage.setItem('theme', 'light')
-        }
-    }, [isDark])
+    const dispatch = useAppDispatch()
+    const isDark = useAppSelector((state) => state.theme.isDark)
 
     return (
         <Button
             variant="ghost"
             isIconOnly
-            onPress={() => setIsDark((prev) => !prev)}
+            onPress={() => dispatch(toggleTheme())}
             className="transition-all"
         >
             {isDark ? (

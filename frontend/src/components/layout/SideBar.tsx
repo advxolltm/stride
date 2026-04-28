@@ -1,25 +1,18 @@
 import { Button, Tooltip } from '@heroui/react'
 import { useState } from 'react'
-import {
-    FolderKanban,
-    PanelLeftClose,
-    PanelLeftOpen,
-} from 'lucide-react'
+import { FolderKanban, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { SidebarItems, type SidebarProject } from '../main/SidebarItems'
 import { LogoutButton } from '../../shared/components/LogoutButton'
 import { LogoutConfirmDialog } from '../../shared/components/LogoutConfirmDialog'
 import { useGetProjectsQuery } from '../../store/features/project/project.api'
+import clsx from 'clsx'
 
 interface SidebarProps {
     collapsed: boolean
     onToggle: () => void
     onCreateProject: () => void
-}
-
-function getSidebarIcon() {
-    return <FolderKanban size={14} />
 }
 
 export function Sidebar({
@@ -36,7 +29,7 @@ export function Sidebar({
     const sidebarProjects: SidebarProject[] = projects.map((project) => ({
         id: project.id,
         label: project.name,
-        icon: getSidebarIcon(),
+        icon: <FolderKanban size={14} />,
     }))
 
     const getActiveKey = () => {
@@ -79,16 +72,17 @@ export function Sidebar({
 
     return (
         <aside
-            className={[
+            className={clsx(
                 'relative flex h-full shrink-0 flex-col overflow-hidden border-r border-[var(--border)] bg-[var(--surface)]',
                 'transition-[width] duration-300 ease-in-out',
                 collapsed ? 'w-[68px]' : 'w-[240px]',
-            ].join(' ')}
+            )}
         >
             <div
-                className={`flex shrink-0 px-2 py-3 ${
-                    collapsed ? 'justify-center' : 'justify-end'
-                }`}
+                className={clsx(
+                    'flex shrink-0 px-2 py-3',
+                    collapsed ? 'justify-center' : 'justify-end',
+                )}
             >
                 {collapsed ? (
                     <Tooltip>

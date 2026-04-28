@@ -5,8 +5,8 @@ import { useNavigate } from 'react-router-dom'
 import { LogoutButton } from '../../shared/components/LogoutButton'
 import { LogoutConfirmDialog } from '../../shared/components/LogoutConfirmDialog'
 import { useGetSessionQuery } from '../../store/features/auth/auth.api'
-import { getInitials } from '../../shared/utils'
 import { useGetUserByIdQuery } from '../../store/features/user/user.api'
+import getInitials from '../../shared/utils/getInitials'
 
 export function UserMenu() {
     const { data: user } = useGetSessionQuery()
@@ -16,6 +16,8 @@ export function UserMenu() {
     const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false)
 
     const displayName = userData?.fullName || user?.username
+    const avatarSrc =
+        userData?.avatarSmallUrl ?? userData?.avatarUrl ?? undefined
 
     return (
         <>
@@ -26,6 +28,12 @@ export function UserMenu() {
                     className="rounded-lg"
                 >
                     <Avatar size="sm">
+                        {avatarSrc && (
+                            <Avatar.Image
+                                src={avatarSrc}
+                                alt={displayName || 'User'}
+                            />
+                        )}
                         <Avatar.Fallback className="bg-accent text-white">
                             {getInitials(displayName || 'User')}
                         </Avatar.Fallback>

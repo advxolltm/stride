@@ -11,13 +11,14 @@ export const mapApiUserToUser = ({
     username,
     email,
     full_name,
-    avatar_url
+    avatar_url,
 }: ApiUser): User => ({
     id,
     username,
     email,
     fullName: full_name,
     avatarUrl: avatar_url?.original ?? null,
+    avatarSmallUrl: avatar_url?.[300] ?? avatar_url?.original ?? null,
 })
 
 export const userApi = baseApi.injectEndpoints({
@@ -45,7 +46,7 @@ export const userApi = baseApi.injectEndpoints({
 
         updateUser: builder.mutation<
             User,
-            { id: string; body: UpdateUserRequest }
+            { id: string; body: UpdateUserRequest | FormData }
         >({
             query: ({ id, body }) => ({
                 url: `/users/${id}`,

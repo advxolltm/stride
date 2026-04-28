@@ -76,6 +76,9 @@ func TestAuthService(t *testing.T) {
 				if !errors.Is(err, ErrUnauthorized) {
 					t.Errorf("expected unauthorized error, got: %v", err)
 				}
+				if !errors.Is(err, ErrInvalidCredentials) {
+					t.Errorf("expected invalid credentials error, got: %v", err)
+				}
 			})
 
 			runTest(t, db, "real email, non existent password", func(t *testing.T, db *gorm.DB, sut authService) {
@@ -84,6 +87,9 @@ func TestAuthService(t *testing.T) {
 
 				if !errors.Is(err, ErrUnauthorized) {
 					t.Errorf("expected unauthorized error, got: %v", err)
+				}
+				if !errors.Is(err, ErrInvalidCredentials) {
+					t.Errorf("expected invalid credentials error, got: %v", err)
 				}
 			})
 
@@ -94,6 +100,9 @@ func TestAuthService(t *testing.T) {
 				if !errors.Is(err, ErrUnauthorized) {
 					t.Errorf("expected unauthorized error, got: %v", err)
 				}
+				if !errors.Is(err, ErrInvalidCredentials) {
+					t.Errorf("expected invalid credentials error, got: %v", err)
+				}
 			})
 
 			runTest(t, db, "real email and password, but from different users", func(t *testing.T, db *gorm.DB, sut authService) {
@@ -101,6 +110,9 @@ func TestAuthService(t *testing.T) {
 
 				if !errors.Is(err, ErrUnauthorized) {
 					t.Errorf("expected unauthorized error, got: %v", err)
+				}
+				if !errors.Is(err, ErrInvalidCredentials) {
+					t.Errorf("expected invalid credentials error, got: %v", err)
 				}
 			})
 		})

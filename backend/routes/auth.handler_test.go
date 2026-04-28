@@ -121,6 +121,10 @@ func TestAuthHandler(t *testing.T) {
 					if rec.Code != http.StatusUnauthorized {
 						t.Errorf("rec.Code: expected %d, got: %d", http.StatusBadRequest, rec.Code)
 					}
+
+					if !strings.Contains(rec.Body.String(), "unauthorized: email or password incorrect") {
+						t.Errorf("expected sanitized auth error, got: %s", rec.Body.String())
+					}
 				}
 			})
 

@@ -76,6 +76,8 @@ export function useKanbanState() {
             toast.success(t('tasks.messages.moveSuccess'))
         } catch {
             toast.danger(t('tasks.messages.moveError'))
+
+            // eslint-disable-next-line react-hooks/immutability
             setLocalColumns(serverColumns)
         }
     })
