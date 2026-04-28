@@ -1,7 +1,7 @@
 import { Card } from '@heroui/react'
 import { Users } from 'lucide-react'
 import type { Project } from '../../store/features/project/project.types'
-import { getInitials } from '../../shared/utils'
+import getInitials from '../../shared/utils/getInitials'
 
 interface MainPageCardProps {
     project: Project
@@ -33,7 +33,7 @@ export function MainPageCard({ project, onClick }: MainPageCardProps) {
             }`}
         >
             <Card.Header className="flex items-start gap-4 pb-3">
-                <div className="`text-accent-foreground flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-(--accent) text-xs text-white font-bold">
+                <div className="`text-accent-foreground flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-(--accent) text-xs font-bold text-white">
                     {getInitials(project.name)}
                 </div>
 

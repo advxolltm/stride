@@ -4,7 +4,7 @@ import { Avatar, Button, Card, Dropdown, Label, Tooltip } from '@heroui/react'
 import { Calendar, MoreHorizontal } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { Task } from '../../../../../store/features/tasks/task.types'
-import { getInitials } from '../../../../../shared/utils'
+import getInitials from '../../../../../shared/utils/getInitials'
 
 interface KanbanCardProps {
     task: Task

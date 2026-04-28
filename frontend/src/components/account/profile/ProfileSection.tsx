@@ -1,5 +1,4 @@
 import { Button, Spinner, toast } from '@heroui/react'
-import type { FetchBaseQueryError } from '@reduxjs/toolkit/query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -7,13 +6,11 @@ import {
     useGetUserByIdQuery,
     useUpdateUserMutation,
 } from '../../../store/features/user/user.api'
-import type {
-    ApiErrorResponse,
-    UpdateUserRequest,
-} from '../../../store/features/user/user.types'
+import type { ApiErrorResponse } from '../../../store/features/user/user.types'
 import { ProfileAvatarUpload } from './ProfileAvatarUpload'
 import { ProfileDetailsForm } from './ProfileDetailsForm'
 import { useGetSessionQuery } from '../../../store/features/auth/auth.api'
+import { isFetchBaseQueryError } from '../../../shared/utils/api/errors'
 
 export type ProfileForm = {
     fullName: string
@@ -21,9 +18,6 @@ export type ProfileForm = {
     email: string
     avatarFile: File | null
 }
-
-const isFetchBaseQueryError = (error: unknown): error is FetchBaseQueryError =>
-    typeof error === 'object' && error !== null && 'status' in error
 
 export function ProfileSection() {
     const { t } = useTranslation('setting')
@@ -56,11 +50,19 @@ export function ProfileSection() {
     const handleSave = async () => {
         if (!isChanged || isUpdating) return
 
-        const body: UpdateUserRequest = {}
-        if (form.fullName.trim() !== (user?.fullName ?? ''))
-            body.full_name = form.fullName.trim()
-        if (form.email.trim() !== (user?.email ?? ''))
-            body.email = form.email.trim()
+        const nextFullName = form.fullName.trim()
+        const nextEmail = form.email.trim()
+
+        const body = new FormData()
+        if (nextFullName !== (user?.fullName ?? '')) {
+            body.set('full_name', nextFullName)
+        }
+        if (nextEmail !== (user?.email ?? '')) {
+            body.set('email', nextEmail)
+        }
+        if (form.avatarFile) {
+            body.set('avatar', form.avatarFile)
+        }
 
         try {
             await updateUser({ id: sessionUser!.id, body }).unwrap()

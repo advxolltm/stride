@@ -242,6 +242,9 @@ func (s userService) DeleteUser(ctx context.Context, id uuid.UUID) error {
 func (s userService) GetByEmailAndPassword(ctx context.Context, email, password string) (uuid.UUID, error) {
 	userId, err := s.userStore.GetByEmailAndPassword(ctx, email, password)
 	if err != nil {
+		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
+			return uuid.Nil, ErrInvalidPassword
+		}
 		return uuid.Nil, fmt.Errorf("%w: %w", ErrUserFindFailed, err)
 	}
 

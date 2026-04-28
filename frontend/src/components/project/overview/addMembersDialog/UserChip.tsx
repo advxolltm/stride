@@ -1,6 +1,6 @@
 import { Avatar, Chip } from '@heroui/react'
 import { X } from 'lucide-react'
-import { getInitials } from '../../../../shared/utils'
+import getInitials from '../../../../shared/utils/getInitials'
 
 interface UserChipProps {
     id: string

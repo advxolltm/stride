@@ -4,6 +4,7 @@ import (
 	"backend/services/auth"
 	"backend/services/user"
 	"errors"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -28,8 +29,10 @@ func (h authRouteHandler) AddRoutes(api *echo.Group) {
 
 func (h authRouteHandler) mapServiceError(err error) (int, string) {
 	switch {
-	case errors.Is(err, auth.ErrUnauthorized):
+	case errors.Is(err, auth.ErrInvalidCredentials):
 		return http.StatusUnauthorized, err.Error()
+	case errors.Is(err, auth.ErrUnauthorized):
+		return http.StatusUnauthorized, auth.ErrUnauthorized.Error()
 	default:
 		return http.StatusInternalServerError, "internal server error"
 	}
@@ -56,6 +59,9 @@ func (h authRouteHandler) loginPOST(c *echo.Context) error {
 	jwtTokenString, jwtExpiry, err := h.authService.AuthenticateUser(ctx, email, password)
 	if err != nil {
 		status, msg := h.mapServiceError(err)
+		if status >= http.StatusInternalServerError {
+			slog.Error("authentication failed", "error", err)
+		}
 		return c.JSON(status, ErrorResponse{Error: msg})
 	}
 

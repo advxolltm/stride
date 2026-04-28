@@ -36,6 +36,41 @@ export function ProjectGeneralSettings({
     const formattedUpdatedAt = new Date(project.updatedAt).toLocaleDateString()
     const createdByDisplay =
         project.creator.fullName ?? project.creator.username
+    const metadataFields = [
+        {
+            key: 'createdBy',
+            label: t('generalSettings.createdBy'),
+            value: createdByDisplay,
+        },
+        {
+            key: 'createdAt',
+            label: t('generalSettings.createdAt'),
+            value: formattedCreatedAt,
+        },
+        {
+            key: 'updatedAt',
+            label: t('generalSettings.updatedAt'),
+            value: formattedUpdatedAt,
+        },
+    ]
+    const viewFields = [
+        {
+            key: 'name',
+            label: t('generalSettings.projectName'),
+            value: name,
+            valueClassName: 'text-sm',
+        },
+        {
+            key: 'description',
+            label: t('generalSettings.projectDescription'),
+            value: description,
+            valueClassName: 'text-sm leading-relaxed',
+        },
+        ...metadataFields.map((field) => ({
+            ...field,
+            valueClassName: 'text-sm',
+        })),
+    ]
 
     function hasChanges(): boolean {
         return (
@@ -98,60 +133,22 @@ export function ProjectGeneralSettings({
 
             {!isEditing ? (
                 <div className="space-y-5">
-                    <div>
-                        <p
-                            className="mb-1 text-xs"
-                            style={{ color: 'var(--muted)' }}
-                        >
-                            {t('generalSettings.projectName')}
-                        </p>
-                        <p className="text-sm">{name}</p>
-                    </div>
-
-                    <div>
-                        <p
-                            className="mb-1 text-xs"
-                            style={{ color: 'var(--muted)' }}
-                        >
-                            {t('generalSettings.projectDescription')}
-                        </p>
-                        <p className="text-sm leading-relaxed">{description}</p>
-                    </div>
-
-                    <div>
-                        <p
-                            className="mb-1 text-xs"
-                            style={{ color: 'var(--muted)' }}
-                        >
-                            {t('generalSettings.createdBy')}
-                        </p>
-                        <p className="text-sm">{createdByDisplay}</p>
-                    </div>
-
-                    <div>
-                        <p
-                            className="mb-1 text-xs"
-                            style={{ color: 'var(--muted)' }}
-                        >
-                            {t('generalSettings.createdAt')}
-                        </p>
-                        <p className="text-sm">{formattedCreatedAt}</p>
-                    </div>
-
-                    <div>
-                        <p
-                            className="mb-1 text-xs"
-                            style={{ color: 'var(--muted)' }}
-                        >
-                            {t('generalSettings.updatedAt')}
-                        </p>
-                        <p className="text-sm">{formattedUpdatedAt}</p>
-                    </div>
+                    {viewFields.map((field) => (
+                        <div key={field.key}>
+                            <p
+                                className="mb-1 text-xs"
+                                style={{ color: 'var(--muted)' }}
+                            >
+                                {field.label}
+                            </p>
+                            <p className={field.valueClassName}>
+                                {field.value}
+                            </p>
+                        </div>
+                    ))}
 
                     {isOwner && (
-                        <>
-                            <ProjectGeneralSettingsDelete project={project} />
-                        </>
+                        <ProjectGeneralSettingsDelete project={project} />
                     )}
                 </div>
             ) : (
@@ -180,23 +177,17 @@ export function ProjectGeneralSettings({
                         <FieldError />
                     </TextField>
 
-                    <TextField isDisabled className="w-full">
-                        <Label>{t('generalSettings.createdBy')}</Label>
-                        <Input variant="secondary" value={createdByDisplay} />
-                        <FieldError />
-                    </TextField>
-
-                    <TextField isDisabled className="w-full">
-                        <Label>{t('generalSettings.createdAt')}</Label>
-                        <Input variant="secondary" value={formattedCreatedAt} />
-                        <FieldError />
-                    </TextField>
-
-                    <TextField isDisabled className="w-full">
-                        <Label>{t('generalSettings.updatedAt')}</Label>
-                        <Input variant="secondary" value={formattedUpdatedAt} />
-                        <FieldError />
-                    </TextField>
+                    {metadataFields.map((field) => (
+                        <TextField
+                            key={field.key}
+                            isDisabled
+                            className="w-full"
+                        >
+                            <Label>{field.label}</Label>
+                            <Input variant="secondary" value={field.value} />
+                            <FieldError />
+                        </TextField>
+                    ))}
 
                     <div className="flex gap-2 pt-1">
                         <Button

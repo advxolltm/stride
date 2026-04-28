@@ -5,19 +5,17 @@ import {
     Input,
     Label,
     TextField,
+    toast,
 } from '@heroui/react'
-import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import AuthContainer from '../../components/auth/AuthContainer'
 import PasswordInput from '../../components/auth/PasswordInput'
-import { getApiErrorMessage } from '../../shared/utils/api/errors'
 import { useLoginMutation } from '../../store/features/auth/auth.api'
 
 export default function LoginPage() {
     const navigate = useNavigate()
     const location = useLocation()
     const [login, { isLoading }] = useLoginMutation()
-    const [submitError, setSubmitError] = useState<string | null>(null)
     const redirectTarget =
         typeof location.state === 'object' &&
         location.state !== null &&
@@ -31,7 +29,6 @@ export default function LoginPage() {
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
-        setSubmitError(null)
 
         const formData = new FormData(e.currentTarget)
         const email = String(formData.get('email') ?? '').trim()
@@ -45,12 +42,21 @@ export default function LoginPage() {
 
             navigate(redirectTarget, { replace: true })
         } catch (error: unknown) {
-            setSubmitError(
-                getApiErrorMessage(
-                    error,
-                    'Failed to sign in. Please try again.',
-                ),
-            )
+            if (
+                typeof error === 'object' &&
+                error !== null &&
+                'status' in error &&
+                error.status === 401
+            ) {
+                toast.danger(
+                    'Failed to sign in. Please check your credentials and try again.',
+                )
+            } else {
+                console.error('Login error:', error)
+                toast.danger(
+                    'An error occurred while signing in. Please try again later.',
+                )
+            }
         }
     }
 
@@ -116,10 +122,6 @@ export default function LoginPage() {
                         </button>
                     </div>
                 </div>
-
-                {submitError ? (
-                    <p className="text-sm text-red-500">{submitError}</p>
-                ) : null}
 
                 <Button
                     type="submit"

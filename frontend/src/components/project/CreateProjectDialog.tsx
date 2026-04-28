@@ -1,5 +1,3 @@
-'use client'
-
 import {
     Button,
     FieldError,
@@ -13,6 +11,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { getApiErrorMessage } from '../../shared/utils/api/errors'
 import { useCreateProjectMutation } from '../../store/features/project/project.api'
+import createProjectSlug from '../../shared/utils/createProjectSlug'
 
 interface CreateProjectDialogProps {
     isOpen: boolean
@@ -22,18 +21,6 @@ interface CreateProjectDialogProps {
 const EMPTY_FORM = {
     title: '',
     description: '',
-}
-
-const createProjectSlug = (title: string) => {
-    const baseSlug = title
-        .trim()
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '')
-
-    const suffix = Date.now().toString(36)
-
-    return `${baseSlug || 'project'}-${suffix}`
 }
 
 export function CreateProjectDialog({
