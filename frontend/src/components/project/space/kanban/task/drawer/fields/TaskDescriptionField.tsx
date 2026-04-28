@@ -10,7 +10,7 @@ export function TaskDescriptionField({ task }: { task: Task }) {
     const [updateTask, { isLoading: isSaving }] = useUpdateTaskMutation()
 
     async function handleBlur(value: string) {
-        const trimmed = value.trim() || null
+        const trimmed = value.trim()
         if (trimmed === task.description) return
         await updateTask({ taskId: task.id, projectId, body: { description: trimmed } })
     }

@@ -158,21 +158,22 @@ export const taskApi = baseApi.injectEndpoints({
                         },
                     ),
                 )
-                const patchTask = dispatch(
-                    taskApi.util.updateQueryData('getTask', taskId, (draft) => {
-                        applyTaskUpdate(draft, body)
-                    }),
-                )
+                // TODO: Uncomment when getTask endpoint is used
+                // const patchTask = dispatch(
+                //     taskApi.util.updateQueryData('getTask', taskId, (draft) => {
+                //         applyTaskUpdate(draft, body)
+                //     }),
+                // )
 
                 try {
                     await queryFulfilled
                 } catch {
                     patchProjectTasks.undo()
-                    patchTask.undo()
+                    // TODO: Uncomment when getTask endpoint is used
+                    //patchTask.undo()
                 }
             },
         }),
-
         deleteTask: builder.mutation<
             void,
             { taskId: string; projectId: string }
@@ -185,7 +186,6 @@ export const taskApi = baseApi.injectEndpoints({
                 { type: 'Task' as const, id: projectId },
             ],
         }),
-
         assignTask: builder.mutation<
             TaskAssignee,
             { taskId: string; projectId: string; body: AssignTaskRequest }
@@ -213,7 +213,6 @@ export const taskApi = baseApi.injectEndpoints({
                 { type: 'Task' as const, id: projectId },
             ],
         }),
-
         moveTask: builder.mutation<
             Task[],
             { taskId: string; projectId: string; body: MoveTaskRequest }
@@ -241,17 +240,19 @@ export const taskApi = baseApi.injectEndpoints({
                         },
                     ),
                 )
-                const patchTask = dispatch(
-                    taskApi.util.updateQueryData('getTask', taskId, (draft) => {
-                        draft.position = body.position
-                    }),
-                )
+                // TODO: Uncomment when getTask endpoint is used
+                // const patchTask = dispatch(
+                //     taskApi.util.updateQueryData('getTask', taskId, (draft) => {
+                //         draft.position = body.position
+                //     }),
+                // )
 
                 try {
                     await queryFulfilled
                 } catch {
                     patchProjectTasks.undo()
-                    patchTask.undo()
+                    // TODO: Uncomment when getTask endpoint is used
+                    //patchTask.undo()
                 }
             },
         }),
