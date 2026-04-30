@@ -24,7 +24,6 @@ func newWhiteboardRouteHandler(ws whiteboardSvc.WhiteboardService) *whiteboardRo
 
 func (h *whiteboardRouteHandler) registerRoutes(g *echo.Group) {
 	g.GET("/:id/whiteboard", h.whiteboardGETHandle)
-	g.PATCH("/:id/whiteboard", h.whiteboardPATCHHandle)
 
 	g.GET("/:id/whiteboard/elements", h.elementsGETHandle)
 	g.GET("/:id/whiteboard/elements/:elementId", h.elementGETHandle)
@@ -51,10 +50,6 @@ type whiteboardElementResponse struct {
 	ZIndex       int    `json:"zIndex" example:"1"`
 	CreatedAt    string `json:"createdAt" example:"2026-01-01T00:00:00Z"`
 	UpdatedAt    string `json:"updatedAt" example:"2026-01-01T00:00:00Z"`
-}
-
-type updateWhiteboardRequest struct {
-	CanvasState *datatypes.JSON `json:"canvasState" swaggertype:"object"`
 }
 
 type createElementRequest struct {
@@ -99,41 +94,6 @@ func (h *whiteboardRouteHandler) whiteboardGETHandle(c *echo.Context) error {
 	}
 
 	wb, err := h.whiteboardService.GetOrCreateWhiteboardByProjectID(c.Request().Context(), projectID)
-	if err != nil {
-		status, msg := mapServiceErrorWB(err)
-		return c.JSON(status, routes.ErrorResponse{Error: msg})
-	}
-
-	return c.JSON(http.StatusOK, wb)
-}
-
-// PATCH /projects/:id/whiteboard
-//
-//	@Summary	Update whiteboard canvas state
-//	@Tags		whiteboard
-//	@Param		id		path		string					true	"Project ID"
-//	@Param		body	body		updateWhiteboardRequest	true	"Whiteboard update data"
-//	@Success	200		{object}	whiteboardResponse
-//	@Failure	400		{object}	routes.ErrorResponse	"invalid request body"
-//	@Failure	401		{object}	routes.ErrorResponse	"unauthorized"
-//	@Failure	404		{object}	routes.ErrorResponse	"whiteboard not found"
-//	@Failure	500		{object}	routes.ErrorResponse	"internal server error"
-//	@Security	Auth
-//	@Router		/projects/{id}/whiteboard [patch]
-func (h *whiteboardRouteHandler) whiteboardPATCHHandle(c *echo.Context) error {
-	projectID, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid project id"})
-	}
-
-	var req updateWhiteboardRequest
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid request body"})
-	}
-
-	wb, err := h.whiteboardService.UpdateWhiteboardByProjectID(c.Request().Context(), projectID, whiteboardDB.UpdateWhiteboardFields{
-		CanvasState: req.CanvasState,
-	})
 	if err != nil {
 		status, msg := mapServiceErrorWB(err)
 		return c.JSON(status, routes.ErrorResponse{Error: msg})

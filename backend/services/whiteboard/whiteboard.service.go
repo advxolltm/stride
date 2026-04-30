@@ -18,7 +18,6 @@ type (
 		GetOrCreateWhiteboardByProjectID(ctx context.Context, projectID uuid.UUID) (*models.Whiteboard, error)
 		GetWhiteboardByProjectID(ctx context.Context, projectUUID uuid.UUID) (*models.Whiteboard, error)
 		CreateWhiteboard(ctx context.Context, whiteboard *models.Whiteboard) error
-		UpdateWhiteboardByProjectID(ctx context.Context, id uuid.UUID, fields whiteboard.UpdateWhiteboardFields) (*models.Whiteboard, error)
 
 		GetElements(ctx context.Context, projectID uuid.UUID) ([]models.WhiteboardElement, error)
 		GetElement(ctx context.Context, projectID uuid.UUID, id uuid.UUID) (*models.WhiteboardElement, error)
@@ -78,14 +77,6 @@ func (s *whiteboardService) GetWhiteboardByProjectID(ctx context.Context, projec
 
 func (s *whiteboardService) CreateWhiteboard(ctx context.Context, whiteboard *models.Whiteboard) error {
 	return s.store.CreateWhiteboard(ctx, whiteboard)
-}
-
-func (s *whiteboardService) UpdateWhiteboardByProjectID(ctx context.Context, projectID uuid.UUID, fields whiteboard.UpdateWhiteboardFields) (*models.Whiteboard, error) {
-	err := ValidateUserAccessToProject(ctx, s.projectService, projectID)
-	if err != nil {
-		return nil, err
-	}
-	return s.store.UpdateWhiteboardByProjectID(ctx, projectID, fields)
 }
 
 func (s *whiteboardService) GetElements(ctx context.Context, projectID uuid.UUID) ([]models.WhiteboardElement, error) {

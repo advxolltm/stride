@@ -170,13 +170,6 @@ func TestWhiteboardService_NilUserID_ReturnsError(t *testing.T) {
 				return svc.DeleteElement(nilCtx, projectID, elementID)
 			},
 		},
-		{
-			name: "UpdateWhiteboardByProjectID",
-			fn: func(svc whiteboardSvc.WhiteboardService) error {
-				_, err := svc.UpdateWhiteboardByProjectID(nilCtx, projectID, whiteboardDB.UpdateWhiteboardFields{})
-				return err
-			},
-		},
 	}
 
 	for _, tc := range cases {
@@ -185,38 +178,6 @@ func TestWhiteboardService_NilUserID_ReturnsError(t *testing.T) {
 			assert.Error(t, err, "expected error for nil userID")
 		})
 	}
-}
-
-func TestWhiteboardService_UpdateWhiteboardByProjectID(t *testing.T) {
-	runTest(t, db, "member updates canvas state", func(t *testing.T, db *gorm.DB, svc whiteboardSvc.WhiteboardService) {
-		project, member := selectProjectMember(t, db)
-		ctx := ctxWithUser(member.ID)
-
-		_, err := svc.GetOrCreateWhiteboardByProjectID(ctx, project.ID)
-		require.NoError(t, err)
-
-		newCanvas := datatypes.JSON([]byte(`{"version": 1, "shapes": []}`))
-		updated, err := svc.UpdateWhiteboardByProjectID(ctx, project.ID, whiteboardDB.UpdateWhiteboardFields{
-			CanvasState: &newCanvas,
-		})
-
-		require.NoError(t, err)
-		require.NotNil(t, updated)
-		assert.Equal(t, project.ID, updated.ProjectID)
-	})
-}
-func TestWhiteboardService_UpdateWhiteboardByProjectID_NonExistentProject(t *testing.T) {
-	runTest(t, db, "returns error for unknown project ID", func(t *testing.T, db *gorm.DB, svc whiteboardSvc.WhiteboardService) {
-		_, member := selectProjectMember(t, db)
-		ctx := ctxWithUser(member.ID)
-
-		newCanvas := datatypes.JSON([]byte(`{}`))
-		_, err := svc.UpdateWhiteboardByProjectID(ctx, uuid.New(), whiteboardDB.UpdateWhiteboardFields{
-			CanvasState: &newCanvas,
-		})
-
-		assert.Error(t, err)
-	})
 }
 
 func TestWhiteboardService_GetWhiteboardByProjectID_NotFound(t *testing.T) {

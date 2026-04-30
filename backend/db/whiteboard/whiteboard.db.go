@@ -12,7 +12,6 @@ import (
 type (
 	WhiteboardStore interface {
 		GetWhiteboardByProjectID(ctx context.Context, projectUUID uuid.UUID) (*models.Whiteboard, error)
-		UpdateWhiteboardByProjectID(ctx context.Context, projectUUID uuid.UUID, fields UpdateWhiteboardFields) (*models.Whiteboard, error)
 		CreateWhiteboard(ctx context.Context, whiteboard *models.Whiteboard) error
 		GetElements(ctx context.Context, projectID uuid.UUID) ([]models.WhiteboardElement, error)
 		GetElement(ctx context.Context, projectID uuid.UUID, id uuid.UUID) (*models.WhiteboardElement, error)
@@ -21,9 +20,6 @@ type (
 		DeleteElement(ctx context.Context, projectID uuid.UUID, id uuid.UUID) error
 	}
 
-	UpdateWhiteboardFields struct {
-		CanvasState *datatypes.JSON `gorm:"column:canvas_state"`
-	}
 	UpdateElementFields struct {
 		ElementType *string         `gorm:"column:element_type"`
 		Props       *datatypes.JSON `gorm:"column:props"`
@@ -50,15 +46,6 @@ func (s *whiteboardStore) GetWhiteboardByProjectID(ctx context.Context, projectU
 func (s *whiteboardStore) CreateWhiteboard(ctx context.Context, whiteboard *models.Whiteboard) error {
 	result := s.db.WithContext(ctx).Create(whiteboard)
 	return result.Error
-}
-
-func (s *whiteboardStore) UpdateWhiteboardByProjectID(ctx context.Context, projectUUID uuid.UUID, fields UpdateWhiteboardFields) (*models.Whiteboard, error) {
-	var whiteboard models.Whiteboard
-	result := s.db.WithContext(ctx).Model(&whiteboard).Where("project_id = ?", projectUUID).Updates(fields).First(&whiteboard)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-	return &whiteboard, nil
 }
 
 func (s *whiteboardStore) GetElement(ctx context.Context, projectID uuid.UUID, id uuid.UUID) (*models.WhiteboardElement, error) {

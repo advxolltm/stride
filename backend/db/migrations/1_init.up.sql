@@ -88,7 +88,6 @@ CREATE TABLE task_skills (
 CREATE TABLE whiteboards (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     project_id UUID NOT NULL UNIQUE REFERENCES projects(id) ON DELETE CASCADE,
-    canvas_state JSONB,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
