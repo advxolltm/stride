@@ -44,7 +44,7 @@ func ValidateUserAccessToProject(ctx context.Context, projectService project.Pro
 
 	isMember, err := projectService.IsProjectMember(ctx, userID, projectID)
 	if err != nil {
-		return fmt.Errorf("failed to check project membership: %w", err)
+		return fmt.Errorf("%w: %w", ErrCheckProjectMembership, err)
 	}
 	if !isMember {
 		return auth.ErrAccessDenied

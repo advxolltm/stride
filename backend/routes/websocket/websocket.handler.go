@@ -3,6 +3,7 @@ package websocket
 import (
 	"backend/services/auth"
 	"backend/services/project"
+	"backend/services/user"
 
 	"github.com/labstack/echo/v5"
 	"github.com/redis/go-redis/v9"
@@ -14,11 +15,16 @@ type WSRouteHandler struct {
 	whiteboardHandler   whiteboardWSRouteHandler
 }
 
-func NewWSRouteHandler(authService auth.AuthService, projectService project.ProjectService, rdb *redis.Client) *WSRouteHandler {
+func NewWSRouteHandler(
+	authService auth.AuthService,
+	projectService project.ProjectService,
+	userService user.UserService,
+	rdb *redis.Client,
+) *WSRouteHandler {
 	return &WSRouteHandler{
 		projectHandler:      newProjectWSRouteHandler(authService, projectService, rdb),
-		notificationHandler: newNotificationWSRouteHandler(authService, projectService, rdb),
-		whiteboardHandler:   newWhiteboardWSRouteHandler(authService),
+		notificationHandler: newNotificationWSRouteHandler(authService),
+		whiteboardHandler:   newWhiteboardWSRouteHandler(authService, projectService, userService, rdb),
 	}
 }
 

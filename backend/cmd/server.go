@@ -19,6 +19,7 @@ import (
 	"backend/routes"
 	"backend/routes/projects"
 	taskHandler "backend/routes/task"
+	wsRoutes "backend/routes/websocket"
 	authService "backend/services/auth"
 	exampleService "backend/services/example"
 	projectService "backend/services/project"
@@ -148,7 +149,7 @@ func main() {
 		projects.NewProjectsGroup(projectService, whiteboardService, authService),
 		taskHandler.NewTaskRouteHandler(authService, taskService, projectService, rdb),
 		routes.NewUserRouteHandler(userService, authService),
-		routes.NewWSRouteHandler(authService, projectService, rdb),
+		wsRoutes.NewWSRouteHandler(authService, projectService, userService, rdb),
 	}
 
 	for _, handler := range handlers {
