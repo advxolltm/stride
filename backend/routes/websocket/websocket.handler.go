@@ -9,25 +9,23 @@ import (
 )
 
 type WSRouteHandler struct {
-	chatHandler         chatWSRouteHandler
-	kanbanHandler       kanbanWSRouteHandler
+	projectHandler      projectWSRouteHandler
 	notificationHandler notificationWSRouteHandler
 	whiteboardHandler   whiteboardWSRouteHandler
 }
 
-func NewWSRouteHandler(authService auth.AuthService, _ project.ProjectService, _ *redis.Client) *WSRouteHandler {
+func NewWSRouteHandler(authService auth.AuthService, projectService project.ProjectService, rdb *redis.Client) *WSRouteHandler {
 	return &WSRouteHandler{
-		chatHandler:         newChatWSRouteHandler(authService),
-		kanbanHandler:       newKanbanWSRouteHandler(authService),
-		notificationHandler: newNotificationWSRouteHandler(authService),
+		projectHandler:      newProjectWSRouteHandler(authService, projectService, rdb),
+		notificationHandler: newNotificationWSRouteHandler(authService, projectService, rdb),
 		whiteboardHandler:   newWhiteboardWSRouteHandler(authService),
 	}
 }
 
-func (h WSRouteHandler) AddRoutes(api *echo.Group) {
-	g := api.Group("/ws")
-	h.chatHandler.addRoutes(g)
-	h.kanbanHandler.addRoutes(g)
-	h.notificationHandler.addRoutes(g)
-	h.whiteboardHandler.addRoutes(g)
+func (h WSRouteHandler) AddRoutes(ws *echo.Group) {
+	wsGroup := ws.Group("/ws")
+
+	h.projectHandler.addRoutes(wsGroup)
+	h.notificationHandler.addRoutes(wsGroup)
+	h.whiteboardHandler.addRoutes(wsGroup)
 }
