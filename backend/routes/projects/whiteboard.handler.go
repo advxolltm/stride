@@ -1,12 +1,14 @@
 package projects
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
 	whiteboardDB "backend/db/whiteboard"
 	"backend/models"
 	"backend/routes"
+	authSvc "backend/services/auth"
 	whiteboardSvc "backend/services/whiteboard"
 
 	"github.com/google/uuid"
@@ -15,11 +17,15 @@ import (
 )
 
 type whiteboardRouteHandler struct {
+	authService       authSvc.AuthService
 	whiteboardService whiteboardSvc.WhiteboardService
 }
 
-func newWhiteboardRouteHandler(ws whiteboardSvc.WhiteboardService) *whiteboardRouteHandler {
-	return &whiteboardRouteHandler{whiteboardService: ws}
+func newWhiteboardRouteHandler(ws whiteboardSvc.WhiteboardService, authService authSvc.AuthService) *whiteboardRouteHandler {
+	return &whiteboardRouteHandler{
+		authService:       authService,
+		whiteboardService: ws,
+	}
 }
 
 func (h *whiteboardRouteHandler) registerRoutes(g *echo.Group) {
@@ -66,6 +72,10 @@ type updateElementRequest struct {
 
 func mapServiceErrorWB(err error) (int, string) {
 	switch {
+	case errors.Is(err, authSvc.ErrUserIDNotInContext):
+		return http.StatusUnauthorized, authSvc.ErrUnauthorized.Error()
+	case errors.Is(err, authSvc.ErrAccessDenied):
+		return http.StatusForbidden, err.Error()
 	case errors.Is(err, whiteboardSvc.ErrWhiteboardNotFound):
 		return http.StatusNotFound, err.Error()
 	case errors.Is(err, whiteboardSvc.ErrElementNotFound):
@@ -73,6 +83,11 @@ func mapServiceErrorWB(err error) (int, string) {
 	default:
 		return http.StatusInternalServerError, "internal server error"
 	}
+}
+
+func (h *whiteboardRouteHandler) userContext(c *echo.Context) context.Context {
+	userID := h.authService.GetClaims(c).UserID
+	return context.WithValue(c.Request().Context(), "userID", userID)
 }
 
 // GET /projects/:id/whiteboard
@@ -83,6 +98,7 @@ func mapServiceErrorWB(err error) (int, string) {
 //	@Success	200	{object}	whiteboardResponse
 //	@Failure	400	{object}	routes.ErrorResponse	"invalid project id"
 //	@Failure	401	{object}	routes.ErrorResponse	"unauthorized"
+//	@Failure	403	{object}	routes.ErrorResponse	"forbidden"
 //	@Failure	404	{object}	routes.ErrorResponse	"whiteboard not found"
 //	@Failure	500	{object}	routes.ErrorResponse	"internal server error"
 //	@Security	Auth
@@ -93,7 +109,7 @@ func (h *whiteboardRouteHandler) whiteboardGETHandle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid project id"})
 	}
 
-	wb, err := h.whiteboardService.GetOrCreateWhiteboardByProjectID(c.Request().Context(), projectID)
+	wb, err := h.whiteboardService.GetOrCreateWhiteboardByProjectID(h.userContext(c), projectID)
 	if err != nil {
 		status, msg := mapServiceErrorWB(err)
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
@@ -110,6 +126,7 @@ func (h *whiteboardRouteHandler) whiteboardGETHandle(c *echo.Context) error {
 //	@Success	200	{array}		whiteboardElementResponse
 //	@Failure	400	{object}	routes.ErrorResponse	"invalid project id"
 //	@Failure	401	{object}	routes.ErrorResponse	"unauthorized"
+//	@Failure	403	{object}	routes.ErrorResponse	"forbidden"
 //	@Failure	404	{object}	routes.ErrorResponse	"whiteboard not found"
 //	@Failure	500	{object}	routes.ErrorResponse	"internal server error"
 //	@Security	Auth
@@ -120,7 +137,7 @@ func (h *whiteboardRouteHandler) elementsGETHandle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid project id"})
 	}
 
-	elements, err := h.whiteboardService.GetElements(c.Request().Context(), projectID)
+	elements, err := h.whiteboardService.GetElements(h.userContext(c), projectID)
 	if err != nil {
 		status, msg := mapServiceErrorWB(err)
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
@@ -138,6 +155,7 @@ func (h *whiteboardRouteHandler) elementsGETHandle(c *echo.Context) error {
 //	@Success	200			{object}	whiteboardElementResponse
 //	@Failure	400			{object}	routes.ErrorResponse	"invalid project or element id"
 //	@Failure	401			{object}	routes.ErrorResponse	"unauthorized"
+//	@Failure	403			{object}	routes.ErrorResponse	"forbidden"
 //	@Failure	404			{object}	routes.ErrorResponse	"element not found"
 //	@Failure	500			{object}	routes.ErrorResponse	"internal server error"
 //	@Security	Auth
@@ -153,7 +171,7 @@ func (h *whiteboardRouteHandler) elementGETHandle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid element id"})
 	}
 
-	element, err := h.whiteboardService.GetElement(c.Request().Context(), projectID, elementID)
+	element, err := h.whiteboardService.GetElement(h.userContext(c), projectID, elementID)
 	if err != nil {
 		status, msg := mapServiceErrorWB(err)
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
@@ -171,6 +189,7 @@ func (h *whiteboardRouteHandler) elementGETHandle(c *echo.Context) error {
 //	@Success	201		{object}	whiteboardElementResponse
 //	@Failure	400		{object}	routes.ErrorResponse	"invalid request body"
 //	@Failure	401		{object}	routes.ErrorResponse	"unauthorized"
+//	@Failure	403		{object}	routes.ErrorResponse	"forbidden"
 //	@Failure	404		{object}	routes.ErrorResponse	"whiteboard not found"
 //	@Failure	500		{object}	routes.ErrorResponse	"internal server error"
 //	@Security	Auth
@@ -192,7 +211,7 @@ func (h *whiteboardRouteHandler) elementPOSTHandle(c *echo.Context) error {
 		ZIndex:      req.ZIndex,
 	}
 
-	created, err := h.whiteboardService.CreateElement(c.Request().Context(), projectID, element)
+	created, err := h.whiteboardService.CreateElement(h.userContext(c), projectID, element)
 	if err != nil {
 		status, msg := mapServiceErrorWB(err)
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
@@ -211,6 +230,7 @@ func (h *whiteboardRouteHandler) elementPOSTHandle(c *echo.Context) error {
 //	@Success	200			{object}	whiteboardElementResponse
 //	@Failure	400			{object}	routes.ErrorResponse	"invalid request body or id"
 //	@Failure	401			{object}	routes.ErrorResponse	"unauthorized"
+//	@Failure	403			{object}	routes.ErrorResponse	"forbidden"
 //	@Failure	404			{object}	routes.ErrorResponse	"element not found"
 //	@Failure	500			{object}	routes.ErrorResponse	"internal server error"
 //	@Security	Auth
@@ -231,7 +251,7 @@ func (h *whiteboardRouteHandler) elementPATCHHandle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid request body"})
 	}
 
-	updated, err := h.whiteboardService.UpdateElement(c.Request().Context(), projectID, elementID, whiteboardDB.UpdateElementFields{
+	updated, err := h.whiteboardService.UpdateElement(h.userContext(c), projectID, elementID, whiteboardDB.UpdateElementFields{
 		ElementType: req.ElementType,
 		Props:       req.Props,
 		ZIndex:      req.ZIndex,
@@ -253,6 +273,7 @@ func (h *whiteboardRouteHandler) elementPATCHHandle(c *echo.Context) error {
 //	@Success	204
 //	@Failure	400	{object}	routes.ErrorResponse	"invalid project or element id"
 //	@Failure	401	{object}	routes.ErrorResponse	"unauthorized"
+//	@Failure	403	{object}	routes.ErrorResponse	"forbidden"
 //	@Failure	404	{object}	routes.ErrorResponse	"element not found"
 //	@Failure	500	{object}	routes.ErrorResponse	"internal server error"
 //	@Security	Auth
@@ -268,7 +289,7 @@ func (h *whiteboardRouteHandler) elementDELETEHandle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid element id"})
 	}
 
-	if err := h.whiteboardService.DeleteElement(c.Request().Context(), projectID, elementID); err != nil {
+	if err := h.whiteboardService.DeleteElement(h.userContext(c), projectID, elementID); err != nil {
 		status, msg := mapServiceErrorWB(err)
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
 	}
