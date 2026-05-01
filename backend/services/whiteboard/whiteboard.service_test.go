@@ -22,11 +22,6 @@ import (
 var db *gorm.DB
 var rdb *redis.Client
 
-type userIDKeyType string
-
-const userIDKey userIDKeyType = "userID"
-
-
 func TestMain(m *testing.M) {
 	testutils.RunTestMain(m, &db, &rdb, true, true)
 }
@@ -39,7 +34,7 @@ func newTestService(db *gorm.DB) whiteboardSvc.WhiteboardService {
 }
 
 func ctxWithUser(userID uuid.UUID) context.Context {
-	return context.WithValue(context.Background(), userIDKey, userID)
+	return context.WithValue(context.Background(), "userID", userID) //nolint:staticcheck // test helper must match the current service context key
 }
 
 func selectProjectMember(t *testing.T, db *gorm.DB) (models.Project, models.User) {
