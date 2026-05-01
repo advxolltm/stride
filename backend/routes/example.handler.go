@@ -42,14 +42,14 @@ func (h ExampleRouteHandler) AddRoutes(api *echo.Group) {
 	g.POST("/channel-post/:id", h.ChannelPost)
 }
 
-// @Summary	Some route to get data
-// @Tags		example
-// @Success	200	{object}	routes.DataGETHandle.dataResponse
-// @Router		/example/data [get]
+//	@Summary	Some route to get data
+//	@Tags		example
+//	@Success	200	{object}	routes.DataGETHandle.dataResponse
+//	@Router		/example/data [get]
 func (h ExampleRouteHandler) DataGETHandle(c *echo.Context) error {
 	type dataResponse struct {
 		Value string
-	} // @name DataResponse
+	} //	@name	DataResponse
 
 	value, err := h.exampleService.GetData()
 	if err != nil {
@@ -58,11 +58,11 @@ func (h ExampleRouteHandler) DataGETHandle(c *echo.Context) error {
 	return c.JSON(http.StatusOK, dataResponse{Value: value})
 }
 
-// @Summary	Some route to get data, requires authentication
-// @Tags		example
-// @Success	200	{string}	string
-// @Router		/example/data-protected [get]
-// @Security	Auth
+//	@Summary	Some route to get data, requires authentication
+//	@Tags		example
+//	@Success	200	{string}	string
+//	@Router		/example/data-protected [get]
+//	@Security	Auth
 func (h ExampleRouteHandler) DataProtectedGETHandle(c *echo.Context) error {
 	claims := h.authService.GetClaims(c)
 	userID := claims.UserID
@@ -74,11 +74,11 @@ func (h ExampleRouteHandler) DataProtectedGETHandle(c *echo.Context) error {
 	return c.String(http.StatusOK, fmt.Sprintf("Hello user %s! -> %s", userID.String(), value))
 }
 
-// @Summary	Connect to a channel with the given ID
-// @Tags		example
-// @Param		id		path		int true	"Channel ID"
-// @Success	200
-// @Router		/example/channel-connect/{id} [get]
+//	@Summary	Connect to a channel with the given ID
+//	@Tags		example
+//	@Param		id	path	int	true	"Channel ID"
+//	@Success	200
+//	@Router		/example/channel-connect/{id} [get]
 func (h ExampleRouteHandler) ChannelConnect(c *echo.Context) error {
 	ctx := c.Request().Context()
 	channel := c.Param("id")
@@ -103,17 +103,17 @@ func (h ExampleRouteHandler) ChannelConnect(c *echo.Context) error {
 	}
 }
 
-// @Summary	Send something in a channel with the given ID
-// @Tags		example
-// @Param			id		path		int true	"Channel ID"
-// @Param			message body		routes.ChannelPost.channelMessage	true	"Channel Message"
-// @Success	200	{string}	string
-// @Router		/example/channel-post/{id} [post]
+//	@Summary	Send something in a channel with the given ID
+//	@Tags		example
+//	@Param		id		path		int									true	"Channel ID"
+//	@Param		message	body		routes.ChannelPost.channelMessage	true	"Channel Message"
+//	@Success	200		{string}	string
+//	@Router		/example/channel-post/{id} [post]
 func (h ExampleRouteHandler) ChannelPost(c *echo.Context) error {
 	type channelMessage struct {
-		Type string `json:"type"`
+		Type    string `json:"type"`
 		Payload string `json:"payload"`
-	} // @name ChannelMessage
+	} //	@name	ChannelMessage
 
 	ctx := c.Request().Context()
 	channel, err := uuid.Parse(c.Param("id"))

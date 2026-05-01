@@ -8,16 +8,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func compareDate(t1 time.Time, t2 time.Time) bool {
-	y1, m1, d1 := t1.Date()
-	y2, m2, d2 := t2.Date()
-	return y1 == y2 && m1 == m2 && d1 == d2
+func RequireEqualDate(t *testing.T, t1 time.Time, t2 time.Time, msg ...string) {
+	t1Trunc := t1.In(time.UTC).Truncate(24 * time.Hour)
+	t2Trunc := t2.In(time.UTC).Truncate(24 * time.Hour)
+
+	require.Truef(t, t1Trunc.Equal(t2Trunc), "Expected date-part of two times (%s, %s) to be equal: %s", t1Trunc, t2Trunc, strings.Join(msg, ", "))
 }
 
-func RequireEqualDate(t *testing.T, t1 time.Time, t2 time.Time, msg ...string) {
-	if !compareDate(t1, t2) {
-		require.FailNowf(t, "Date-Part of time not equal:\nexpected: %s\nactual: %s\nMessages %s", t1.Format(time.DateOnly), t2.Format(time.DateOnly), strings.Join(msg, ", "))
-	}
+func RequireEqualTime(t *testing.T, t1 time.Time, t2 time.Time, msg ...string) {
+	require.Truef(t, t1.Equal(t2), "Expected times (%s, %s) to be equal: %s", t1, t2, strings.Join(msg, ", "))
 }
 
 func Map[T, V any](from []T, toFunc func(T) V) []V {

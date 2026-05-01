@@ -1,8 +1,10 @@
 package task_test
 
 import (
+	projectStore "backend/db/project"
 	taskStore "backend/db/task"
 	"backend/models"
+	projectService "backend/services/project"
 	taskService "backend/services/task"
 	"backend/testutils"
 	"fmt"
@@ -10,7 +12,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
+	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 )
 
@@ -23,7 +27,9 @@ func TestMain(m *testing.M) {
 
 func newTestTaskService(db *gorm.DB) taskService.TaskService {
 	store := taskStore.NewTaskStore(db)
-	return taskService.NewTaskService(store)
+	projStore := projectStore.NewProjectStore(db)
+	projService := projectService.NewProjectService(projStore)
+	return taskService.NewTaskService(store, projService)
 }
 
 func runTest(t *testing.T, db *gorm.DB, name string, f func(*testing.T, *gorm.DB, taskService.TaskService)) {
@@ -35,7 +41,7 @@ func runTest(t *testing.T, db *gorm.DB, name string, f func(*testing.T, *gorm.DB
 	})
 }
 
-func TestTaskStore(t *testing.T) {
+func TestTaskService(t *testing.T) {
 	runTest(t, db, "Creating a task", func(t *testing.T, db *gorm.DB, sut taskService.TaskService) {
 		runTest(t, db, "fails if the project member does not exist", func(t *testing.T, db *gorm.DB, sut taskService.TaskService) {
 			project := testutils.SelectRandomProject(t, db)
@@ -116,12 +122,7 @@ func TestTaskStore(t *testing.T) {
 					assignee, err := sut.AssignTask(t.Context(), randomTask.ID, randomProjectMember.ID)
 					testutils.TAssertNoError(t, err)
 
-					y1, m1, d1 := assignee.AssignedAt.Date()
-					y2, m2, d2 := time.Now().Date()
-
-					if y1 != y2 || m1 != m2 || d1 != d2 {
-						t.Errorf("assignee.AssignedAt: expected %s, got %s", time.Now(), assignee.AssignedAt)
-					}
+					testutils.RequireEqualDate(t, assignee.AssignedAt, time.Now())
 
 					runTest(t, db, "fails if the task is already assigned to the project member", func(t *testing.T, db *gorm.DB, sut taskService.TaskService) {
 						_, err := sut.AssignTask(t.Context(), randomTask.ID, randomProjectMember.ID)
@@ -261,6 +262,147 @@ func TestTaskStore(t *testing.T) {
 				}
 			})
 
+		})
+	})
+
+	runTest(t, db, "Adding a task to a skill", func(t *testing.T, db *gorm.DB, sut taskService.TaskService) {
+		runTest(t, db, "fails if either does not exist", func(t *testing.T, db *gorm.DB, sut taskService.TaskService) {
+			project := testutils.SelectRandomProject(t, db)
+
+			task := testutils.Choice(&project.Tasks)
+			skill := testutils.Choice(&project.Skills)
+
+			taskSkill, err := sut.AddSkill(t.Context(), task.ID, uuid.New())
+			require.Nil(t, taskSkill)
+			require.ErrorIs(t, err, projectService.ErrNonExistentProjectSkill)
+
+			taskSkill, err = sut.AddSkill(t.Context(), uuid.New(), skill.ID)
+			require.Nil(t, taskSkill)
+			require.ErrorIs(t, err, projectService.ErrNonExistentProjectTask)
+		})
+
+		runTest(t, db, "fails if the task and skill are not in the same project", func(t *testing.T, db *gorm.DB, sut taskService.TaskService) {
+			projects := testutils.SelectRandomProjects(t, db, 2)
+			p1 := projects[0]
+			p2 := projects[1]
+
+			taskOfP1 := testutils.Choice(&p1.Tasks)
+			skillOfP2 := testutils.Choice(&p2.Skills)
+
+			taskSkill, err := sut.AddSkill(t.Context(), taskOfP1.ID, skillOfP2.ID)
+			require.Nil(t, taskSkill)
+			require.ErrorIs(t, err, taskService.ErrSkillNotInSameProjectAsTask)
+		})
+
+		runTest(t, db, "fails if the skill is already assigned to the task", func(t *testing.T, db *gorm.DB, sut taskService.TaskService) {
+			project := testutils.SelectRandomProject(t, db)
+
+			task := testutils.Choice(&project.Tasks)
+			skill := testutils.Choice(&project.Skills)
+
+			// ensure that the skill is not assigned to the task first
+			err := sut.RemoveSkill(t.Context(), task.ID, skill.ID)
+			require.NoError(t, err)
+
+			taskSkill, err := sut.AddSkill(t.Context(), task.ID, skill.ID)
+			require.NoError(t, err)
+			require.NotNil(t, taskSkill)
+			require.Equal(t, task.ID, taskSkill.TaskID)
+			require.Equal(t, skill.ID, taskSkill.ProjectSkillID)
+
+			taskSkill, err = sut.AddSkill(t.Context(), task.ID, skill.ID)
+			require.Nil(t, taskSkill)
+			require.ErrorIs(t, err, taskService.ErrSkillAlreadyAssignedToTask)
+		})
+
+		runTest(t, db, "updates the assigned skills of a task", func(t *testing.T, db *gorm.DB, sut taskService.TaskService) {
+			project := testutils.SelectRandomProject(t, db)
+
+			task := testutils.Choice(&project.Tasks)
+			skill := testutils.Choice(&project.Skills)
+
+			// ensure that the skill is not assigned to the task first
+			err := sut.RemoveSkill(t.Context(), task.ID, skill.ID)
+			require.NoError(t, err)
+
+			taskSkill, err := sut.AddSkill(t.Context(), task.ID, skill.ID)
+			require.NotNil(t, taskSkill)
+			require.Equal(t, task.ID, taskSkill.TaskID)
+			require.Equal(t, skill.ID, taskSkill.ProjectSkillID)
+			require.NoError(t, err)
+
+			updatedTask, err := sut.GetTask(t.Context(), task.ID)
+			require.NoError(t, err)
+			require.Len(t, updatedTask.TaskSkills, len(task.TaskSkills)+1)
+
+			skillFound := false
+			for _, s := range updatedTask.TaskSkills {
+				if s.ProjectSkillID == skill.ID && s.TaskID == task.ID {
+					skillFound = true
+					break
+				}
+			}
+			require.Truef(t, skillFound, "expected skill %s to be included in the tasks skill-array: %v", skill.ID, updatedTask.TaskSkills)
+		})
+	})
+
+	runTest(t, db, "Removing a task from a skill", func(t *testing.T, db *gorm.DB, sut taskService.TaskService) {
+		runTest(t, db, "fails if either does not exist", func(t *testing.T, db *gorm.DB, sut taskService.TaskService) {
+			project := testutils.SelectRandomProject(t, db)
+
+			task := testutils.Choice(&project.Tasks)
+			skill := testutils.Choice(&project.Skills)
+
+			err := sut.RemoveSkill(t.Context(), task.ID, uuid.New())
+			require.ErrorIs(t, err, projectService.ErrNonExistentProjectSkill)
+
+			err = sut.RemoveSkill(t.Context(), uuid.New(), skill.ID)
+			require.ErrorIs(t, err, projectService.ErrNonExistentProjectTask)
+		})
+
+		runTest(t, db, "fails if the task and skill are not in the same project", func(t *testing.T, db *gorm.DB, sut taskService.TaskService) {
+			projects := testutils.SelectRandomProjects(t, db, 2)
+			p1 := projects[0]
+			p2 := projects[1]
+
+			taskOfP1 := testutils.Choice(&p1.Tasks)
+			skillOfP2 := testutils.Choice(&p2.Skills)
+
+			err := sut.RemoveSkill(t.Context(), taskOfP1.ID, skillOfP2.ID)
+			require.ErrorIs(t, err, taskService.ErrSkillNotInSameProjectAsTask)
+		})
+
+		runTest(t, db, "succeeds even if the skill is not assigned to the task (idempotent)", func(t *testing.T, db *gorm.DB, sut taskService.TaskService) {
+			project := testutils.SelectRandomProject(t, db)
+
+			task := testutils.Choice(&project.Tasks)
+			skill := testutils.Choice(&project.Skills)
+
+			err := sut.RemoveSkill(t.Context(), task.ID, skill.ID)
+			require.NoError(t, err)
+
+			err = sut.RemoveSkill(t.Context(), task.ID, skill.ID)
+			require.NoError(t, err)
+		})
+
+		runTest(t, db, "updates the assigned skills of a task", func(t *testing.T, db *gorm.DB, sut taskService.TaskService) {
+			project := testutils.SelectRandomProject(t, db)
+
+			task := testutils.Choice(&project.Tasks)
+			skill := testutils.Choice(&task.TaskSkills)
+
+			err := sut.RemoveSkill(t.Context(), task.ID, skill.ProjectSkillID)
+			require.NoError(t, err)
+
+			updatedTask, err := sut.GetTask(t.Context(), task.ID)
+			require.NoError(t, err)
+			require.Len(t, updatedTask.TaskSkills, len(task.TaskSkills)-1)
+
+			for _, s := range updatedTask.TaskSkills {
+				if s.ProjectSkillID == skill.ProjectSkillID && s.TaskID == task.ID {
+					require.Fail(t, "expected skill %s to be excluded in the tasks skill-array: %v", updatedTask.TaskSkills)
+				}
+			}
 		})
 	})
 }
