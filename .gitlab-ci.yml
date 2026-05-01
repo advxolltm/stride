@@ -98,7 +98,7 @@ test-backend:
     - echo "CI=$CI"
     - until PGPASSWORD=$DB_PASSWORD psql -h "postgres" -U stride -d stride -c "SELECT 'OK' AS status;"; do echo "Waiting for postgres..."; sleep 2; done
     - go mod download
-    - ../bin/golangci-lint run --output.code-climate.path=gl-code-quality-report.json
+    - ../bin/golangci-lint run --output.code-climate.path=../gl-code-quality-report.json
     - go test -count=1 -p 1 ./...
   artifacts:
     reports:
