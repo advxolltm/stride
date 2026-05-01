@@ -14,7 +14,7 @@ import (
 )
 
 type WSRouteHandler struct {
-	upgrader websocket.Upgrader
+	upgrader       websocket.Upgrader
 	authService    auth.AuthService
 	projectService project.ProjectService
 	rdb            *redis.Client
@@ -39,14 +39,14 @@ func (h WSRouteHandler) AddRoutes(api *echo.Group) {
 	g.GET("/connect/:id", h.ConnectGET, h.authService.AuthenticatedMiddleware())
 }
 
-// @Summary		Connect to a project channel to receive all updates for the project in real-time.
-// @Tags		websocket
-// @Param		id		path		string true	"Project ID"
-// @Success	200
-// @Failure 400 {object} ErrorResponse "invalid project id"
-// @Failure 401 {object} ErrorResponse "unauthorized"
-// @Router	/ws/connect/{id} [get]
-// @Security Auth
+//	@Summary	Connect to a project channel to receive all updates for the project in real-time.
+//	@Tags		websocket
+//	@Param		id	path	string	true	"Project ID"
+//	@Success	200
+//	@Failure	400	{object}	ErrorResponse	"invalid project id"
+//	@Failure	401	{object}	ErrorResponse	"unauthorized"
+//	@Router		/ws/connect/{id} [get]
+//	@Security	Auth
 func (h WSRouteHandler) ConnectGET(c *echo.Context) error {
 	ctx := c.Request().Context()
 	channel, err := uuid.Parse(c.Param("id"))

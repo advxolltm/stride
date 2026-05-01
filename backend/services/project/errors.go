@@ -10,6 +10,7 @@ var (
 	ErrNonExistentUser         = errors.New("user not found")
 	ErrNonExistentMember       = errors.New("member not found")
 	ErrUserAlreadyMember       = errors.New("user is already a member of the project")
-	ErrNonExistentProjectSkill = errors.New("the project skill you are trying to delete does not exist")
+	ErrNonExistentProjectSkill = errors.New("project skill not found")
 	ErrProjectMemberNotFound   = errors.New("User is not a member of the project")
+	ErrNonExistentProjectTask  = errors.New("task not found")
 )
