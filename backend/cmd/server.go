@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log/slog"
 	"os"
 	"strings"
 
@@ -121,7 +122,12 @@ func main() {
 	}
 	
 	rdb := db.InitRedis(db.RedisDSNFromEnv())
-	defer rdb.Close()
+	defer func() {
+		err := rdb.Close()
+		if err != nil {
+			slog.Error("failed to close redis client", "error", err)
+		}
+	}()
 
 	userStore := userDB.NewUserStore(mainDB)
 	projectStore := projectDB.NewProjectStore(mainDB)

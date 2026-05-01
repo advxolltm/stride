@@ -3,6 +3,7 @@ package testutils
 import (
 	"backend/models"
 	"fmt"
+	"log"
 	"math/rand"
 	"testing"
 	"time"
@@ -65,9 +66,7 @@ func ChoiceN[V any](src []V, count int) []V {
 	}
 
 	srcCopy := make([]V, 0, len(src))
-	for _, e := range src {
-		srcCopy = append(srcCopy, e)
-	}
+	srcCopy = append(srcCopy, src...)
 
 	res := make([]V, 0, count)
 	for range count {
@@ -312,7 +311,10 @@ func updateProjects(db *gorm.DB, projects []models.Project) {
 
 func fillDBWithRandomData(db *gorm.DB) {
 	// Define a fixed seed to make tests reproducable
-	f.Seed(seed)
+	err := f.Seed(seed)
+	if err != nil {
+		log.Fatalf("fakeitseed could not be set: %s", err.Error())
+	}
 	batchsize := 25
 
 	users := GenerateRandomUsers(20)
@@ -398,15 +400,4 @@ func generateTasksForProject(maxTasksPerProject int, projects []models.Project) 
 		tasks := GenerateRandomTasks(taskCount, p)
 		projects[pidx].Tasks = tasks
 	}
-}
-
-func assignProjectOwners(projects []models.Project) {
-	for pidx := range projects {
-		assignProjectOwner(&projects[pidx])
-	}
-}
-
-func assignProjectOwner(project *models.Project) {
-	o := Choice(&project.Members)
-	project.Creator = &o.User
 }

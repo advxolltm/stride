@@ -66,10 +66,20 @@ func (h WSRouteHandler) ConnectGET(c *echo.Context) error {
 		slog.Error("failed to upgrade", "error", err)
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
 	}
-	defer ws.Close()
+	defer func() {
+		err := ws.Close()
+		if err != nil {
+			slog.Error("failed to close websocket connection", "error", err)
+		}
+	}()
 
 	sub := h.rdb.Subscribe(ctx, channel.String())
-	defer sub.Close()
+	defer func() {
+		err := sub.Close()
+		if err != nil {
+			slog.Error("failed to close redis sub", "error", err)
+		}
+	}()
 	ch := sub.Channel()
 
 	for msg := range ch {
