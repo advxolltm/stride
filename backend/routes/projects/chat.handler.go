@@ -1,0 +1,273 @@
+package projects
+
+import (
+	"backend/routes"
+	authService "backend/services/auth"
+	chatService "backend/services/chat"
+	projectService "backend/services/project"
+	"errors"
+	"log/slog"
+	"net/http"
+
+	"github.com/google/uuid"
+	"github.com/labstack/echo/v5"
+)
+
+type chatRouteHandler struct {
+	chatService chatService.ChatService
+	authService authService.AuthService
+	projectService projectService.ProjectService
+}
+
+func newChatRouteHandler(chatService chatService.ChatService, authService authService.AuthService, projectService projectService.ProjectService) *chatRouteHandler {
+	return &chatRouteHandler{chatService, authService, projectService}
+}
+
+func (h *chatRouteHandler) registerRoutes(api *echo.Group) {
+	g := api.Group("/:project-id/chat", h.authService.AuthenticatedMiddleware())
+	g.GET("", h.messagesPagedGET)
+	g.GET("/count", h.messagesCountGET)
+	g.GET("/message/:message-id", h.messageGET)
+	g.PATCH("/message/:message-id", h.messagePATCH)
+	g.DELETE("/message/:message-id", h.messageDELETE)
+}
+
+
+func (h *chatRouteHandler) mapServiceError(err error) (int, string) {
+	switch {
+	case errors.Is(err, projectService.ErrProjectNotFound):
+		return http.StatusNotFound, err.Error()
+	default:
+		slog.Error("unexpected error in chat route handler", "error", err.Error())
+		return http.StatusInternalServerError, "internal server error"
+	}
+}
+
+// @Summary Gets a range of messages. `offset` and `count` must be set as a query param
+// @Tags chat
+// @Param project-id path string true "Project ID"
+// @Param count query int true "Number of messages to return"
+// @Param offset query int true "Number of messages to skip"
+// @Success 200 {array} Message "messages"
+// @Failure 400 {object} ErrorResponse "invalid project id or message count or message offset"
+// @Failure 401 {object} ErrorResponse "unauthorized"
+// @Failure 404 {object} ErrorResponse "project not found"
+// @Router /projects/{project-id}/chat [get]
+func (h *chatRouteHandler) messagesPagedGET(c *echo.Context) error {
+	ctx := c.Request().Context()
+
+	type reqFields struct {
+		ProjectID uuid.UUID `path:"project-id"`
+		Count int `query:"count"`
+		Offset int `query:"offset"`
+	}
+
+	var req reqFields
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, routes.BadRequestErrResponse(err))
+	}
+
+	userId := h.authService.GetClaims(c).UserID
+	isMember, err := h.projectService.IsProjectMember(ctx, userId, req.ProjectID)
+
+	if err != nil {
+		status, msg := h.mapServiceError(err)
+		return c.JSON(status, routes.ErrorResponse{Error: msg})
+	}
+
+	if !isMember {
+		return c.JSON(http.StatusUnauthorized, routes.ErrorResponse{Error: "unauthorized"})
+	}
+
+	messages, err := h.chatService.GetProjectMessages(ctx, req.ProjectID, req.Offset, req.Count)
+	if err != nil {
+		status, msg := h.mapServiceError(err)
+		return c.JSON(status, routes.ErrorResponse{Error: msg})
+	}
+
+	messagesResp := routes.Map(messages, routes.MapMessage)
+	return c.JSON(http.StatusOK, messagesResp)
+}
+
+// @Summary Gets the message count in a chat
+// @Tags chat
+// @Param project-id path string true "Project ID"
+// @Success 200 {array} MessageCount "Number of messages"
+// @Failure 400 {object} ErrorResponse "invalid project id"
+// @Failure 401 {object} ErrorResponse "unauthorized"
+// @Failure 404 {object} ErrorResponse "project not found"
+// @Router /projects/{project-id}/chat/count [get]
+func (h *chatRouteHandler) messagesCountGET(c *echo.Context) error {
+	ctx := c.Request().Context()
+
+	type reqFields struct {
+		ProjectID uuid.UUID `path:"project-id"`
+	}
+
+	var req reqFields
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, routes.BadRequestErrResponse(err))
+	}
+
+	userId := h.authService.GetClaims(c).UserID
+	isMember, err := h.projectService.IsProjectMember(ctx, userId, req.ProjectID)
+
+	if err != nil {
+		status, msg := h.mapServiceError(err)
+		return c.JSON(status, routes.ErrorResponse{Error: msg})
+	}
+
+	if !isMember {
+		return c.JSON(http.StatusUnauthorized, routes.ErrorResponse{Error: "unauthorized"})
+	}
+
+	count, err := h.chatService.GetMessageCount(ctx, req.ProjectID) 
+	if err != nil {
+		status, msg := h.mapServiceError(err)
+		return c.JSON(status, routes.ErrorResponse{Error: msg})
+	}
+
+	countResp := routes.MessageCount{
+		Count: count,
+	}
+	return c.JSON(http.StatusOK, countResp)
+}
+
+// @Summary Gets a specific message
+// @Tags chat
+// @Param project-id path string true "Project ID"
+// @Param message-id path string true "Message ID"
+// @Success 200 {object} Message "Message"
+// @Failure 400 {object} ErrorResponse "invalid project id or message id"
+// @Failure 401 {object} ErrorResponse "unauthorized"
+// @Failure 404 {object} ErrorResponse "project not found or message not found"
+// @Router /projects/{project-id}/chat/message/{message-id} [get]
+func (h *chatRouteHandler) messageGET(c *echo.Context) error {
+	ctx := c.Request().Context()
+
+	type reqFields struct {
+		ProjectID uuid.UUID `path:"project-id"`
+		MessageID uuid.UUID `path:"message-id"`
+	}
+
+	var req reqFields
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, routes.BadRequestErrResponse(err))
+	}
+
+	userId := h.authService.GetClaims(c).UserID
+	isMember, err := h.projectService.IsProjectMember(ctx, userId, req.ProjectID)
+
+	if err != nil {
+		status, msg := h.mapServiceError(err)
+		return c.JSON(status, routes.ErrorResponse{Error: msg})
+	}
+
+	if !isMember {
+		return c.JSON(http.StatusUnauthorized, routes.ErrorResponse{Error: "unauthorized"})
+	}
+
+	message, err := h.chatService.GetMessage(ctx, req.MessageID) 
+	if err != nil {
+		status, msg := h.mapServiceError(err)
+		return c.JSON(status, routes.ErrorResponse{Error: msg})
+	}
+
+	messageResp := routes.MapMessage(message)
+	return c.JSON(http.StatusOK, messageResp)
+}
+
+
+type updateMessageRequest struct {
+	Content string `json:"content" example:"You should play Deltarune!"`
+} // @name UpdateMessageRequest
+
+// @Summary Updates a specific message
+// @Tags chat
+// @Param project-id path string true "Project ID"
+// @Param message-id path string true "Message ID"
+// @Param data body updateMessageRequest true "Update message data"
+// @Success 200 {object} Message "Message"
+// @Failure 400 {object} ErrorResponse "invalid project id or message id"
+// @Failure 401 {object} ErrorResponse "unauthorized"
+// @Failure 404 {object} ErrorResponse "project not found or message not found"
+// @Router /projects/{project-id}/chat/message/{message-id} [patch]
+func (h *chatRouteHandler) messagePATCH(c *echo.Context) error {
+	ctx := c.Request().Context()
+
+	type reqFields struct {
+		ProjectID uuid.UUID `path:"project-id"`
+		MessageID uuid.UUID `path:"message-id"`
+		updateMessageRequest
+	}
+
+	var req reqFields
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, routes.BadRequestErrResponse(err))
+	}
+
+	userId := h.authService.GetClaims(c).UserID
+	isMember, err := h.projectService.IsProjectMember(ctx, userId, req.ProjectID)
+
+	if err != nil {
+		status, msg := h.mapServiceError(err)
+		return c.JSON(status, routes.ErrorResponse{Error: msg})
+	}
+
+	if !isMember {
+		return c.JSON(http.StatusUnauthorized, routes.ErrorResponse{Error: "unauthorized"})
+	}
+
+	message, err := h.chatService.UpdateMessage(ctx, req.MessageID, req.Content) 
+	if err != nil {
+		status, msg := h.mapServiceError(err)
+		return c.JSON(status, routes.ErrorResponse{Error: msg})
+	}
+
+	messageResp := routes.MapMessage(message)
+	return c.JSON(http.StatusOK, messageResp)
+}
+
+// @Summary Deletes a specific message
+// @Tags chat
+// @Param project-id path string true "Project ID"
+// @Param message-id path string true "Message ID"
+// @Success 200
+// @Failure 400 {object} ErrorResponse "invalid project id or message id"
+// @Failure 401 {object} ErrorResponse "unauthorized"
+// @Failure 404 {object} ErrorResponse "project not found or message not found"
+// @Router /projects/{project-id}/chat/message/{message-id} [delete]
+func (h *chatRouteHandler) messageDELETE(c *echo.Context) error {
+	ctx := c.Request().Context()
+
+	type reqFields struct {
+		ProjectID uuid.UUID `path:"project-id"`
+		MessageID uuid.UUID `path:"message-id"`
+	}
+
+	var req reqFields
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, routes.BadRequestErrResponse(err))
+	}
+
+	userId := h.authService.GetClaims(c).UserID
+	isMember, err := h.projectService.IsProjectMember(ctx, userId, req.ProjectID)
+
+	if err != nil {
+		status, msg := h.mapServiceError(err)
+		return c.JSON(status, routes.ErrorResponse{Error: msg})
+	}
+
+	if !isMember {
+		return c.JSON(http.StatusUnauthorized, routes.ErrorResponse{Error: "unauthorized"})
+	}
+
+	err = h.chatService.DeleteMessage(ctx, req.MessageID) 
+	if err != nil {
+		status, msg := h.mapServiceError(err)
+		return c.JSON(status, routes.ErrorResponse{Error: msg})
+	}
+
+	return c.NoContent(http.StatusOK)
+}
+

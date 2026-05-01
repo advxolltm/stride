@@ -135,7 +135,37 @@ type (
 		TaskAssignee
 		Task Task `json:"task"`
 	} // @name TaskAssigneeWithTask
+
+	Message struct {
+		ID uuid.UUID `json:"id"`
+		SenderID *uuid.UUID `json:"senderId"`
+		ProjectID uuid.UUID `json:"projectId"`
+		Content string `json:"content" example:"You should play Ultrakill"`
+		IsEdited bool `json:"isEdited"`
+		IsDeleted bool `json:"isDeleted"`
+		CreatedAt time.Time `json:"createdAt"`
+		EditedAt *time.Time `json:"editedAt"`
+		DeletedAt *time.Time `json:"deletedAt"`
+	} // @name Message
+
+	MessageCount struct {
+		Count int `json:"count" example:"42"`
+	} // @name MessageCount
 )
+
+func MapMessage(msg models.Message) Message {
+	return Message{
+		ID:        msg.ID,
+		SenderID:  msg.SenderID,
+		ProjectID: msg.ProjectID,
+		Content:   msg.Content,
+		IsEdited:  msg.IsEdited,
+		IsDeleted: msg.IsDeleted,
+		CreatedAt: msg.CreatedAt,
+		EditedAt:  msg.EditedAt, 
+		DeletedAt: msg.DeletedAt,
+	}
+}
 
 func MapTask(task models.Task) Task {
 	return Task{
