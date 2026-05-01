@@ -118,7 +118,7 @@ func (h ExampleRouteHandler) ChannelPost(c *echo.Context) error {
 	ctx := c.Request().Context()
 	channel, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid project id"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid project id"})
 	}
 
 	var chMsg channelMessage
