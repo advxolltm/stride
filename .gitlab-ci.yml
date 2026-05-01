@@ -91,14 +91,14 @@ test-backend:
   before_script:
     # Install the psql client just for the DB health check, along with git/bash
     - apk add --no-cache git bash postgresql-client
-    - wget -O- -nv https://golangci-lint.run/install.sh | sh -s v2.11.4
+    - wget -O- -nv https://golangci-lint.run/install.sh | sh -s v2.12.0
     - cd backend
   script:
     - if [ -z "$CI" ]; then echo "CI variable is not set"; exit 1; fi
     - echo "CI=$CI"
     - until PGPASSWORD=$DB_PASSWORD psql -h "postgres" -U stride -d stride -c "SELECT 'OK' AS status;"; do echo "Waiting for postgres..."; sleep 2; done
     - go mod download
-    - golangci-lint run --output.code-climate.path=gl-code-quality-report.json
+    - ../bin/golangci-lint run --output.code-climate.path=gl-code-quality-report.json
     - go test -count=1 -p 1 ./...
   artifacts:
     reports:
