@@ -83,6 +83,8 @@ test-backend:
     # Use the non-root Bitnami image to bypass the CI environment's user restrictions
     - name: bitnami/postgresql:latest
       alias: postgres
+    - name: redis:8.4-alpine
+      alias: redis
   needs:
     - job: build-backend
       artifacts: true

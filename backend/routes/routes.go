@@ -372,6 +372,8 @@ const (
 	TaskMove
 	TaskAssign
 	TaskUnassign
+	TaskSkillAdded
+	TaskSkillRemoved
 
 	// Project message types
 	ProjectMemberAdd
@@ -408,7 +410,7 @@ func validateWSMessage[T any](payload T) {
 	}
 
 	v := reflect.ValueOf(payload)
-	
+
 	if v.Kind() == reflect.Slice || v.Kind() == reflect.Array {
 		for i := 0; i < v.Len(); i++ {
 			e := v.Index(i)

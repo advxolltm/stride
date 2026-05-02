@@ -162,9 +162,9 @@ func fakeTaskWithProjects(projects []models.Project) func(int) models.Task {
 		}
 
 		status := f.RandomString([]string{"todo", "in_progress", "done"})
-		var completedAt time.Time
+		var completedAt *time.Time
 		if status == "done" {
-			completedAt = startDate.AddDate(0, 0, f.Day())
+			completedAt = new(startDate.AddDate(0, 0, f.Day()))
 		}
 
 		return models.Task{
@@ -175,7 +175,7 @@ func fakeTaskWithProjects(projects []models.Project) func(int) models.Task {
 			DueDate:                 &dueDate,
 			ExpectedDurationMinutes: &expMinutes,
 			Position:                idx,
-			CompletedAt:             &completedAt,
+			CompletedAt:             completedAt,
 			CreatedBy:               taskCreator.ID,
 			Creator:                 taskCreator,
 			Project:                 project,
@@ -207,11 +207,21 @@ func GenerateRandomTasks(count int, projects []models.Project) []models.Task {
 	return generateNOfType(count, fakeTaskWithProjects(projects))
 }
 
+func generateProjectSkills(maxSkills int, projects []models.Project) {
+	for pidx := range projects {
+		skillsCount := rng.Intn(maxSkills) + 1
+		skills := generateNOfType(skillsCount, fakeProjectSkill)
+		for sidx := range skills {
+			skills[sidx].ProjectID = projects[pidx].ID
+		}
+
+		projects[pidx].Skills = skills
+	}
+}
+
 func SelectRandomUser(t *testing.T, db *gorm.DB) models.User {
 	t.Helper()
-	users, err := gorm.G[models.User](db).Find(t.Context())
-	AssertNoError(err)
-	return Choice(&users)
+	return SelectRandomUsers(t, db, 1)[0]
 }
 
 func SelectRandomUsers(t *testing.T, db *gorm.DB, count int) []models.User {
@@ -221,7 +231,7 @@ func SelectRandomUsers(t *testing.T, db *gorm.DB, count int) []models.User {
 	return ChoiceN(users, count)
 }
 
-func SelectRandomProject(t *testing.T, db *gorm.DB) models.Project {
+func SelectRandomProjects(t *testing.T, db *gorm.DB, count int) []models.Project {
 	t.Helper()
 	projects, err := gorm.G[models.Project](db).
 		Preload("Creator", nil).
@@ -229,11 +239,16 @@ func SelectRandomProject(t *testing.T, db *gorm.DB) models.Project {
 		Preload("Members.User", nil).
 		Preload("Skills", nil).
 		Preload("Messages", nil).
-		Preload("Tasks", nil).
+		Preload("Tasks.TaskSkills", nil).
 		Preload("Whiteboards", nil).
 		Find(t.Context())
 	AssertNoError(err)
-	return Choice(&projects)
+	return ChoiceN(projects, count)
+}
+
+func SelectRandomProject(t *testing.T, db *gorm.DB) models.Project {
+	t.Helper()
+	return SelectRandomProjects(t, db, 1)[0]
 }
 
 func SelectRandomTask(t *testing.T, db *gorm.DB) models.Task {
@@ -284,20 +299,15 @@ func generateProjectMembers(users []models.User, projects []models.Project) {
 	}
 }
 
-func generateProjectSkills(maxSkills int, projects []models.Project) {
-	for pidx := range projects {
-		skillsCount := rng.Intn(maxSkills) + 1
-		skills := generateNOfType(skillsCount, fakeProjectSkill)
-		for sidx := range skills {
-			skills[sidx].ProjectID = projects[pidx].ID
-		}
-
-		projects[pidx].Skills = skills
-	}
-}
-
 func Faker() *f.Faker {
 	return f.GlobalFaker
+}
+
+func updateProjects(db *gorm.DB, projects []models.Project) {
+	for pidx := range projects {
+		_, err := gorm.G[models.Project](db).Updates(ctx, projects[pidx])
+		AssertNoError(err)
+	}
 }
 
 func fillDBWithRandomData(db *gorm.DB) {
@@ -314,26 +324,17 @@ func fillDBWithRandomData(db *gorm.DB) {
 	generateProjectMembers(users, projects)
 	generateProjectSkills(10, projects)
 
-	for pidx := range projects {
-		_, err := gorm.G[models.Project](db).Updates(ctx, projects[pidx])
-		AssertNoError(err)
-	}
+	updateProjects(db, projects)
 
 	generateTasksForProject(30, projects)
 
-	for pidx := range projects {
-		_, err := gorm.G[models.Project](db).Updates(ctx, projects[pidx])
-		AssertNoError(err)
-	}
+	updateProjects(db, projects)
 
 	generateProjectTaskSkills(projects)
 	generateProjectMemberSkills(projects)
 	generateTaskAssignments(projects)
 
-	for pidx := range projects {
-		_, err := gorm.G[models.Project](db).Updates(ctx, projects[pidx])
-		AssertNoError(err)
-	}
+	updateProjects(db, projects)
 }
 
 func generateTaskAssignments(projects []models.Project) {

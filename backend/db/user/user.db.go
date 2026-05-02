@@ -21,6 +21,7 @@ type UpdateUserFields struct {
 	PasswordHash *string              `gorm:"column:password_hash"`
 	FullName     *string              `gorm:"column:full_name"`
 	AvatarURL    *models.AvatarURLMap `gorm:"column:avatar_url;type:jsonb"`
+	SetAvatarURL bool                 `gorm:"-"`
 }
 
 type (
@@ -76,11 +77,29 @@ func (s *userStore) CreateUser(ctx context.Context, user *models.User) error {
 }
 
 func (s *userStore) UpdateUser(ctx context.Context, id uuid.UUID, fields UpdateUserFields) (*models.User, error) {
+	updates := map[string]any{}
+	if fields.Email != nil {
+		updates["email"] = *fields.Email
+	}
+	if fields.PasswordHash != nil {
+		updates["password_hash"] = *fields.PasswordHash
+	}
+	if fields.FullName != nil {
+		updates["full_name"] = *fields.FullName
+	}
+	if fields.SetAvatarURL || fields.AvatarURL != nil {
+		updates["avatar_url"] = fields.AvatarURL
+	}
+
 	var user models.User
+	if len(updates) == 0 {
+		return s.GetUser(ctx, id)
+	}
+
 	result := s.db.WithContext(ctx).Model(&user).
 		Clauses(clause.Returning{}).
 		Where("id = ?", id).
-		Updates(fields)
+		Updates(updates)
 	if result.Error != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(result.Error, &pgErr) && pgErr.Code == db.UniqueConstraintViolationCode {

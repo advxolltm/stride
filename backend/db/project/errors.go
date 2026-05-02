@@ -10,4 +10,5 @@ var (
 	ErrNonExistentMember       = errors.New("the members you are trying to modify do not exist")
 	ErrUserAlreadyMember       = errors.New("one or more users are already members of the project")
 	ErrNonExistentProjectSkill = errors.New("the project skill you are trying to delete does not exist")
+	ErrNonExistentProjectTask  = errors.New("task not found")
 )

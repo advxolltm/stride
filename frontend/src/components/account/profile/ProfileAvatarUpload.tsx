@@ -4,7 +4,9 @@ import { useRef } from 'react'
 interface ProfileAvatarUploadProps {
     avatarUrl: string | null
     avatarFile: File | null
+    avatarRemoved: boolean
     onAvatarChange: (file: File | null) => void
+    onAvatarRemove: () => void
 }
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png']
@@ -13,7 +15,9 @@ const MAX_SIZE_BYTES = 2 * 1024 * 1024
 export function ProfileAvatarUpload({
     avatarUrl,
     avatarFile,
+    avatarRemoved,
     onAvatarChange,
+    onAvatarRemove,
 }: Readonly<ProfileAvatarUploadProps>) {
     const inputRef = useRef<HTMLInputElement>(null)
 
@@ -34,7 +38,18 @@ export function ProfileAvatarUpload({
         onAvatarChange(file)
     }
 
-    const previewSrc = avatarFile ? URL.createObjectURL(avatarFile) : avatarUrl
+    const handleRemove = () => {
+        if (inputRef.current) {
+            inputRef.current.value = ''
+        }
+        onAvatarRemove()
+    }
+
+    const previewSrc = avatarRemoved
+        ? null
+        : avatarFile
+          ? URL.createObjectURL(avatarFile)
+          : avatarUrl
 
     return (
         <div className="border-border bg-surface flex items-center gap-4 rounded-xl border p-6">
@@ -72,11 +87,11 @@ export function ProfileAvatarUpload({
                     >
                         Change avatar
                     </Button>
-                    {(avatarFile ?? avatarUrl) && (
+                    {(avatarFile || (!avatarRemoved && avatarUrl)) && (
                         <Button
                             size="sm"
                             variant="ghost"
-                            onPress={() => onAvatarChange(null)}
+                            onPress={handleRemove}
                         >
                             Remove
                         </Button>

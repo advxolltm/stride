@@ -6,6 +6,8 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/google/uuid"
@@ -294,6 +296,46 @@ func TestUserService_UpdateUser(t *testing.T) {
 		assert.ErrorContains(t, err, "read failed")
 	})
 
+	runServiceTest(t, "clears avatar_url and deletes avatar files when RemoveAvatar is requested", func(t *testing.T, service userService, store *stubUserStore) {
+		ctx := context.Background()
+		userID := uuid.New()
+		avatarDir := filepath.Join(service.mediaDir, "avatars", userID.String())
+		require.NoError(t, os.MkdirAll(avatarDir, 0o755))
+		require.NoError(t, os.WriteFile(filepath.Join(avatarDir, "original.png"), []byte("avatar"), 0o644))
+
+		store.updateUserFn = func(_ context.Context, id uuid.UUID, fields userStore.UpdateUserFields) (*models.User, error) {
+			require.Equal(t, userID, id)
+			assert.True(t, fields.SetAvatarURL)
+			assert.Nil(t, fields.AvatarURL)
+			return &models.User{ID: id}, nil
+		}
+
+		updated, err := service.UpdateUser(ctx, userID, UpdateUserInput{RemoveAvatar: true})
+
+		require.NoError(t, err)
+		require.NotNil(t, updated)
+		_, statErr := os.Stat(avatarDir)
+		assert.True(t, errors.Is(statErr, os.ErrNotExist))
+	})
+
+	runServiceTest(t, "does not delete avatar files when store update fails during avatar removal", func(t *testing.T, service userService, store *stubUserStore) {
+		userID := uuid.New()
+		avatarDir := filepath.Join(service.mediaDir, "avatars", userID.String())
+		require.NoError(t, os.MkdirAll(avatarDir, 0o755))
+		require.NoError(t, os.WriteFile(filepath.Join(avatarDir, "original.png"), []byte("avatar"), 0o644))
+
+		store.updateUserFn = func(_ context.Context, _ uuid.UUID, _ userStore.UpdateUserFields) (*models.User, error) {
+			return nil, errors.New("update failed")
+		}
+
+		updated, err := service.UpdateUser(context.Background(), userID, UpdateUserInput{RemoveAvatar: true})
+
+		assert.Nil(t, updated)
+		assert.ErrorIs(t, err, ErrUserStoreFailed)
+		_, statErr := os.Stat(avatarDir)
+		assert.NoError(t, statErr)
+	})
+
 	runServiceTest(t, "maps duplicate email from store", func(t *testing.T, service userService, store *stubUserStore) {
 		store.updateUserFn = func(_ context.Context, _ uuid.UUID, _ userStore.UpdateUserFields) (*models.User, error) {
 			return nil, userStore.ErrDuplicateEmail
@@ -326,6 +368,31 @@ func TestUserService_UpdateUser(t *testing.T) {
 		assert.Nil(t, updated)
 		assert.ErrorIs(t, err, ErrUserStoreFailed)
 		assert.ErrorContains(t, err, "update failed")
+	})
+}
+
+func TestUserService_DeleteAvatar(t *testing.T) {
+	runServiceTest(t, "removes the user's avatar directory", func(t *testing.T, service userService, _ *stubUserStore) {
+		userID := uuid.New()
+		avatarDir := filepath.Join(service.mediaDir, "avatars", userID.String())
+		require.NoError(t, os.MkdirAll(avatarDir, 0o755))
+		require.NoError(t, os.WriteFile(filepath.Join(avatarDir, "original.png"), []byte("avatar"), 0o644))
+
+		err := service.deleteAvatar(userID)
+
+		assert.NoError(t, err)
+		_, statErr := os.Stat(avatarDir)
+		assert.True(t, errors.Is(statErr, os.ErrNotExist))
+	})
+
+	runServiceTest(t, "wraps filesystem errors", func(t *testing.T, service userService, _ *stubUserStore) {
+		badMediaRoot := filepath.Join(t.TempDir(), "media-root")
+		require.NoError(t, os.WriteFile(badMediaRoot, []byte("not-a-directory"), 0o644))
+		service.mediaDir = badMediaRoot
+
+		err := service.deleteAvatar(uuid.New())
+
+		assert.ErrorIs(t, err, ErrAvatarDeleteFailed)
 	})
 }
 
