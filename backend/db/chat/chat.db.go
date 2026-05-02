@@ -1,8 +1,10 @@
 package chat
 
 import (
+	"backend/db"
 	"backend/models"
 	"context"
+	"math"
 	"time"
 
 	"github.com/google/uuid"
@@ -14,7 +16,7 @@ type (
 		CreateMessage(ctx context.Context, message *models.Message) error
 		UpdateMessage(ctx context.Context, messageID uuid.UUID, newContent string) (models.Message, error)
 		DeleteMessage(ctx context.Context, messageID uuid.UUID) error
-		GetProjectMessages(ctx context.Context, projectID uuid.UUID, createdBefore time.Time, count int) ([]models.Message, error)
+		GetProjectMessages(ctx context.Context, projectID uuid.UUID, page, pageSize int) (db.Paginated[models.Message], error)
 		GetMessage(ctx context.Context, messageID uuid.UUID) (models.Message, error)
 		GetMessageCount(ctx context.Context, projectID uuid.UUID) (int, error)
 	}
@@ -53,7 +55,7 @@ func (s *chatStore) GetMessageCount(ctx context.Context, projectID uuid.UUID) (i
 	err := s.db.
 		WithContext(ctx).
 		Model(&models.Message{}).
-		Where("project_id = ?", projectID).
+		Where("project_id = ? and is_deleted = false", projectID).
 		Count(&count).
 		Error
 	if err != nil {
@@ -65,20 +67,48 @@ func (s *chatStore) GetMessageCount(ctx context.Context, projectID uuid.UUID) (i
 }
 
 // GetProjectMessages implements [ChatStore].
-func (s *chatStore) GetProjectMessages(ctx context.Context, projectID uuid.UUID, createdBefore time.Time, count int) ([]models.Message, error) {
+func (s *chatStore) GetProjectMessages(ctx context.Context, projectID uuid.UUID, page, pageSize int) (db.Paginated[models.Message], error) {
 	var messages []models.Message
-	err := s.db.
+	numElements, err := s.GetMessageCount(ctx, projectID)
+	if err != nil {
+		return db.Paginated[models.Message]{}, err
+	}
+
+	pageCount := int(math.Ceil(float64(numElements) / float64(pageSize)))
+
+	var actualPage int
+
+	// if page == 0 -> select last page
+	if page == 0 {
+		actualPage = pageCount
+	} else {
+		actualPage = page
+	}
+
+	offset := (actualPage - 1) * pageSize
+
+	err = s.db.
 		WithContext(ctx).
-		Where("project_id = ? ", projectID).
-		Where("created_at < ?", createdBefore).
-		Order("created_at DESC").
-		Limit(count).
+		Debug().
+		Where("project_id = ? and is_deleted = false", projectID).
+		Order("created_at ASC").
+		Offset(offset).
+		Limit(pageSize).
 		Find(&messages).
 		Error
 	if err != nil {
-		return nil, err
+		return db.Paginated[models.Message]{}, err
 	}
-	return messages, nil
+
+	paginated := db.Paginated[models.Message]{
+		Items:             messages,
+		Page:              actualPage,
+		PageSize:          pageSize,
+		PageCount:         pageCount,
+		TotalItemCount: numElements,
+	}
+
+	return paginated, nil
 }
 
 // GetMessage implements [ChatStore]

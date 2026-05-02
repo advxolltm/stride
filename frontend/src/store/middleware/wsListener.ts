@@ -1,7 +1,10 @@
 // wsListener.ts
 import { createAction, createListenerMiddleware } from "@reduxjs/toolkit";
-import { wsService } from "../websocket";
+import { WSMessageType, wsService } from "../websocket";
 import { taskCreate, type Task } from "../taskSlice";
+import { baseApi } from "../api/base.api";
+import { chatApi } from "../features/chat/chat.api";
+import { messageDeleted } from "../chatSlice";
 
 export const wsListener = createListenerMiddleware();
 
@@ -9,18 +12,6 @@ export const wsListener = createListenerMiddleware();
 export const wsConnect = createAction<string>("ws/connect");
 export const wsDisconnect = createAction("ws/disconnect");
 
-
-export const WSMessageType = {
-    ChatMessageCreate: 0,
-    TaskCreate: 1,
-    TaskUpdate: 2,
-    TaskDelete: 3,
-    TaskMove: 4,
-    TaskAssign: 5,
-    TaskUnassign: 6,
-    ProjectMemberAdd: 7,
-    ProjectMemberRemove: 8,
-} as const;
 
 wsListener.startListening({
 	actionCreator: wsDisconnect,
@@ -37,9 +28,29 @@ wsListener.startListening({
         wsService.connect(projectId);
 
         wsService.onMessage((msg) => {
-            console.log(`received a message: ${msg}`);
+            console.log(`received a message`, msg);
             switch (msg.type) {
                 case WSMessageType.ChatMessageCreate:
+                case WSMessageType.ChatMessageUpdate:
+                case WSMessageType.ChatMessageDelete:
+					listenerApi.dispatch(baseApi.util.invalidateTags([{ type: 'Messages' }]));
+					// // @ts-ignore
+					// const deletedMsgId = msg.payload.id;
+					// console.warn("deleted: ", msg.payload);
+					// listenerApi.dispatch(messageDeleted({ projectId: projectId, messageId: deletedMsgId }));
+					// listenerApi.dispatch(chatApi.util.updateQueryData('getMessages', { projectId }, (draftMsgs) => {
+					// 	console.warn("updating getMessages data", draftMsgs.pages);
+					// 	for(const page of draftMsgs.pages) {
+					// 		const mIdx = page.items.findIndex(m => m.id === deletedMsgId);
+					// 		if(mIdx !== -1) {
+					// 			page.items.splice(mIdx, 1);
+					// 			console.warn("removed item");
+					// 		}
+					// 	}
+					// }))
+					// listenerApi.dispatch(
+     //  					baseApi.util.invalidateTags([{ type: 'Messages', id: projectId }])
+					// )
                     break;
                 case WSMessageType.TaskCreate:
 					listenerApi.dispatch(taskCreate(msg.payload as Task));

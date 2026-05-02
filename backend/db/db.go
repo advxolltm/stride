@@ -13,6 +13,14 @@ import (
 	"gorm.io/gorm"
 )
 
+type Paginated[T any] struct {
+	Items []T
+	Page int
+	PageSize int
+	PageCount int
+	TotalItemCount int
+}
+
 //go:embed migrations/*.sql
 var fs embed.FS
 

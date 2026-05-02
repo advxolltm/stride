@@ -17,6 +17,6 @@ type Message struct {
 	EditedAt  *time.Time `gorm:"default:NULL"`
 	DeletedAt *time.Time `gorm:"default:NULL"`
 
-	Sender  *User   `gorm:"foreignKey:SenderID"`
+	Sender  *ProjectMember `gorm:"foreignKey:SenderID"`
 	Project Project `gorm:"foreignKey:ProjectID"`
 }

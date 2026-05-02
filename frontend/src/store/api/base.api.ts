@@ -30,6 +30,7 @@ export const baseApi = createApi({
         'ProjectSkill',
         'Task',
         'TaskAssignee',
+		'Messages',
     ],
     baseQuery: fetchBaseQuery({
         baseUrl: apiBasePath,

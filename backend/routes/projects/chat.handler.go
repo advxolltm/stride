@@ -8,20 +8,21 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
+	"github.com/redis/go-redis/v9"
 )
 
 type chatRouteHandler struct {
 	chatService    chatService.ChatService
 	authService    authService.AuthService
 	projectService projectService.ProjectService
+	rdb            *redis.Client
 }
 
-func newChatRouteHandler(chatService chatService.ChatService, authService authService.AuthService, projectService projectService.ProjectService) *chatRouteHandler {
-	return &chatRouteHandler{chatService, authService, projectService}
+func newChatRouteHandler(chatService chatService.ChatService, authService authService.AuthService, projectService projectService.ProjectService, rdb *redis.Client) *chatRouteHandler {
+	return &chatRouteHandler{chatService, authService, projectService, rdb}
 }
 
 func (h *chatRouteHandler) registerRoutes(api *echo.Group) {
@@ -29,6 +30,7 @@ func (h *chatRouteHandler) registerRoutes(api *echo.Group) {
 	g.GET("", h.messagesPagedGET)
 	g.GET("/count", h.messagesCountGET)
 	g.GET("/message/:message-id", h.messageGET)
+	g.POST("", h.messagePOST)
 	g.PATCH("/message/:message-id", h.messagePATCH)
 	g.DELETE("/message/:message-id", h.messageDELETE)
 }
@@ -58,16 +60,13 @@ func (h *chatRouteHandler) messagesPagedGET(c *echo.Context) error {
 
 	type reqFields struct {
 		ProjectID     uuid.UUID `param:"project-id"`
-		Count         int       `query:"count"`
-		CreatedBefore *time.Time `query:"createdBefore"`
+		routes.PaginationRequest
 	}
 
 	var req reqFields
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, routes.BadRequestErrResponse(err))
 	}
-
-	slog.Error("messagesPagedGET", "project-id", req.ProjectID, "count", req.Count, "created-before", req.CreatedBefore)
 
 	userId := h.authService.GetClaims(c).UserID
 	isMember, err := h.projectService.IsProjectMember(ctx, userId, req.ProjectID)
@@ -81,20 +80,13 @@ func (h *chatRouteHandler) messagesPagedGET(c *echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, routes.ErrorResponse{Error: "unauthorized"})
 	}
 
-	var createdBefore time.Time
-	if req.CreatedBefore != nil {
-		createdBefore = *req.CreatedBefore
-	} else {
-		createdBefore = time.Now()
-	}
-
-	messages, err := h.chatService.GetProjectMessages(ctx, req.ProjectID, createdBefore, req.Count)
+	messages, err := h.chatService.GetProjectMessages(ctx, req.ProjectID, req.Page, req.PageSize)
 	if err != nil {
 		status, msg := h.mapServiceError(err)
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
 	}
 
-	messagesResp := routes.Map(messages, routes.MapMessage)
+	messagesResp := routes.MapPaginated(messages, routes.MapMessage)
 	return c.JSON(http.StatusOK, messagesResp)
 }
 
@@ -186,6 +178,64 @@ func (h *chatRouteHandler) messageGET(c *echo.Context) error {
 	return c.JSON(http.StatusOK, messageResp)
 }
 
+type createMessageRequest struct {
+	Content string `json:"content" example:"You should play Hollow Knight!"`
+}
+
+// @Summary Send a new message in the chat
+// @Tags chat
+// @Param project-id path string true "Project ID"
+// @Param data body createMessageRequest true "Message content"
+// @Success 200 {object} Message "Message"
+// @Failure 400 {object} ErrorResponse "bad request"
+// @Failure 401 {object} ErrorResponse "unauthorized"
+// @Failure 404 {object} ErrorResponse "project not found"
+// @Router /projects/{project-id}/chat [post]
+func (h *chatRouteHandler) messagePOST(c *echo.Context) error {
+	ctx := c.Request().Context()
+
+	type reqFields struct {
+		ProjectID uuid.UUID `param:"project-id"`
+		createMessageRequest
+	}
+
+	var req reqFields
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, routes.BadRequestErrResponse(err))
+	}
+
+	userId := h.authService.GetClaims(c).UserID
+	isMember, err := h.projectService.IsProjectMember(ctx, userId, req.ProjectID)
+
+	if err != nil {
+		status, msg := h.mapServiceError(err)
+		return c.JSON(status, routes.ErrorResponse{Error: msg})
+	}
+
+	if !isMember {
+		return c.JSON(http.StatusUnauthorized, routes.ErrorResponse{Error: "unauthorized"})
+	}
+
+	member, err := h.projectService.GetProjectMember(ctx, req.ProjectID, userId)
+	if err != nil {
+		status, msg := h.mapServiceError(err)
+		return c.JSON(status, routes.ErrorResponse{Error: msg})
+	}
+
+	message, err := h.chatService.CreateMessage(ctx, req.Content, *member)
+	if err != nil {
+		status, msg := h.mapServiceError(err)
+		return c.JSON(status, routes.ErrorResponse{Error: msg})
+	}
+
+	if err := routes.SendWSUpdate(ctx, h.rdb, req.ProjectID, routes.ChatMessageCreate, routes.Message{ID: message.ID}); err != nil {
+		slog.Error("messageCreate: Failed to send ws update", "error", err)
+	}
+
+	messageResp := routes.MapMessage(message)
+	return c.JSON(http.StatusOK, messageResp)
+}
+
 type updateMessageRequest struct {
 	Content string `json:"content" example:"You should play Deltarune!"`
 } // @name UpdateMessageRequest
@@ -232,6 +282,10 @@ func (h *chatRouteHandler) messagePATCH(c *echo.Context) error {
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
 	}
 
+	if err := routes.SendWSUpdate(ctx, h.rdb, req.ProjectID, routes.ChatMessageUpdate, routes.Message{ID: req.MessageID}); err != nil {
+		slog.Error("messageUPATE: Failed to send ws update", "error", err)
+	}
+
 	messageResp := routes.MapMessage(message)
 	return c.JSON(http.StatusOK, messageResp)
 }
@@ -274,6 +328,10 @@ func (h *chatRouteHandler) messageDELETE(c *echo.Context) error {
 	if err != nil {
 		status, msg := h.mapServiceError(err)
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
+	}
+
+	if err := routes.SendWSUpdate(ctx, h.rdb, req.ProjectID, routes.ChatMessageDelete, routes.Message{ID: req.MessageID}); err != nil {
+		slog.Error("messageDELETE: Failed to send ws update", "error", err)
 	}
 
 	return c.NoContent(http.StatusOK)

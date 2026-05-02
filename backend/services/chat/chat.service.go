@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"backend/db"
 	"backend/db/chat"
 	"backend/models"
 	"context"
@@ -12,10 +13,10 @@ import (
 
 type (
 	ChatService interface {
-		CreateMessage(ctx context.Context, message *models.Message) error
+		CreateMessage(ctx context.Context, content string, sentBy models.ProjectMember) (models.Message, error)
 		UpdateMessage(ctx context.Context, messageID uuid.UUID, newContent string) (models.Message, error)
 		DeleteMessage(ctx context.Context, messageID uuid.UUID) error
-		GetProjectMessages(ctx context.Context, projectID uuid.UUID, createdBefore time.Time, count int) ([]models.Message, error)
+		GetProjectMessages(ctx context.Context, projectID uuid.UUID, page, pageSize int) (db.Paginated[models.Message], error)
 		GetMessage(ctx context.Context, messageID uuid.UUID) (models.Message, error)
 		GetMessageCount(ctx context.Context, projectID uuid.UUID) (int, error)
 	}
@@ -31,12 +32,22 @@ func NewChatService(chatStore chat.ChatStore) ChatService {
 }
 
 // CreateMessage implements [ChatService].
-func (s *chatService) CreateMessage(ctx context.Context, message *models.Message) error {
-	err := s.chatStore.CreateMessage(ctx, message)
-	if err != nil {
-		return fmt.Errorf("failed to create a new chat message: %w", err)
+func (s *chatService) CreateMessage(ctx context.Context, content string, sentBy models.ProjectMember) (models.Message, error) {
+	msg := models.Message{
+		SenderID:  &sentBy.ID,
+		ProjectID: sentBy.ProjectID,
+		Content:   content,
+		IsEdited:  false,
+		IsDeleted: false,
+		CreatedAt: time.Now(),
+		EditedAt:  nil,
+		DeletedAt: nil,
 	}
-	return nil
+	err := s.chatStore.CreateMessage(ctx, &msg)
+	if err != nil {
+		return models.Message{}, fmt.Errorf("failed to create a new chat message: %w", err)
+	}
+	return msg, nil
 }
 
 // DeleteMessage implements [ChatService].
@@ -58,10 +69,10 @@ func (s *chatService) GetMessageCount(ctx context.Context, projectID uuid.UUID) 
 }
 
 // GetProjectMessages implements [ChatService].
-func (s *chatService) GetProjectMessages(ctx context.Context, projectID uuid.UUID, createdBefore time.Time, count int) ([]models.Message, error) {
-	messages, err := s.chatStore.GetProjectMessages(ctx, projectID, createdBefore, count)
+func (s *chatService) GetProjectMessages(ctx context.Context, projectID uuid.UUID, page, pageSize int) (db.Paginated[models.Message], error) {
+	messages, err := s.chatStore.GetProjectMessages(ctx, projectID, page, pageSize)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get %d project messages for project %s at createdBefore %d: %w", count, projectID, createdBefore, err)
+		return db.Paginated[models.Message]{}, fmt.Errorf("failed to get %d project messages for project %s at page %d: %w", pageSize, projectID, page, err)
 	}
 	return messages, nil
 }

@@ -14,3 +14,20 @@ export type Message = {
 export type MessageCount = {
     count: number
 }
+
+export type SendMessageRequest = {
+	content: string	
+}
+
+export type EditMessageRequest = {
+	content: string
+}
+
+export type Paginated<T> = {
+	items: T[]
+	page: number
+	pageSize: number
+	pageCount: number
+	totalItemCount: number
+}
+
