@@ -2,6 +2,7 @@ package routes
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 
 	authService "backend/services/auth"
@@ -189,7 +190,12 @@ func (h userRouteHandler) userPATCHHandle(c *echo.Context) error {
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "failed to read uploaded file"})
 		}
-		defer src.Close()
+		defer func() {
+			err := src.Close()
+			if err != nil {
+				slog.Error("failed to close avatar file", "error", err)
+			}
+		}()
 		input.Avatar = &userService.AvatarInput{
 			Filename: file.Filename,
 			File:     src,

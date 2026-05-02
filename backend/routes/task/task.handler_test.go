@@ -103,7 +103,7 @@ func TestTaskHandler(t *testing.T) {
 
 	runTest := func(t *testing.T, db *gorm.DB, name string, f func(*testing.T, *gorm.DB, taskRouteHandler)) {
 		t.Run(name, func(t *testing.T) {
-			db.Transaction(func(tx *gorm.DB) error {
+			_ = db.Transaction(func(tx *gorm.DB) error {
 				f(t, tx, newTestTaskHandler(tx, rdb))
 				return fmt.Errorf("rollback %s", t.Name())
 			})
@@ -125,7 +125,8 @@ func TestTaskHandler(t *testing.T) {
 				c := e.NewContext(req, rec)
 				c.SetPathValues(echo.PathValues{{Name: "id", Value: tsk.ID.String()}})
 				loginUser(t, sut.authService, c, randomUserOfProject.User)
-				sut.authService.AuthenticatedMiddleware()(sut.taskGET)(c)
+				err := sut.authService.AuthenticatedMiddleware()(sut.taskGET)(c)
+				require.NoError(t, err)
 				require.Equal(t, http.StatusOK, rec.Code)
 
 				resp := parse[routes.Task](t, rec.Body)
@@ -152,7 +153,8 @@ func TestTaskHandler(t *testing.T) {
 				c := e.NewContext(req, rec)
 				c.SetPathValues(echo.PathValues{{Name: "id", Value: tsk.ID.String()}})
 				loginUser(t, sut.authService, c, randomUserOfProject.User)
-				sut.authService.AuthenticatedMiddleware()(sut.taskPATCH)(c)
+				err = sut.authService.AuthenticatedMiddleware()(sut.taskPATCH)(c)
+				require.NoError(t, err)
 				if !assert.Equal(t, http.StatusOK, rec.Code) {
 					t.Fatalf("PATCH /task/task/:id got error response: %s", rec.Body.String())
 				}
@@ -186,10 +188,11 @@ func TestTaskHandler(t *testing.T) {
 				c := e.NewContext(req, rec)
 				c.SetPathValues(echo.PathValues{{Name: "id", Value: tsk.ID.String()}})
 				loginUser(t, sut.authService, c, randomUserOfProject.User)
-				sut.authService.AuthenticatedMiddleware()(sut.taskDELETE)(c)
+				err := sut.authService.AuthenticatedMiddleware()(sut.taskDELETE)(c)
+				require.NoError(t, err)
 				require.Equal(t, http.StatusOK, rec.Code)
 
-				_, err := sut.taskService.GetTask(t.Context(), tsk.ID)
+				_, err = sut.taskService.GetTask(t.Context(), tsk.ID)
 				require.Error(t, err)
 			}
 		}
@@ -224,7 +227,8 @@ func TestTaskHandler(t *testing.T) {
 				c.SetPathValues(echo.PathValues{{Name: "id", Value: tsk.ID.String()}})
 				loginUser(t, sut.authService, c, randomUserOfProject.User)
 
-				sut.authService.AuthenticatedMiddleware()(sut.taskUnassignPOST)(c)
+				err := sut.authService.AuthenticatedMiddleware()(sut.taskUnassignPOST)(c)
+				require.NoError(t, err)
 				require.Equal(t, http.StatusOK, rec.Code)
 
 				assignedTasks, err := sut.taskService.GetTasksAssignedToProjectMember(t.Context(), randomUserOfProject.ID)
@@ -243,7 +247,8 @@ func TestTaskHandler(t *testing.T) {
 				c.SetPathValues(echo.PathValues{{Name: "id", Value: tsk.ID.String()}})
 				loginUser(t, sut.authService, c, randomUserOfProject.User)
 
-				sut.authService.AuthenticatedMiddleware()(sut.taskAssignPOST)(c)
+				err := sut.authService.AuthenticatedMiddleware()(sut.taskAssignPOST)(c)
+				require.NoError(t, err)
 				require.Equal(t, http.StatusCreated, rec.Code)
 				returnedAssignedTask := parse[routes.TaskAssignee](t, rec.Body)
 				require.Equal(t, returnedAssignedTask.TaskID, tsk.ID)
@@ -264,7 +269,8 @@ func TestTaskHandler(t *testing.T) {
 				c.SetPathValues(echo.PathValues{{Name: "id", Value: tsk.ID.String()}})
 				loginUser(t, sut.authService, c, randomUserOfProject.User)
 
-				sut.authService.AuthenticatedMiddleware()(sut.taskUnassignPOST)(c)
+				err := sut.authService.AuthenticatedMiddleware()(sut.taskUnassignPOST)(c)
+				require.NoError(t, err)
 				require.Equal(t, http.StatusOK, rec.Code)
 
 				assignedTasks, err := sut.taskService.GetTasksAssignedToProjectMember(t.Context(), randomUserOfProject.ID)
@@ -298,7 +304,8 @@ func TestTaskHandler(t *testing.T) {
 		c.SetPathValues(echo.PathValues{{Name: "id", Value: from.ID.String()}})
 		loginUser(t, sut.authService, c, member.User)
 
-		sut.authService.AuthenticatedMiddleware()(sut.taskMovePOST)(c)
+		err = sut.authService.AuthenticatedMiddleware()(sut.taskMovePOST)(c)
+		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, rec.Code)
 		returnedMovedTasks := parse[[]routes.Task](t, rec.Body)
 
@@ -321,7 +328,8 @@ func TestTaskHandler(t *testing.T) {
 		c := e.NewContext(req, rec)
 		c.SetPathValues(echo.PathValues{{Name: "id", Value: project.ID.String()}})
 		loginUser(t, sut.authService, c, member.User)
-		sut.authService.AuthenticatedMiddleware()(sut.tasksForProjectAssignedToMeGET)(c)
+		err := sut.authService.AuthenticatedMiddleware()(sut.tasksForProjectAssignedToMeGET)(c)
+		require.NoError(t, err)
 
 		require.Equal(t, http.StatusOK, rec.Code)
 		returnedMyTaskAssignments := parse[[]routes.TaskAssigneeWithTask](t, rec.Body)

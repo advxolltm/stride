@@ -101,11 +101,12 @@ func newUserTestEnv(t *testing.T, tx *gorm.DB) userTestEnv {
 }
 
 func TestUserRouteHandler_Integration(t *testing.T) {
-	os.Setenv("SESSION_SECRET", "secretsecret")
+	err := os.Setenv("SESSION_SECRET", "secretsecret")
+	require.NoError(t, err)
 
 	runTest := func(t *testing.T, name string, f func(*testing.T, *gorm.DB)) {
 		t.Run(name, func(t *testing.T) {
-			db.Transaction(func(tx *gorm.DB) error {
+			_ = db.Transaction(func(tx *gorm.DB) error {
 				f(t, tx)
 				return fmt.Errorf("rollback %s", t.Name())
 			})

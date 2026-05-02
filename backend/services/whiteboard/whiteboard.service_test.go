@@ -34,7 +34,7 @@ func newTestService(db *gorm.DB) whiteboardSvc.WhiteboardService {
 }
 
 func ctxWithUser(userID uuid.UUID) context.Context {
-	return context.WithValue(context.Background(), "userID", userID)
+	return context.WithValue(context.Background(), "userID", userID) //nolint:staticcheck // test helper must match the current service context key
 }
 
 func selectProjectMember(t *testing.T, db *gorm.DB) (models.Project, models.User) {
@@ -47,7 +47,7 @@ func selectProjectMember(t *testing.T, db *gorm.DB) (models.Project, models.User
 
 func runTest(t *testing.T, db *gorm.DB, name string, f func(*testing.T, *gorm.DB, whiteboardSvc.WhiteboardService)) {
 	t.Run(name, func(t *testing.T) {
-		db.Transaction(func(tx *gorm.DB) error {
+		_ = db.Transaction(func(tx *gorm.DB) error {
 			f(t, tx, newTestService(tx))
 			return fmt.Errorf("rollback %s", t.Name())
 		})
