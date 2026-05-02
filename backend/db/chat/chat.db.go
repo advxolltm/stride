@@ -14,7 +14,7 @@ type (
 		CreateMessage(ctx context.Context, message *models.Message) error
 		UpdateMessage(ctx context.Context, messageID uuid.UUID, newContent string) (models.Message, error)
 		DeleteMessage(ctx context.Context, messageID uuid.UUID) error
-		GetProjectMessages(ctx context.Context, projectID uuid.UUID, offset int, count int) ([]models.Message, error)
+		GetProjectMessages(ctx context.Context, projectID uuid.UUID, createdBefore time.Time, count int) ([]models.Message, error)
 		GetMessage(ctx context.Context, messageID uuid.UUID) (models.Message, error)
 		GetMessageCount(ctx context.Context, projectID uuid.UUID) (int, error)
 	}
@@ -65,11 +65,13 @@ func (s *chatStore) GetMessageCount(ctx context.Context, projectID uuid.UUID) (i
 }
 
 // GetProjectMessages implements [ChatStore].
-func (s *chatStore) GetProjectMessages(ctx context.Context, projectID uuid.UUID, offset int, count int) ([]models.Message, error) {
+func (s *chatStore) GetProjectMessages(ctx context.Context, projectID uuid.UUID, createdBefore time.Time, count int) ([]models.Message, error) {
 	var messages []models.Message
 	err := s.db.
 		WithContext(ctx).
-		Offset(offset).
+		Where("project_id = ? ", projectID).
+		Where("created_at < ?", createdBefore).
+		Order("created_at DESC").
 		Limit(count).
 		Find(&messages).
 		Error

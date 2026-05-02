@@ -5,6 +5,7 @@ import (
 	"backend/models"
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -14,7 +15,7 @@ type (
 		CreateMessage(ctx context.Context, message *models.Message) error
 		UpdateMessage(ctx context.Context, messageID uuid.UUID, newContent string) (models.Message, error)
 		DeleteMessage(ctx context.Context, messageID uuid.UUID) error
-		GetProjectMessages(ctx context.Context, projectID uuid.UUID, offset int, count int) ([]models.Message, error)
+		GetProjectMessages(ctx context.Context, projectID uuid.UUID, createdBefore time.Time, count int) ([]models.Message, error)
 		GetMessage(ctx context.Context, messageID uuid.UUID) (models.Message, error)
 		GetMessageCount(ctx context.Context, projectID uuid.UUID) (int, error)
 	}
@@ -57,10 +58,10 @@ func (s *chatService) GetMessageCount(ctx context.Context, projectID uuid.UUID) 
 }
 
 // GetProjectMessages implements [ChatService].
-func (s *chatService) GetProjectMessages(ctx context.Context, projectID uuid.UUID, offset int, count int) ([]models.Message, error) {
-	messages, err := s.chatStore.GetProjectMessages(ctx, projectID, offset, count)
+func (s *chatService) GetProjectMessages(ctx context.Context, projectID uuid.UUID, createdBefore time.Time, count int) ([]models.Message, error) {
+	messages, err := s.chatStore.GetProjectMessages(ctx, projectID, createdBefore, count)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get %d project messages for project %s at offset %d: %w", count, projectID, offset, err)
+		return nil, fmt.Errorf("failed to get %d project messages for project %s at createdBefore %d: %w", count, projectID, createdBefore, err)
 	}
 	return messages, nil
 }

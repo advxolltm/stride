@@ -168,7 +168,10 @@ func fakeMessageWithProjects(projects []models.Project) func(int) models.Message
 			senderId = &sender.ID
 		}
 
-		createdAt := f.PastDate()
+		createdAt := f.Date()
+		updatedYear := 2025
+		createdAt = time.Date(updatedYear, createdAt.Month(), createdAt.Day(), createdAt.Hour(), createdAt.Minute(), createdAt.Second(), createdAt.Nanosecond(), createdAt.Location())
+
 		isEdited := f.Bool()
 		var editedAt *time.Time
 		if isEdited {
