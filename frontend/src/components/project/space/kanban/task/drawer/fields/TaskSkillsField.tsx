@@ -84,6 +84,7 @@ export function TaskSkillsField({ task }: { task: Task }) {
                             }
                             return (
                                 <TagGroup
+                                    aria-label={t('tasks.form.skills')}
                                     selectionMode="none"
                                     onRemove={handleRemove}
                                     variant="surface"
@@ -102,12 +103,9 @@ export function TaskSkillsField({ task }: { task: Task }) {
                                         renderEmptyState={() => null}
                                     >
                                         {(item) => (
-                                            <Tag
-                                                key={item.id}
-                                                id={item.id}
-                                                textValue={item.name}
-                                            >
+                                            <Tag key={item.id} id={item.id}>
                                                 {item.name}
+                                                <Tag.RemoveButton />
                                             </Tag>
                                         )}
                                     </TagGroup.List>

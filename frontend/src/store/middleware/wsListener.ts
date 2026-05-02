@@ -1,76 +1,53 @@
-// wsListener.ts
-import { createAction, createListenerMiddleware } from "@reduxjs/toolkit";
-import { baseApi } from "../api/base.api";
-import { wsService } from "../websocket";
+import { createAction, createListenerMiddleware } from '@reduxjs/toolkit'
+import { baseApi } from '../api/base.api'
+import { wsService } from '../websocket'
+import { WSMessageType } from './wsMessageTypes'
+import { handleTaskWsMessage, type WsListenerApi } from './wsTaskHandlers'
 
-export const wsListener = createListenerMiddleware();
+export const wsListener = createListenerMiddleware()
 
-// action you dispatch to start everything
-export const wsConnect = createAction<string>("ws/connect");
-export const wsDisconnect = createAction("ws/disconnect");
-
-
-export const WSMessageType = {
-    ChatMessageCreate: 0,
-    TaskCreate: 1,
-    TaskUpdate: 2,
-    TaskDelete: 3,
-    TaskMove: 4,
-    TaskAssign: 5,
-    TaskUnassign: 6,
-    TaskSkillAdded: 7,
-    TaskSkillRemoved: 8,
-    ProjectMemberAdd: 9,
-    ProjectMemberRemove: 10,
-} as const;
+export const wsConnect = createAction<string>('ws/connect')
+export const wsDisconnect = createAction('ws/disconnect')
 
 wsListener.startListening({
-	actionCreator: wsDisconnect,
-	effect: async () => {
-		wsService.disconnect();
-	}
-});
+    actionCreator: wsDisconnect,
+    effect: async () => {
+        wsService.disconnect()
+    },
+})
 
 wsListener.startListening({
     actionCreator: wsConnect,
     effect: async (action, listenerApi) => {
-        console.log("starting to listen");
-        const projectId = action.payload;
-        wsService.connect(projectId);
+        const projectId = action.payload
+        const api = listenerApi as unknown as WsListenerApi
+
+        wsService.connect(projectId)
 
         wsService.onMessage((msg) => {
-            console.log(`received a message: ${msg}`);
+            // Task messages (create/update/delete/move/assign/unassign/skill)
+            // are handled in wsTaskHandlers.ts with optimistic cache updates.
+            if (handleTaskWsMessage(msg.type, msg.payload, projectId, api)) {
+                return
+            }
+
             switch (msg.type) {
-                case WSMessageType.TaskCreate:
-                case WSMessageType.TaskUpdate:
-                case WSMessageType.TaskDelete:
-                case WSMessageType.TaskMove:
-                case WSMessageType.TaskAssign:
-                case WSMessageType.TaskUnassign:
-                case WSMessageType.TaskSkillAdded:
-                case WSMessageType.TaskSkillRemoved:
-                    listenerApi.dispatch(
-                        baseApi.util.invalidateTags([
-                            { type: 'Task', id: projectId },
-                        ]),
-                    );
-                    break;
                 case WSMessageType.ChatMessageCreate:
-                    break;
+                    break
                 case WSMessageType.ProjectMemberAdd:
                 case WSMessageType.ProjectMemberRemove:
-                    listenerApi.dispatch(
+                    api.dispatch(
                         baseApi.util.invalidateTags([
                             { type: 'ProjectMember', id: projectId },
                             { type: 'Project', id: projectId },
                             { type: 'Project', id: 'LIST' },
                         ]),
-                    );
-                    break;
+                    )
+                    break
                 default:
-					console.error("unexpected ws message", msg)
-					break;
+                    console.error('unexpected ws message', msg)
+                    break
             }
-        });
+        })
     },
-});
+})

@@ -610,7 +610,7 @@ func (h taskRouteHandler) taskRemoveSkill(c *echo.Context) error {
 		TaskID:         taskID,
 		ProjectSkillID: req.SkillID,
 	}
-	if err := routes.SendWSUpdate(ctx, h.rdb, projIDOfTask, routes.TaskSkillAdded, taskSkill); err != nil {
+	if err := routes.SendWSUpdate(ctx, h.rdb, projIDOfTask, routes.TaskSkillRemoved, taskSkill); err != nil {
 		slog.Error("taskRemoveSkillPOST: Failed to send ws update", "error", err)
 	}
 

@@ -34,9 +34,15 @@ export function TaskEditDrawer({
                             </Drawer.Heading>
                         </Drawer.Header>
                         <Drawer.Body className="flex flex-col gap-5">
-                            <TaskTitleField task={task} />
+                            <TaskTitleField
+                                key={`${task.id}:${task.title}`}
+                                task={task}
+                            />
                             <TaskDescriptionField task={task} />
-                            <TaskDueDateField task={task} />
+                            <TaskDueDateField
+                                key={`${task.id}:${task.dueDate ?? ''}`}
+                                task={task}
+                            />
                             <TaskStatusField task={task} />
                             <TaskAssigneeField task={task} />
                             <TaskSkillsField task={task} />
