@@ -1,10 +1,18 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Avatar, Button, Card, Dropdown, Label, Tooltip } from '@heroui/react'
+import {
+    Avatar,
+    Button,
+    Card,
+    Dropdown,
+    Label,
+    Tooltip,
+} from '@heroui/react'
 import { Calendar, MoreHorizontal } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { Task } from '../../../../../store/features/tasks/task.types'
 import getInitials from '../../../../../shared/utils/getInitials'
+import { TaskSkillChips } from './TaskSkillChips'
 
 interface KanbanCardProps {
     task: Task
@@ -125,6 +133,8 @@ export function KanbanCard({
                             </Dropdown.Popover>
                         </Dropdown>
                     </div>
+
+                    <TaskSkillChips skills={task.skills} />
 
                     <div className="flex items-center justify-between">
                         <div className="text-default-400 flex items-center gap-1">

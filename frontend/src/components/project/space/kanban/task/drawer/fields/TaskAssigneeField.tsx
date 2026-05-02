@@ -10,7 +10,7 @@ import {
     useFilter,
 } from '@heroui/react'
 import { useTranslation } from 'react-i18next'
-import { getInitials } from '../../../../../../../shared/utils'
+import getInitials from '../../../../../../../shared/utils/getInitials'
 import {
     useAssignTaskMutation,
     useUnassignTaskMutation,

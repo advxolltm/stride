@@ -256,6 +256,33 @@ export const taskApi = baseApi.injectEndpoints({
                 }
             },
         }),
+        addSkillToTask: builder.mutation<
+            void,
+            { taskId: string; projectId: string; skillId: string }
+        >({
+            query: ({ taskId, skillId }) => ({
+                url: `/tasks/task/${taskId}/add-skill`,
+                method: 'POST',
+                body: { skillId },
+            }),
+            invalidatesTags: (_result, _error, { projectId }) => [
+                { type: 'Task' as const, id: projectId },
+            ],
+        }),
+
+        removeSkillFromTask: builder.mutation<
+            void,
+            { taskId: string; projectId: string; skillId: string }
+        >({
+            query: ({ taskId, skillId }) => ({
+                url: `/tasks/task/${taskId}/remove-skill`,
+                method: 'POST',
+                body: { skillId },
+            }),
+            invalidatesTags: (_result, _error, { projectId }) => [
+                { type: 'Task' as const, id: projectId },
+            ],
+        }),
     }),
 })
 
@@ -268,4 +295,6 @@ export const {
     useAssignTaskMutation,
     useUnassignTaskMutation,
     useMoveTaskMutation,
+    useAddSkillToTaskMutation,
+    useRemoveSkillFromTaskMutation,
 } = taskApi
