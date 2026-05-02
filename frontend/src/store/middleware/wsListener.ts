@@ -1,7 +1,7 @@
 import { createAction, createListenerMiddleware } from '@reduxjs/toolkit'
-import { baseApi } from '../api/base.api'
 import { wsService } from '../websocket'
 import { WSMessageType } from './wsMessageTypes'
+import { handleProjectWsMessage } from './wsProjectHandlers'
 import { handleTaskWsMessage, type WsListenerApi } from './wsTaskHandlers'
 
 export const wsListener = createListenerMiddleware()
@@ -31,18 +31,14 @@ wsListener.startListening({
                 return
             }
 
+            // Project messages are patched in wsProjectHandlers.ts when the
+            // payload has enough data, with invalidation kept as a fallback.
+            if (handleProjectWsMessage(msg.type, msg.payload, projectId, api)) {
+                return
+            }
+
             switch (msg.type) {
                 case WSMessageType.ChatMessageCreate:
-                    break
-                case WSMessageType.ProjectMemberAdd:
-                case WSMessageType.ProjectMemberRemove:
-                    api.dispatch(
-                        baseApi.util.invalidateTags([
-                            { type: 'ProjectMember', id: projectId },
-                            { type: 'Project', id: projectId },
-                            { type: 'Project', id: 'LIST' },
-                        ]),
-                    )
                     break
                 default:
                     console.error('unexpected ws message', msg)
