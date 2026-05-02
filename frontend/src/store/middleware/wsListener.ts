@@ -1,7 +1,7 @@
 // wsListener.ts
 import { createAction, createListenerMiddleware } from "@reduxjs/toolkit";
+import { baseApi } from "../api/base.api";
 import { wsService } from "../websocket";
-import { taskCreate, type Task } from "../taskSlice";
 
 export const wsListener = createListenerMiddleware();
 
@@ -18,8 +18,10 @@ export const WSMessageType = {
     TaskMove: 4,
     TaskAssign: 5,
     TaskUnassign: 6,
-    ProjectMemberAdd: 7,
-    ProjectMemberRemove: 8,
+    TaskSkillAdded: 7,
+    TaskSkillRemoved: 8,
+    ProjectMemberAdd: 9,
+    ProjectMemberRemove: 10,
 } as const;
 
 wsListener.startListening({
@@ -39,24 +41,31 @@ wsListener.startListening({
         wsService.onMessage((msg) => {
             console.log(`received a message: ${msg}`);
             switch (msg.type) {
+                case WSMessageType.TaskCreate:
+                case WSMessageType.TaskUpdate:
+                case WSMessageType.TaskDelete:
+                case WSMessageType.TaskMove:
+                case WSMessageType.TaskAssign:
+                case WSMessageType.TaskUnassign:
+                case WSMessageType.TaskSkillAdded:
+                case WSMessageType.TaskSkillRemoved:
+                    listenerApi.dispatch(
+                        baseApi.util.invalidateTags([
+                            { type: 'Task', id: projectId },
+                        ]),
+                    );
+                    break;
                 case WSMessageType.ChatMessageCreate:
                     break;
-                case WSMessageType.TaskCreate:
-					listenerApi.dispatch(taskCreate(msg.payload as Task));
-                    break;
-                case WSMessageType.TaskUpdate:
-                    break;
-                case WSMessageType.TaskDelete:
-                    break;
-                case WSMessageType.TaskMove:
-                    break;
-                case WSMessageType.TaskAssign:
-                    break;
-                case WSMessageType.TaskUnassign:
-                    break;
                 case WSMessageType.ProjectMemberAdd:
-                    break;
                 case WSMessageType.ProjectMemberRemove:
+                    listenerApi.dispatch(
+                        baseApi.util.invalidateTags([
+                            { type: 'ProjectMember', id: projectId },
+                            { type: 'Project', id: projectId },
+                            { type: 'Project', id: 'LIST' },
+                        ]),
+                    );
                     break;
                 default:
 					console.error("unexpected ws message", msg)

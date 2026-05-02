@@ -7,8 +7,10 @@ export const WSMessageType = {
   TaskMove: 4,
   TaskAssign: 5,
   TaskUnassign: 6,
-  ProjectMemberAdd: 7,
-  ProjectMemberRemove: 8,
+  TaskSkillAdded: 7,
+  TaskSkillRemoved: 8,
+  ProjectMemberAdd: 9,
+  ProjectMemberRemove: 10,
 } as const;
 
 type WSMessageType = typeof WSMessageType[keyof typeof WSMessageType];
