@@ -36,7 +36,7 @@ func newProjectWSRouteHandler(authService auth.AuthService, projectService proje
 func (h projectWSRouteHandler) addRoutes(ws *echo.Group) {
 	g := ws.Group("/project/:projectId", h.authService.AuthenticatedMiddleware())
 	g.GET("/messages", h.connectMessagesGET)
-	g.GET("/tasks", h.connectTasksGET)
+	g.GET("/kanban", h.connectTasksGET)
 }
 
 // GET /ws/project/:projectId/tasks

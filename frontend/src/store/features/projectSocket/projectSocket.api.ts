@@ -3,7 +3,7 @@ import { taskCreate, type Task } from '../../taskSlice'
 import type { projectSocketSocketState, WSMessage } from './projectSocket.types'
 
 const createProjectSocketSocketUrl = (projectId: string) =>
-    buildApiWebSocketUrl(`/ws/project/${projectId}`)
+    buildApiWebSocketUrl(`/ws/project/${projectId}/kanban`)
 
 const createprojectSocketSocketState = (
     projectId: string,
