@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log/slog"
 	"os"
 	"strings"
 
@@ -122,7 +123,12 @@ func main() {
 	}
 	
 	rdb := db.InitRedis(db.RedisDSNFromEnv())
-	defer rdb.Close()
+	defer func() {
+		err := rdb.Close()
+		if err != nil {
+			slog.Error("failed to close redis client", "error", err)
+		}
+	}()
 
 	userStore := userDB.NewUserStore(mainDB)
 	projectStore := projectDB.NewProjectStore(mainDB)
@@ -135,7 +141,7 @@ func main() {
 	projectService := projectService.NewProjectService(projectStore)
 	authService := authService.NewAuthenticationService(userService)
 	whiteboardService := whiteboardService.NewWhiteboardService(whiteboardStore, projectService)
-	taskService := taskService.NewTaskService(taskStore)
+	taskService := taskService.NewTaskService(taskStore, projectService)
 
 	// Routes
 	// Register route handler by adding them to the array

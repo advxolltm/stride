@@ -35,16 +35,14 @@ type (
 		AssignTask(ctx context.Context, taskID uuid.UUID, projectMemberID uuid.UUID) (*models.TaskAssignee, error)
 		UnassignTask(ctx context.Context, taskID uuid.UUID, projectMemberID uuid.UUID) error
 		MoveTask(ctx context.Context, id uuid.UUID, pos int) error
+		AddSkill(ctx context.Context, taskID uuid.UUID, skillID uuid.UUID) (*models.TaskSkill, error)
+		RemoveSkill(ctx context.Context, taskID uuid.UUID, skillID uuid.UUID) error
 	}
 
 	taskStore struct {
 		db *gorm.DB
 	}
 )
-
-func withTaskSkill(db *gorm.DB) *gorm.DB {
-	return db.Preload("TaskSkills").Preload("TaskSkills.ProjectSkill")
-}
 
 // GetTask implements [TaskStore].
 func (t *taskStore) GetTask(ctx context.Context, id uuid.UUID) (*models.Task, error) {
@@ -273,6 +271,30 @@ func (t *taskStore) MoveTask(ctx context.Context, id uuid.UUID, pos int) error {
 	}
 	t.db = dbTmp
 	return nil
+}
+
+func (t *taskStore) AddSkill(ctx context.Context, taskID uuid.UUID, skillID uuid.UUID) (*models.TaskSkill, error) {
+	taskSkill := models.TaskSkill{
+		TaskID:         taskID,
+		ProjectSkillID: skillID,
+	}
+
+	err := t.db.Create(&taskSkill).Error
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == db.UniqueConstraintViolationCode {
+			return nil, ErrSkillAlreadyAssignedToTask
+		}
+		return nil, err
+	}
+	return &taskSkill, nil
+}
+
+func (t *taskStore) RemoveSkill(ctx context.Context, taskID uuid.UUID, skillID uuid.UUID) error {
+	_, err := gorm.G[models.TaskSkill](t.db).
+		Where("task_id = ? AND project_skill_id = ?", taskID, skillID).
+		Delete(ctx)
+	return err
 }
 
 func NewTaskStore(db *gorm.DB) TaskStore {

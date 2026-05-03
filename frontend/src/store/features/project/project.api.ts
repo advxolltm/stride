@@ -1,59 +1,30 @@
 import { baseApi } from '../../api/base.api'
+import {
+    applyProjectMembers,
+    applyProjectSkill,
+    applyProjectUpdate,
+    patchProject,
+    patchProjectFields,
+    removeProjectMemberByUserId,
+    removeProjectSkillById,
+} from './project.cache'
+import {
+    transformProject,
+    transformProjectMember,
+    transformProjectSkill,
+} from './project.mappers'
 import type {
     AddProjectMembersRequest,
     ApiProject,
     ApiProjectMember,
     ApiProjectSkill,
-    ApiProjectUser,
     CreateProjectRequest,
     CreateProjectSkillRequest,
     Project,
     ProjectMember,
     ProjectSkill,
-    ProjectUser,
     UpdateProjectRequest,
 } from './project.types'
-
-// Transformation functions
-const transformApiUser = (user: ApiProjectUser): ProjectUser => ({
-    id: user.id,
-    username: user.username,
-    email: user.email,
-    fullName: user.full_name,
-    avatarUrl: user.avatar_url,
-})
-
-// Transformation functions
-const transformProjectSkill = (skill: ApiProjectSkill): ProjectSkill => ({
-    id: skill.id,
-    projectId: skill.project_id,
-    name: skill.name,
-    description: skill.description,
-})
-
-const transformProjectMember = (member: ApiProjectMember): ProjectMember => ({
-    id: member.id,
-    userId: member.user_id,
-    projectId: member.project_id,
-    role: member.role,
-    joinedAt: member.joined_at,
-    user: transformApiUser(member.user),
-})
-
-const transformProject = (project: ApiProject): Project => ({
-    id: project.id,
-    createdBy: project.created_by,
-    name: project.name,
-    slug: project.slug,
-    description: project.description,
-    status: project.status,
-    createdAt: project.created_at,
-    updatedAt: project.updated_at,
-    joinLink: project.join_link,
-    creator: transformApiUser(project.creator),
-    members: project.members.map(transformProjectMember),
-    skills: project.skills?.map(transformProjectSkill) ?? [],
-})
 
 export const projectApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
@@ -97,7 +68,35 @@ export const projectApi = baseApi.injectEndpoints({
             }),
             transformResponse: (response: ApiProject) =>
                 transformProject(response),
-            invalidatesTags: [{ type: 'Project', id: 'LIST' }],
+            async onQueryStarted(_body, { dispatch, queryFulfilled }) {
+                try {
+                    const { data } = await queryFulfilled
+                    // The create response is a full project, so we can place it in the
+                    // project list and seed the detail cache without refetching all projects.
+                    dispatch(
+                        projectApi.util.updateQueryData(
+                            'getProjects',
+                            undefined,
+                            (draft) => {
+                                if (
+                                    !draft.some((item) => item.id === data.id)
+                                ) {
+                                    draft.push(data)
+                                }
+                            },
+                        ),
+                    )
+                    dispatch(
+                        projectApi.util.upsertQueryData(
+                            'getProjectById',
+                            data.id,
+                            data,
+                        ),
+                    )
+                } catch {
+                    // The hook that called this mutation will surface the error.
+                }
+            },
         }),
 
         addProjectMembers: builder.mutation<
@@ -111,10 +110,57 @@ export const projectApi = baseApi.injectEndpoints({
             }),
             transformResponse: (response: ApiProjectMember[]) =>
                 response.map(transformProjectMember),
-            invalidatesTags: (_result, _error, { projectId }) => [
-                { type: 'ProjectMember' as const, id: projectId },
-                { type: 'Project' as const, id: projectId },
-            ],
+            async onQueryStarted({ projectId }, { dispatch, queryFulfilled }) {
+                try {
+                    const { data } = await queryFulfilled
+                    // Adding members affects the members query and the embedded members
+                    // shown on project detail/list cards, so keep those caches in sync.
+                    dispatch(
+                        projectApi.util.updateQueryData(
+                            'getProjectMembers',
+                            projectId,
+                            (draft) => {
+                                for (const member of data) {
+                                    const existingIndex = draft.findIndex(
+                                        (item) =>
+                                            item.id === member.id ||
+                                            item.userId === member.userId,
+                                    )
+
+                                    if (existingIndex === -1) {
+                                        draft.push(member)
+                                    } else {
+                                        draft[existingIndex] = member
+                                    }
+                                }
+                            },
+                        ),
+                    )
+                    dispatch(
+                        projectApi.util.updateQueryData(
+                            'getProjectById',
+                            projectId,
+                            (draft) => {
+                                applyProjectMembers(draft, data)
+                            },
+                        ),
+                    )
+                    dispatch(
+                        projectApi.util.updateQueryData(
+                            'getProjects',
+                            undefined,
+                            (draft) => {
+                                const project = draft.find(
+                                    (item) => item.id === projectId,
+                                )
+                                if (project) applyProjectMembers(project, data)
+                            },
+                        ),
+                    )
+                } catch {
+                    // The hook that called this mutation will surface the error.
+                }
+            },
         }),
 
         addProjectSkill: builder.mutation<
@@ -128,11 +174,49 @@ export const projectApi = baseApi.injectEndpoints({
             }),
             transformResponse: (response: ApiProjectSkill) =>
                 transformProjectSkill(response),
-            invalidatesTags: (_result, _error, { projectId }) => [
-                { type: 'Project' as const, id: projectId },
-                { type: 'Project' as const, id: 'LIST' },
-                { type: 'ProjectSkill' as const, id: projectId },
-            ],
+            async onQueryStarted({ projectId }, { dispatch, queryFulfilled }) {
+                try {
+                    const { data } = await queryFulfilled
+                    // The backend returns the new skill, which is enough to update every
+                    // project cache that displays the skill list.
+                    dispatch(
+                        projectApi.util.updateQueryData(
+                            'getProjectSkills',
+                            projectId,
+                            (draft) => {
+                                if (
+                                    !draft.some((item) => item.id === data.id)
+                                ) {
+                                    draft.push(data)
+                                }
+                            },
+                        ),
+                    )
+                    dispatch(
+                        projectApi.util.updateQueryData(
+                            'getProjectById',
+                            projectId,
+                            (draft) => {
+                                applyProjectSkill(draft, data)
+                            },
+                        ),
+                    )
+                    dispatch(
+                        projectApi.util.updateQueryData(
+                            'getProjects',
+                            undefined,
+                            (draft) => {
+                                const project = draft.find(
+                                    (item) => item.id === projectId,
+                                )
+                                if (project) applyProjectSkill(project, data)
+                            },
+                        ),
+                    )
+                } catch {
+                    // The hook that called this mutation will surface the error.
+                }
+            },
         }),
 
         updateProject: builder.mutation<
@@ -146,9 +230,62 @@ export const projectApi = baseApi.injectEndpoints({
             }),
             transformResponse: (response: ApiProject) =>
                 transformProject(response),
-            invalidatesTags: (_result, _error, { projectId }) => [
-                { type: 'Project' as const, id: projectId },
-            ],
+            async onQueryStarted(
+                { projectId, body },
+                { dispatch, queryFulfilled },
+            ) {
+                // Show the edited project fields immediately, then replace them with
+                // the server-confirmed values once the request finishes.
+                const patchProjectList = dispatch(
+                    projectApi.util.updateQueryData(
+                        'getProjects',
+                        undefined,
+                        (draft) => {
+                            const project = draft.find(
+                                (item) => item.id === projectId,
+                            )
+                            if (project) applyProjectUpdate(project, body)
+                        },
+                    ),
+                )
+                const patchProjectDetail = dispatch(
+                    projectApi.util.updateQueryData(
+                        'getProjectById',
+                        projectId,
+                        (draft) => {
+                            applyProjectUpdate(draft, body)
+                        },
+                    ),
+                )
+
+                try {
+                    const { data } = await queryFulfilled
+                    dispatch(
+                        projectApi.util.updateQueryData(
+                            'getProjects',
+                            undefined,
+                            (draft) => {
+                                const project = draft.find(
+                                    (item) => item.id === projectId,
+                                )
+                                if (project) patchProjectFields(project, data)
+                            },
+                        ),
+                    )
+                    dispatch(
+                        projectApi.util.updateQueryData(
+                            'getProjectById',
+                            projectId,
+                            (draft) => {
+                                patchProject(draft, data)
+                            },
+                        ),
+                    )
+                } catch {
+                    patchProjectList.undo()
+                    patchProjectDetail.undo()
+                }
+            },
         }),
 
         getProjectSkills: builder.query<ProjectSkill[], string>({
@@ -168,10 +305,51 @@ export const projectApi = baseApi.injectEndpoints({
                 url: `/projects/skills/${skillId}`,
                 method: 'DELETE',
             }),
-            invalidatesTags: (_result, _error, { projectId }) => [
-                { type: 'ProjectSkill' as const, id: projectId },
-                { type: 'Project' as const, id: projectId },
-            ],
+            async onQueryStarted(
+                { projectId, skillId },
+                { dispatch, queryFulfilled },
+            ) {
+                // Delete returns no body, but the skill id is enough to remove it from
+                // all project caches. Undo puts it back if the request fails.
+                const patchProjectSkills = dispatch(
+                    projectApi.util.updateQueryData(
+                        'getProjectSkills',
+                        projectId,
+                        (draft) =>
+                            draft.filter((skill) => skill.id !== skillId),
+                    ),
+                )
+                const patchProjectDetail = dispatch(
+                    projectApi.util.updateQueryData(
+                        'getProjectById',
+                        projectId,
+                        (draft) => {
+                            removeProjectSkillById(draft, skillId)
+                        },
+                    ),
+                )
+                const patchProjectList = dispatch(
+                    projectApi.util.updateQueryData(
+                        'getProjects',
+                        undefined,
+                        (draft) => {
+                            const project = draft.find(
+                                (item) => item.id === projectId,
+                            )
+                            if (project)
+                                removeProjectSkillById(project, skillId)
+                        },
+                    ),
+                )
+
+                try {
+                    await queryFulfilled
+                } catch {
+                    patchProjectSkills.undo()
+                    patchProjectDetail.undo()
+                    patchProjectList.undo()
+                }
+            },
         }),
 
         removeProjectMember: builder.mutation<
@@ -182,10 +360,53 @@ export const projectApi = baseApi.injectEndpoints({
                 url: `/projects/${projectId}/members/${memberId}`,
                 method: 'DELETE',
             }),
-            invalidatesTags: (_result, _error, { projectId }) => [
-                { type: 'ProjectMember' as const, id: projectId },
-                { type: 'Project' as const, id: projectId },
-            ],
+            async onQueryStarted(
+                { projectId, memberId },
+                { dispatch, queryFulfilled },
+            ) {
+                // The route removes by user id, so we remove the same user from the
+                // standalone members query and the embedded project member lists.
+                const patchProjectMembers = dispatch(
+                    projectApi.util.updateQueryData(
+                        'getProjectMembers',
+                        projectId,
+                        (draft) =>
+                            draft.filter(
+                                (member) => member.userId !== memberId,
+                            ),
+                    ),
+                )
+                const patchProjectDetail = dispatch(
+                    projectApi.util.updateQueryData(
+                        'getProjectById',
+                        projectId,
+                        (draft) => {
+                            removeProjectMemberByUserId(draft, memberId)
+                        },
+                    ),
+                )
+                const patchProjectList = dispatch(
+                    projectApi.util.updateQueryData(
+                        'getProjects',
+                        undefined,
+                        (draft) => {
+                            const project = draft.find(
+                                (item) => item.id === projectId,
+                            )
+                            if (project)
+                                removeProjectMemberByUserId(project, memberId)
+                        },
+                    ),
+                )
+
+                try {
+                    await queryFulfilled
+                } catch {
+                    patchProjectMembers.undo()
+                    patchProjectDetail.undo()
+                    patchProjectList.undo()
+                }
+            },
         }),
 
         deleteProject: builder.mutation<void, string>({
@@ -193,10 +414,24 @@ export const projectApi = baseApi.injectEndpoints({
                 url: `/projects/${projectId}`,
                 method: 'DELETE',
             }),
-            invalidatesTags: (_result, _error, projectId) => [
-                { type: 'Project', id: projectId },
-                { type: 'Project', id: 'LIST' },
-            ],
+            async onQueryStarted(projectId, { dispatch, queryFulfilled }) {
+                // A deleted project only needs to disappear from the project list here.
+                // The UI should navigate away from any open detail view separately.
+                const patchProjectList = dispatch(
+                    projectApi.util.updateQueryData(
+                        'getProjects',
+                        undefined,
+                        (draft) =>
+                            draft.filter((project) => project.id !== projectId),
+                    ),
+                )
+
+                try {
+                    await queryFulfilled
+                } catch {
+                    patchProjectList.undo()
+                }
+            },
         }),
     }),
 })

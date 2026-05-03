@@ -34,10 +34,11 @@ type AvatarInput struct {
 }
 
 type UpdateUserInput struct {
-	Email    *string
-	Password *string
-	FullName *string
-	Avatar   *AvatarInput
+	Email        *string
+	Password     *string
+	FullName     *string
+	Avatar       *AvatarInput
+	RemoveAvatar bool
 }
 
 type (
@@ -191,6 +192,7 @@ func (s userService) UpdateUser(ctx context.Context, id uuid.UUID, input UpdateU
 		Email:    input.Email,
 		FullName: input.FullName,
 	}
+	removeAvatar := input.RemoveAvatar && input.Avatar == nil
 
 	if input.Email != nil {
 		if err := s.validateEmail(*input.Email); err != nil {
@@ -216,6 +218,9 @@ func (s userService) UpdateUser(ctx context.Context, id uuid.UUID, input UpdateU
 			return nil, err
 		}
 		fields.AvatarURL = avatarURLMap
+		fields.SetAvatarURL = true
+	} else if removeAvatar {
+		fields.SetAvatarURL = true
 	}
 
 	u, err := s.userStore.UpdateUser(ctx, id, fields)
@@ -227,6 +232,11 @@ func (s userService) UpdateUser(ctx context.Context, id uuid.UUID, input UpdateU
 			return nil, ErrDuplicateEmail
 		}
 		return nil, fmt.Errorf("%w: %w", ErrUserStoreFailed, err)
+	}
+	if removeAvatar {
+		if err := s.deleteAvatar(id); err != nil {
+			return nil, err
+		}
 	}
 	return u, nil
 }
@@ -282,6 +292,14 @@ func validateImageContent(data []byte) (image.Image, error) {
 
 var thumbnailSizes = []int{300, 600}
 
+func (s userService) deleteAvatar(userID uuid.UUID) error {
+	userDir := filepath.Join(s.mediaDir, "avatars", userID.String())
+	if err := os.RemoveAll(userDir); err != nil {
+		return fmt.Errorf("%w: %w", ErrAvatarDeleteFailed, err)
+	}
+	return nil
+}
+
 func (s userService) processAndSaveAvatar(userID uuid.UUID, avatar *AvatarInput) (*models.AvatarURLMap, error) {
 
 	data, err := io.ReadAll(avatar.File)
@@ -295,7 +313,7 @@ func (s userService) processAndSaveAvatar(userID uuid.UUID, avatar *AvatarInput)
 	}
 
 	userDir := filepath.Join(s.mediaDir, "avatars", userID.String())
-	if err := os.MkdirAll(userDir, 0o755); err != nil {
+	if err := os.MkdirAll(userDir, 0o750); err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrAvatarSaveFailed, err)
 	}
 
@@ -304,7 +322,7 @@ func (s userService) processAndSaveAvatar(userID uuid.UUID, avatar *AvatarInput)
 
 	originalName := "original" + ext
 	originalPath := filepath.Join(userDir, originalName)
-	if err := os.WriteFile(originalPath, data, 0o644); err != nil {
+	if err := os.WriteFile(originalPath, data, 0o600); err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrAvatarSaveFailed, err)
 	}
 

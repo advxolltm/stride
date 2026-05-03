@@ -108,8 +108,8 @@ export function ProjectGeneralSettings({
     }
 
     return (
-        <div className="flex flex-col gap-8 p-2">
-            <div className="flex items-center justify-between">
+        <div className="flex h-full min-h-0 flex-col gap-8 p-2">
+            <div className="flex shrink-0 items-center justify-between">
                 <h2
                     className="text-base font-semibold"
                     style={{ color: 'var(--overlay-foreground)' }}
@@ -132,7 +132,7 @@ export function ProjectGeneralSettings({
             </div>
 
             {!isEditing ? (
-                <div className="space-y-5">
+                <div className="min-h-0 flex-1 space-y-5 overflow-y-auto pr-1 [scrollbar-gutter:auto]">
                     {viewFields.map((field) => (
                         <div key={field.key}>
                             <p
@@ -152,7 +152,7 @@ export function ProjectGeneralSettings({
                     )}
                 </div>
             ) : (
-                <div className="flex flex-col gap-4">
+                <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1 [scrollbar-gutter:auto]">
                     <TextField
                         value={name}
                         onChange={(val) => {

@@ -2,6 +2,7 @@ package routes
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 
 	authService "backend/services/auth"
@@ -36,9 +37,10 @@ type createUserRequest struct {
 } //	@name	CreateUserRequest
 
 type updateUserRequest struct {
-	Email    *string `json:"email" form:"email"`
-	Password *string `json:"password" form:"password"`
-	FullName *string `json:"full_name" form:"full_name"`
+	Email        *string `json:"email" form:"email"`
+	Password     *string `json:"password" form:"password"`
+	FullName     *string `json:"full_name" form:"full_name"`
+	RemoveAvatar *bool   `json:"remove_avatar" form:"remove_avatar"`
 }
 
 func (h userRouteHandler) mapServiceError(err error) (int, string) {
@@ -151,6 +153,7 @@ func (h userRouteHandler) userPOSTHandle(c *echo.Context) error {
 //	@Param			email		formData	string	false	"New email"
 //	@Param			password	formData	string	false	"New password"
 //	@Param			full_name	formData	string	false	"Full name"
+//	@Param			remove_avatar	formData	boolean	false	"Delete the current avatar and clear avatar_url"
 //	@Param			avatar		formData	file	false	"Avatar image (jpeg, png, gif, webp; max 2MB). Generates 300x300, 600x600 thumbnails + original."
 //	@Success		200			{object}	User
 //	@Failure		400			{object}	ErrorResponse	"invalid user id, request body, avatar type, corrupt image, or file too large"
@@ -175,9 +178,10 @@ func (h userRouteHandler) userPATCHHandle(c *echo.Context) error {
 	}
 
 	input := userService.UpdateUserInput{
-		Email:    req.Email,
-		Password: req.Password,
-		FullName: req.FullName,
+		Email:        req.Email,
+		Password:     req.Password,
+		FullName:     req.FullName,
+		RemoveAvatar: req.RemoveAvatar != nil && *req.RemoveAvatar,
 	}
 
 	file, err := c.FormFile("avatar")
@@ -186,7 +190,12 @@ func (h userRouteHandler) userPATCHHandle(c *echo.Context) error {
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "failed to read uploaded file"})
 		}
-		defer src.Close()
+		defer func() {
+			err := src.Close()
+			if err != nil {
+				slog.Error("failed to close avatar file", "error", err)
+			}
+		}()
 		input.Avatar = &userService.AvatarInput{
 			Filename: file.Filename,
 			File:     src,

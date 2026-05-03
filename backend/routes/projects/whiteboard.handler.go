@@ -38,7 +38,7 @@ func (h *whiteboardRouteHandler) registerRoutes(g *echo.Group) {
 }
 
 // whiteboardResponse represents a whiteboard in API responses.
-type whiteboardResponse struct {
+type whiteboardResponse struct { //nolint:unused
 	ID        string `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
 	ProjectID string `json:"projectId" example:"550e8400-e29b-41d4-a716-446655440000"`
 	CreatedAt string `json:"createdAt" example:"2026-01-01T00:00:00Z"`
@@ -46,7 +46,7 @@ type whiteboardResponse struct {
 }
 
 // whiteboardElementResponse represents a whiteboard element in API responses.
-type whiteboardElementResponse struct {
+type whiteboardElementResponse struct { //nolint:unused
 	ID           string `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
 	WhiteboardID string `json:"whiteboardId" example:"550e8400-e29b-41d4-a716-446655440000"`
 	CreatedBy    string `json:"createdBy" example:"550e8400-e29b-41d4-a716-446655440000"`

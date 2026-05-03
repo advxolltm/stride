@@ -1,4 +1,4 @@
-import { Button, Input, Label, TextField, toast } from '@heroui/react'
+import { Button, FieldError, Input, Label, TextField, toast } from '@heroui/react'
 import { type SyntheticEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCreateTaskMutation } from '../../../../../store/features/tasks/task.api'
@@ -48,13 +48,14 @@ export function AddTaskForm({
             className="border-border bg-surface flex flex-col gap-3 rounded-lg border p-3"
         >
             <TextField className="w-full" name={`${columnId}-title`}>
-                <Label>Title</Label>
+                <Label>{t('tasks.form.title')}</Label>
                 <Input
                     autoFocus
                     variant="secondary"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                 />
+                <FieldError />
             </TextField>
 
             <div className="flex items-center gap-2">

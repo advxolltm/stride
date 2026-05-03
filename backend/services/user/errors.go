@@ -17,6 +17,7 @@ var (
 	ErrAvatarTooLarge         = errors.New("avatar file too large (max 2MB)")
 	ErrAvatarInvalidType      = errors.New("avatar must be an image (jpeg, png, gif, webp)")
 	ErrAvatarSaveFailed       = errors.New("failed to save avatar file")
+	ErrAvatarDeleteFailed     = errors.New("failed to delete avatar files")
 	ErrAvatarCorruptImage     = errors.New("uploaded file is not a valid image")
 	ErrAvatarProcessingFailed = errors.New("failed to process avatar thumbnails")
 )
