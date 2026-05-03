@@ -19,10 +19,10 @@ type projectWSRouteHandler struct {
 	rdb            *redis.Client
 }
 
-type taskWSUpdateResponse struct {
-	Type    int `json:"type" example:"2"`
-	Payload any `json:"payload"`
-}
+// type taskWSUpdateResponse struct {
+// 	Type    int `json:"type" example:"2"`
+// 	Payload any `json:"payload"`
+// }
 
 func newProjectWSRouteHandler(authService auth.AuthService, projectService project.ProjectService, rdb *redis.Client) projectWSRouteHandler {
 	return projectWSRouteHandler{

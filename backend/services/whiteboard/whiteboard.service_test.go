@@ -33,9 +33,7 @@ func newTestService(db *gorm.DB) whiteboardSvc.WhiteboardService {
 	return whiteboardSvc.NewWhiteboardService(wbStore, pService)
 }
 
-func ctxWithUser(userID uuid.UUID) context.Context {
-	return context.WithValue(context.Background(), "userID", userID) //nolint:staticcheck // test helper must match the current service context key
-}
+
 
 func selectProjectMember(t *testing.T, db *gorm.DB) (models.Project, models.User) {
 	t.Helper()

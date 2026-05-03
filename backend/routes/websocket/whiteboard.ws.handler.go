@@ -29,18 +29,18 @@ type whiteboardWSRouteHandler struct {
 	presenceStore  *whiteboardSvc.CursorPresenceStore
 }
 
-type whiteboardCursorUserResponse struct {
+type whiteboardCursorUserResponse struct { //nolint:unused
 	ID          string `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
 	Name        string `json:"name" example:"Jane Doe"`
 	AvatarSmall string `json:"avatarSmall" example:"/media/avatars/user-small.png"`
 }
 
-type whiteboardCursorPositionResponse struct {
+type whiteboardCursorPositionResponse struct { //nolint:unused
 	X *float64 `json:"x" example:"120.5"`
 	Y *float64 `json:"y" example:"340.25"`
 }
 
-type whiteboardCursorPresenceResponse struct {
+type whiteboardCursorPresenceResponse struct { //nolint:unused
 	User   whiteboardCursorUserResponse     `json:"user"`
 	Cursor whiteboardCursorPositionResponse `json:"cursor"`
 }
@@ -104,14 +104,32 @@ func (h whiteboardWSRouteHandler) cursorConnectGET(c *echo.Context) error {
 		slog.Error("failed to upgrade whiteboard cursor ws", "error", err)
 		return c.JSON(http.StatusInternalServerError, routes.ErrorResponse{Error: err.Error()})
 	}
-	defer conn.Close()
+	closeConn := func() {
+		if conn == nil {
+			return
+		}
+		if err := conn.Close(); err != nil {
+			slog.Error("failed to close whiteboard cursor websocket connection", "error", err, "projectID", session.ProjectID, "userID", session.UserID)
+		}
+		conn = nil
+	}
+	defer closeConn()
 
 	connectionID := uuid.NewString()
 	redisCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	sub := h.rdb.Subscribe(redisCtx, whiteboardSvc.CursorPresenceChannel(session.ProjectID))
-	defer sub.Close()
+	closeSub := func() {
+		if sub == nil {
+			return
+		}
+		if err := sub.Close(); err != nil {
+			slog.Error("failed to close whiteboard cursor redis subscription", "error", err, "projectID", session.ProjectID, "userID", session.UserID)
+		}
+		sub = nil
+	}
+	defer closeSub()
 	channel := sub.Channel()
 
 	presenceRecord := whiteboardSvc.CursorPresenceRecord{
@@ -136,8 +154,8 @@ func (h whiteboardWSRouteHandler) cursorConnectGET(c *echo.Context) error {
 
 	firstErr := <-errCh
 	cancel()
-	_ = sub.Close()
-	_ = conn.Close()
+	closeSub()
+	closeConn()
 	secondErr := <-errCh
 
 	if err := h.presenceStore.RemoveConnection(context.Background(), session.ProjectID, connectionID); err != nil {
