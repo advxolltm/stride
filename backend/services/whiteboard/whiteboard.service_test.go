@@ -33,9 +33,7 @@ func newTestService(db *gorm.DB) whiteboardSvc.WhiteboardService {
 	return whiteboardSvc.NewWhiteboardService(wbStore, pService)
 }
 
-func ctxWithUser(userID uuid.UUID) context.Context {
-	return context.WithValue(context.Background(), "userID", userID) //nolint:staticcheck // test helper must match the current service context key
-}
+
 
 func selectProjectMember(t *testing.T, db *gorm.DB) (models.Project, models.User) {
 	t.Helper()
@@ -56,26 +54,27 @@ func runTest(t *testing.T, db *gorm.DB, name string, f func(*testing.T, *gorm.DB
 func TestWhiteboardService_GetOrCreate_CreatesNewWhiteboard(t *testing.T) {
 	runTest(t, db, "creates whiteboard when none exists", func(t *testing.T, db *gorm.DB, svc whiteboardSvc.WhiteboardService) {
 		project, member := selectProjectMember(t, db)
-		ctx := ctxWithUser(member.ID)
+		ctx := context.Background()
 
-		wb, err := svc.GetOrCreateWhiteboardByProjectID(ctx, project.ID)
+		wb, err := svc.GetOrCreateWhiteboardByProjectID(ctx, member.ID, project.ID)
 
 		require.NoError(t, err)
 		require.NotNil(t, wb)
 		assert.NotEqual(t, uuid.Nil, wb.ID)
 		assert.Equal(t, project.ID, wb.ProjectID)
+		assert.JSONEq(t, `{}`, string(wb.CanvasState))
 	})
 }
 
 func TestWhiteboardService_GetOrCreate_IsIdempotent(t *testing.T) {
 	runTest(t, db, "returns existing whiteboard on second call", func(t *testing.T, db *gorm.DB, svc whiteboardSvc.WhiteboardService) {
 		project, member := selectProjectMember(t, db)
-		ctx := ctxWithUser(member.ID)
+		ctx := context.Background()
 
-		first, err := svc.GetOrCreateWhiteboardByProjectID(ctx, project.ID)
+		first, err := svc.GetOrCreateWhiteboardByProjectID(ctx, member.ID, project.ID)
 		require.NoError(t, err)
 
-		second, err := svc.GetOrCreateWhiteboardByProjectID(ctx, project.ID)
+		second, err := svc.GetOrCreateWhiteboardByProjectID(ctx, member.ID, project.ID)
 		require.NoError(t, err)
 
 		assert.Equal(t, first.ID, second.ID, "second call must return the same whiteboard")
@@ -85,9 +84,9 @@ func TestWhiteboardService_GetOrCreate_IsIdempotent(t *testing.T) {
 func TestWhiteboardService_CreateElement_SetsWhiteboardID(t *testing.T) {
 	runTest(t, db, "element receives WhiteboardID resolved from project", func(t *testing.T, db *gorm.DB, svc whiteboardSvc.WhiteboardService) {
 		project, member := selectProjectMember(t, db)
-		ctx := ctxWithUser(member.ID)
+		ctx := context.Background()
 
-		wb, err := svc.GetOrCreateWhiteboardByProjectID(ctx, project.ID)
+		wb, err := svc.GetOrCreateWhiteboardByProjectID(ctx, member.ID, project.ID)
 		require.NoError(t, err)
 
 		element := &models.WhiteboardElement{
@@ -95,7 +94,7 @@ func TestWhiteboardService_CreateElement_SetsWhiteboardID(t *testing.T) {
 			Props:       datatypes.JSON([]byte(`{"x": 10, "y": 20, "width": 100, "height": 50}`)),
 		}
 
-		created, err := svc.CreateElement(ctx, project.ID, element)
+		created, err := svc.CreateElement(ctx, member.ID, project.ID, element)
 
 		require.NoError(t, err)
 		require.NotNil(t, created)
@@ -107,21 +106,41 @@ func TestWhiteboardService_CreateElement_SetsWhiteboardID(t *testing.T) {
 func TestWhiteboardService_CreateElement_FailsWhenNoWhiteboardExists(t *testing.T) {
 	runTest(t, db, "error when project has no whiteboard", func(t *testing.T, db *gorm.DB, svc whiteboardSvc.WhiteboardService) {
 		project, member := selectProjectMember(t, db)
-		ctx := ctxWithUser(member.ID)
+		ctx := context.Background()
 
 		element := &models.WhiteboardElement{
 			ElementType: "sticky-note",
 			Props:       datatypes.JSON([]byte(`{"text": "hello"}`)),
 		}
 
-		_, err := svc.CreateElement(ctx, project.ID, element)
+		_, err := svc.CreateElement(ctx, member.ID, project.ID, element)
 
 		assert.Error(t, err)
 	})
 }
 
+func TestWhiteboardService_UpdateCanvasState_PersistsState(t *testing.T) {
+	runTest(t, db, "canvas state updates and persists", func(t *testing.T, db *gorm.DB, svc whiteboardSvc.WhiteboardService) {
+		project, member := selectProjectMember(t, db)
+		ctx := context.Background()
+		canvasState := datatypes.JSON([]byte(`{"appState":{"zoom":{"value":1.25}}}`))
+
+		updated, err := svc.UpdateCanvasState(ctx, member.ID, project.ID, canvasState)
+
+		require.NoError(t, err)
+		require.NotNil(t, updated)
+		assert.Equal(t, project.ID, updated.ProjectID)
+		assert.JSONEq(t, string(canvasState), string(updated.CanvasState))
+
+		fetched, err := svc.GetWhiteboardByProjectID(ctx, project.ID)
+		require.NoError(t, err)
+		assert.JSONEq(t, string(canvasState), string(fetched.CanvasState))
+	})
+}
+
 func TestWhiteboardService_NilUserID_ReturnsError(t *testing.T) {
-	nilCtx := ctxWithUser(uuid.Nil)
+	ctx := context.Background()
+	nilUserID := uuid.Nil
 	projectID := uuid.New()
 	elementID := uuid.New()
 
@@ -132,49 +151,42 @@ func TestWhiteboardService_NilUserID_ReturnsError(t *testing.T) {
 		{
 			name: "GetOrCreateWhiteboardByProjectID",
 			fn: func(svc whiteboardSvc.WhiteboardService) error {
-				_, err := svc.GetOrCreateWhiteboardByProjectID(nilCtx, projectID)
+				_, err := svc.GetOrCreateWhiteboardByProjectID(ctx, nilUserID, projectID)
 				return err
 			},
 		},
 		{
 			name: "GetElements",
 			fn: func(svc whiteboardSvc.WhiteboardService) error {
-				_, err := svc.GetElements(nilCtx, projectID)
+				_, err := svc.GetElements(ctx, nilUserID, projectID)
 				return err
 			},
 		},
 		{
 			name: "GetElement",
 			fn: func(svc whiteboardSvc.WhiteboardService) error {
-				_, err := svc.GetElement(nilCtx, projectID, elementID)
+				_, err := svc.GetElement(ctx, nilUserID, projectID, elementID)
 				return err
 			},
 		},
 		{
 			name: "CreateElement",
 			fn: func(svc whiteboardSvc.WhiteboardService) error {
-				_, err := svc.CreateElement(nilCtx, projectID, &models.WhiteboardElement{ElementType: "rect"})
+				_, err := svc.CreateElement(ctx, nilUserID, projectID, &models.WhiteboardElement{ElementType: "rect"})
 				return err
 			},
 		},
 		{
 			name: "UpdateElement",
 			fn: func(svc whiteboardSvc.WhiteboardService) error {
-				_, err := svc.UpdateElement(nilCtx, projectID, elementID, whiteboardDB.UpdateElementFields{})
+				_, err := svc.UpdateElement(ctx, nilUserID, projectID, elementID, whiteboardDB.UpdateElementFields{})
 				return err
 			},
 		},
 		{
 			name: "DeleteElement",
 			fn: func(svc whiteboardSvc.WhiteboardService) error {
-				return svc.DeleteElement(nilCtx, projectID, elementID)
-			},
-		},
-		{
-			name: "UpdateWhiteboardByProjectID",
-			fn: func(svc whiteboardSvc.WhiteboardService) error {
-				_, err := svc.UpdateWhiteboardByProjectID(nilCtx, projectID, whiteboardDB.UpdateWhiteboardFields{})
-				return err
+				return svc.DeleteElement(ctx, nilUserID, projectID, elementID)
 			},
 		},
 	}
@@ -185,38 +197,6 @@ func TestWhiteboardService_NilUserID_ReturnsError(t *testing.T) {
 			assert.Error(t, err, "expected error for nil userID")
 		})
 	}
-}
-
-func TestWhiteboardService_UpdateWhiteboardByProjectID(t *testing.T) {
-	runTest(t, db, "member updates canvas state", func(t *testing.T, db *gorm.DB, svc whiteboardSvc.WhiteboardService) {
-		project, member := selectProjectMember(t, db)
-		ctx := ctxWithUser(member.ID)
-
-		_, err := svc.GetOrCreateWhiteboardByProjectID(ctx, project.ID)
-		require.NoError(t, err)
-
-		newCanvas := datatypes.JSON([]byte(`{"version": 1, "shapes": []}`))
-		updated, err := svc.UpdateWhiteboardByProjectID(ctx, project.ID, whiteboardDB.UpdateWhiteboardFields{
-			CanvasState: &newCanvas,
-		})
-
-		require.NoError(t, err)
-		require.NotNil(t, updated)
-		assert.Equal(t, project.ID, updated.ProjectID)
-	})
-}
-func TestWhiteboardService_UpdateWhiteboardByProjectID_NonExistentProject(t *testing.T) {
-	runTest(t, db, "returns error for unknown project ID", func(t *testing.T, db *gorm.DB, svc whiteboardSvc.WhiteboardService) {
-		_, member := selectProjectMember(t, db)
-		ctx := ctxWithUser(member.ID)
-
-		newCanvas := datatypes.JSON([]byte(`{}`))
-		_, err := svc.UpdateWhiteboardByProjectID(ctx, uuid.New(), whiteboardDB.UpdateWhiteboardFields{
-			CanvasState: &newCanvas,
-		})
-
-		assert.Error(t, err)
-	})
 }
 
 func TestWhiteboardService_GetWhiteboardByProjectID_NotFound(t *testing.T) {
@@ -231,12 +211,12 @@ func TestWhiteboardService_GetWhiteboardByProjectID_NotFound(t *testing.T) {
 func TestWhiteboardService_GetElements_EmptyForFreshWhiteboard(t *testing.T) {
 	runTest(t, db, "empty element list for fresh whiteboard", func(t *testing.T, db *gorm.DB, svc whiteboardSvc.WhiteboardService) {
 		project, member := selectProjectMember(t, db)
-		ctx := ctxWithUser(member.ID)
+		ctx := context.Background()
 
-		_, err := svc.GetOrCreateWhiteboardByProjectID(ctx, project.ID)
+		_, err := svc.GetOrCreateWhiteboardByProjectID(ctx, member.ID, project.ID)
 		require.NoError(t, err)
 
-		elements, err := svc.GetElements(ctx, project.ID)
+		elements, err := svc.GetElements(ctx, member.ID, project.ID)
 
 		require.NoError(t, err)
 		assert.Empty(t, elements)
@@ -246,18 +226,18 @@ func TestWhiteboardService_GetElements_EmptyForFreshWhiteboard(t *testing.T) {
 func TestWhiteboardService_GetElement_ReturnsSameElement(t *testing.T) {
 	runTest(t, db, "GetElement returns the element just created", func(t *testing.T, db *gorm.DB, svc whiteboardSvc.WhiteboardService) {
 		project, member := selectProjectMember(t, db)
-		ctx := ctxWithUser(member.ID)
+		ctx := context.Background()
 
-		_, err := svc.GetOrCreateWhiteboardByProjectID(ctx, project.ID)
+		_, err := svc.GetOrCreateWhiteboardByProjectID(ctx, member.ID, project.ID)
 		require.NoError(t, err)
 
-		created, err := svc.CreateElement(ctx, project.ID, &models.WhiteboardElement{
+		created, err := svc.CreateElement(ctx, member.ID, project.ID, &models.WhiteboardElement{
 			ElementType: "ellipse",
 			Props:       datatypes.JSON([]byte(`{"rx": 50}`)),
 		})
 		require.NoError(t, err)
 
-		fetched, err := svc.GetElement(ctx, project.ID, created.ID)
+		fetched, err := svc.GetElement(ctx, member.ID, project.ID, created.ID)
 
 		require.NoError(t, err)
 		assert.Equal(t, created.ID, fetched.ID)
@@ -268,21 +248,21 @@ func TestWhiteboardService_GetElement_ReturnsSameElement(t *testing.T) {
 func TestWhiteboardService_DeleteElement_RemovesElement(t *testing.T) {
 	runTest(t, db, "element not found after deletion", func(t *testing.T, db *gorm.DB, svc whiteboardSvc.WhiteboardService) {
 		project, member := selectProjectMember(t, db)
-		ctx := ctxWithUser(member.ID)
+		ctx := context.Background()
 
-		_, err := svc.GetOrCreateWhiteboardByProjectID(ctx, project.ID)
+		_, err := svc.GetOrCreateWhiteboardByProjectID(ctx, member.ID, project.ID)
 		require.NoError(t, err)
 
-		created, err := svc.CreateElement(ctx, project.ID, &models.WhiteboardElement{
+		created, err := svc.CreateElement(ctx, member.ID, project.ID, &models.WhiteboardElement{
 			ElementType: "text",
 			Props:       datatypes.JSON([]byte(`{"content": "hello"}`)),
 		})
 		require.NoError(t, err)
 
-		err = svc.DeleteElement(ctx, project.ID, created.ID)
+		err = svc.DeleteElement(ctx, member.ID, project.ID, created.ID)
 		require.NoError(t, err)
 
-		_, err = svc.GetElement(ctx, project.ID, created.ID)
+		_, err = svc.GetElement(ctx, member.ID, project.ID, created.ID)
 		assert.Error(t, err)
 	})
 }

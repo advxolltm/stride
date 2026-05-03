@@ -10,21 +10,22 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
 type (
 	WhiteboardService interface {
-		GetOrCreateWhiteboardByProjectID(ctx context.Context, projectID uuid.UUID) (*models.Whiteboard, error)
+		GetOrCreateWhiteboardByProjectID(ctx context.Context, userID uuid.UUID, projectID uuid.UUID) (*models.Whiteboard, error)
 		GetWhiteboardByProjectID(ctx context.Context, projectUUID uuid.UUID) (*models.Whiteboard, error)
 		CreateWhiteboard(ctx context.Context, whiteboard *models.Whiteboard) error
-		UpdateWhiteboardByProjectID(ctx context.Context, id uuid.UUID, fields whiteboard.UpdateWhiteboardFields) (*models.Whiteboard, error)
+		UpdateCanvasState(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, canvasState datatypes.JSON) (*models.Whiteboard, error)
 
-		GetElements(ctx context.Context, projectID uuid.UUID) ([]models.WhiteboardElement, error)
-		GetElement(ctx context.Context, projectID uuid.UUID, id uuid.UUID) (*models.WhiteboardElement, error)
-		CreateElement(ctx context.Context, projectID uuid.UUID, element *models.WhiteboardElement) (*models.WhiteboardElement, error)
-		UpdateElement(ctx context.Context, projectID uuid.UUID, id uuid.UUID, fields whiteboard.UpdateElementFields) (*models.WhiteboardElement, error)
-		DeleteElement(ctx context.Context, projectID uuid.UUID, id uuid.UUID) error
+		GetElements(ctx context.Context, userID uuid.UUID, projectID uuid.UUID) ([]models.WhiteboardElement, error)
+		GetElement(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, id uuid.UUID) (*models.WhiteboardElement, error)
+		CreateElement(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, element *models.WhiteboardElement) (*models.WhiteboardElement, error)
+		UpdateElement(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, id uuid.UUID, fields whiteboard.UpdateElementFields) (*models.WhiteboardElement, error)
+		DeleteElement(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, id uuid.UUID) error
 	}
 
 	whiteboardService struct {
@@ -37,15 +38,22 @@ func NewWhiteboardService(store whiteboard.WhiteboardStore, projectService proje
 	return &whiteboardService{store: store, projectService: projectService}
 }
 
-func ValidateUserAccessToProject(ctx context.Context, projectService project.ProjectService, projectID uuid.UUID) error {
-	userID, ok := ctx.Value("userID").(uuid.UUID)
-	if !ok || userID == uuid.Nil {
-		return auth.ErrUserIDNotInContext
+func defaultCanvasState() datatypes.JSON {
+	return datatypes.JSON([]byte(`{}`))
+}
+
+func normalizeCanvasState(canvasState datatypes.JSON) datatypes.JSON {
+	if len(canvasState) == 0 {
+		return defaultCanvasState()
 	}
 
+	return canvasState
+}
+
+func ValidateUserAccessToProject(ctx context.Context, projectService project.ProjectService, userID uuid.UUID, projectID uuid.UUID) error {
 	isMember, err := projectService.IsProjectMember(ctx, userID, projectID)
 	if err != nil {
-		return fmt.Errorf("failed to check project membership: %w", err)
+		return fmt.Errorf("%w: %w", ErrCheckProjectMembership, err)
 	}
 	if !isMember {
 		return auth.ErrAccessDenied
@@ -53,8 +61,8 @@ func ValidateUserAccessToProject(ctx context.Context, projectService project.Pro
 	return nil
 }
 
-func (s *whiteboardService) GetOrCreateWhiteboardByProjectID(ctx context.Context, projectID uuid.UUID) (*models.Whiteboard, error) {
-	err := ValidateUserAccessToProject(ctx, s.projectService, projectID)
+func (s *whiteboardService) GetOrCreateWhiteboardByProjectID(ctx context.Context, userID uuid.UUID, projectID uuid.UUID) (*models.Whiteboard, error) {
+	err := ValidateUserAccessToProject(ctx, s.projectService, userID, projectID)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +72,7 @@ func (s *whiteboardService) GetOrCreateWhiteboardByProjectID(ctx context.Context
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, err
 		}
-		whiteboard = &models.Whiteboard{ProjectID: projectID}
+		whiteboard = &models.Whiteboard{ProjectID: projectID, CanvasState: defaultCanvasState()}
 		if err = s.CreateWhiteboard(ctx, whiteboard); err != nil {
 			return nil, ErrCreateWhiteboardFailed
 		}
@@ -77,33 +85,34 @@ func (s *whiteboardService) GetWhiteboardByProjectID(ctx context.Context, projec
 }
 
 func (s *whiteboardService) CreateWhiteboard(ctx context.Context, whiteboard *models.Whiteboard) error {
+	whiteboard.CanvasState = normalizeCanvasState(whiteboard.CanvasState)
 	return s.store.CreateWhiteboard(ctx, whiteboard)
 }
 
-func (s *whiteboardService) UpdateWhiteboardByProjectID(ctx context.Context, projectID uuid.UUID, fields whiteboard.UpdateWhiteboardFields) (*models.Whiteboard, error) {
-	err := ValidateUserAccessToProject(ctx, s.projectService, projectID)
-	if err != nil {
+func (s *whiteboardService) UpdateCanvasState(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, canvasState datatypes.JSON) (*models.Whiteboard, error) {
+	if _, err := s.GetOrCreateWhiteboardByProjectID(ctx, userID, projectID); err != nil {
 		return nil, err
 	}
-	return s.store.UpdateWhiteboardByProjectID(ctx, projectID, fields)
+
+	return s.store.UpdateCanvasState(ctx, projectID, normalizeCanvasState(canvasState))
 }
 
-func (s *whiteboardService) GetElements(ctx context.Context, projectID uuid.UUID) ([]models.WhiteboardElement, error) {
-	if err := ValidateUserAccessToProject(ctx, s.projectService, projectID); err != nil {
+func (s *whiteboardService) GetElements(ctx context.Context, userID uuid.UUID, projectID uuid.UUID) ([]models.WhiteboardElement, error) {
+	if err := ValidateUserAccessToProject(ctx, s.projectService, userID, projectID); err != nil {
 		return nil, err
 	}
 	return s.store.GetElements(ctx, projectID)
 }
 
-func (s *whiteboardService) GetElement(ctx context.Context, projectID uuid.UUID, id uuid.UUID) (*models.WhiteboardElement, error) {
-	if err := ValidateUserAccessToProject(ctx, s.projectService, projectID); err != nil {
+func (s *whiteboardService) GetElement(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, id uuid.UUID) (*models.WhiteboardElement, error) {
+	if err := ValidateUserAccessToProject(ctx, s.projectService, userID, projectID); err != nil {
 		return nil, err
 	}
 	return s.store.GetElement(ctx, projectID, id)
 }
 
-func (s *whiteboardService) CreateElement(ctx context.Context, projectID uuid.UUID, element *models.WhiteboardElement) (*models.WhiteboardElement, error) {
-	if err := ValidateUserAccessToProject(ctx, s.projectService, projectID); err != nil {
+func (s *whiteboardService) CreateElement(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, element *models.WhiteboardElement) (*models.WhiteboardElement, error) {
+	if err := ValidateUserAccessToProject(ctx, s.projectService, userID, projectID); err != nil {
 		return nil, err
 	}
 	wb, err := s.store.GetWhiteboardByProjectID(ctx, projectID)
@@ -114,15 +123,15 @@ func (s *whiteboardService) CreateElement(ctx context.Context, projectID uuid.UU
 	return s.store.CreateElement(ctx, element)
 }
 
-func (s *whiteboardService) UpdateElement(ctx context.Context, projectID uuid.UUID, id uuid.UUID, fields whiteboard.UpdateElementFields) (*models.WhiteboardElement, error) {
-	if err := ValidateUserAccessToProject(ctx, s.projectService, projectID); err != nil {
+func (s *whiteboardService) UpdateElement(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, id uuid.UUID, fields whiteboard.UpdateElementFields) (*models.WhiteboardElement, error) {
+	if err := ValidateUserAccessToProject(ctx, s.projectService, userID, projectID); err != nil {
 		return nil, err
 	}
 	return s.store.UpdateElement(ctx, projectID, id, fields)
 }
 
-func (s *whiteboardService) DeleteElement(ctx context.Context, projectID uuid.UUID, id uuid.UUID) error {
-	if err := ValidateUserAccessToProject(ctx, s.projectService, projectID); err != nil {
+func (s *whiteboardService) DeleteElement(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, id uuid.UUID) error {
+	if err := ValidateUserAccessToProject(ctx, s.projectService, userID, projectID); err != nil {
 		return err
 	}
 	return s.store.DeleteElement(ctx, projectID, id)

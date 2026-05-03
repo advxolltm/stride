@@ -302,7 +302,7 @@ export const taskApi = baseApi.injectEndpoints({
             },
         }),
         moveTask: builder.mutation<
-            Task[],
+            Task,
             { taskId: string; projectId: string; body: MoveTaskRequest }
         >({
             query: ({ taskId, body }) => ({
@@ -310,16 +310,13 @@ export const taskApi = baseApi.injectEndpoints({
                 method: 'POST',
                 body,
             }),
-            transformResponse: (response: ApiTask[]) =>
-                response.map(transformTask),
+            transformResponse: (response: ApiTask) => transformTask(response),
             async onQueryStarted(
                 { taskId, projectId, body },
                 { dispatch, queryFulfilled },
             ) {
-                // Moves affect several positions, so we update locally first and then
-                // replace the board cache with the server's final ordering.
-                // FIXME: This relies on the backend returning the full task list for now.
-                // If move later returns only affected tasks/positions, patch just those.
+                // Backend returns moved task only. Reorder board optimistically, then
+                // patch the moved task with server-confirmed fields.
                 const patchProjectTasks = dispatch(
                     taskApi.util.updateQueryData(
                         'getTasksForProject',
@@ -341,22 +338,25 @@ export const taskApi = baseApi.injectEndpoints({
                         taskApi.util.updateQueryData(
                             'getTasksForProject',
                             projectId,
-                            () => {
-                                return data
+                            (draft) => {
+                                const task = draft.find(
+                                    (item) => item.id === taskId,
+                                )
+                                if (task) {
+                                    patchTask(task, data)
+                                }
                             },
                         ),
                     )
-                    for (const task of data) {
-                        dispatch(
-                            taskApi.util.updateQueryData(
-                                'getTask',
-                                task.id,
-                                (draft) => {
-                                    patchTask(draft, task)
-                                },
-                            ),
-                        )
-                    }
+                    dispatch(
+                        taskApi.util.updateQueryData(
+                            'getTask',
+                            taskId,
+                            (draft) => {
+                                patchTask(draft, data)
+                            },
+                        ),
+                    )
                 } catch {
                     patchProjectTasks.undo()
                     patchTaskDetail.undo()

@@ -454,18 +454,18 @@ func (h taskRouteHandler) taskMovePOST(c *echo.Context) error {
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
 	}
 
-	tasksOfProject, err := h.taskService.GetTasksForProject(ctx, task.ProjectID)
+
+	updatedTask, err := h.taskService.GetTask(ctx, taskID)
 	if err != nil {
 		status, msg := h.mapServiceError(err)
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
 	}
-
-	mappedTasksOfProject := routes.Map(tasksOfProject, routes.MapTask)
-	if err := routes.SendWSUpdate(ctx, h.rdb, task.ProjectID, routes.TaskMove, mappedTasksOfProject); err != nil {
+	mappedTask := routes.MapTask(*updatedTask)
+	if err := routes.SendWSUpdate(ctx, h.rdb, task.ProjectID, routes.TaskMove, mappedTask); err != nil {
 		slog.Error("taskMovePOST: Failed to send ws update", "error", err)
 	}
 
-	return c.JSON(http.StatusOK, mappedTasksOfProject)
+	return c.JSON(http.StatusOK, mappedTask)
 }
 
 type addSkillToTaskRequest struct {
