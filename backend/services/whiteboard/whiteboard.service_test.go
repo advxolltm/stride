@@ -64,6 +64,7 @@ func TestWhiteboardService_GetOrCreate_CreatesNewWhiteboard(t *testing.T) {
 		require.NotNil(t, wb)
 		assert.NotEqual(t, uuid.Nil, wb.ID)
 		assert.Equal(t, project.ID, wb.ProjectID)
+		assert.JSONEq(t, `{}`, string(wb.CanvasState))
 	})
 }
 
@@ -117,6 +118,25 @@ func TestWhiteboardService_CreateElement_FailsWhenNoWhiteboardExists(t *testing.
 		_, err := svc.CreateElement(ctx, member.ID, project.ID, element)
 
 		assert.Error(t, err)
+	})
+}
+
+func TestWhiteboardService_UpdateCanvasState_PersistsState(t *testing.T) {
+	runTest(t, db, "canvas state updates and persists", func(t *testing.T, db *gorm.DB, svc whiteboardSvc.WhiteboardService) {
+		project, member := selectProjectMember(t, db)
+		ctx := context.Background()
+		canvasState := datatypes.JSON([]byte(`{"appState":{"zoom":{"value":1.25}}}`))
+
+		updated, err := svc.UpdateCanvasState(ctx, member.ID, project.ID, canvasState)
+
+		require.NoError(t, err)
+		require.NotNil(t, updated)
+		assert.Equal(t, project.ID, updated.ProjectID)
+		assert.JSONEq(t, string(canvasState), string(updated.CanvasState))
+
+		fetched, err := svc.GetWhiteboardByProjectID(ctx, project.ID)
+		require.NoError(t, err)
+		assert.JSONEq(t, string(canvasState), string(fetched.CanvasState))
 	})
 }
 
