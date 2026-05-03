@@ -1,0 +1,57 @@
+import { baseApi } from '../../api/base.api'
+import type {
+    ApiWhiteboard,
+    ApiWhiteboardElement,
+    Whiteboard,
+    WhiteboardElement,
+} from './whiteboard.types'
+
+const transformWhiteboard = (whiteboard: ApiWhiteboard): Whiteboard => ({
+    id: whiteboard.id,
+    projectId: whiteboard.projectId,
+    createdAt: whiteboard.createdAt,
+    updatedAt: whiteboard.updatedAt,
+})
+
+const transformWhiteboardElement = (
+    element: ApiWhiteboardElement,
+): WhiteboardElement => ({
+    id: element.id,
+    whiteboardId: element.whiteboardId,
+    createdBy: element.createdBy,
+    elementType: element.elementType,
+    props: element.props,
+    zIndex: element.zIndex,
+    createdAt: element.createdAt,
+    updatedAt: element.updatedAt,
+})
+
+export const whiteboardApi = baseApi.injectEndpoints({
+    endpoints: (builder) => ({
+        getProjectWhiteboard: builder.query<Whiteboard, string>({
+            query: (projectId) => `/projects/${projectId}/whiteboard`,
+            transformResponse: (response: ApiWhiteboard) =>
+                transformWhiteboard(response),
+            providesTags: (_result, _error, projectId) => [
+                { type: 'Whiteboard' as const, id: projectId },
+            ],
+        }),
+
+        getProjectWhiteboardElements: builder.query<WhiteboardElement[], string>(
+            {
+                query: (projectId) =>
+                    `/projects/${projectId}/whiteboard/elements`,
+                transformResponse: (response: ApiWhiteboardElement[]) =>
+                    response.map(transformWhiteboardElement),
+                providesTags: (_result, _error, projectId) => [
+                    { type: 'WhiteboardElement' as const, id: projectId },
+                ],
+            },
+        ),
+    }),
+})
+
+export const {
+    useGetProjectWhiteboardQuery,
+    useGetProjectWhiteboardElementsQuery,
+} = whiteboardApi

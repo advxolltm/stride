@@ -30,6 +30,8 @@ export const baseApi = createApi({
         'ProjectSkill',
         'Task',
         'TaskAssignee',
+        'Whiteboard',
+        'WhiteboardElement',
     ],
     baseQuery: fetchBaseQuery({
         baseUrl: apiBasePath,

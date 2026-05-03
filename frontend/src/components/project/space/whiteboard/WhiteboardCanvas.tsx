@@ -4,13 +4,10 @@ import './WhiteboardCanvas.css'
 
 import type { WhiteboardCanvasProps } from './types'
 
-export function WhiteboardCanvas({ projectId }: WhiteboardCanvasProps) {
+export function WhiteboardCanvas({ elements }: WhiteboardCanvasProps) {
     return (
-        <div
-            className="whiteboard-excalidraw h-screen w-full overflow-hidden"
-            data-project-id={projectId}
-        >
-            <Excalidraw />
+        <div className="whiteboard-excalidraw h-full w-full overflow-hidden">
+            <Excalidraw initialData={{ elements }} />
         </div>
     )
 }

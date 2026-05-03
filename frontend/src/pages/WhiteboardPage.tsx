@@ -2,13 +2,36 @@ import { Button, toast } from '@heroui/react'
 import { ChevronRight, Home, Share2, Zap } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { WhiteboardCanvas } from '../components/project/space/whiteboard/WhiteboardCanvas'
+import { getApiErrorMessage } from '../shared/utils/api/errors'
 import { useGetProjectByIdQuery } from '../store/features/project/project.api'
+import {
+    useGetProjectWhiteboardElementsQuery,
+    useGetProjectWhiteboardQuery,
+} from '../store/features/whiteboard/whiteboard.api'
 import getInitials from '../shared/utils/getInitials'
 
 export function WhiteboardPage() {
     const { projectId } = useParams()
-    const { data: project } = useGetProjectByIdQuery(projectId ?? '', {
+    const {
+        data: project,
+        isLoading: isProjectLoading,
+        error: projectError,
+    } = useGetProjectByIdQuery(projectId ?? '', {
         skip: !projectId,
+    })
+    const {
+        isSuccess: isWhiteboardReady,
+        isLoading: isWhiteboardLoading,
+        error: whiteboardError,
+    } = useGetProjectWhiteboardQuery(projectId ?? '', {
+        skip: !projectId,
+    })
+    const {
+        data: whiteboardElements = [],
+        isLoading: isElementsLoading,
+        error: elementsError,
+    } = useGetProjectWhiteboardElementsQuery(projectId ?? '', {
+        skip: !projectId || !isWhiteboardReady,
     })
 
     const handleShare = async () => {
@@ -26,10 +49,53 @@ export function WhiteboardPage() {
         return null
     }
 
+    const isLoading =
+        isProjectLoading || isWhiteboardLoading || isElementsLoading
+    const loadingMessage = isWhiteboardReady
+        ? 'Loading whiteboard elements...'
+        : 'Loading whiteboard...'
+    const pageError = projectError ?? whiteboardError ?? elementsError
+
+    if (pageError) {
+        return (
+            <div className="flex h-screen items-center justify-center bg-[var(--background)] p-6 text-center">
+                <div className="max-w-md rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
+                    <h1 className="text-lg font-semibold text-[var(--foreground)]">
+                        Could not load whiteboard
+                    </h1>
+                    <p className="mt-2 text-sm text-[var(--muted)]">
+                        {getApiErrorMessage(
+                            pageError,
+                            'Please try again in a moment.',
+                        )}
+                    </p>
+                </div>
+            </div>
+        )
+    }
+
+    if (isLoading) {
+        return (
+            <div className="flex h-screen items-center justify-center bg-[var(--background)] p-6 text-center">
+                <div className="max-w-md rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-6 py-5 shadow-sm">
+                    <h1 className="text-lg font-semibold text-[var(--foreground)]">
+                        {loadingMessage}
+                    </h1>
+                    <p className="mt-2 text-sm text-[var(--muted)]">
+                        Preparing the canvas for this project.
+                    </p>
+                </div>
+            </div>
+        )
+    }
+
     const projectName = project?.name ?? projectId
     const collaborators = project?.members ?? []
     const visibleCollaborators = collaborators.slice(0, 3)
     const hiddenCollaborators = Math.max(collaborators.length - 3, 0)
+    const excalidrawElements = [...whiteboardElements]
+        .sort((left, right) => left.zIndex - right.zIndex)
+        .map((element) => element.props)
 
     return (
         <div className="relative h-screen w-full overflow-hidden bg-[var(--background)]">
@@ -110,7 +176,7 @@ export function WhiteboardPage() {
                 </Button>
             </div>
 
-            <WhiteboardCanvas projectId={projectId} />
+            <WhiteboardCanvas key={projectId} elements={excalidrawElements} />
         </div>
     )
 }
