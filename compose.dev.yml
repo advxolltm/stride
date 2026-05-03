@@ -74,6 +74,10 @@ services:
       context: ./backend
       dockerfile: ./docker/dev.Dockerfile
     restart: unless-stopped
+    command:
+      - sh
+      - -c
+      - RUN_DB_MIGRATIONS=true EXIT_AFTER_DB_SETUP=true go run ./cmd/server.go && exec air -c .air.toml
     working_dir: /app
     environment:
       PORT: "8000"

@@ -1,4 +1,4 @@
-import { Label, ListBox, Select, Spinner } from '@heroui/react'
+import { Label, ListBox, Select, Spinner, toast } from '@heroui/react'
 import { useTranslation } from 'react-i18next'
 import { useTaskBoard } from '../../../context/useTaskBoard'
 import { useUpdateTaskMutation } from '../../../../../../../store/features/tasks/task.api'
@@ -16,7 +16,12 @@ export function TaskStatusField({ task }: { task: Task }) {
 
     async function handleChange(status: TaskStatus) {
         if (status === task.status) return
-        await updateTask({ taskId: task.id, projectId, body: { status } })
+        await updateTask({
+            taskId: task.id,
+            projectId,
+            body: { status },
+        }).unwrap()
+        toast.success(t('tasks.messages.taskUpdateSuccess'))
     }
 
     return (

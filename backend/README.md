@@ -102,6 +102,29 @@ go test -count=1 -p 1 ./...
 
 You need to make sure test aren't failing before creating PR
 
+## Static Analysis
+
+### govulncheck
+
+```bash
+govulncheck -show verbose ./...
+```
+
+### golangci-lint
+
+From the backend root:
+
+```bash
+mkdir -p bin
+curl -sSfL https://golangci-lint.run/install.sh | sh -s -- -b ./bin v2.12.0
+```
+
+Then run:
+
+```bash
+./bin/golangci-lint run
+```
+
 ### How test setup works (`RunTestMain`)
 
 ```go

@@ -26,7 +26,7 @@ func newTestTaskStore(db *gorm.DB) task.TaskStore {
 
 func runTest(t *testing.T, db *gorm.DB, name string, f func(*testing.T, *gorm.DB, task.TaskStore)) {
 	t.Run(name, func(t *testing.T) {
-		db.Transaction(func(tx *gorm.DB) error {
+		_ = db.Transaction(func(tx *gorm.DB) error {
 			f(t, tx, newTestTaskStore(tx))
 			return fmt.Errorf("rollback %s", t.Name())
 		})
@@ -114,12 +114,7 @@ func TestTaskStore(t *testing.T) {
 					assignee, err := sut.AssignTask(t.Context(), randomTask.ID, randomProjectMember.ID)
 					testutils.TAssertNoError(t, err)
 
-					y1, m1, d1 := assignee.AssignedAt.Date()
-					y2, m2, d2 := time.Now().Date()
-
-					if y1 != y2 || m1 != m2 || d1 != d2 {
-						t.Errorf("assignee.AssignedAt: expected %s, got %s", time.Now(), assignee.AssignedAt)
-					}
+					testutils.RequireEqualDate(t, assignee.AssignedAt, time.Now())
 
 					runTest(t, db, "fails if the task is already assigned to the project member", func(t *testing.T, db *gorm.DB, sut task.TaskStore) {
 						_, err := sut.AssignTask(t.Context(), randomTask.ID, randomProjectMember.ID)

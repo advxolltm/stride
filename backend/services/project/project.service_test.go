@@ -33,8 +33,7 @@ func newTestProjectService(db *gorm.DB) (projectService.ProjectService, userServ
 
 func runTest(t *testing.T, db *gorm.DB, name string, f func(*testing.T, *gorm.DB, projectService.ProjectService, userService.UserService)) {
 	t.Run(name, func(t *testing.T) {
-
-		db.Transaction(func(tx *gorm.DB) error {
+		_ = db.Transaction(func(tx *gorm.DB) error {
 			service, uServ := newTestProjectService(tx)
 			f(t, tx, service, uServ)
 			return fmt.Errorf("rollback %s", t.Name())
@@ -263,7 +262,8 @@ func TestProjectService(t *testing.T) {
 	runTest(t, db, "User without projects get an empty list", func(t *testing.T, db *gorm.DB, service projectService.ProjectService, userServ userService.UserService) {
 		user := testutils.GenerateRandomUser()
 		uStore := userStore.NewUserStore(db)
-		uStore.CreateUser(ctx, &user)
+		err := uStore.CreateUser(ctx, &user)
+		require.NoError(t, err)
 
 		projects, err := service.GetAllProjects(ctx, user.ID)
 		require.NoError(t, err)

@@ -85,6 +85,7 @@
   },
   "membersSettings": {
     "title": "Teammitglieder",
+    "add": "Mitglieder hinzufuegen",
     "owner": "Eigentümer",
     "member": "Mitglied",
     "removeTitle": "Mitglied entfernen",
@@ -98,9 +99,24 @@
   "skillsSettings": {
     "title": "Fähigkeiten",
     "description": "Verwalten Sie die für dieses Projekt erforderlichen Fähigkeiten.",
+    "addSkillTabsLabel": "Optionen zum Hinzufügen von Skills",
+    "addSkillTabs": {
+      "templates": "Vorlagen",
+      "projects": "Aus Projekten",
+      "custom": "Eigene"
+    },
+    "searchTemplates": "Vorlagen-Skills suchen...",
+    "searchProjects": "Projekt-Skills suchen...",
+    "add": "Hinzufügen",
+    "addAll": "Alle hinzufügen",
+    "added": "Hinzugefügt",
+    "done": "Fertig",
     "addSuccess": "Fähigkeit erfolgreich hinzugefügt",
+    "addAllSuccess": "Fähigkeiten erfolgreich hinzugefügt",
     "addError": "Fähigkeit konnte nicht hinzugefügt werden",
     "addSkill": "Fähigkeit hinzufügen",
+    "noSkillsFound": "Keine Skills gefunden",
+    "noProjectSkills": "Keine wiederverwendbaren Projekt-Skills gefunden",
     "nameLabel": "Name",
     "namePlaceholder": "Fähigkeitsname eingeben",
     "descriptionLabel": "Beschreibung",

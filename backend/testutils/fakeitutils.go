@@ -3,6 +3,7 @@ package testutils
 import (
 	"backend/models"
 	"fmt"
+	"log"
 	"math/rand"
 	"testing"
 	"time"
@@ -65,9 +66,7 @@ func ChoiceN[V any](src []V, count int) []V {
 	}
 
 	srcCopy := make([]V, 0, len(src))
-	for _, e := range src {
-		srcCopy = append(srcCopy, e)
-	}
+	srcCopy = append(srcCopy, src...)
 
 	res := make([]V, 0, count)
 	for range count {
@@ -162,9 +161,9 @@ func fakeTaskWithProjects(projects []models.Project) func(int) models.Task {
 		}
 
 		status := f.RandomString([]string{"todo", "in_progress", "done"})
-		var completedAt time.Time
+		var completedAt *time.Time
 		if status == "done" {
-			completedAt = startDate.AddDate(0, 0, f.Day())
+			completedAt = new(startDate.AddDate(0, 0, f.Day()))
 		}
 
 		return models.Task{
@@ -175,7 +174,7 @@ func fakeTaskWithProjects(projects []models.Project) func(int) models.Task {
 			DueDate:                 &dueDate,
 			ExpectedDurationMinutes: &expMinutes,
 			Position:                idx,
-			CompletedAt:             &completedAt,
+			CompletedAt:             completedAt,
 			CreatedBy:               taskCreator.ID,
 			Creator:                 taskCreator,
 			Project:                 project,
@@ -207,11 +206,21 @@ func GenerateRandomTasks(count int, projects []models.Project) []models.Task {
 	return generateNOfType(count, fakeTaskWithProjects(projects))
 }
 
+func generateProjectSkills(maxSkills int, projects []models.Project) {
+	for pidx := range projects {
+		skillsCount := rng.Intn(maxSkills) + 1
+		skills := generateNOfType(skillsCount, fakeProjectSkill)
+		for sidx := range skills {
+			skills[sidx].ProjectID = projects[pidx].ID
+		}
+
+		projects[pidx].Skills = skills
+	}
+}
+
 func SelectRandomUser(t *testing.T, db *gorm.DB) models.User {
 	t.Helper()
-	users, err := gorm.G[models.User](db).Find(t.Context())
-	AssertNoError(err)
-	return Choice(&users)
+	return SelectRandomUsers(t, db, 1)[0]
 }
 
 func SelectRandomUsers(t *testing.T, db *gorm.DB, count int) []models.User {
@@ -221,7 +230,7 @@ func SelectRandomUsers(t *testing.T, db *gorm.DB, count int) []models.User {
 	return ChoiceN(users, count)
 }
 
-func SelectRandomProject(t *testing.T, db *gorm.DB) models.Project {
+func SelectRandomProjects(t *testing.T, db *gorm.DB, count int) []models.Project {
 	t.Helper()
 	projects, err := gorm.G[models.Project](db).
 		Preload("Creator", nil).
@@ -229,11 +238,16 @@ func SelectRandomProject(t *testing.T, db *gorm.DB) models.Project {
 		Preload("Members.User", nil).
 		Preload("Skills", nil).
 		Preload("Messages", nil).
-		Preload("Tasks", nil).
+		Preload("Tasks.TaskSkills", nil).
 		Preload("Whiteboards", nil).
 		Find(t.Context())
 	AssertNoError(err)
-	return Choice(&projects)
+	return ChoiceN(projects, count)
+}
+
+func SelectRandomProject(t *testing.T, db *gorm.DB) models.Project {
+	t.Helper()
+	return SelectRandomProjects(t, db, 1)[0]
 }
 
 func SelectRandomTask(t *testing.T, db *gorm.DB) models.Task {
@@ -284,25 +298,23 @@ func generateProjectMembers(users []models.User, projects []models.Project) {
 	}
 }
 
-func generateProjectSkills(maxSkills int, projects []models.Project) {
-	for pidx := range projects {
-		skillsCount := rng.Intn(maxSkills) + 1
-		skills := generateNOfType(skillsCount, fakeProjectSkill)
-		for sidx := range skills {
-			skills[sidx].ProjectID = projects[pidx].ID
-		}
-
-		projects[pidx].Skills = skills
-	}
-}
-
 func Faker() *f.Faker {
 	return f.GlobalFaker
 }
 
+func updateProjects(db *gorm.DB, projects []models.Project) {
+	for pidx := range projects {
+		_, err := gorm.G[models.Project](db).Updates(ctx, projects[pidx])
+		AssertNoError(err)
+	}
+}
+
 func fillDBWithRandomData(db *gorm.DB) {
 	// Define a fixed seed to make tests reproducable
-	f.Seed(seed)
+	err := f.Seed(seed)
+	if err != nil {
+		log.Fatalf("fakeitseed could not be set: %s", err.Error())
+	}
 	batchsize := 25
 
 	users := GenerateRandomUsers(20)
@@ -314,26 +326,17 @@ func fillDBWithRandomData(db *gorm.DB) {
 	generateProjectMembers(users, projects)
 	generateProjectSkills(10, projects)
 
-	for pidx := range projects {
-		_, err := gorm.G[models.Project](db).Updates(ctx, projects[pidx])
-		AssertNoError(err)
-	}
+	updateProjects(db, projects)
 
 	generateTasksForProject(30, projects)
 
-	for pidx := range projects {
-		_, err := gorm.G[models.Project](db).Updates(ctx, projects[pidx])
-		AssertNoError(err)
-	}
+	updateProjects(db, projects)
 
 	generateProjectTaskSkills(projects)
 	generateProjectMemberSkills(projects)
 	generateTaskAssignments(projects)
 
-	for pidx := range projects {
-		_, err := gorm.G[models.Project](db).Updates(ctx, projects[pidx])
-		AssertNoError(err)
-	}
+	updateProjects(db, projects)
 }
 
 func generateTaskAssignments(projects []models.Project) {
@@ -397,15 +400,4 @@ func generateTasksForProject(maxTasksPerProject int, projects []models.Project) 
 		tasks := GenerateRandomTasks(taskCount, p)
 		projects[pidx].Tasks = tasks
 	}
-}
-
-func assignProjectOwners(projects []models.Project) {
-	for pidx := range projects {
-		assignProjectOwner(&projects[pidx])
-	}
-}
-
-func assignProjectOwner(project *models.Project) {
-	o := Choice(&project.Members)
-	project.Creator = &o.User
 }

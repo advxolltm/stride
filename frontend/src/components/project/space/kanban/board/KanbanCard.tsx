@@ -1,10 +1,18 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Avatar, Button, Card, Dropdown, Label } from '@heroui/react'
+import {
+    Avatar,
+    Button,
+    Card,
+    Dropdown,
+    Label,
+    Tooltip,
+} from '@heroui/react'
 import { Calendar, MoreHorizontal } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { Task } from '../../../../../store/features/tasks/task.types'
 import getInitials from '../../../../../shared/utils/getInitials'
+import { TaskSkillChips } from './TaskSkillChips'
 
 interface KanbanCardProps {
     task: Task
@@ -35,13 +43,24 @@ export function KanbanCard({
         transition,
     }
 
-    const formattedDate = task.dueDate
-        ? new Date(task.dueDate).toLocaleDateString(i18n.language, {
-              month: 'short',
-              day: 'numeric',
-          })
+    const formatCardDate = (date: string) =>
+        new Date(date).toLocaleDateString(i18n.language, {
+            month: 'short',
+            day: 'numeric',
+        })
+
+    const formattedStartDate = task.startDate
+        ? formatCardDate(task.startDate)
         : null
+    const formattedDueDate = task.dueDate ? formatCardDate(task.dueDate) : null
+    const formattedDateRange =
+        formattedStartDate && formattedDueDate
+            ? `${formattedStartDate} - ${formattedDueDate}`
+            : formattedStartDate || formattedDueDate
     const assignee = task.assignees?.[0]
+    const assigneeName = assignee
+        ? (assignee.user.fullName ?? assignee.user.username)
+        : ''
 
     function handleEdit() {
         if (onEdit) {
@@ -123,13 +142,15 @@ export function KanbanCard({
                         </Dropdown>
                     </div>
 
+                    <TaskSkillChips skills={task.skills} />
+
                     <div className="flex items-center justify-between">
                         <div className="text-default-400 flex items-center gap-1">
-                            {formattedDate && (
+                            {formattedDateRange && (
                                 <>
                                     <Calendar size={13} />
                                     <span className="text-xs">
-                                        {formattedDate}
+                                        {formattedDateRange}
                                     </span>
                                 </>
                             )}
@@ -137,11 +158,22 @@ export function KanbanCard({
 
                         <div className="flex items-center gap-1">
                             {assignee && (
-                                <Avatar className="h-7 w-7 text-sm">
-                                    <Avatar.Fallback className="bg-accent text-white">
-                                        {getInitials(assignee.projectMemberId)}
-                                    </Avatar.Fallback>
-                                </Avatar>
+                                <Tooltip delay={0}>
+                                    <Tooltip.Trigger>
+                                        <Avatar className="h-7 w-7 text-sm">
+                                            <Avatar.Fallback className="bg-accent text-white">
+                                                {getInitials(assigneeName)}
+                                            </Avatar.Fallback>
+                                        </Avatar>
+                                    </Tooltip.Trigger>
+                                    <Tooltip.Content
+                                        showArrow
+                                        placement="bottom"
+                                    >
+                                        <Tooltip.Arrow />
+                                        {assigneeName}
+                                    </Tooltip.Content>
+                                </Tooltip>
                             )}
                         </div>
                     </div>
