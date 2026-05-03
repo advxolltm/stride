@@ -26,7 +26,7 @@ func newTestTaskStore(db *gorm.DB) task.TaskStore {
 
 func runTest(t *testing.T, db *gorm.DB, name string, f func(*testing.T, *gorm.DB, task.TaskStore)) {
 	t.Run(name, func(t *testing.T) {
-		db.Transaction(func(tx *gorm.DB) error {
+		_ = db.Transaction(func(tx *gorm.DB) error {
 			f(t, tx, newTestTaskStore(tx))
 			return fmt.Errorf("rollback %s", t.Name())
 		})

@@ -88,10 +88,20 @@ func (h ExampleRouteHandler) ChannelConnect(c *echo.Context) error {
 		slog.Error("failed to upgrade", "error", err)
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
 	}
-	defer ws.Close()
+	defer func() {
+		err := ws.Close()
+		if err != nil {
+			slog.Error("failed to close websocket connection", "error", err)
+		}
+	}()
 
 	sub := h.rdb.Subscribe(ctx, channel)
-	defer sub.Close()
+	defer func() {
+		err := sub.Close()
+		if err != nil {
+			slog.Error("failed to close redis sub", "error", err)
+		}
+	}()
 	ch := sub.Channel()
 
 	for {
@@ -118,7 +128,7 @@ func (h ExampleRouteHandler) ChannelPost(c *echo.Context) error {
 	ctx := c.Request().Context()
 	channel, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid project id"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid project id"})
 	}
 
 	var chMsg channelMessage

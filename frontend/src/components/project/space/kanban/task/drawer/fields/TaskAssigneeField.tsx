@@ -7,6 +7,7 @@ import {
     ListBox,
     SearchField,
     Spinner,
+    toast,
     useFilter,
 } from '@heroui/react'
 import { useTranslation } from 'react-i18next'
@@ -44,7 +45,8 @@ export function TaskAssigneeField({ task }: { task: Task }) {
                 taskId: task.id,
                 projectId,
                 body: { project_member_id: currentAssignee.projectMemberId },
-            })
+            }).unwrap()
+            toast.success(t('tasks.messages.taskUpdateSuccess'))
             return
         }
 
@@ -54,13 +56,14 @@ export function TaskAssigneeField({ task }: { task: Task }) {
                 taskId: task.id,
                 projectId,
                 body: { project_member_id: currentAssignee.projectMemberId },
-            })
+            }).unwrap()
         }
         await assignTask({
             taskId: task.id,
             projectId,
             body: { project_member_id: key as string },
-        })
+        }).unwrap()
+        toast.success(t('tasks.messages.taskUpdateSuccess'))
     }
 
     return (

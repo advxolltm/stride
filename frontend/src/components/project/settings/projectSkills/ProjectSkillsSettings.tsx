@@ -3,13 +3,19 @@ import { Plus } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ConfirmDialog } from '../../../../shared/components'
-import { useRemoveProjectSkillMutation } from '../../../../store/features/project/project.api'
+import {
+    useAddProjectSkillMutation,
+    useGetProjectsQuery,
+    useRemoveProjectSkillMutation,
+} from '../../../../store/features/project/project.api'
 import type {
     Project,
     ProjectSkill,
 } from '../../../../store/features/project/project.types'
-import { AddSkillForm } from './AddSkillForm'
-import { SkillCard } from './SkillCard'
+import { AddProjectSkillPanel } from './AddProjectSkillPanel'
+import { CurrentSkillsList } from './CurrentSkillsList'
+import type { ProjectSkillInput } from './skillUtils'
+import { getAddedSkillNames } from './skillUtils'
 
 interface ProjectSkillsSettingsProps {
     isOwner: boolean
@@ -26,8 +32,49 @@ export function ProjectSkillsSettings({
         null,
     )
 
+    const { data: projects = [] } = useGetProjectsQuery()
+    const [createProjectSkill, { isLoading: isCreatingProjectSkill }] =
+        useAddProjectSkillMutation()
     const [removeSkill, { isLoading: isRemoving }] =
         useRemoveProjectSkillMutation()
+    const skills = project.skills ?? []
+    const addedSkillNames = getAddedSkillNames(skills)
+
+    const addProjectSkill = async (skill: ProjectSkillInput) => {
+        try {
+            await createProjectSkill({
+                projectId: project.id,
+                body: {
+                    name: skill.name,
+                    description: skill.description,
+                },
+            }).unwrap()
+            toast.success(t('skillsSettings.addSuccess'))
+        } catch {
+            toast.danger(t('skillsSettings.addError'))
+        }
+    }
+
+    const addProjectSkills = async (skillsToAdd: ProjectSkillInput[]) => {
+        if (skillsToAdd.length === 0) return
+
+        try {
+            await Promise.all(
+                skillsToAdd.map((skill) =>
+                    createProjectSkill({
+                        projectId: project.id,
+                        body: {
+                            name: skill.name,
+                            description: skill.description,
+                        },
+                    }).unwrap(),
+                ),
+            )
+            toast.success(t('skillsSettings.addAllSuccess'))
+        } catch {
+            toast.danger(t('skillsSettings.addError'))
+        }
+    }
 
     const handleConfirmDelete = async () => {
         if (!skillToDelete) return
@@ -43,8 +90,8 @@ export function ProjectSkillsSettings({
     }
 
     return (
-        <div className="flex flex-col gap-8 p-2">
-            <div className="flex items-start justify-between">
+        <div className="flex h-full min-h-0 flex-col gap-6 p-2">
+            <div className="flex shrink-0 items-start justify-between gap-3">
                 <div>
                     <h2
                         className="text-base font-semibold"
@@ -70,32 +117,41 @@ export function ProjectSkillsSettings({
                 )}
             </div>
 
-            {isOwner && isAdding && (
-                <AddSkillForm
-                    projectId={project.id}
-                    onCancel={() => setIsAdding(false)}
-                />
-            )}
-
-            <div className="flex flex-col gap-3">
-                {(project.skills?.length ?? 0) > 0 && (
-                    project.skills!.map((skill) => (
-                        <SkillCard
-                            key={skill.id}
-                            name={skill.name}
-                            description={skill.description}
-                            isOwner={isOwner}
-                            onDelete={() => setSkillToDelete(skill)}
+            {isOwner && isAdding ? (
+                <div className="grid min-h-0 flex-1 grid-rows-[minmax(420px,3fr)_minmax(280px,2fr)] gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(320px,2fr)] xl:grid-rows-none">
+                    <div className="min-h-0">
+                        <AddProjectSkillPanel
+                            project={project}
+                            projects={projects}
+                            addedSkillNames={addedSkillNames}
+                            isCreatingProjectSkill={isCreatingProjectSkill}
+                            addProjectSkill={addProjectSkill}
+                            addProjectSkills={addProjectSkills}
+                            onDone={() => setIsAdding(false)}
                         />
-                    ))
-                )}
+                    </div>
 
-                {(project.skills?.length ?? 0) === 0 && !isAdding && (
-                    <p className="py-4 text-center text-sm">
-                        {t('skillsSettings.empty')}
-                    </p>
-                )}
-            </div>
+                    <div className="min-h-0 overflow-y-auto pr-1 [scrollbar-gutter:auto]">
+                        <CurrentSkillsList
+                            skills={skills}
+                            isOwner={isOwner}
+                            isAddingCustom={isAdding}
+                            emptyLabel={t('skillsSettings.empty')}
+                            onDelete={setSkillToDelete}
+                        />
+                    </div>
+                </div>
+            ) : (
+                <div className="min-h-0 flex-1 overflow-y-auto pr-1 [scrollbar-gutter:auto]">
+                    <CurrentSkillsList
+                        skills={skills}
+                        isOwner={isOwner}
+                        isAddingCustom={isAdding}
+                        emptyLabel={t('skillsSettings.empty')}
+                        onDelete={setSkillToDelete}
+                    />
+                </div>
+            )}
 
             <ConfirmDialog
                 isOpen={!!skillToDelete}

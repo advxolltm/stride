@@ -313,7 +313,7 @@ func (s userService) processAndSaveAvatar(userID uuid.UUID, avatar *AvatarInput)
 	}
 
 	userDir := filepath.Join(s.mediaDir, "avatars", userID.String())
-	if err := os.MkdirAll(userDir, 0o755); err != nil {
+	if err := os.MkdirAll(userDir, 0o750); err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrAvatarSaveFailed, err)
 	}
 
@@ -322,7 +322,7 @@ func (s userService) processAndSaveAvatar(userID uuid.UUID, avatar *AvatarInput)
 
 	originalName := "original" + ext
 	originalPath := filepath.Join(userDir, originalName)
-	if err := os.WriteFile(originalPath, data, 0o644); err != nil {
+	if err := os.WriteFile(originalPath, data, 0o600); err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrAvatarSaveFailed, err)
 	}
 

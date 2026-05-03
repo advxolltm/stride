@@ -42,7 +42,7 @@ func getCookie(t *testing.T, authServ authService.AuthService, email string, pas
 func runTest(t *testing.T, name string, f func(t *testing.T, tx *gorm.DB, as authService.AuthService, ps projectService.ProjectService, us userService.UserService, e *echo.Echo, cookie *http.Cookie, loginUser models.User)) {
 	t.Run(name, func(t *testing.T) {
 		t.Setenv("SESSION_SECRET", "super-secret")
-		db.Transaction(func(tx *gorm.DB) error {
+		_ = db.Transaction(func(tx *gorm.DB) error {
 			// Setup Stack
 			pStore := project.NewProjectStore(tx)
 			pServ := projectService.NewProjectService(pStore)
@@ -281,13 +281,15 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, rec.Code)
 		var updated routes.ReturnProj
-		json.Unmarshal(rec.Body.Bytes(), &updated)
+		err := json.Unmarshal(rec.Body.Bytes(), &updated)
+		require.NoError(t, err)
 		assert.Equal(t, newName, updated.Name)
 		assert.Equal(t, newSlug, updated.Slug)
 	})
 
 	runTest(t, "Returns 409 Conflict on duplicate slug during update", func(t *testing.T, tx *gorm.DB, as authService.AuthService, ps projectService.ProjectService, us userService.UserService, e *echo.Echo, cookie *http.Cookie, loginUser models.User) {
-		ps.CreateProject(ctx, &loginUser.ID, "Existing", "taken-slug", nil, "active")
+		_, err := ps.CreateProject(ctx, &loginUser.ID, "Existing", "taken-slug", nil, "active")
+		require.NoError(t, err)
 		proj, _ := ps.CreateProject(ctx, &loginUser.ID, "Target", "target-slug", nil, "active")
 
 		newSlug := "taken-slug"
@@ -362,7 +364,7 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 	runTest(t, "Returns 204 on successful member removal", func(t *testing.T, tx *gorm.DB, as authService.AuthService, ps projectService.ProjectService, us userService.UserService, e *echo.Echo, cookie *http.Cookie, loginUser models.User) {
 		proj, _ := ps.CreateProject(ctx, &loginUser.ID, "Team Project", "team-slug", nil, "active")
 		otherUser, _ := us.CreateUser(ctx, "other", "other@test.com", "Password123!")
-		ps.AddUsersToProject(ctx, []projectService.AddMemberRequest{{UserId: otherUser.ID, Role: "developer"}}, proj.ID)
+		_, _ = ps.AddUsersToProject(ctx, []projectService.AddMemberRequest{{UserId: otherUser.ID, Role: "developer"}}, proj.ID)
 
 		req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/projects/%s/members/%s", proj.ID, otherUser.ID), nil)
 		req.AddCookie(cookie)

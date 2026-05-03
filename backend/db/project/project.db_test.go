@@ -30,7 +30,7 @@ func newTestProjectStore(db *gorm.DB) project.ProjectStore {
 
 func runTest(t *testing.T, db *gorm.DB, name string, f func(*testing.T, *gorm.DB, project.ProjectStore)) {
 	t.Run(name, func(t *testing.T) {
-		db.Transaction(func(tx *gorm.DB) error {
+		_ = db.Transaction(func(tx *gorm.DB) error {
 			f(t, tx, newTestProjectStore(tx))
 			return fmt.Errorf("rollback %s", t.Name())
 		})
@@ -259,7 +259,8 @@ func TestProjectStore(t *testing.T) {
 	runTest(t, db, "User without projects get an empty list", func(t *testing.T, db *gorm.DB, store project.ProjectStore) {
 		user := testutils.GenerateRandomUser()
 		uStore := userStore.NewUserStore(db)
-		uStore.CreateUser(ctx, &user)
+		err := uStore.CreateUser(ctx, &user)
+		require.NoError(t, err)
 
 		projects, err := store.GetAllProjects(ctx, user.ID)
 		require.NoError(t, err)
@@ -277,7 +278,8 @@ func TestProjectStore(t *testing.T) {
 		user := testutils.GenerateRandomUser()
 		user2 := testutils.GenerateRandomUser()
 		uStore := userStore.NewUserStore(db)
-		uStore.CreateUser(ctx, &user)
+		err := uStore.CreateUser(ctx, &user)
+		require.NoError(t, err)
 
 		proj1 := testutils.GenerateRandomProject([]models.User{user})
 		proj2 := testutils.GenerateRandomProject([]models.User{user})
