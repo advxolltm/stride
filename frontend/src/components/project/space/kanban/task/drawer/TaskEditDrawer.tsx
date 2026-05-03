@@ -4,10 +4,9 @@ import type { Task } from '../../../../../../store/features/tasks/task.types'
 import { TaskAssigneeField } from './fields/TaskAssigneeField'
 import { TaskDescriptionField } from './fields/TaskDescriptionField'
 import { TaskDueDateField } from './fields/TaskDueDateField'
-import { TaskStatusField } from './fields/TaskStatusField'
-import { TaskStartDateField } from './fields/TaskStartDateField'
-import { TaskTitleField } from './fields/TaskTitleField'
 import { TaskSkillsField } from './fields/TaskSkillsField'
+import { TaskStatusField } from './fields/TaskStatusField'
+import { TaskTitleField } from './fields/TaskTitleField'
 interface TaskEditDrawerProps {
     task: Task | null
     isOpen: boolean
