@@ -15,6 +15,17 @@
   "projectPage": {
     "notFound": "Projekt nicht gefunden."
   },
+  "whiteboardPage": {
+    "loading": "Whiteboard wird geladen...",
+    "loadingElements": "Whiteboard-Elemente werden geladen...",
+    "loadingDescription": "Die Zeichenflaeche fuer dieses Projekt wird vorbereitet.",
+    "errorTitle": "Whiteboard konnte nicht geladen werden",
+    "errorFallback": "Bitte versuchen Sie es in einem Moment erneut.",
+    "shareSuccess": "Freigabelink kopiert",
+    "shareError": "Freigabelink konnte nicht kopiert werden",
+    "overviewAriaLabel": "Uebersicht",
+    "shareAriaLabel": "Whiteboard teilen"
+  },
   "spaces": {
     "title": "Bereiche",
     "whiteboard": "Whiteboard",

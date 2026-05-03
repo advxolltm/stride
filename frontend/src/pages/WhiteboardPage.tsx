@@ -1,4 +1,5 @@
 import { Button, toast } from '@heroui/react'
+import { useTranslation } from 'react-i18next'
 import { ChevronRight, Home, Share2, Zap } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { WhiteboardCanvas } from '../components/project/space/whiteboard/WhiteboardCanvas'
@@ -12,6 +13,7 @@ import getInitials from '../shared/utils/getInitials'
 
 export function WhiteboardPage() {
     const { projectId } = useParams()
+    const { t } = useTranslation('project')
     const {
         data: project,
         isLoading: isProjectLoading,
@@ -39,9 +41,9 @@ export function WhiteboardPage() {
 
         try {
             await navigator.clipboard.writeText(shareUrl)
-            toast.success('Share link copied')
+            toast.success(t('whiteboardPage.shareSuccess'))
         } catch {
-            toast.danger('Could not copy share link')
+            toast.danger(t('whiteboardPage.shareError'))
         }
     }
 
@@ -52,8 +54,8 @@ export function WhiteboardPage() {
     const isLoading =
         isProjectLoading || isWhiteboardLoading || isElementsLoading
     const loadingMessage = isWhiteboardReady
-        ? 'Loading whiteboard elements...'
-        : 'Loading whiteboard...'
+        ? t('whiteboardPage.loadingElements')
+        : t('whiteboardPage.loading')
     const pageError = projectError ?? whiteboardError ?? elementsError
 
     if (pageError) {
@@ -61,12 +63,12 @@ export function WhiteboardPage() {
             <div className="flex h-screen items-center justify-center bg-[var(--background)] p-6 text-center">
                 <div className="max-w-md rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
                     <h1 className="text-lg font-semibold text-[var(--foreground)]">
-                        Could not load whiteboard
+                        {t('whiteboardPage.errorTitle')}
                     </h1>
                     <p className="mt-2 text-sm text-[var(--muted)]">
                         {getApiErrorMessage(
                             pageError,
-                            'Please try again in a moment.',
+                            t('whiteboardPage.errorFallback'),
                         )}
                     </p>
                 </div>
@@ -82,7 +84,7 @@ export function WhiteboardPage() {
                         {loadingMessage}
                     </h1>
                     <p className="mt-2 text-sm text-[var(--muted)]">
-                        Preparing the canvas for this project.
+                        {t('whiteboardPage.loadingDescription')}
                     </p>
                 </div>
             </div>
@@ -114,10 +116,10 @@ export function WhiteboardPage() {
                 <Link
                     to="/"
                     className="flex h-8 shrink-0 items-center gap-1.5 rounded-full px-2 font-medium text-[var(--muted)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]"
-                    aria-label="Overview"
+                    aria-label={t('whiteboardPage.overviewAriaLabel')}
                 >
                     <Home size={15} />
-                    <span>Overview</span>
+                    <span>{t('common:navigation.overview')}</span>
                 </Link>
                 <ChevronRight size={14} className="shrink-0 text-[var(--muted)]" />
                 <Link
@@ -128,7 +130,7 @@ export function WhiteboardPage() {
                 </Link>
                 <ChevronRight size={14} className="shrink-0 text-[var(--muted)]" />
                 <span className="rounded-full px-2 py-1 font-semibold text-[var(--foreground)]">
-                    Whiteboard
+                    {t('spaces.whiteboard')}
                 </span>
             </nav>
 
@@ -170,7 +172,7 @@ export function WhiteboardPage() {
                     variant="ghost"
                     className="h-10 w-10 min-w-10 rounded-full border border-[var(--border)] bg-[color-mix(in_oklch,var(--surface)_94%,transparent)] text-[var(--foreground)] shadow-lg backdrop-blur-xl hover:bg-[var(--surface-secondary)]"
                     onPress={handleShare}
-                    aria-label="Share whiteboard"
+                    aria-label={t('whiteboardPage.shareAriaLabel')}
                 >
                     <Share2 size={16} />
                 </Button>
