@@ -29,6 +29,7 @@ type (
 
 	NotificationStreamStore interface {
 		Append(ctx context.Context, notification Notification) (string, error)
+		AppendMany(ctx context.Context, notifications []Notification) ([]string, error)
 		Range(ctx context.Context, userID uuid.UUID, start string, count int64) ([]NotificationStreamEntry, error)
 		Delete(ctx context.Context, userID uuid.UUID, redisIDs ...string) error
 	}
@@ -51,9 +52,7 @@ func (s *notificationStreamStore) Append(ctx context.Context, notification Notif
 		return "", ErrRedisIsNil
 	}
 
-	if notification.ID == uuid.Nil {
-		notification.ID = uuid.New()
-	}
+	notification = prepareNotification(notification)
 
 	redisID, err := s.rdb.XAdd(ctx, &redis.XAddArgs{
 		Stream: s.streamKey(notification.UserID),
@@ -64,6 +63,42 @@ func (s *notificationStreamStore) Append(ctx context.Context, notification Notif
 	}
 
 	return redisID, nil
+}
+
+func (s *notificationStreamStore) AppendMany(ctx context.Context, notifications []Notification) ([]string, error) {
+	if s.rdb == nil {
+		return nil, ErrRedisIsNil
+	}
+
+	if len(notifications) == 0 {
+		return []string{}, nil
+	}
+
+	pipe := s.rdb.Pipeline()
+	cmds := make([]*redis.StringCmd, 0, len(notifications))
+	for _, notification := range notifications {
+		notification = prepareNotification(notification)
+		cmds = append(cmds, pipe.XAdd(ctx, &redis.XAddArgs{
+			Stream: s.streamKey(notification.UserID),
+			Values: notificationToValues(notification),
+		}))
+	}
+
+	if _, err := pipe.Exec(ctx); err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrAppendNotificationToRedisStream, err)
+	}
+
+	redisIDs := make([]string, 0, len(cmds))
+	for _, cmd := range cmds {
+		redisID, err := cmd.Result()
+		if err != nil {
+			return nil, fmt.Errorf("%w: %w", ErrAppendNotificationToRedisStream, err)
+		}
+
+		redisIDs = append(redisIDs, redisID)
+	}
+
+	return redisIDs, nil
 }
 
 func (s *notificationStreamStore) Range(ctx context.Context, userID uuid.UUID, start string, count int64) ([]NotificationStreamEntry, error) {
@@ -157,6 +192,14 @@ func streamValueAsString(value any) string {
 	default:
 		return fmt.Sprint(v)
 	}
+}
+
+func prepareNotification(notification Notification) Notification {
+	if notification.ID == uuid.Nil {
+		notification.ID = uuid.New()
+	}
+
+	return notification
 }
 
 func (s *notificationStreamStore) Delete(ctx context.Context, userID uuid.UUID, redisIDs ...string) error {
