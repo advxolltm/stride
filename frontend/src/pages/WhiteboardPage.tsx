@@ -12,17 +12,32 @@ import {
     useCreateProjectWhiteboardElementMutation,
     useGetProjectWhiteboardElementsQuery,
     useGetProjectWhiteboardQuery,
+    useUpdateProjectWhiteboardElementMutation,
 } from '../store/features/whiteboard/whiteboard.api'
 import getInitials from '../shared/utils/getInitials'
+
+const serializeElementSnapshot = (
+    element: ExcalidrawElement,
+    zIndex: number,
+) =>
+    JSON.stringify({
+        elementType: element.type,
+        props: element,
+        zIndex,
+    })
 
 export function WhiteboardPage() {
     const { projectId } = useParams()
     const { t } = useTranslation('project')
     const excalidrawToBackendElementIdRef = useRef(new Map<string, string>())
     const pendingCreateElementIdsRef = useRef(new Set<string>())
+    const pendingUpdateElementIdsRef = useRef(new Set<string>())
+    const persistedElementSnapshotsRef = useRef(new Map<string, string>())
     const isElementIdMappingReadyRef = useRef(false)
     const [createProjectWhiteboardElement] =
         useCreateProjectWhiteboardElementMutation()
+    const [updateProjectWhiteboardElement] =
+        useUpdateProjectWhiteboardElementMutation()
     const {
         data: project,
         isLoading: isProjectLoading,
@@ -49,6 +64,8 @@ export function WhiteboardPage() {
     useEffect(() => {
         excalidrawToBackendElementIdRef.current = new Map()
         pendingCreateElementIdsRef.current = new Set()
+        pendingUpdateElementIdsRef.current = new Set()
+        persistedElementSnapshotsRef.current = new Map()
         isElementIdMappingReadyRef.current = false
     }, [projectId])
 
@@ -57,6 +74,15 @@ export function WhiteboardPage() {
             whiteboardElements.map((backendElement) => [
                 backendElement.props.id,
                 backendElement.id,
+            ]),
+        )
+        persistedElementSnapshotsRef.current = new Map(
+            whiteboardElements.map((backendElement) => [
+                backendElement.props.id,
+                serializeElementSnapshot(
+                    backendElement.props,
+                    backendElement.zIndex,
+                ),
             ]),
         )
         isElementIdMappingReadyRef.current = true
@@ -79,19 +105,59 @@ export function WhiteboardPage() {
         }
 
         elements.forEach((element, index) => {
+            const nextSnapshot = serializeElementSnapshot(element, index)
+            const backendElementId =
+                excalidrawToBackendElementIdRef.current.get(element.id)
+
             if (
                 element.isDeleted ||
                 isInvisiblySmallElement(element) ||
-                excalidrawToBackendElementIdRef.current.has(element.id) ||
                 pendingCreateElementIdsRef.current.has(element.id)
             ) {
                 return
             }
 
-            pendingCreateElementIdsRef.current.add(element.id)
+            if (!backendElementId) {
+                pendingCreateElementIdsRef.current.add(element.id)
 
-            void createProjectWhiteboardElement({
+                void createProjectWhiteboardElement({
+                    projectId,
+                    body: {
+                        elementType: element.type,
+                        props: element,
+                        zIndex: index,
+                    },
+                })
+                    .unwrap()
+                    .then((createdElement) => {
+                        excalidrawToBackendElementIdRef.current.set(
+                            element.id,
+                            createdElement.id,
+                        )
+                        persistedElementSnapshotsRef.current.set(
+                            element.id,
+                            nextSnapshot,
+                        )
+                    })
+                    .finally(() => {
+                        pendingCreateElementIdsRef.current.delete(element.id)
+                    })
+                return
+            }
+
+            if (
+                pendingUpdateElementIdsRef.current.has(element.id) ||
+                persistedElementSnapshotsRef.current.get(element.id) ===
+                    nextSnapshot
+            ) {
+                return
+            }
+
+            pendingUpdateElementIdsRef.current.add(element.id)
+
+            void updateProjectWhiteboardElement({
                 projectId,
+                elementId: backendElementId,
                 body: {
                     elementType: element.type,
                     props: element,
@@ -99,14 +165,14 @@ export function WhiteboardPage() {
                 },
             })
                 .unwrap()
-                .then((createdElement) => {
-                    excalidrawToBackendElementIdRef.current.set(
+                .then(() => {
+                    persistedElementSnapshotsRef.current.set(
                         element.id,
-                        createdElement.id,
+                        nextSnapshot,
                     )
                 })
                 .finally(() => {
-                    pendingCreateElementIdsRef.current.delete(element.id)
+                    pendingUpdateElementIdsRef.current.delete(element.id)
                 })
         })
     }
