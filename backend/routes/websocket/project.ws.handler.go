@@ -30,10 +30,11 @@ func newProjectWSRouteHandler(authService auth.AuthService, projectService proje
 
 func (h projectWSRouteHandler) addRoutes(ws *echo.Group) {
 	g := ws.Group("/project/:projectId", h.authService.AuthenticatedMiddleware())
-	g.GET("", h.connectGET)
+	g.GET("/messages", h.connectMessagesGET)
+	g.GET("/tasks", h.connectTasksGET)
 }
 
-func (h projectWSRouteHandler) connectGET(c *echo.Context) error {
+func (h projectWSRouteHandler) connectTasksGET(c *echo.Context) error {
 	ctx := c.Request().Context()
 	session, err := authorizeProjectWSSession(c, h.authService, h.projectService)
 	if err != nil {
@@ -64,4 +65,9 @@ func (h projectWSRouteHandler) connectGET(c *echo.Context) error {
 
 	slog.Debug("Closing ws connection", "userid", session.UserID)
 	return nil
+}
+
+
+func (h projectWSRouteHandler) connectMessagesGET(c *echo.Context) error {
+	return c.NoContent(http.StatusNotImplemented)
 }
