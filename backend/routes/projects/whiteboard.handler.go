@@ -1,7 +1,6 @@
 package projects
 
 import (
-	"context"
 	"errors"
 	"net/http"
 
@@ -85,10 +84,7 @@ func mapServiceErrorWB(err error) (int, string) {
 	}
 }
 
-func (h *whiteboardRouteHandler) userContext(c *echo.Context) context.Context {
-	userID := h.authService.GetClaims(c).UserID
-	return context.WithValue(c.Request().Context(), "userID", userID)
-}
+
 
 // GET /projects/:id/whiteboard
 //
@@ -104,12 +100,16 @@ func (h *whiteboardRouteHandler) userContext(c *echo.Context) context.Context {
 //	@Security	Auth
 //	@Router		/projects/{id}/whiteboard [get]
 func (h *whiteboardRouteHandler) whiteboardGETHandle(c *echo.Context) error {
+	userID := h.authService.GetClaims(c).UserID
+	if userID == uuid.Nil {
+		return c.JSON(http.StatusUnauthorized, routes.ErrorResponse{Error: authSvc.ErrUnauthorized.Error()})
+	}
 	projectID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid project id"})
 	}
 
-	wb, err := h.whiteboardService.GetOrCreateWhiteboardByProjectID(h.userContext(c), projectID)
+	wb, err := h.whiteboardService.GetOrCreateWhiteboardByProjectID(c.Request().Context(), userID, projectID)
 	if err != nil {
 		status, msg := mapServiceErrorWB(err)
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
@@ -132,12 +132,17 @@ func (h *whiteboardRouteHandler) whiteboardGETHandle(c *echo.Context) error {
 //	@Security	Auth
 //	@Router		/projects/{id}/whiteboard/elements [get]
 func (h *whiteboardRouteHandler) elementsGETHandle(c *echo.Context) error {
+	userID := h.authService.GetClaims(c).UserID
+	if userID == uuid.Nil {
+		return c.JSON(http.StatusUnauthorized, routes.ErrorResponse{Error: authSvc.ErrUnauthorized.Error()})
+	}
 	projectID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid project id"})
 	}
 
-	elements, err := h.whiteboardService.GetElements(h.userContext(c), projectID)
+	
+	elements, err := h.whiteboardService.GetElements(c.Request().Context(), userID, projectID)
 	if err != nil {
 		status, msg := mapServiceErrorWB(err)
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
@@ -161,6 +166,10 @@ func (h *whiteboardRouteHandler) elementsGETHandle(c *echo.Context) error {
 //	@Security	Auth
 //	@Router		/projects/{id}/whiteboard/elements/{elementId} [get]
 func (h *whiteboardRouteHandler) elementGETHandle(c *echo.Context) error {
+	userID := h.authService.GetClaims(c).UserID
+	if userID == uuid.Nil {
+		return c.JSON(http.StatusUnauthorized, routes.ErrorResponse{Error: authSvc.ErrUnauthorized.Error()})
+	}
 	projectID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid project id"})
@@ -171,7 +180,7 @@ func (h *whiteboardRouteHandler) elementGETHandle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid element id"})
 	}
 
-	element, err := h.whiteboardService.GetElement(h.userContext(c), projectID, elementID)
+	element, err := h.whiteboardService.GetElement(c.Request().Context(), userID, projectID, elementID)
 	if err != nil {
 		status, msg := mapServiceErrorWB(err)
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
@@ -195,6 +204,10 @@ func (h *whiteboardRouteHandler) elementGETHandle(c *echo.Context) error {
 //	@Security	Auth
 //	@Router		/projects/{id}/whiteboard/elements [post]
 func (h *whiteboardRouteHandler) elementPOSTHandle(c *echo.Context) error {
+	userID := h.authService.GetClaims(c).UserID
+	if userID == uuid.Nil {
+		return c.JSON(http.StatusUnauthorized, routes.ErrorResponse{Error: authSvc.ErrUnauthorized.Error()})
+	}
 	projectID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid project id"})
@@ -211,7 +224,7 @@ func (h *whiteboardRouteHandler) elementPOSTHandle(c *echo.Context) error {
 		ZIndex:      req.ZIndex,
 	}
 
-	created, err := h.whiteboardService.CreateElement(h.userContext(c), projectID, element)
+	created, err := h.whiteboardService.CreateElement(c.Request().Context(), userID, projectID, element)
 	if err != nil {
 		status, msg := mapServiceErrorWB(err)
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
@@ -236,6 +249,10 @@ func (h *whiteboardRouteHandler) elementPOSTHandle(c *echo.Context) error {
 //	@Security	Auth
 //	@Router		/projects/{id}/whiteboard/elements/{elementId} [patch]
 func (h *whiteboardRouteHandler) elementPATCHHandle(c *echo.Context) error {
+	userID := h.authService.GetClaims(c).UserID
+	if userID == uuid.Nil {
+		return c.JSON(http.StatusUnauthorized, routes.ErrorResponse{Error: authSvc.ErrUnauthorized.Error()})
+	}
 	projectID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid project id"})
@@ -251,7 +268,7 @@ func (h *whiteboardRouteHandler) elementPATCHHandle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid request body"})
 	}
 
-	updated, err := h.whiteboardService.UpdateElement(h.userContext(c), projectID, elementID, whiteboardDB.UpdateElementFields{
+	updated, err := h.whiteboardService.UpdateElement(c.Request().Context(), userID, projectID, elementID, whiteboardDB.UpdateElementFields{
 		ElementType: req.ElementType,
 		Props:       req.Props,
 		ZIndex:      req.ZIndex,
@@ -279,6 +296,10 @@ func (h *whiteboardRouteHandler) elementPATCHHandle(c *echo.Context) error {
 //	@Security	Auth
 //	@Router		/projects/{id}/whiteboard/elements/{elementId} [delete]
 func (h *whiteboardRouteHandler) elementDELETEHandle(c *echo.Context) error {
+	userID := h.authService.GetClaims(c).UserID
+	if userID == uuid.Nil {
+		return c.JSON(http.StatusUnauthorized, routes.ErrorResponse{Error: authSvc.ErrUnauthorized.Error()})
+	}
 	projectID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid project id"})
@@ -289,7 +310,7 @@ func (h *whiteboardRouteHandler) elementDELETEHandle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid element id"})
 	}
 
-	if err := h.whiteboardService.DeleteElement(h.userContext(c), projectID, elementID); err != nil {
+	if err := h.whiteboardService.DeleteElement(c.Request().Context(), userID, projectID, elementID); err != nil {
 		status, msg := mapServiceErrorWB(err)
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
 	}

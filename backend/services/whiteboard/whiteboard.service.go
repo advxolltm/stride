@@ -15,15 +15,15 @@ import (
 
 type (
 	WhiteboardService interface {
-		GetOrCreateWhiteboardByProjectID(ctx context.Context, projectID uuid.UUID) (*models.Whiteboard, error)
+		GetOrCreateWhiteboardByProjectID(ctx context.Context, userID uuid.UUID, projectID uuid.UUID) (*models.Whiteboard, error)
 		GetWhiteboardByProjectID(ctx context.Context, projectUUID uuid.UUID) (*models.Whiteboard, error)
 		CreateWhiteboard(ctx context.Context, whiteboard *models.Whiteboard) error
 
-		GetElements(ctx context.Context, projectID uuid.UUID) ([]models.WhiteboardElement, error)
-		GetElement(ctx context.Context, projectID uuid.UUID, id uuid.UUID) (*models.WhiteboardElement, error)
-		CreateElement(ctx context.Context, projectID uuid.UUID, element *models.WhiteboardElement) (*models.WhiteboardElement, error)
-		UpdateElement(ctx context.Context, projectID uuid.UUID, id uuid.UUID, fields whiteboard.UpdateElementFields) (*models.WhiteboardElement, error)
-		DeleteElement(ctx context.Context, projectID uuid.UUID, id uuid.UUID) error
+		GetElements(ctx context.Context, userID uuid.UUID, projectID uuid.UUID) ([]models.WhiteboardElement, error)
+		GetElement(ctx context.Context, userID uuid.UUID,  projectID uuid.UUID, id uuid.UUID) (*models.WhiteboardElement, error)
+		CreateElement(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, element *models.WhiteboardElement) (*models.WhiteboardElement, error)
+		UpdateElement(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, id uuid.UUID, fields whiteboard.UpdateElementFields) (*models.WhiteboardElement, error)
+		DeleteElement(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, id uuid.UUID) error
 	}
 
 	whiteboardService struct {
@@ -36,12 +36,7 @@ func NewWhiteboardService(store whiteboard.WhiteboardStore, projectService proje
 	return &whiteboardService{store: store, projectService: projectService}
 }
 
-func ValidateUserAccessToProject(ctx context.Context, projectService project.ProjectService, projectID uuid.UUID) error {
-	userID, ok := ctx.Value("userID").(uuid.UUID)
-	if !ok || userID == uuid.Nil {
-		return auth.ErrUserIDNotInContext
-	}
-
+func ValidateUserAccessToProject(ctx context.Context, projectService project.ProjectService, userID uuid.UUID, projectID uuid.UUID) error {
 	isMember, err := projectService.IsProjectMember(ctx, userID, projectID)
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrCheckProjectMembership, err)
@@ -52,8 +47,8 @@ func ValidateUserAccessToProject(ctx context.Context, projectService project.Pro
 	return nil
 }
 
-func (s *whiteboardService) GetOrCreateWhiteboardByProjectID(ctx context.Context, projectID uuid.UUID) (*models.Whiteboard, error) {
-	err := ValidateUserAccessToProject(ctx, s.projectService, projectID)
+func (s *whiteboardService) GetOrCreateWhiteboardByProjectID(ctx context.Context, userID uuid.UUID, projectID uuid.UUID) (*models.Whiteboard, error) {
+	err := ValidateUserAccessToProject(ctx, s.projectService, userID, projectID)
 	if err != nil {
 		return nil, err
 	}
@@ -79,22 +74,22 @@ func (s *whiteboardService) CreateWhiteboard(ctx context.Context, whiteboard *mo
 	return s.store.CreateWhiteboard(ctx, whiteboard)
 }
 
-func (s *whiteboardService) GetElements(ctx context.Context, projectID uuid.UUID) ([]models.WhiteboardElement, error) {
-	if err := ValidateUserAccessToProject(ctx, s.projectService, projectID); err != nil {
-		return nil, err
-	}
-	return s.store.GetElements(ctx, projectID)
+func (s *whiteboardService) GetElements(ctx context.Context, userID uuid.UUID, projectID uuid.UUID) ([]models.WhiteboardElement, error) {
+    if err := ValidateUserAccessToProject(ctx, s.projectService, userID, projectID); err != nil {
+        return nil, err
+    }
+    return s.store.GetElements(ctx, projectID)
 }
 
-func (s *whiteboardService) GetElement(ctx context.Context, projectID uuid.UUID, id uuid.UUID) (*models.WhiteboardElement, error) {
-	if err := ValidateUserAccessToProject(ctx, s.projectService, projectID); err != nil {
+func (s *whiteboardService) GetElement(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, id uuid.UUID) (*models.WhiteboardElement, error) {
+	if err := ValidateUserAccessToProject(ctx, s.projectService, userID, projectID); err != nil {
 		return nil, err
 	}
 	return s.store.GetElement(ctx, projectID, id)
 }
 
-func (s *whiteboardService) CreateElement(ctx context.Context, projectID uuid.UUID, element *models.WhiteboardElement) (*models.WhiteboardElement, error) {
-	if err := ValidateUserAccessToProject(ctx, s.projectService, projectID); err != nil {
+func (s *whiteboardService) CreateElement(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, element *models.WhiteboardElement) (*models.WhiteboardElement, error) {
+	if err := ValidateUserAccessToProject(ctx, s.projectService, userID, projectID); err != nil {
 		return nil, err
 	}
 	wb, err := s.store.GetWhiteboardByProjectID(ctx, projectID)
@@ -105,15 +100,15 @@ func (s *whiteboardService) CreateElement(ctx context.Context, projectID uuid.UU
 	return s.store.CreateElement(ctx, element)
 }
 
-func (s *whiteboardService) UpdateElement(ctx context.Context, projectID uuid.UUID, id uuid.UUID, fields whiteboard.UpdateElementFields) (*models.WhiteboardElement, error) {
-	if err := ValidateUserAccessToProject(ctx, s.projectService, projectID); err != nil {
+func (s *whiteboardService) UpdateElement(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, id uuid.UUID, fields whiteboard.UpdateElementFields) (*models.WhiteboardElement, error) {
+	if err := ValidateUserAccessToProject(ctx, s.projectService, userID, projectID); err != nil {
 		return nil, err
 	}
 	return s.store.UpdateElement(ctx, projectID, id, fields)
 }
 
-func (s *whiteboardService) DeleteElement(ctx context.Context, projectID uuid.UUID, id uuid.UUID) error {
-	if err := ValidateUserAccessToProject(ctx, s.projectService, projectID); err != nil {
+func (s *whiteboardService) DeleteElement(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, id uuid.UUID) error {
+	if err := ValidateUserAccessToProject(ctx, s.projectService, userID, projectID); err != nil {
 		return err
 	}
 	return s.store.DeleteElement(ctx, projectID, id)
