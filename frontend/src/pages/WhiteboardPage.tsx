@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { Button, toast } from '@heroui/react'
+import { isInvisiblySmallElement, restoreElements } from '@excalidraw/excalidraw'
 import { useTranslation } from 'react-i18next'
 import { ChevronRight, Home, Share2, Zap } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
@@ -8,6 +9,7 @@ import { WhiteboardCanvas } from '../components/project/space/whiteboard/Whitebo
 import { getApiErrorMessage } from '../shared/utils/api/errors'
 import { useGetProjectByIdQuery } from '../store/features/project/project.api'
 import {
+    useCreateProjectWhiteboardElementMutation,
     useGetProjectWhiteboardElementsQuery,
     useGetProjectWhiteboardQuery,
 } from '../store/features/whiteboard/whiteboard.api'
@@ -17,6 +19,10 @@ export function WhiteboardPage() {
     const { projectId } = useParams()
     const { t } = useTranslation('project')
     const excalidrawToBackendElementIdRef = useRef(new Map<string, string>())
+    const pendingCreateElementIdsRef = useRef(new Set<string>())
+    const isElementIdMappingReadyRef = useRef(false)
+    const [createProjectWhiteboardElement] =
+        useCreateProjectWhiteboardElementMutation()
     const {
         data: project,
         isLoading: isProjectLoading,
@@ -34,10 +40,17 @@ export function WhiteboardPage() {
     const {
         data: whiteboardElements = [],
         isLoading: isElementsLoading,
+        isSuccess: isElementsReady,
         error: elementsError,
     } = useGetProjectWhiteboardElementsQuery(projectId ?? '', {
         skip: !projectId || !isWhiteboardReady,
     })
+
+    useEffect(() => {
+        excalidrawToBackendElementIdRef.current = new Map()
+        pendingCreateElementIdsRef.current = new Set()
+        isElementIdMappingReadyRef.current = false
+    }, [projectId])
 
     useEffect(() => {
         excalidrawToBackendElementIdRef.current = new Map(
@@ -46,6 +59,7 @@ export function WhiteboardPage() {
                 backendElement.id,
             ]),
         )
+        isElementIdMappingReadyRef.current = true
     }, [whiteboardElements])
 
     const handleShare = async () => {
@@ -59,16 +73,64 @@ export function WhiteboardPage() {
         }
     }
 
-    const handleCanvasChange = (elements: readonly ExcalidrawElement[]) => {
-        void elements
+    const handleCanvasPointerUp = (elements: readonly ExcalidrawElement[]) => {
+        if (!projectId || !isElementIdMappingReadyRef.current) {
+            return
+        }
+
+        elements.forEach((element, index) => {
+            if (
+                element.isDeleted ||
+                isInvisiblySmallElement(element) ||
+                excalidrawToBackendElementIdRef.current.has(element.id) ||
+                pendingCreateElementIdsRef.current.has(element.id)
+            ) {
+                return
+            }
+
+            pendingCreateElementIdsRef.current.add(element.id)
+
+            void createProjectWhiteboardElement({
+                projectId,
+                body: {
+                    elementType: element.type,
+                    props: element,
+                    zIndex: index,
+                },
+            })
+                .unwrap()
+                .then((createdElement) => {
+                    excalidrawToBackendElementIdRef.current.set(
+                        element.id,
+                        createdElement.id,
+                    )
+                })
+                .finally(() => {
+                    pendingCreateElementIdsRef.current.delete(element.id)
+                })
+        })
     }
+    const excalidrawElements = useMemo(
+        () =>
+            restoreElements(
+                [...whiteboardElements]
+                    .sort((left, right) => left.zIndex - right.zIndex)
+                    .map((element) => element.props),
+                null,
+            ),
+        [whiteboardElements],
+    )
 
     if (!projectId) {
         return null
     }
 
     const isLoading =
-        isProjectLoading || isWhiteboardLoading || isElementsLoading
+        isProjectLoading ||
+        isWhiteboardLoading ||
+        !isWhiteboardReady ||
+        !isElementsReady ||
+        isElementsLoading
     const loadingMessage = isWhiteboardReady
         ? t('whiteboardPage.loadingElements')
         : t('whiteboardPage.loading')
@@ -111,9 +173,6 @@ export function WhiteboardPage() {
     const collaborators = project?.members ?? []
     const visibleCollaborators = collaborators.slice(0, 3)
     const hiddenCollaborators = Math.max(collaborators.length - 3, 0)
-    const excalidrawElements = [...whiteboardElements]
-        .sort((left, right) => left.zIndex - right.zIndex)
-        .map((element) => element.props)
 
     return (
         <div className="relative h-screen w-full overflow-hidden bg-[var(--background)]">
@@ -197,7 +256,7 @@ export function WhiteboardPage() {
             <WhiteboardCanvas
                 key={projectId}
                 elements={excalidrawElements}
-                onChange={handleCanvasChange}
+                onPointerUp={handleCanvasPointerUp}
             />
         </div>
     )

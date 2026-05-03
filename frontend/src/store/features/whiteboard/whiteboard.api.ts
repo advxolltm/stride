@@ -62,9 +62,6 @@ export const whiteboardApi = baseApi.injectEndpoints({
             }),
             transformResponse: (response: ApiWhiteboardElement) =>
                 transformWhiteboardElement(response),
-            invalidatesTags: (_result, _error, { projectId }) => [
-                { type: 'WhiteboardElement' as const, id: projectId },
-            ],
         }),
 
         updateProjectWhiteboardElement: builder.mutation<
