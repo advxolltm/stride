@@ -2,6 +2,8 @@ import { baseApi } from '../../api/base.api'
 import type {
     ApiWhiteboard,
     ApiWhiteboardElement,
+    CreateWhiteboardElementRequest,
+    UpdateWhiteboardElementRequest,
     Whiteboard,
     WhiteboardElement,
 } from './whiteboard.types'
@@ -48,10 +50,62 @@ export const whiteboardApi = baseApi.injectEndpoints({
                 ],
             },
         ),
+
+        createProjectWhiteboardElement: builder.mutation<
+            WhiteboardElement,
+            { projectId: string; body: CreateWhiteboardElementRequest }
+        >({
+            query: ({ projectId, body }) => ({
+                url: `/projects/${projectId}/whiteboard/elements`,
+                method: 'POST',
+                body,
+            }),
+            transformResponse: (response: ApiWhiteboardElement) =>
+                transformWhiteboardElement(response),
+            invalidatesTags: (_result, _error, { projectId }) => [
+                { type: 'WhiteboardElement' as const, id: projectId },
+            ],
+        }),
+
+        updateProjectWhiteboardElement: builder.mutation<
+            WhiteboardElement,
+            {
+                projectId: string
+                elementId: string
+                body: UpdateWhiteboardElementRequest
+            }
+        >({
+            query: ({ projectId, elementId, body }) => ({
+                url: `/projects/${projectId}/whiteboard/elements/${elementId}`,
+                method: 'PATCH',
+                body,
+            }),
+            transformResponse: (response: ApiWhiteboardElement) =>
+                transformWhiteboardElement(response),
+            invalidatesTags: (_result, _error, { projectId }) => [
+                { type: 'WhiteboardElement' as const, id: projectId },
+            ],
+        }),
+
+        deleteProjectWhiteboardElement: builder.mutation<
+            void,
+            { projectId: string; elementId: string }
+        >({
+            query: ({ projectId, elementId }) => ({
+                url: `/projects/${projectId}/whiteboard/elements/${elementId}`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: (_result, _error, { projectId }) => [
+                { type: 'WhiteboardElement' as const, id: projectId },
+            ],
+        }),
     }),
 })
 
 export const {
     useGetProjectWhiteboardQuery,
     useGetProjectWhiteboardElementsQuery,
+    useCreateProjectWhiteboardElementMutation,
+    useUpdateProjectWhiteboardElementMutation,
+    useDeleteProjectWhiteboardElementMutation,
 } = whiteboardApi

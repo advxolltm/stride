@@ -35,3 +35,15 @@ export type WhiteboardElement = {
     createdAt: string
     updatedAt: string
 }
+
+export type CreateWhiteboardElementRequest = {
+    elementType: string
+    props: ExcalidrawElement
+    zIndex: number
+}
+
+export type UpdateWhiteboardElementRequest = {
+    elementType?: string
+    props?: ExcalidrawElement
+    zIndex?: number
+}
