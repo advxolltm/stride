@@ -1,15 +1,6 @@
-// websocket.ts
-export const WSMessageType = {
-  ChatMessageCreate: 0,
-  TaskCreate: 1,
-  TaskUpdate: 2,
-  TaskDelete: 3,
-  TaskMove: 4,
-  TaskAssign: 5,
-  TaskUnassign: 6,
-  ProjectMemberAdd: 7,
-  ProjectMemberRemove: 8,
-} as const;
+import { WSMessageType } from './middleware/wsMessageTypes'
+
+export { WSMessageType }
 
 type WSMessageType = typeof WSMessageType[keyof typeof WSMessageType];
 

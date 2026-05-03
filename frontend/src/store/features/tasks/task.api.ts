@@ -1,99 +1,32 @@
 import { baseApi } from '../../api/base.api'
+import { projectApi } from '../project/project.api'
+import {
+    applyTaskAssignee,
+    applyTaskMove,
+    applyTaskSkill,
+    applyTaskUpdate,
+    patchTaskFields,
+    patchTask,
+    removeTaskAssignee,
+    removeTaskSkill,
+} from './task.cache'
+import {
+    mapApiTaskAssigneeToAssignee,
+    mapProjectMemberToTaskAssignee,
+    mapProjectSkillToTaskSkill,
+    transformTask,
+} from './task.mappers'
 import type {
     ApiTask,
     ApiTaskAssignee,
-    ApiTaskSkill,
     AssignTaskRequest,
     CreateTaskRequest,
     MoveTaskRequest,
     Task,
     TaskAssignee,
-    TaskSkill,
     UnassignTaskRequest,
     UpdateTaskRequest,
 } from './task.types'
-
-const mapApiTaskAssigneeToAssignee = (a: ApiTaskAssignee): TaskAssignee => ({
-    id: a.id,
-    taskId: a.task_id,
-    projectMemberId: a.project_member_id,
-    assignedAt: a.assigned_at,
-    user: {
-        id: a.project_member.user.id,
-        username: a.project_member.user.username,
-        email: a.project_member.user.email,
-        fullName: a.project_member.user.full_name,
-        avatarUrl: a.project_member.user.avatar_url?.original ?? null,
-    },
-})
-
-const mapApiTaskSkillToSkill = (skill: ApiTaskSkill): TaskSkill => ({
-    id: skill.id,
-    taskId: skill.task_id,
-    projectSkillId: skill.project_skill_id,
-    name: skill.project_skill.name,
-    description: skill.project_skill.description,
-})
-
-const transformTask = (task: ApiTask): Task => ({
-    id: task.id,
-    projectId: task.project_id,
-    createdBy: task.created_by,
-    title: task.title,
-    description: task.description,
-    status: task.status as Task['status'],
-    startDate: task.start_date,
-    dueDate: task.due_date,
-    expectedDurationMinutes: task.expected_duration_minutes,
-    position: task.position,
-    createdAt: task.created_at,
-    updatedAt: task.updated_at,
-    completedAt: task.completed_at,
-    assignees: task.task_assignees?.map(mapApiTaskAssigneeToAssignee) ?? [],
-    skills: task.task_skills?.map(mapApiTaskSkillToSkill) ?? [],
-})
-
-const hasOwn = <T extends object>(object: T, key: keyof T) =>
-    Object.prototype.hasOwnProperty.call(object, key)
-
-const applyTaskUpdate = (task: Task, update: UpdateTaskRequest) => {
-    if (hasOwn(update, 'title')) {
-        task.title = update.title ?? ''
-    }
-    if (hasOwn(update, 'description')) {
-        task.description = update.description ?? null
-    }
-    if (hasOwn(update, 'status') && update.status) {
-        task.status = update.status
-    }
-    if (hasOwn(update, 'start_date')) {
-        task.startDate = update.start_date ?? null
-    }
-    if (hasOwn(update, 'due_date')) {
-        task.dueDate = update.due_date ?? null
-    }
-    if (hasOwn(update, 'expected_duration_minutes')) {
-        task.expectedDurationMinutes = update.expected_duration_minutes ?? null
-    }
-}
-
-const applyTaskMove = (tasks: Task[], taskId: string, position: number) => {
-    const sortedTasks = [...tasks].sort((a, b) => a.position - b.position)
-    const currentIndex = sortedTasks.findIndex((task) => task.id === taskId)
-
-    if (currentIndex === -1) return
-
-    const targetIndex = Math.max(0, Math.min(position, sortedTasks.length - 1))
-    const [movedTask] = sortedTasks.splice(currentIndex, 1)
-    sortedTasks.splice(targetIndex, 0, movedTask)
-
-    sortedTasks.forEach((task, index) => {
-        const draftTask = tasks.find((item) => item.id === task.id)
-        if (draftTask) {
-            draftTask.position = index
-        }
-    })
-}
 
 export const taskApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
@@ -136,14 +69,12 @@ export const taskApi = baseApi.injectEndpoints({
                 body,
             }),
             transformResponse: (response: ApiTask) => transformTask(response),
-            invalidatesTags: (_result, _error, { taskId, projectId }) => [
-                { type: 'Task' as const, id: taskId },
-                { type: 'Task' as const, id: projectId },
-            ],
             async onQueryStarted(
                 { taskId, projectId, body },
                 { dispatch, queryFulfilled },
             ) {
+                // Show the edit right away in both the board and the task detail cache.
+                // Once the request finishes, we overwrite these fields with the server result.
                 const patchProjectTasks = dispatch(
                     taskApi.util.updateQueryData(
                         'getTasksForProject',
@@ -158,21 +89,46 @@ export const taskApi = baseApi.injectEndpoints({
                         },
                     ),
                 )
-                const patchTask = dispatch(
+                const patchTaskDetail = dispatch(
                     taskApi.util.updateQueryData('getTask', taskId, (draft) => {
                         applyTaskUpdate(draft, body)
                     }),
                 )
 
                 try {
-                    await queryFulfilled
+                    const { data } = await queryFulfilled
+                    // Instead of refetching the whole task list, we update just the changed task
+                    // directly in the cache. We locate it by ID and patch it with the latest data
+                    // from the server so the UI updates instantly.
+                    dispatch(
+                        taskApi.util.updateQueryData(
+                            'getTasksForProject',
+                            projectId,
+                            (draft) => {
+                                const task = draft.find(
+                                    (item) => item.id === taskId,
+                                )
+                                if (task) {
+                                    patchTaskFields(task, data)
+                                }
+                            },
+                        ),
+                    )
+                    dispatch(
+                        taskApi.util.updateQueryData(
+                            'getTask',
+                            taskId,
+                            (draft) => {
+                                patchTaskFields(draft, data)
+                            },
+                        ),
+                    )
                 } catch {
                     patchProjectTasks.undo()
-                    patchTask.undo()
+                    patchTaskDetail.undo()
                 }
             },
         }),
-
         deleteTask: builder.mutation<
             void,
             { taskId: string; projectId: string }
@@ -181,11 +137,27 @@ export const taskApi = baseApi.injectEndpoints({
                 url: `/tasks/task/${taskId}`,
                 method: 'DELETE',
             }),
-            invalidatesTags: (_result, _error, { projectId }) => [
-                { type: 'Task' as const, id: projectId },
-            ],
-        }),
+            async onQueryStarted(
+                { taskId, projectId },
+                { dispatch, queryFulfilled },
+            ) {
+                // Deleting a task does not reorder the rest, so removing it locally is enough.
+                // If the request fails, RTK Query gives us an undo function.
+                const patchProjectTasks = dispatch(
+                    taskApi.util.updateQueryData(
+                        'getTasksForProject',
+                        projectId,
+                        (draft) => draft.filter((task) => task.id !== taskId),
+                    ),
+                )
 
+                try {
+                    await queryFulfilled
+                } catch {
+                    patchProjectTasks.undo()
+                }
+            },
+        }),
         assignTask: builder.mutation<
             TaskAssignee,
             { taskId: string; projectId: string; body: AssignTaskRequest }
@@ -195,9 +167,95 @@ export const taskApi = baseApi.injectEndpoints({
                 method: 'POST',
                 body,
             }),
-            invalidatesTags: (_result, _error, { projectId }) => [
-                { type: 'Task' as const, id: projectId },
-            ],
+            transformResponse: (response: ApiTaskAssignee) =>
+                mapApiTaskAssigneeToAssignee(response),
+            async onQueryStarted(
+                { taskId, projectId, body },
+                { dispatch, getState, queryFulfilled },
+            ) {
+                // FIXME: The backend currently returns project_member with empty user data.
+                // Use cached project members for display until that response is fixed.
+                const project =
+                    projectApi.endpoints.getProjectById.select(projectId)(
+                        getState(),
+                    ).data
+                const member = project?.members.find(
+                    (item) => item.id === body.project_member_id,
+                )
+
+                if (!member) {
+                    try {
+                        await queryFulfilled
+                        dispatch(
+                            baseApi.util.invalidateTags([
+                                { type: 'Task' as const, id: projectId },
+                            ]),
+                        )
+                    } catch {
+                        // The hook that called this mutation will surface the error.
+                    }
+                    return
+                }
+
+                const optimisticAssignee = mapProjectMemberToTaskAssignee(
+                    member,
+                    taskId,
+                    `optimistic-${taskId}-${member.id}`,
+                )
+                const patchProjectTasks = dispatch(
+                    taskApi.util.updateQueryData(
+                        'getTasksForProject',
+                        projectId,
+                        (draft) => {
+                            const task = draft.find(
+                                (item) => item.id === taskId,
+                            )
+                            if (task)
+                                applyTaskAssignee(task, optimisticAssignee)
+                        },
+                    ),
+                )
+                const patchTaskDetail = dispatch(
+                    taskApi.util.updateQueryData('getTask', taskId, (draft) => {
+                        applyTaskAssignee(draft, optimisticAssignee)
+                    }),
+                )
+
+                try {
+                    const { data } = await queryFulfilled
+                    const confirmedAssignee = {
+                        ...optimisticAssignee,
+                        id: data.id,
+                        assignedAt: data.assignedAt,
+                    }
+                    dispatch(
+                        taskApi.util.updateQueryData(
+                            'getTasksForProject',
+                            projectId,
+                            (draft) => {
+                                const task = draft.find(
+                                    (item) => item.id === taskId,
+                                )
+                                if (task) {
+                                    applyTaskAssignee(task, confirmedAssignee)
+                                }
+                            },
+                        ),
+                    )
+                    dispatch(
+                        taskApi.util.updateQueryData(
+                            'getTask',
+                            taskId,
+                            (draft) => {
+                                applyTaskAssignee(draft, confirmedAssignee)
+                            },
+                        ),
+                    )
+                } catch {
+                    patchProjectTasks.undo()
+                    patchTaskDetail.undo()
+                }
+            },
         }),
 
         unassignTask: builder.mutation<
@@ -209,11 +267,40 @@ export const taskApi = baseApi.injectEndpoints({
                 method: 'POST',
                 body,
             }),
-            invalidatesTags: (_result, _error, { projectId }) => [
-                { type: 'Task' as const, id: projectId },
-            ],
-        }),
+            async onQueryStarted(
+                { taskId, projectId, body },
+                { dispatch, queryFulfilled },
+            ) {
+                // Remove the assignee from the board and detail cache right away.
+                // If the request fails, we undo the local change.
+                const patchProjectTasks = dispatch(
+                    taskApi.util.updateQueryData(
+                        'getTasksForProject',
+                        projectId,
+                        (draft) => {
+                            const task = draft.find(
+                                (item) => item.id === taskId,
+                            )
+                            if (task) {
+                                removeTaskAssignee(task, body.project_member_id)
+                            }
+                        },
+                    ),
+                )
+                const patchTaskDetail = dispatch(
+                    taskApi.util.updateQueryData('getTask', taskId, (draft) => {
+                        removeTaskAssignee(draft, body.project_member_id)
+                    }),
+                )
 
+                try {
+                    await queryFulfilled
+                } catch {
+                    patchProjectTasks.undo()
+                    patchTaskDetail.undo()
+                }
+            },
+        }),
         moveTask: builder.mutation<
             Task[],
             { taskId: string; projectId: string; body: MoveTaskRequest }
@@ -225,13 +312,14 @@ export const taskApi = baseApi.injectEndpoints({
             }),
             transformResponse: (response: ApiTask[]) =>
                 response.map(transformTask),
-            invalidatesTags: (_result, _error, { projectId }) => [
-                { type: 'Task' as const, id: projectId },
-            ],
             async onQueryStarted(
                 { taskId, projectId, body },
                 { dispatch, queryFulfilled },
             ) {
+                // Moves affect several positions, so we update locally first and then
+                // replace the board cache with the server's final ordering.
+                // FIXME: This relies on the backend returning the full task list for now.
+                // If move later returns only affected tasks/positions, patch just those.
                 const patchProjectTasks = dispatch(
                     taskApi.util.updateQueryData(
                         'getTasksForProject',
@@ -241,9 +329,97 @@ export const taskApi = baseApi.injectEndpoints({
                         },
                     ),
                 )
-                const patchTask = dispatch(
+                const patchTaskDetail = dispatch(
                     taskApi.util.updateQueryData('getTask', taskId, (draft) => {
                         draft.position = body.position
+                    }),
+                )
+
+                try {
+                    const { data } = await queryFulfilled
+                    dispatch(
+                        taskApi.util.updateQueryData(
+                            'getTasksForProject',
+                            projectId,
+                            () => {
+                                return data
+                            },
+                        ),
+                    )
+                    for (const task of data) {
+                        dispatch(
+                            taskApi.util.updateQueryData(
+                                'getTask',
+                                task.id,
+                                (draft) => {
+                                    patchTask(draft, task)
+                                },
+                            ),
+                        )
+                    }
+                } catch {
+                    patchProjectTasks.undo()
+                    patchTaskDetail.undo()
+                }
+            },
+        }),
+        addSkillToTask: builder.mutation<
+            void,
+            { taskId: string; projectId: string; skillId: string }
+        >({
+            query: ({ taskId, skillId }) => ({
+                url: `/tasks/task/${taskId}/add-skill`,
+                method: 'POST',
+                body: { skillId },
+            }),
+            async onQueryStarted(
+                { taskId, projectId, skillId },
+                { dispatch, getState, queryFulfilled },
+            ) {
+                // This endpoint returns no body. We can still show the skill immediately
+                // because the project skill data is already in cache.
+                const project =
+                    projectApi.endpoints.getProjectById.select(projectId)(
+                        getState(),
+                    ).data
+                const skill = project?.skills.find(
+                    (item) => item.id === skillId,
+                )
+
+                if (!skill) {
+                    try {
+                        await queryFulfilled
+                        dispatch(
+                            baseApi.util.invalidateTags([
+                                { type: 'Task' as const, id: projectId },
+                            ]),
+                        )
+                    } catch {
+                        // The hook that called this mutation will surface the error.
+                    }
+                    return
+                }
+
+                const optimisticSkill = mapProjectSkillToTaskSkill(
+                    skill,
+                    taskId,
+                    `optimistic-${taskId}-${skill.id}`,
+                )
+                const patchProjectTasks = dispatch(
+                    taskApi.util.updateQueryData(
+                        'getTasksForProject',
+                        projectId,
+                        (draft) => {
+                            const task = draft.find(
+                                (item) => item.id === taskId,
+                            )
+                            if (task) applyTaskSkill(task, optimisticSkill)
+                        },
+                    ),
+                )
+                const patchTaskDetail = dispatch(
+                    taskApi.util.updateQueryData('getTask', taskId, (draft) => {
+                        applyTaskSkill(draft, optimisticSkill)
                     }),
                 )
 
@@ -251,7 +427,49 @@ export const taskApi = baseApi.injectEndpoints({
                     await queryFulfilled
                 } catch {
                     patchProjectTasks.undo()
-                    patchTask.undo()
+                    patchTaskDetail.undo()
+                }
+            },
+        }),
+
+        removeSkillFromTask: builder.mutation<
+            void,
+            { taskId: string; projectId: string; skillId: string }
+        >({
+            query: ({ taskId, skillId }) => ({
+                url: `/tasks/task/${taskId}/remove-skill`,
+                method: 'POST',
+                body: { skillId },
+            }),
+            async onQueryStarted(
+                { taskId, projectId, skillId },
+                { dispatch, queryFulfilled },
+            ) {
+                // Removing a skill only changes this task's skill list, so no full task
+                // refetch is needed.
+                const patchProjectTasks = dispatch(
+                    taskApi.util.updateQueryData(
+                        'getTasksForProject',
+                        projectId,
+                        (draft) => {
+                            const task = draft.find(
+                                (item) => item.id === taskId,
+                            )
+                            if (task) removeTaskSkill(task, skillId)
+                        },
+                    ),
+                )
+                const patchTaskDetail = dispatch(
+                    taskApi.util.updateQueryData('getTask', taskId, (draft) => {
+                        removeTaskSkill(draft, skillId)
+                    }),
+                )
+
+                try {
+                    await queryFulfilled
+                } catch {
+                    patchProjectTasks.undo()
+                    patchTaskDetail.undo()
                 }
             },
         }),
@@ -267,4 +485,6 @@ export const {
     useAssignTaskMutation,
     useUnassignTaskMutation,
     useMoveTaskMutation,
+    useAddSkillToTaskMutation,
+    useRemoveSkillFromTaskMutation,
 } = taskApi
