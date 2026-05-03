@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { Button, toast } from '@heroui/react'
 import { useTranslation } from 'react-i18next'
 import { ChevronRight, Home, Share2, Zap } from 'lucide-react'
@@ -15,6 +16,7 @@ import getInitials from '../shared/utils/getInitials'
 export function WhiteboardPage() {
     const { projectId } = useParams()
     const { t } = useTranslation('project')
+    const excalidrawToBackendElementIdRef = useRef(new Map<string, string>())
     const {
         data: project,
         isLoading: isProjectLoading,
@@ -37,6 +39,15 @@ export function WhiteboardPage() {
         skip: !projectId || !isWhiteboardReady,
     })
 
+    useEffect(() => {
+        excalidrawToBackendElementIdRef.current = new Map(
+            whiteboardElements.map((backendElement) => [
+                backendElement.props.id,
+                backendElement.id,
+            ]),
+        )
+    }, [whiteboardElements])
+
     const handleShare = async () => {
         const shareUrl = project?.joinLink ?? window.location.href
 
@@ -50,7 +61,6 @@ export function WhiteboardPage() {
 
     const handleCanvasChange = (elements: readonly ExcalidrawElement[]) => {
         void elements
-        console.log('Canvas changed, new elements:', elements)
     }
 
     if (!projectId) {
