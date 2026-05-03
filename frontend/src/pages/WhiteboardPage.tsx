@@ -2,6 +2,7 @@ import { Button, toast } from '@heroui/react'
 import { useTranslation } from 'react-i18next'
 import { ChevronRight, Home, Share2, Zap } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
+import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types'
 import { WhiteboardCanvas } from '../components/project/space/whiteboard/WhiteboardCanvas'
 import { getApiErrorMessage } from '../shared/utils/api/errors'
 import { useGetProjectByIdQuery } from '../store/features/project/project.api'
@@ -45,6 +46,11 @@ export function WhiteboardPage() {
         } catch {
             toast.danger(t('whiteboardPage.shareError'))
         }
+    }
+
+    const handleCanvasChange = (elements: readonly ExcalidrawElement[]) => {
+        void elements
+        console.log('Canvas changed, new elements:', elements)
     }
 
     if (!projectId) {
@@ -178,7 +184,11 @@ export function WhiteboardPage() {
                 </Button>
             </div>
 
-            <WhiteboardCanvas key={projectId} elements={excalidrawElements} />
+            <WhiteboardCanvas
+                key={projectId}
+                elements={excalidrawElements}
+                onChange={handleCanvasChange}
+            />
         </div>
     )
 }
