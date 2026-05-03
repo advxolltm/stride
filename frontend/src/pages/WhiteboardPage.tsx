@@ -3,7 +3,7 @@ import { ChevronRight, Home, Share2, Zap } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { WhiteboardCanvas } from '../components/project/space/whiteboard/WhiteboardCanvas'
 import { useGetProjectByIdQuery } from '../store/features/project/project.api'
-import { getInitials } from '../shared/utils/getInitials'
+import getInitials from '../shared/utils/getInitials'
 
 export function WhiteboardPage() {
     const { projectId } = useParams()
