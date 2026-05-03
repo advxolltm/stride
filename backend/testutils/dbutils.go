@@ -36,15 +36,20 @@ func SeedDB(db *gorm.DB) {
 	fillDBWithRandomData(db)
 }
 
-func TAssertNoError(t interface{ Helper(); Fatalf(string, ...any) }, err error) {
+func TAssertNoError(t interface {
+	Helper()
+	Fatalf(string, ...any)
+}, err error) {
 	t.Helper()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
-
-func TAssertError(t interface{ Helper(); Fatalf(string, ...any) }, err error) {
+func TAssertError(t interface {
+	Helper()
+	Fatalf(string, ...any)
+}, err error) {
 	t.Helper()
 	if err == nil {
 		t.Fatalf("expected error: %v", err)

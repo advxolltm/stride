@@ -4,6 +4,5 @@ export type User = {
     email: string
     fullName: string | null
     avatarUrl: string | null
-    createdAt: string
-    updatedAt: string
+    avatarSmallUrl?: string | null
 }

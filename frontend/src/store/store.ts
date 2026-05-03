@@ -1,23 +1,31 @@
 import { configureStore } from '@reduxjs/toolkit'
 import { setupListeners } from '@reduxjs/toolkit/query'
 import { baseApi } from './api/base.api'
-import chatReducer from "./chatSlice";
-import taskReducer from "./taskSlice";
-import { wsListener } from './middleware/wsListener';
+import chatReducer from './chatSlice'
+import {
+    themeListener,
+    syncThemeWithDocument,
+} from './middleware/themeListener'
+import themeReducer from './themeSlice'
+import taskReducer from './taskSlice'
+import { wsListener } from './middleware/wsListener'
 
 export const store = configureStore({
     reducer: {
         [baseApi.reducerPath]: baseApi.reducer,
-		chat: chatReducer,
-		tasks: taskReducer,
+        chat: chatReducer,
+        tasks: taskReducer,
+        theme: themeReducer,
     },
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware()
-		.concat(baseApi.middleware)
-		.concat(wsListener.middleware),
+            .concat(themeListener.middleware)
+            .concat(baseApi.middleware)
+            .concat(wsListener.middleware),
 })
 
 setupListeners(store.dispatch)
+syncThemeWithDocument(store.getState().theme.isDark)
 
 export type RootState = ReturnType<typeof store.getState>
 export type AppDispatch = typeof store.dispatch

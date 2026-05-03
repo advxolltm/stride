@@ -1,12 +1,14 @@
 package main
 
 import (
+	"log/slog"
 	"os"
 	"strings"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
+	"gorm.io/gorm"
 
 	// NOTE: if you want to give multiple "layers" (route, service, db) the same package-name to group them together, you can provide a custom name on import to distinguish them like here
 	"backend/db"
@@ -48,6 +50,37 @@ func getAPIBasePath() string {
 	return apiBasePath
 }
 
+func envEnabled(name string) bool {
+	value := strings.ToLower(strings.TrimSpace(os.Getenv(name)))
+	return value == "1" || value == "true" || value == "yes" || value == "on"
+}
+
+func closeMigration(migration *migrate.Migrate) {
+	if migration == nil {
+		return
+	}
+	
+	srcErr, dbErr := migration.Close()
+	if srcErr != nil || dbErr != nil {
+		println("failed to close migration", "source_error", srcErr, "db_error", dbErr)
+	}
+}
+
+func initMainDB(dsn string) (*gorm.DB, error) {
+	if !envEnabled("RUN_DB_MIGRATIONS") {
+		return db.InitGORMDB(dsn)
+	}
+
+	mainDB, migration, err := db.InitDB(dsn)
+	if err != nil {
+		return nil, err
+	}
+	closeMigration(migration)
+	testutils.SeedDB(mainDB)
+
+	return mainDB, nil
+}
+
 //	@title		STRIDE backend API
 //	@version	1.0
 
@@ -75,21 +108,26 @@ func main() {
 	//		 We define everything we need here once and then just pass it to the handlers as necessary Stores
 	exampleStore := exampleDB.NewExampleStore("some-db-connection-string")
 
-	var migration *migrate.Migrate
 	dsn := db.PostgresDSNFromEnv()
 
-	mainDB, migration, err := db.InitDB(dsn)
-	defer migration.Down()
-
-	testutils.SeedDB(mainDB)
+	mainDB, err := initMainDB(dsn)
 
 	if err != nil {
 		println("failed to initialize database", "error", err)
+		return
 	}
-	println("Database initialized successfully:", mainDB != nil)
 
+	if envEnabled("EXIT_AFTER_DB_SETUP") {
+		return
+	}
+	
 	rdb := db.InitRedis(db.RedisDSNFromEnv())
-	defer rdb.Close()
+	defer func() {
+		err := rdb.Close()
+		if err != nil {
+			slog.Error("failed to close redis client", "error", err)
+		}
+	}()
 
 	userStore := userDB.NewUserStore(mainDB)
 	projectStore := projectDB.NewProjectStore(mainDB)
@@ -102,7 +140,7 @@ func main() {
 	projectService := projectService.NewProjectService(projectStore)
 	authService := authService.NewAuthenticationService(userService)
 	whiteboardService := whiteboardService.NewWhiteboardService(whiteboardStore, projectService)
-	taskService := taskService.NewTaskService(taskStore)
+	taskService := taskService.NewTaskService(taskStore, projectService)
 
 	// Routes
 	// Register route handler by adding them to the array

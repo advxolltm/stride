@@ -7,7 +7,7 @@ import (
 )
 
 type Project struct {
-	ID           uuid.UUID `gorm:"primaryKey;default:gen_random_uuid()"`
+	ID          uuid.UUID `gorm:"primaryKey;default:gen_random_uuid()"`
 	CreatedBy   *uuid.UUID
 	Name        string
 	Slug        string

@@ -1,4 +1,4 @@
-import { Breadcrumbs } from '@heroui/react'
+import { Breadcrumbs, Skeleton } from '@heroui/react'
 import { Home } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useParams } from 'react-router-dom'
@@ -8,15 +8,16 @@ export function AppBreadcrumb() {
     const { t } = useTranslation()
     const { projectId } = useParams()
     const location = useLocation()
-    const { data: project } = useGetProjectByIdQuery(projectId ?? '', {
-        skip: !projectId,
-    })
+    const { data: project, isLoading } = useGetProjectByIdQuery(
+        projectId ?? '',
+        {
+            skip: !projectId,
+        },
+    )
 
     if (!projectId) {
         return null
     }
-
-    const projectName = project?.name ?? projectId
 
     const path = location.pathname
     const isTasks = path.endsWith('/tasks')
@@ -52,19 +53,27 @@ export function AppBreadcrumb() {
                     <Link
                         to={overviewHref}
                         aria-current={overviewIsCurrent ? 'page' : undefined}
-                        className='flex flex-row gap-1 items-center'
+                        className="flex flex-row items-center gap-1"
                     >
                         <Home size={14} />
                         {t('common:navigation.overview')}
                     </Link>
                 </Breadcrumbs.Item>
                 <Breadcrumbs.Item>
-                    <Link
-                        to={projectHref}
-                        aria-current={projectIsCurrent ? 'page' : undefined}
-                    >
-                        {projectName}
-                    </Link>
+                    {project ? (
+                        <Link
+                            to={projectHref}
+                            aria-current={
+                                projectIsCurrent ? 'page' : undefined
+                            }
+                        >
+                            {project.name}
+                        </Link>
+                    ) : (
+                        <span aria-busy={isLoading} className="inline-flex">
+                            <Skeleton className="h-4 w-28 rounded-lg" />
+                        </span>
+                    )}
                 </Breadcrumbs.Item>
                 {tailLabel && tailHref && (
                     <Breadcrumbs.Item>

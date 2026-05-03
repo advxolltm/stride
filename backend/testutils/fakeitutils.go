@@ -3,8 +3,10 @@ package testutils
 import (
 	"backend/models"
 	"fmt"
+	"log"
 	"math/rand"
 	"testing"
+	"time"
 
 	f "github.com/brianvoe/gofakeit/v7"
 	"github.com/google/uuid"
@@ -64,9 +66,7 @@ func ChoiceN[V any](src []V, count int) []V {
 	}
 
 	srcCopy := make([]V, 0, len(src))
-	for _, e := range src {
-		srcCopy = append(srcCopy, e)
-	}
+	srcCopy = append(srcCopy, src...)
 
 	res := make([]V, 0, count)
 	for range count {
@@ -74,6 +74,16 @@ func ChoiceN[V any](src []V, count int) []V {
 		res = append(res, c)
 	}
 	return res
+}
+
+func ChoiceSubset[V any](src []V) []V {
+	num := rng.Intn(len(src) + 1)
+	return ChoiceN(src, num)
+}
+
+func ChoiceSubsetNonEmpty[V any](src []V) []V {
+	num := rng.Intn(len(src)) + 1
+	return ChoiceN(src, num)
 }
 
 func userPassword() string {
@@ -113,6 +123,13 @@ func fakeUser(idx int) models.User {
 	}
 }
 
+func fakeProjectSkill(idx int) models.ProjectSkill {
+	return models.ProjectSkill{
+		Name:        f.SongName(),
+		Description: new(f.SongGenre()),
+	}
+}
+
 func fakeProjectWithUsers(users []models.User) func(int) models.Project {
 	return func(idx int) models.Project {
 		name := fmt.Sprintf("%s-%d", f.ProductName(), idx)
@@ -143,16 +160,22 @@ func fakeTaskWithProjects(projects []models.Project) func(int) models.Task {
 			panic("invalid taskCreator in fakeTaskWithProjects")
 		}
 
+		status := f.RandomString([]string{"todo", "in_progress", "done"})
+		var completedAt *time.Time
+		if status == "done" {
+			completedAt = new(startDate.AddDate(0, 0, f.Day()))
+		}
+
 		return models.Task{
 			Title:                   f.BookTitle(),
 			Description:             &desc,
-			Status:                  "todo: status",
+			Status:                  status,
 			StartDate:               &startDate,
 			DueDate:                 &dueDate,
 			ExpectedDurationMinutes: &expMinutes,
 			Position:                idx,
-			CompletedAt:             nil, // TODO: generate already-completed tasks too
-			CreatedBy: 				 taskCreator.ID,
+			CompletedAt:             completedAt,
+			CreatedBy:               taskCreator.ID,
 			Creator:                 taskCreator,
 			Project:                 project,
 		}
@@ -183,11 +206,21 @@ func GenerateRandomTasks(count int, projects []models.Project) []models.Task {
 	return generateNOfType(count, fakeTaskWithProjects(projects))
 }
 
+func generateProjectSkills(maxSkills int, projects []models.Project) {
+	for pidx := range projects {
+		skillsCount := rng.Intn(maxSkills) + 1
+		skills := generateNOfType(skillsCount, fakeProjectSkill)
+		for sidx := range skills {
+			skills[sidx].ProjectID = projects[pidx].ID
+		}
+
+		projects[pidx].Skills = skills
+	}
+}
+
 func SelectRandomUser(t *testing.T, db *gorm.DB) models.User {
 	t.Helper()
-	users, err := gorm.G[models.User](db).Find(t.Context())
-	AssertNoError(err)
-	return Choice(&users)
+	return SelectRandomUsers(t, db, 1)[0]
 }
 
 func SelectRandomUsers(t *testing.T, db *gorm.DB, count int) []models.User {
@@ -197,7 +230,7 @@ func SelectRandomUsers(t *testing.T, db *gorm.DB, count int) []models.User {
 	return ChoiceN(users, count)
 }
 
-func SelectRandomProject(t *testing.T, db *gorm.DB) models.Project {
+func SelectRandomProjects(t *testing.T, db *gorm.DB, count int) []models.Project {
 	t.Helper()
 	projects, err := gorm.G[models.Project](db).
 		Preload("Creator", nil).
@@ -205,11 +238,16 @@ func SelectRandomProject(t *testing.T, db *gorm.DB) models.Project {
 		Preload("Members.User", nil).
 		Preload("Skills", nil).
 		Preload("Messages", nil).
-		Preload("Tasks", nil).
+		Preload("Tasks.TaskSkills", nil).
 		Preload("Whiteboards", nil).
 		Find(t.Context())
 	AssertNoError(err)
-	return Choice(&projects)
+	return ChoiceN(projects, count)
+}
+
+func SelectRandomProject(t *testing.T, db *gorm.DB) models.Project {
+	t.Helper()
+	return SelectRandomProjects(t, db, 1)[0]
 }
 
 func SelectRandomTask(t *testing.T, db *gorm.DB) models.Task {
@@ -264,9 +302,19 @@ func Faker() *f.Faker {
 	return f.GlobalFaker
 }
 
+func updateProjects(db *gorm.DB, projects []models.Project) {
+	for pidx := range projects {
+		_, err := gorm.G[models.Project](db).Updates(ctx, projects[pidx])
+		AssertNoError(err)
+	}
+}
+
 func fillDBWithRandomData(db *gorm.DB) {
 	// Define a fixed seed to make tests reproducable
-	f.Seed(seed)
+	err := f.Seed(seed)
+	if err != nil {
+		log.Fatalf("fakeitseed could not be set: %s", err.Error())
+	}
 	batchsize := 25
 
 	users := GenerateRandomUsers(20)
@@ -275,23 +323,71 @@ func fillDBWithRandomData(db *gorm.DB) {
 	projects := GenerateRandomProjects(20, users)
 	AssertNoError(gorm.G[models.Project](db).CreateInBatches(ctx, &projects, batchsize))
 
-	for pidx := range projects {
-		_, err := gorm.G[models.Project](db).Updates(ctx, projects[pidx])
-		AssertNoError(err)
-	}
-
 	generateProjectMembers(users, projects)
+	generateProjectSkills(10, projects)
 
-	for pidx := range projects {
-		_, err := gorm.G[models.Project](db).Updates(ctx, projects[pidx])
-		AssertNoError(err)
-	}
+	updateProjects(db, projects)
 
 	generateTasksForProject(30, projects)
 
+	updateProjects(db, projects)
+
+	generateProjectTaskSkills(projects)
+	generateProjectMemberSkills(projects)
+	generateTaskAssignments(projects)
+
+	updateProjects(db, projects)
+}
+
+func generateTaskAssignments(projects []models.Project) {
 	for pidx := range projects {
-		_, err := gorm.G[models.Project](db).Updates(ctx, projects[pidx])
-		AssertNoError(err)
+		for tidx := range projects[pidx].Tasks {
+			assignedMembers := ChoiceSubset(projects[pidx].Members)
+			assignees := Map(assignedMembers, func(mem models.ProjectMember) models.TaskAssignee {
+				return models.TaskAssignee{
+					TaskID:          projects[pidx].Tasks[tidx].ID,
+					ProjectMemberID: mem.ID,
+					AssignedAt:      f.PastDate(),
+				}
+			})
+			projects[pidx].Tasks[tidx].Assignees = assignees
+		}
+	}
+}
+
+func generateProjectTaskSkills(projects []models.Project) {
+	for pidx := range projects {
+		for tidx := range projects[pidx].Tasks {
+			requiredSkills := ChoiceSubsetNonEmpty(projects[pidx].Skills)
+			taskSkills := Map(requiredSkills, func(ps models.ProjectSkill) models.TaskSkill {
+				return models.TaskSkill{
+					TaskID:         projects[pidx].Tasks[tidx].ID,
+					ProjectSkillID: ps.ID,
+				}
+			})
+
+			projects[pidx].Tasks[tidx].TaskSkills = taskSkills
+		}
+	}
+}
+
+func generateProjectMemberSkills(projects []models.Project) {
+	for pidx := range projects {
+		for midx := range projects[pidx].Members {
+			requiredSkills := ChoiceSubsetNonEmpty(projects[pidx].Skills)
+			userSkills := Map(requiredSkills, func(ps models.ProjectSkill) models.UserSkill {
+				return models.UserSkill{
+					UserID:         projects[pidx].Members[midx].ID,
+					ProjectSkillID: ps.ID,
+				}
+			})
+
+			if len(projects[pidx].Members[midx].User.UserSkills) == 0 {
+				projects[pidx].Members[midx].User.UserSkills = userSkills
+			} else {
+				projects[pidx].Members[midx].User.UserSkills = append(projects[pidx].Members[midx].User.UserSkills, userSkills...)
+			}
+		}
 	}
 }
 
@@ -304,15 +400,4 @@ func generateTasksForProject(maxTasksPerProject int, projects []models.Project) 
 		tasks := GenerateRandomTasks(taskCount, p)
 		projects[pidx].Tasks = tasks
 	}
-}
-
-func assignProjectOwners(projects []models.Project) {
-	for pidx := range projects {
-		assignProjectOwner(&projects[pidx])
-	}
-}
-
-func assignProjectOwner(project *models.Project) {
-	o := Choice(&project.Members)
-	project.Creator = &o.User
 }

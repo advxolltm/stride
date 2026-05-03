@@ -83,27 +83,53 @@ func ToTimeOpt(d **DateOnly) **time.Time {
 
 type (
 	Task struct {
-		ID                      uuid.UUID  `json:"id"`
-		ProjectID               uuid.UUID  `json:"project_id"`
-		CreatedBy               uuid.UUID  `json:"created_by"`
-		Title                   string     `json:"title"`
-		Description             *string    `json:"description"`
-		Status                  string     `json:"status"`
-		StartDate               *time.Time `json:"start_date"`
-		DueDate                 *time.Time `json:"due_date"`
-		ExpectedDurationMinutes *int       `json:"expected_duration_minutes"`
-		Position                int        `json:"position"`
-		CreatedAt               time.Time  `json:"created_at"`
-		UpdatedAt               time.Time  `json:"updated_at"`
-		CompletedAt             *time.Time `json:"completed_at"`
+		ID                      uuid.UUID      `json:"id"`
+		ProjectID               uuid.UUID      `json:"project_id"`
+		CreatedBy               uuid.UUID      `json:"created_by"`
+		Title                   string         `json:"title"`
+		Description             *string        `json:"description"`
+		Status                  string         `json:"status"`
+		StartDate               *time.Time     `json:"start_date"`
+		DueDate                 *time.Time     `json:"due_date"`
+		ExpectedDurationMinutes *int           `json:"expected_duration_minutes"`
+		Position                int            `json:"position"`
+		CreatedAt               time.Time      `json:"created_at"`
+		UpdatedAt               time.Time      `json:"updated_at"`
+		CompletedAt             *time.Time     `json:"completed_at"`
+		TaskSkills              []TaskSkill    `json:"task_skills"`
+		TaskAssignees           []TaskAssignee `json:"task_assignees"`
 	} // @name Task
 
+	TaskSkill struct {
+		ID             uuid.UUID    `json:"id"`
+		TaskID         uuid.UUID    `json:"task_id"`
+		ProjectSkillID uuid.UUID    `json:"project_skill_id"`
+		ProjectSkill   ProjectSkill `json:"project_skill"`
+	} // @name TaskSkill
+
+	ProjectSkill struct {
+		ID          uuid.UUID `json:"id"`
+		ProjectID   uuid.UUID `json:"project_id"`
+		Name        string    `json:"name"`
+		Description *string   `json:"description"`
+	} // @name ProjectSkill
+
 	TaskAssignee struct {
-		ID              uuid.UUID `json:"id"`
-		TaskID          uuid.UUID `json:"task_id"`
-		ProjectMemberID uuid.UUID `json:"project_member_id"`
-		AssignedAt      time.Time `json:"assigned_at"`
+		ID              uuid.UUID     `json:"id"`
+		TaskID          uuid.UUID     `json:"task_id"`
+		ProjectMemberID uuid.UUID     `json:"project_member_id"`
+		AssignedAt      time.Time     `json:"assigned_at"`
+		ProjectMember   ProjectMember `json:"project_member"`
 	} // @name TaskAssignee
+
+	ProjectMember struct {
+		ID        uuid.UUID `json:"id"`
+		UserID    uuid.UUID `json:"user_id"`
+		ProjectID uuid.UUID `json:"project_id"`
+		Role      string    `json:"role"`
+		JoinedAt  time.Time `json:"joined_at"`
+		User      User      `json:"user"`
+	} // @name ProjectMember
 
 	TaskAssigneeWithTask struct {
 		TaskAssignee
@@ -126,6 +152,26 @@ func MapTask(task models.Task) Task {
 		CreatedAt:               task.CreatedAt,
 		UpdatedAt:               task.UpdatedAt,
 		CompletedAt:             task.CompletedAt,
+		TaskSkills:              Map(task.TaskSkills, MapTaskSkill),
+		TaskAssignees:           Map(task.Assignees, MapTaskAssignee),
+	}
+}
+
+func MapProjectSkill(projectSkill models.ProjectSkill) ProjectSkill {
+	return ProjectSkill{
+		ID:          projectSkill.ID,
+		ProjectID:   projectSkill.ProjectID,
+		Name:        projectSkill.Name,
+		Description: projectSkill.Description,
+	}
+}
+
+func MapTaskSkill(taskSkill models.TaskSkill) TaskSkill {
+	return TaskSkill{
+		ID:             taskSkill.ID,
+		TaskID:         taskSkill.TaskID,
+		ProjectSkillID: taskSkill.ProjectSkillID,
+		ProjectSkill:   MapProjectSkill(taskSkill.ProjectSkill),
 	}
 }
 
@@ -135,6 +181,18 @@ func MapTaskAssignee(taskAssignee models.TaskAssignee) TaskAssignee {
 		TaskID:          taskAssignee.TaskID,
 		ProjectMemberID: taskAssignee.ProjectMemberID,
 		AssignedAt:      taskAssignee.AssignedAt,
+		ProjectMember:   MapProjectMember(taskAssignee.ProjectMember),
+	}
+}
+
+func MapProjectMember(projectMember models.ProjectMember) ProjectMember {
+	return ProjectMember{
+		ID:        projectMember.ID,
+		UserID:    projectMember.UserID,
+		ProjectID: projectMember.ProjectID,
+		Role:      projectMember.Role,
+		JoinedAt:  projectMember.JoinedAt,
+		User:      MapUser(projectMember.User),
 	}
 }
 
@@ -143,14 +201,6 @@ func MapTaskAssigneeWithTask(taskAssignee models.TaskAssignee) TaskAssigneeWithT
 		TaskAssignee: MapTaskAssignee(taskAssignee),
 		Task:         MapTask(taskAssignee.Task),
 	}
-}
-
-func MapMany[T, V any](from []T, toFunc func(T) V) []V {
-	res := make([]V, 0, len(from))
-	for _, e := range from {
-		res = append(res, toFunc(e))
-	}
-	return res
 }
 
 // Response types
@@ -169,7 +219,6 @@ type (
 		AvatarURL *AvatarURL `json:"avatar_url"`
 	}
 )
-
 
 func mapAvatarURL(a *models.AvatarURLMap) *AvatarURL {
 	if a == nil {
@@ -323,6 +372,8 @@ const (
 	TaskMove
 	TaskAssign
 	TaskUnassign
+	TaskSkillAdded
+	TaskSkillRemoved
 
 	// Project message types
 	ProjectMemberAdd
@@ -359,7 +410,7 @@ func validateWSMessage[T any](payload T) {
 	}
 
 	v := reflect.ValueOf(payload)
-	
+
 	if v.Kind() == reflect.Slice || v.Kind() == reflect.Array {
 		for i := 0; i < v.Len(); i++ {
 			e := v.Index(i)

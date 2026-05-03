@@ -1,9 +1,10 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Avatar, Button, Card, Chip, Dropdown, Label } from '@heroui/react'
+import { Avatar, Button, Card, Dropdown, Label } from '@heroui/react'
 import { Calendar, MoreHorizontal } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import type { Task } from './types'
+import type { Task } from '../../../../../store/features/tasks/task.types'
+import getInitials from '../../../../../shared/utils/getInitials'
 
 interface KanbanCardProps {
     task: Task
@@ -34,12 +35,21 @@ export function KanbanCard({
         transition,
     }
 
-    const formattedDate = task.due_date
-        ? new Date(task.due_date).toLocaleDateString(i18n.language, {
-              month: 'short',
-              day: 'numeric',
-          })
+    const formatCardDate = (date: string) =>
+        new Date(date).toLocaleDateString(i18n.language, {
+            month: 'short',
+            day: 'numeric',
+        })
+
+    const formattedStartDate = task.startDate
+        ? formatCardDate(task.startDate)
         : null
+    const formattedDueDate = task.dueDate ? formatCardDate(task.dueDate) : null
+    const formattedDateRange =
+        formattedStartDate && formattedDueDate
+            ? `${formattedStartDate} - ${formattedDueDate}`
+            : formattedStartDate || formattedDueDate
+    const assignee = task.assignees?.[0]
 
     function handleEdit() {
         if (onEdit) {
@@ -70,7 +80,7 @@ export function KanbanCard({
             >
                 <Card.Content className="flex flex-col gap-3">
                     <div className="flex items-start justify-between gap-2">
-                        <p className="text-default-900 text-sm font-medium">
+                        <p className="text-default-900 truncate text-sm font-medium">
                             {task.title}
                         </p>
 
@@ -121,31 +131,23 @@ export function KanbanCard({
                         </Dropdown>
                     </div>
 
-                    {task.labels && task.labels.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                            {task.labels.map((label) => (
-                                <Chip color="accent">{label}</Chip>
-                            ))}
-                        </div>
-                    )}
-
                     <div className="flex items-center justify-between">
                         <div className="text-default-400 flex items-center gap-1">
-                            {formattedDate && (
+                            {formattedDateRange && (
                                 <>
                                     <Calendar size={13} />
                                     <span className="text-xs">
-                                        {formattedDate}
+                                        {formattedDateRange}
                                     </span>
                                 </>
                             )}
                         </div>
 
                         <div className="flex items-center gap-1">
-                            {task.assignee && (
+                            {assignee && (
                                 <Avatar className="h-7 w-7 text-sm">
                                     <Avatar.Fallback className="bg-accent text-white">
-                                        {task.assignee.initials}
+                                        {getInitials(assignee.projectMemberId)}
                                     </Avatar.Fallback>
                                 </Avatar>
                             )}

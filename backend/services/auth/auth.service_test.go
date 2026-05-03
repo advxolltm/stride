@@ -15,6 +15,7 @@ import (
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/echotest"
 	"github.com/redis/go-redis/v9"
+	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 )
 
@@ -45,7 +46,7 @@ func newTestAuthService(db *gorm.DB) authService {
 func TestAuthService(t *testing.T) {
 	runTest := func(t *testing.T, db *gorm.DB, name string, f func(*testing.T, *gorm.DB, authService)) {
 		t.Run(name, func(t *testing.T) {
-			db.Transaction(func(tx *gorm.DB) error {
+			_ = db.Transaction(func(tx *gorm.DB) error {
 				f(t, tx, newTestAuthService(tx))
 				return fmt.Errorf("rollback %s", t.Name())
 			})
@@ -76,6 +77,9 @@ func TestAuthService(t *testing.T) {
 				if !errors.Is(err, ErrUnauthorized) {
 					t.Errorf("expected unauthorized error, got: %v", err)
 				}
+				if !errors.Is(err, ErrInvalidCredentials) {
+					t.Errorf("expected invalid credentials error, got: %v", err)
+				}
 			})
 
 			runTest(t, db, "real email, non existent password", func(t *testing.T, db *gorm.DB, sut authService) {
@@ -84,6 +88,9 @@ func TestAuthService(t *testing.T) {
 
 				if !errors.Is(err, ErrUnauthorized) {
 					t.Errorf("expected unauthorized error, got: %v", err)
+				}
+				if !errors.Is(err, ErrInvalidCredentials) {
+					t.Errorf("expected invalid credentials error, got: %v", err)
 				}
 			})
 
@@ -94,6 +101,9 @@ func TestAuthService(t *testing.T) {
 				if !errors.Is(err, ErrUnauthorized) {
 					t.Errorf("expected unauthorized error, got: %v", err)
 				}
+				if !errors.Is(err, ErrInvalidCredentials) {
+					t.Errorf("expected invalid credentials error, got: %v", err)
+				}
 			})
 
 			runTest(t, db, "real email and password, but from different users", func(t *testing.T, db *gorm.DB, sut authService) {
@@ -101,6 +111,9 @@ func TestAuthService(t *testing.T) {
 
 				if !errors.Is(err, ErrUnauthorized) {
 					t.Errorf("expected unauthorized error, got: %v", err)
+				}
+				if !errors.Is(err, ErrInvalidCredentials) {
+					t.Errorf("expected invalid credentials error, got: %v", err)
 				}
 			})
 		})
@@ -123,14 +136,8 @@ func TestAuthService(t *testing.T) {
 				})
 
 				testutils.TAssertNoError(t, err)
-
-				if token == nil {
-					t.Error("token did not get successfully parsed")
-				}
-
-				if token.Claims == nil {
-					t.Error("claims did not get successfully parsed")
-				}
+				require.NotNil(t, token, "token did not get successfully parsed")
+				require.NotNil(t, token.Claims, "claims did not get successfully parsed")
 
 				claims, ok := token.Claims.(*jwtCustomClaims)
 				testutils.Assert(ok)

@@ -1,30 +1,25 @@
-import type { User } from '../../../shared/types';
-import { baseApi } from '../../api/base.api';
+import type { User } from '../../../shared/types'
+import { baseApi } from '../../api/base.api'
 import type {
     ApiUser,
     CreateUserRequest,
     UpdateUserRequest,
-} from './user.types';
-
+} from './user.types'
 
 export const mapApiUserToUser = ({
-    ID,
-    Username,
-    Email,
-    FullName,
-    AvatarURL,
-    CreatedAt,
-    UpdatedAt,
+    id,
+    username,
+    email,
+    full_name,
+    avatar_url,
 }: ApiUser): User => ({
-    id: ID,
-    username: Username,
-    email: Email,
-    fullName: FullName,
-    avatarUrl: AvatarURL,
-    createdAt: CreatedAt,
-    updatedAt: UpdatedAt,
+    id,
+    username,
+    email,
+    fullName: full_name,
+    avatarUrl: avatar_url?.original ?? null,
+    avatarSmallUrl: avatar_url?.[300] ?? avatar_url?.original ?? null,
 })
-
 
 export const userApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
@@ -51,7 +46,7 @@ export const userApi = baseApi.injectEndpoints({
 
         updateUser: builder.mutation<
             User,
-            { id: string; body: UpdateUserRequest }
+            { id: string; body: UpdateUserRequest | FormData }
         >({
             query: ({ id, body }) => ({
                 url: `/users/${id}`,

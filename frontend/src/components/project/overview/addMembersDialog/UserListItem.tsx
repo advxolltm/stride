@@ -1,5 +1,5 @@
 import { Avatar, Description, Label, ListBox } from '@heroui/react'
-import { getInitials } from '../../../../shared/utils'
+import getInitials from '../../../../shared/utils/getInitials'
 
 interface UserListItemProps {
     id: string

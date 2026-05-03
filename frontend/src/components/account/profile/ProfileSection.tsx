@@ -1,5 +1,5 @@
+import { skipToken } from '@reduxjs/toolkit/query'
 import { Button, Spinner, toast } from '@heroui/react'
-import type { FetchBaseQueryError } from '@reduxjs/toolkit/query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -7,63 +7,81 @@ import {
     useGetUserByIdQuery,
     useUpdateUserMutation,
 } from '../../../store/features/user/user.api'
-import type {
-    ApiErrorResponse,
-    UpdateUserRequest,
-} from '../../../store/features/user/user.types'
+import type { ApiErrorResponse } from '../../../store/features/user/user.types'
+import type { User } from '../../../shared/types'
 import { ProfileAvatarUpload } from './ProfileAvatarUpload'
 import { ProfileDetailsForm } from './ProfileDetailsForm'
 import { useGetSessionQuery } from '../../../store/features/auth/auth.api'
+import { isFetchBaseQueryError } from '../../../shared/utils/api/errors'
 
 export type ProfileForm = {
     fullName: string
     username: string
     email: string
     avatarFile: File | null
+    avatarRemoved: boolean
 }
 
-const isFetchBaseQueryError = (error: unknown): error is FetchBaseQueryError =>
-    typeof error === 'object' && error !== null && 'status' in error
+const createProfileForm = (user: User): ProfileForm => ({
+    fullName: user.fullName ?? '',
+    username: user.username,
+    email: user.email,
+    avatarFile: null,
+    avatarRemoved: false,
+})
 
 export function ProfileSection() {
-    const { t } = useTranslation('setting')
-
     const { data: sessionUser } = useGetSessionQuery()
-    const { data: user } = useGetUserByIdQuery(sessionUser!.id)
-    const [updateUser, { isLoading: isUpdating }] = useUpdateUserMutation()
+    const { data: user } = useGetUserByIdQuery(sessionUser?.id ?? skipToken)
 
-    const [form, setForm] = useState<ProfileForm>({
-        fullName: user?.fullName ?? '',
-        username: user?.username ?? '',
-        email: user?.email ?? '',
-        avatarFile: null,
-    })
+    if (!user) {
+        return (
+            <div className="flex min-h-40 items-center justify-center">
+                <Spinner size="md" />
+            </div>
+        )
+    }
+
+    return <LoadedProfileSection user={user} />
+}
+
+function LoadedProfileSection({ user }: Readonly<{ user: User }>) {
+    const { t } = useTranslation('setting')
+    const [updateUser, { isLoading: isUpdating }] = useUpdateUserMutation()
+    const [form, setForm] = useState<ProfileForm>(() => createProfileForm(user))
 
     const isChanged =
-        form.fullName.trim() !== (user?.fullName ?? '') ||
-        form.email.trim() !== (user?.email ?? '') ||
-        form.avatarFile !== null
+        form.fullName.trim() !== (user.fullName ?? '') ||
+        form.email.trim() !== user.email ||
+        form.avatarFile !== null ||
+        form.avatarRemoved
 
     const handleReset = () => {
-        setForm({
-            fullName: user?.fullName ?? '',
-            username: user?.username ?? '',
-            email: user?.email ?? '',
-            avatarFile: null,
-        })
+        setForm(createProfileForm(user))
     }
 
     const handleSave = async () => {
         if (!isChanged || isUpdating) return
 
-        const body: UpdateUserRequest = {}
-        if (form.fullName.trim() !== (user?.fullName ?? ''))
-            body.full_name = form.fullName.trim()
-        if (form.email.trim() !== (user?.email ?? ''))
-            body.email = form.email.trim()
+        const nextFullName = form.fullName.trim()
+        const nextEmail = form.email.trim()
+
+        const body = new FormData()
+        if (nextFullName !== (user.fullName ?? '')) {
+            body.set('full_name', nextFullName)
+        }
+        if (nextEmail !== user.email) {
+            body.set('email', nextEmail)
+        }
+        if (form.avatarRemoved) {
+            body.set('remove_avatar', 'true')
+        } else if (form.avatarFile) {
+            body.set('avatar', form.avatarFile)
+        }
 
         try {
-            await updateUser({ id: sessionUser!.id, body }).unwrap()
+            const updatedUser = await updateUser({ id: user.id, body }).unwrap()
+            setForm(createProfileForm(updatedUser))
             toast.success(t('profile.updateSuccess'))
         } catch (error: unknown) {
             const message = isFetchBaseQueryError(error)
@@ -84,8 +102,20 @@ export function ProfileSection() {
             <ProfileAvatarUpload
                 avatarUrl={user?.avatarUrl ?? null}
                 avatarFile={form.avatarFile}
+                avatarRemoved={form.avatarRemoved}
                 onAvatarChange={(file) =>
-                    setForm((prev) => ({ ...prev, avatarFile: file }))
+                    setForm((prev) => ({
+                        ...prev,
+                        avatarFile: file,
+                        avatarRemoved: false,
+                    }))
+                }
+                onAvatarRemove={() =>
+                    setForm((prev) => ({
+                        ...prev,
+                        avatarFile: null,
+                        avatarRemoved: true,
+                    }))
                 }
             />
             <ProfileDetailsForm form={form} onChange={setForm} />

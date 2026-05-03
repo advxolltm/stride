@@ -38,20 +38,20 @@ type CreateProjectRequest struct {
 	Slug        string  `json:"slug"`
 	Description *string `json:"description"`
 	Status      string  `json:"status"`
-} // @name CreateProjectRequest
+} //	@name	CreateProjectRequest
 
 type updateProjectRequest struct {
 	Name        *string `json:"name"`
 	Slug        *string `json:"slug"`
 	Description *string `json:"description"`
 	Status      *string `json:"status"`
-} // @name UpdateProjectRequest
+} //	@name	UpdateProjectRequest
 
 // AddMemberRequest is the request body for adding a project member.
 type AddMemberRequest struct {
 	UserId uuid.UUID `json:"userid"`
 	Role   string    `json:"role"`
-} // @name AddMemberRequest
+} //	@name	AddMemberRequest
 
 func mapServiceErrorProj(err error) (int, string) {
 	switch {
@@ -200,8 +200,8 @@ func (h *projectRouteHandler) projectPOSTHandle(c *echo.Context) error {
 // @Tags			projects
 // @Accept			json
 // @Produce		json
-// @Param			id		path		string					true	"Project ID"
-// @Param			request	body		[]AddMemberRequest		true	"List of users and roles"
+// @Param			id		path		string				true	"Project ID"
+// @Param			request	body		[]AddMemberRequest	true	"List of users and roles"
 // @Success		201		{array}		routes.ReturnMember
 // @Failure		400		{object}	routes.ErrorResponse	"invalid request body | invalid project id"
 // @Failure		401		{object}	routes.ErrorResponse	"only the owner can add members to this project"
@@ -330,10 +330,10 @@ func (h *projectRouteHandler) projectDELETEHandle(c *echo.Context) error {
 // @Tags			projects
 // @Param			id		path	string	true	"Project ID"
 // @Param			userid	path	string	true	"User ID"
-// @Success		204	"No Content"
-// @Failure		400	{object}	routes.ErrorResponse	"invalid id"
-// @Failure		401	{object}	routes.ErrorResponse	"only the project owner can remove members"
-// @Failure		404	{object}	routes.ErrorResponse	"project not found | user not found"
+// @Success		204		"No Content"
+// @Failure		400		{object}	routes.ErrorResponse	"invalid id"
+// @Failure		401		{object}	routes.ErrorResponse	"only the project owner can remove members"
+// @Failure		404		{object}	routes.ErrorResponse	"project not found | user not found"
 // @Router			/projects/{id}/members/{userid} [delete]
 func (h *projectRouteHandler) memberDELETEHandle(c *echo.Context) error {
 	projid, err := uuid.Parse(c.Param("id"))

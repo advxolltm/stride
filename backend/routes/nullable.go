@@ -41,7 +41,7 @@ func NewNullNullable[T any]() Nullable[T] {
 	return n
 }
 
-// Gets the underlying value as a pointer. 
+// Gets the underlying value as a pointer.
 // If the field is specified but nil, it returns a pointer to nil.
 // If the field is not specified, it returns just nil.
 // If the field is specified and not-nil, it returns a valid **T

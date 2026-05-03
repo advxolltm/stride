@@ -4,6 +4,7 @@ import (
 	"backend/config"
 	"backend/services/user"
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -27,7 +28,7 @@ type (
 
 	AuthService interface {
 		AuthenticateUser(ctx context.Context, email, password string) (jwtTokenString, time.Time, error)
-		AuthenticatedMiddleware() echo.MiddlewareFunc	
+		AuthenticatedMiddleware() echo.MiddlewareFunc
 		// should only be called in routes protected by [AuthenticatedMiddleware]
 		// panics if no claims are found
 		GetClaims(ctx *echo.Context) jwtCustomClaims
@@ -65,7 +66,10 @@ func loadAuthenticationConfig() authenticationConfig {
 func (s authService) AuthenticateUser(ctx context.Context, email, password string) (jwtTokenString, time.Time, error) {
 	userId, err := s.userService.GetByEmailAndPassword(ctx, email, password)
 	if err != nil {
-		return "", time.Time{}, fmt.Errorf("%w: %w", ErrUnauthorized, err)
+		if errors.Is(err, user.ErrUserNotFound) || errors.Is(err, user.ErrInvalidPassword){
+			return "", time.Time{}, fmt.Errorf("%w: %w", ErrUnauthorized, ErrInvalidCredentials)
+		}
+		return "", time.Time{}, fmt.Errorf("authenticate user: %w", err)
 	}
 
 	expiry := s.expiresAtTime()

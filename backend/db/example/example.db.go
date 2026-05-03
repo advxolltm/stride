@@ -1,12 +1,14 @@
 package example
 
 import (
+	"crypto/rand"
 	"errors"
-	"math/rand"
+	"fmt"
+	"math/big"
 )
 
 type (
-	ExampleStore interface { 
+	ExampleStore interface {
 		FetchData() (int, error)
 	}
 
@@ -20,7 +22,12 @@ func NewExampleStore(connectionString string) ExampleStore {
 }
 
 func (db exampleStore) FetchData() (int, error) {
-	if rand.Intn(2) == 1 {
+	nBig, err := rand.Int(rand.Reader, big.NewInt(2))
+	if err != nil {
+		return -1, fmt.Errorf("this was actually not expected: %w", err)
+	}
+
+	if nBig.Int64() == 1 {
 		// NOTE: The 0 is just a placeholder / default value
 		// The caller of the function always has to check for error first before using the actual data!
 		return 0, errors.New("oh no! something went horribly wrong :(")

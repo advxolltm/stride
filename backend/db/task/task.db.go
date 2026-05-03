@@ -35,6 +35,8 @@ type (
 		AssignTask(ctx context.Context, taskID uuid.UUID, projectMemberID uuid.UUID) (*models.TaskAssignee, error)
 		UnassignTask(ctx context.Context, taskID uuid.UUID, projectMemberID uuid.UUID) error
 		MoveTask(ctx context.Context, id uuid.UUID, pos int) error
+		AddSkill(ctx context.Context, taskID uuid.UUID, skillID uuid.UUID) (*models.TaskSkill, error)
+		RemoveSkill(ctx context.Context, taskID uuid.UUID, skillID uuid.UUID) error
 	}
 
 	taskStore struct {
@@ -46,7 +48,11 @@ type (
 func (t *taskStore) GetTask(ctx context.Context, id uuid.UUID) (*models.Task, error) {
 	var task models.Task
 
-	result := t.db.WithContext(ctx).First(&task, id)
+	result := t.db.
+		WithContext(ctx).
+		Preload("TaskSkills.ProjectSkill").
+		Preload("Assignees.ProjectMember.User").
+		First(&task, id)
 	if result.Error != nil {
 		return nil, fmt.Errorf("failed to get task %s: %w", id, result.Error)
 	}
@@ -58,7 +64,11 @@ func (t *taskStore) GetTask(ctx context.Context, id uuid.UUID) (*models.Task, er
 func (t *taskStore) GetTasksForProject(ctx context.Context, projectID uuid.UUID) ([]models.Task, error) {
 	var project models.Project
 
-	result := t.db.WithContext(ctx).Preload("Tasks").First(&project, projectID)
+	result := t.db.
+		WithContext(ctx).
+		Preload("Tasks.TaskSkills.ProjectSkill").
+		Preload("Tasks.Assignees.ProjectMember.User").
+		First(&project, projectID)
 	if result.Error != nil {
 		return nil, fmt.Errorf("failed to get tasks for project %s: %w", projectID, result.Error)
 	}
@@ -71,9 +81,8 @@ func (t *taskStore) GetTasksAssignedToProjectMember(ctx context.Context, project
 	var projectMember models.ProjectMember
 
 	result := t.db.WithContext(ctx).
-		Preload("TaskAssignees").
-		Preload("TaskAssignees.Task").
 		Preload("TaskAssignees.ProjectMember").
+		Preload("TaskAssignees.Task.TaskSkills.ProjectSkill").
 		First(&projectMember, projectMemberID)
 	if result.Error != nil {
 		// not found is not an error-case
@@ -262,6 +271,30 @@ func (t *taskStore) MoveTask(ctx context.Context, id uuid.UUID, pos int) error {
 	}
 	t.db = dbTmp
 	return nil
+}
+
+func (t *taskStore) AddSkill(ctx context.Context, taskID uuid.UUID, skillID uuid.UUID) (*models.TaskSkill, error) {
+	taskSkill := models.TaskSkill{
+		TaskID:         taskID,
+		ProjectSkillID: skillID,
+	}
+
+	err := t.db.Create(&taskSkill).Error
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == db.UniqueConstraintViolationCode {
+			return nil, ErrSkillAlreadyAssignedToTask
+		}
+		return nil, err
+	}
+	return &taskSkill, nil
+}
+
+func (t *taskStore) RemoveSkill(ctx context.Context, taskID uuid.UUID, skillID uuid.UUID) error {
+	_, err := gorm.G[models.TaskSkill](t.db).
+		Where("task_id = ? AND project_skill_id = ?", taskID, skillID).
+		Delete(ctx)
+	return err
 }
 
 func NewTaskStore(db *gorm.DB) TaskStore {

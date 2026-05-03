@@ -34,7 +34,7 @@ func newTestService(db *gorm.DB) whiteboardSvc.WhiteboardService {
 }
 
 func ctxWithUser(userID uuid.UUID) context.Context {
-	return context.WithValue(context.Background(), "userID", userID)
+	return context.WithValue(context.Background(), "userID", userID) //nolint:staticcheck // test helper must match the current service context key
 }
 
 func selectProjectMember(t *testing.T, db *gorm.DB) (models.Project, models.User) {
@@ -47,7 +47,7 @@ func selectProjectMember(t *testing.T, db *gorm.DB) (models.Project, models.User
 
 func runTest(t *testing.T, db *gorm.DB, name string, f func(*testing.T, *gorm.DB, whiteboardSvc.WhiteboardService)) {
 	t.Run(name, func(t *testing.T) {
-		db.Transaction(func(tx *gorm.DB) error {
+		_ = db.Transaction(func(tx *gorm.DB) error {
 			f(t, tx, newTestService(tx))
 			return fmt.Errorf("rollback %s", t.Name())
 		})
@@ -67,7 +67,6 @@ func TestWhiteboardService_GetOrCreate_CreatesNewWhiteboard(t *testing.T) {
 	})
 }
 
-
 func TestWhiteboardService_GetOrCreate_IsIdempotent(t *testing.T) {
 	runTest(t, db, "returns existing whiteboard on second call", func(t *testing.T, db *gorm.DB, svc whiteboardSvc.WhiteboardService) {
 		project, member := selectProjectMember(t, db)
@@ -82,7 +81,6 @@ func TestWhiteboardService_GetOrCreate_IsIdempotent(t *testing.T) {
 		assert.Equal(t, first.ID, second.ID, "second call must return the same whiteboard")
 	})
 }
-
 
 func TestWhiteboardService_CreateElement_SetsWhiteboardID(t *testing.T) {
 	runTest(t, db, "element receives WhiteboardID resolved from project", func(t *testing.T, db *gorm.DB, svc whiteboardSvc.WhiteboardService) {
@@ -229,7 +227,6 @@ func TestWhiteboardService_GetWhiteboardByProjectID_NotFound(t *testing.T) {
 		assert.ErrorIs(t, err, gorm.ErrRecordNotFound)
 	})
 }
-
 
 func TestWhiteboardService_GetElements_EmptyForFreshWhiteboard(t *testing.T) {
 	runTest(t, db, "empty element list for fresh whiteboard", func(t *testing.T, db *gorm.DB, svc whiteboardSvc.WhiteboardService) {

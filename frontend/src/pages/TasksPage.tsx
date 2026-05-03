@@ -1,7 +1,8 @@
 import { CheckSquare } from 'lucide-react'
-import { KanbanBoard } from '../components/project/space/kanban/KanbanBoard'
+import { KanbanBoard } from '../components/project/space/kanban/board/KanbanBoard'
 import { useTranslation } from 'react-i18next'
 import { ProjectSpaceHeader } from '../components/project/space/ProjectSpaceHeader'
+import { TaskBoardProvider } from '../components/project/space/kanban/context/TaskBoardContext'
 
 export function TasksPage() {
     const { t } = useTranslation('project')
@@ -14,7 +15,9 @@ export function TasksPage() {
                 icon={CheckSquare}
                 iconColor="yellow"
             />
-            <KanbanBoard />
+            <TaskBoardProvider>
+                <KanbanBoard />
+            </TaskBoardProvider>
         </div>
     )
 }

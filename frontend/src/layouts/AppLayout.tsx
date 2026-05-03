@@ -36,7 +36,7 @@ export function AppLayout() {
                     />
                 )}
 
-                <div className="flex min-w-0 flex-1 flex-col overflow-auto bg-[var(--background)]">
+                <div className="flex min-w-0 flex-1 flex-col overflow-auto bg-background">
                     {!isWhiteboardRoute && <AppBreadcrumb />}
                     <Outlet
                         context={{

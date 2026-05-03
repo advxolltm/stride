@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"testing"
 
 	userStore "backend/db/user"
@@ -100,11 +101,12 @@ func newUserTestEnv(t *testing.T, tx *gorm.DB) userTestEnv {
 }
 
 func TestUserRouteHandler_Integration(t *testing.T) {
-	os.Setenv("SESSION_SECRET", "secretsecret")
+	err := os.Setenv("SESSION_SECRET", "secretsecret")
+	require.NoError(t, err)
 
 	runTest := func(t *testing.T, name string, f func(*testing.T, *gorm.DB)) {
 		t.Run(name, func(t *testing.T) {
-			db.Transaction(func(tx *gorm.DB) error {
+			_ = db.Transaction(func(tx *gorm.DB) error {
 				f(t, tx)
 				return fmt.Errorf("rollback %s", t.Name())
 			})
@@ -381,6 +383,50 @@ func TestUserRouteHandler_Integration(t *testing.T) {
 		assert.Contains(t, u.AvatarURL.Medium, "/600.png")
 		assert.Contains(t, u.AvatarURL.Original, "/original.png")
 		assert.Equal(t, "Avatar User", *u.FullName)
+	})
+
+	runTest(t, "PATCH /users/:id returns 200 and deletes avatar files when remove_avatar is true", func(t *testing.T, tx *gorm.DB) {
+		mediaDir := t.TempDir()
+		t.Setenv("MEDIA_DIR", mediaDir)
+		env := newUserTestEnv(t, tx)
+
+		var avatar bytes.Buffer
+		require.NoError(t, png.Encode(&avatar, image.NewNRGBA(image.Rect(0, 0, 1, 1))))
+
+		updated, err := env.uServe.UpdateUser(env.ctx, env.testUser.ID, userService.UpdateUserInput{
+			Avatar: &userService.AvatarInput{
+				Filename: "photo.png",
+				File:     bytes.NewReader(avatar.Bytes()),
+				Size:     int64(avatar.Len()),
+			},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, updated.AvatarURL)
+
+		avatarDir := filepath.Join(mediaDir, "avatars", env.testUser.ID.String())
+		_, err = os.Stat(avatarDir)
+		require.NoError(t, err)
+
+		var buf bytes.Buffer
+		writer := multipart.NewWriter(&buf)
+		require.NoError(t, writer.WriteField("remove_avatar", "true"))
+		require.NoError(t, writer.Close())
+
+		req := httptest.NewRequest(http.MethodPatch, "/api/users/"+env.testUser.ID.String(), &buf)
+		req.Header.Set(echo.HeaderContentType, writer.FormDataContentType())
+		req.AddCookie(env.globalCookie)
+		rec := httptest.NewRecorder()
+		env.e.ServeHTTP(rec, req)
+
+		require.Equal(t, http.StatusOK, rec.Code)
+
+		var u userResponse
+		err = json.Unmarshal(rec.Body.Bytes(), &u)
+		require.NoError(t, err)
+		assert.Nil(t, u.AvatarURL)
+
+		_, err = os.Stat(avatarDir)
+		assert.True(t, os.IsNotExist(err))
 	})
 
 	runTest(t, "PATCH /users/:id returns 400 on invalid avatar file type", func(t *testing.T, tx *gorm.DB) {

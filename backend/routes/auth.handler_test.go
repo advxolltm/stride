@@ -15,7 +15,6 @@ import (
 	"gorm.io/gorm"
 
 	userStore "backend/db/user"
-	"backend/services/auth"
 	authService "backend/services/auth"
 	userService "backend/services/user"
 )
@@ -42,7 +41,7 @@ func TestAuthHandler(t *testing.T) {
 
 	runTest := func(t *testing.T, db *gorm.DB, name string, f func(*testing.T, *gorm.DB, authRouteHandler)) {
 		t.Run(name, func(t *testing.T) {
-			db.Transaction(func(tx *gorm.DB) error {
+			_ = db.Transaction(func(tx *gorm.DB) error {
 				f(t, tx, newTestAuthHandler(tx))
 				return fmt.Errorf("rollback %s", t.Name())
 			})
@@ -121,6 +120,10 @@ func TestAuthHandler(t *testing.T) {
 					if rec.Code != http.StatusUnauthorized {
 						t.Errorf("rec.Code: expected %d, got: %d", http.StatusBadRequest, rec.Code)
 					}
+
+					if !strings.Contains(rec.Body.String(), "unauthorized: email or password incorrect") {
+						t.Errorf("expected sanitized auth error, got: %s", rec.Body.String())
+					}
 				}
 			})
 
@@ -151,7 +154,7 @@ func TestAuthHandler(t *testing.T) {
 					if cookie.Name != authService.SessionTokenName {
 						t.Errorf("expected sessionToken cookie to be set")
 					}
-				} 
+				}
 			})
 
 			runTest(t, db, "logout should return a cookie with expiry set in the past", func(t *testing.T, db *gorm.DB, sut authRouteHandler) {
@@ -169,10 +172,10 @@ func TestAuthHandler(t *testing.T) {
 
 				if len(rec.Result().Cookies()) != 1 {
 					t.Errorf("expected cookie to be set")
-				} 
+				}
 
 				cookie := rec.Result().Cookies()[0]
-				if cookie.Name != auth.SessionTokenName {
+				if cookie.Name != authService.SessionTokenName {
 					t.Errorf("expected sessionToken cookie to be set")
 				}
 

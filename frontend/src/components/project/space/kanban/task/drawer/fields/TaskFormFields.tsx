@@ -11,7 +11,7 @@ import {
     TextField,
 } from '@heroui/react'
 import { useMemo } from 'react'
-import type { TaskStatus } from './types'
+import type { TaskStatus } from '../../../../../../../store/features/tasks/task.types'
 import { useTranslation } from 'react-i18next'
 
 export interface AssigneeOption {
@@ -99,6 +99,7 @@ export function TaskFormFields({
             <Select
                 placeholder={t('tasks.form.statusPlaceholder')}
                 variant="secondary"
+                aria-label={t('tasks.form.status')}
                 value={status}
                 onChange={(key) => onStatusChange(key as TaskStatus)}
             >
@@ -187,6 +188,7 @@ export function TaskFormFields({
             <Select
                 placeholder={t('tasks.form.assigneePlaceholder')}
                 variant="secondary"
+                aria-label={t('tasks.form.assignee')}
                 value={assigneeId || undefined}
                 onChange={(key) => onAssigneeChange(key as string)}
             >

@@ -51,7 +51,6 @@ func uniqueSuffix() string {
 	return uuid.NewString()[:8]
 }
 
-
 func TestUserStore_GetAllUsers(t *testing.T) {
 	runTest(t, "returns seeded users (non-empty)", func(t *testing.T, s userStore.UserStore) {
 		users, err := s.GetAllUsers(context.Background())
@@ -71,7 +70,6 @@ func TestUserStore_GetAllUsers(t *testing.T) {
 		assert.Equal(t, len(before)+1, len(after))
 	})
 }
-
 
 func TestUserStore_CreateUser(t *testing.T) {
 	runTest(t, "assigns a non-nil UUID and persists all fields", func(t *testing.T, s userStore.UserStore) {
@@ -104,7 +102,6 @@ func TestUserStore_CreateUser(t *testing.T) {
 		assert.ErrorIs(t, err, userStore.ErrDuplicateUsername)
 	})
 }
-
 
 func TestUserStore_GetUser(t *testing.T) {
 	runTest(t, "returns the user with correct fields", func(t *testing.T, s userStore.UserStore) {
@@ -163,6 +160,24 @@ func TestUserStore_UpdateUser(t *testing.T) {
 		assert.Equal(t, hashStr, fetched.PasswordHash)
 	})
 
+	runTest(t, "clears avatar_url when explicitly set to nil", func(t *testing.T, s userStore.UserStore) {
+		u := makeUser("upd-avatar-"+uniqueSuffix(), "upd-avatar-"+uniqueSuffix()+"@test.com")
+		u.AvatarURL = &models.AvatarURLMap{
+			Small:    "/media/avatars/test/300.png",
+			Medium:   "/media/avatars/test/600.png",
+			Original: "/media/avatars/test/original.png",
+		}
+		require.NoError(t, s.CreateUser(context.Background(), u))
+
+		updated, err := s.UpdateUser(context.Background(), u.ID, userStore.UpdateUserFields{SetAvatarURL: true})
+		require.NoError(t, err)
+		assert.Nil(t, updated.AvatarURL)
+
+		fetched, err := s.GetUser(context.Background(), u.ID)
+		require.NoError(t, err)
+		assert.Nil(t, fetched.AvatarURL)
+	})
+
 	runTest(t, "returns gorm.ErrRecordNotFound for unknown ID", func(t *testing.T, s userStore.UserStore) {
 		name := "Ghost"
 		_, err := s.UpdateUser(context.Background(), uuid.New(), userStore.UpdateUserFields{FullName: &name})
@@ -182,7 +197,6 @@ func TestUserStore_UpdateUser(t *testing.T) {
 	})
 }
 
-
 func TestUserStore_DeleteUser(t *testing.T) {
 	runTest(t, "removes the user so GetUser returns gorm.ErrRecordNotFound", func(t *testing.T, s userStore.UserStore) {
 		u := makeUser("del-"+uniqueSuffix(), "del-"+uniqueSuffix()+"@test.com")
@@ -199,7 +213,6 @@ func TestUserStore_DeleteUser(t *testing.T) {
 		assert.ErrorIs(t, err, gorm.ErrRecordNotFound)
 	})
 }
-
 
 func TestUserStore_GetByEmailAndPassword(t *testing.T) {
 	runTest(t, "returns the user ID for correct email and password", func(t *testing.T, s userStore.UserStore) {

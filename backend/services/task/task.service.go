@@ -3,8 +3,10 @@ package task
 import (
 	taskStore "backend/db/task"
 	"backend/models"
+	"backend/services/project"
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -31,15 +33,18 @@ type (
 		AssignTask(ctx context.Context, taskID uuid.UUID, projectMemberID uuid.UUID) (*models.TaskAssignee, error)
 		UnassignTask(ctx context.Context, taskID uuid.UUID, projectMemberID uuid.UUID) error
 		MoveTask(ctx context.Context, id uuid.UUID, pos int) error
+		AddSkill(ctx context.Context, taskID uuid.UUID, skillID uuid.UUID) (*models.TaskSkill, error)
+		RemoveSkill(ctx context.Context, taskID uuid.UUID, skillID uuid.UUID) error
 	}
 
 	taskService struct {
-		taskStore taskStore.TaskStore
+		taskStore      taskStore.TaskStore
+		projectService project.ProjectService
 	}
 )
 
 // AssignTask implements [TaskService].
-func (t *taskService) AssignTask(ctx context.Context, taskID uuid.UUID, projectMemberID uuid.UUID) (*models.TaskAssignee, error){
+func (t *taskService) AssignTask(ctx context.Context, taskID uuid.UUID, projectMemberID uuid.UUID) (*models.TaskAssignee, error) {
 	return t.taskStore.AssignTask(ctx, taskID, projectMemberID)
 }
 
@@ -77,6 +82,63 @@ func (t *taskService) MoveTask(ctx context.Context, id uuid.UUID, pos int) error
 	return t.taskStore.MoveTask(ctx, id, pos)
 }
 
+func (t *taskService) AddSkill(ctx context.Context, taskID uuid.UUID, skillID uuid.UUID) (*models.TaskSkill, error) {
+	isSameProj, err := t.isSkillAndTaskInTheSameProject(ctx, taskID, skillID)
+	if err != nil {
+		if errors.Is(err, project.ErrNonExistentProjectTask) || errors.Is(err, project.ErrNonExistentProjectSkill) {
+			return nil, err
+		}
+		return nil, fmt.Errorf("failed to add skill %s to task %s: %w", skillID, taskID, err)
+	}
+
+	if !isSameProj {
+		return nil, ErrSkillNotInSameProjectAsTask
+	}
+
+	taskSkill, err := t.taskStore.AddSkill(ctx, taskID, skillID)
+	if err != nil {
+		if errors.Is(err, taskStore.ErrSkillAlreadyAssignedToTask) {
+			return nil, ErrSkillAlreadyAssignedToTask
+		}
+		return nil, fmt.Errorf("failed to add skill %s to task %s: %w", skillID, taskID, err)
+	}
+	return taskSkill, nil
+}
+
+func (t *taskService) RemoveSkill(ctx context.Context, taskID uuid.UUID, skillID uuid.UUID) error {
+	isSameProj, err := t.isSkillAndTaskInTheSameProject(ctx, taskID, skillID)
+	if err != nil {
+		if errors.Is(err, project.ErrNonExistentProjectTask) || errors.Is(err, project.ErrNonExistentProjectSkill) {
+			return err
+		}
+		return fmt.Errorf("failed to remove skill %s from task %s: %w", skillID, taskID, err)
+	}
+
+	if !isSameProj {
+		return ErrSkillNotInSameProjectAsTask
+	}
+
+	err = t.taskStore.RemoveSkill(ctx, taskID, skillID)
+	if err != nil {
+		return fmt.Errorf("failed to remove skill %s from task %s: %w", skillID, taskID, err)
+	}
+	return nil
+}
+
+func (t *taskService) isSkillAndTaskInTheSameProject(ctx context.Context, taskID uuid.UUID, skillID uuid.UUID) (bool, error) {
+	projectIDOfTask, err := t.projectService.GetProjectIdByTaskId(ctx, taskID)
+	if err != nil {
+		return false, err
+	}
+
+	projectIDOfSkill, err := t.projectService.GetProjectIdBySkillId(ctx, skillID)
+	if err != nil {
+		return false, err
+	}
+
+	return projectIDOfSkill == projectIDOfTask, nil
+}
+
 // UnassignTask implements [TaskService].
 func (t *taskService) UnassignTask(ctx context.Context, taskID uuid.UUID, projectMemberID uuid.UUID) error {
 	return t.taskStore.UnassignTask(ctx, taskID, projectMemberID)
@@ -95,6 +157,6 @@ func (t *taskService) UpdateTask(ctx context.Context, id uuid.UUID, fields Updat
 	})
 }
 
-func NewTaskService(taskStore taskStore.TaskStore) TaskService {
-	return &taskService{taskStore}
+func NewTaskService(taskStore taskStore.TaskStore, projectService project.ProjectService) TaskService {
+	return &taskService{taskStore, projectService}
 }

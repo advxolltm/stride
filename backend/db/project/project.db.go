@@ -38,6 +38,7 @@ type (
 		AddProjectSkill(ctx context.Context, projectSkill *models.ProjectSkill) error
 		RemoveProjectSkill(ctx context.Context, id uuid.UUID) error
 		GetProjectIdBySkillId(ctx context.Context, skillId uuid.UUID) (uuid.UUID, error)
+		GetProjectIdByTaskId(ctx context.Context, taskId uuid.UUID) (uuid.UUID, error)
 	}
 
 	projectStore struct {
@@ -266,4 +267,16 @@ func (s *projectStore) GetProjectIdBySkillId(ctx context.Context, skillId uuid.U
 		return uuid.Nil, result.Error
 	}
 	return skill.ProjectID, nil
+}
+
+func (s *projectStore) GetProjectIdByTaskId(ctx context.Context, taskId uuid.UUID) (uuid.UUID, error) {
+	var task models.Task
+	result := s.db.WithContext(ctx).First(&task, "id = ?", taskId)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return uuid.Nil, ErrNonExistentProjectTask
+		}
+		return uuid.Nil, result.Error
+	}
+	return task.ProjectID, nil
 }

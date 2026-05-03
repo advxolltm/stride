@@ -1,7 +1,7 @@
 import { Avatar, Button, Chip } from '@heroui/react'
 import { Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { getInitials } from '../../../../shared/utils'
+import getInitials from '../../../../shared/utils/getInitials'
 
 interface MemberCardProps {
     name: string

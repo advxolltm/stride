@@ -13,11 +13,13 @@ import (
 // Create a user from CLI.
 //
 // Example inside Docker:
-//   docker compose -f compose.dev.yml exec backserver go run ./cmd/create-user john john@example.com 'Password123!'
+//
+//	docker compose -f compose.dev.yml exec backserver go run ./cmd/create-user john john@example.com 'Password123!'
 //
 // Example from host:
-//   DB_HOST=localhost DB_PORT=5432 DB_USER=stride DB_PASSWORD=stride DB_NAME=stride \
-//   go run ./cmd/create-user john john@example.com 'Password123!'
+//
+//	DB_HOST=localhost DB_PORT=5432 DB_USER=stride DB_PASSWORD=stride DB_NAME=stride \
+//	go run ./cmd/create-user john john@example.com 'Password123!'
 func main() {
 	// Expected arguments: username, email, password.
 	if len(os.Args) != 4 {

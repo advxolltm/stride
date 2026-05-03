@@ -9,7 +9,6 @@ import (
 	"gorm.io/gorm"
 )
 
-
 type (
 	WhiteboardStore interface {
 		GetWhiteboardByProjectID(ctx context.Context, projectUUID uuid.UUID) (*models.Whiteboard, error)
@@ -62,7 +61,6 @@ func (s *whiteboardStore) UpdateWhiteboardByProjectID(ctx context.Context, proje
 	return &whiteboard, nil
 }
 
-
 func (s *whiteboardStore) GetElement(ctx context.Context, projectID uuid.UUID, id uuid.UUID) (*models.WhiteboardElement, error) {
 	var element models.WhiteboardElement
 	result := s.db.WithContext(ctx).
@@ -87,7 +85,7 @@ func (s *whiteboardStore) GetElements(ctx context.Context, projectID uuid.UUID) 
 	return elements, nil
 }
 
-func (s *whiteboardStore) CreateElement(ctx context.Context, element *models.WhiteboardElement) (*models.WhiteboardElement, error){
+func (s *whiteboardStore) CreateElement(ctx context.Context, element *models.WhiteboardElement) (*models.WhiteboardElement, error) {
 	result := s.db.WithContext(ctx).Create(element)
 	if result.Error != nil {
 		return nil, result.Error

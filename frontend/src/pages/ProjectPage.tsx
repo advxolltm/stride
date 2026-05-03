@@ -2,6 +2,7 @@ import { useParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { ProjectOverviewHeader, ProjectSpacesGrid } from '../components/project'
 import { useGetProjectByIdQuery } from '../store/features/project/project.api'
+import { ProjectPageSkeleton } from './ProjectPageSkeleton'
 
 export function ProjectPage() {
     const { projectId } = useParams()
@@ -15,7 +16,7 @@ export function ProjectPage() {
     )
 
     if (isLoading) {
-        return <div className="text-muted p-6 text-sm">Loading project...</div>
+        return <ProjectPageSkeleton />
     }
 
     if (!project) {
