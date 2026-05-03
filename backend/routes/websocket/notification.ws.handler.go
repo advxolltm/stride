@@ -28,6 +28,11 @@ type notificationWSMessage struct {
 	Payload notificationdb.Notification `json:"payload"`
 }
 
+type notificationWSMessageResponse struct { //nolint:unused
+	Type    string                     `json:"type" example:"notification"`
+	Payload routes.NotificationResponse `json:"payload"`
+}
+
 type notificationWSRouteHandler struct {
 	authService auth.AuthService
 	projectService project.ProjectService
@@ -53,9 +58,17 @@ func (h notificationWSRouteHandler) addRoutes(ws *echo.Group) {
 	g.GET("", h.connectGET)
 }
 
-
-
-
+// GET /ws/notifications
+//
+//	@Summary	Connect to notification updates websocket
+//	@Description	Upgrades HTTP connection to WebSocket for authenticated user notification delivery.
+//	@Description	After successful handshake, server sends JSON envelopes with type "notification" and payload containing notification data.
+//	@Tags		notifications
+//	@Success	101	{object}	notificationWSMessageResponse	"Switching Protocols. Subsequent WebSocket text frames contain notification envelopes."
+//	@Failure	401	{object}	routes.ErrorResponse	"unauthorized"
+//	@Failure	500	{object}	routes.ErrorResponse	"internal server error"
+//	@Security	Auth
+//	@Router		/ws/notifications [get]
 func (h notificationWSRouteHandler) connectGET(c *echo.Context) error {
 	ctx := c.Request().Context()
 
