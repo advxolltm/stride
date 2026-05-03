@@ -57,6 +57,8 @@
       "labelsSearch": "Search labels",
       "assignee": "Assignee",
       "assigneePlaceholder": "Select assignee",
+      "startDate": "Start Date",
+      "noStartDate": "No start date",
       "dueDate": "Due Date",
       "noDueDate": "No due date",
       "skills": "Skills",

@@ -35,12 +35,20 @@ export function KanbanCard({
         transition,
     }
 
-    const formattedDate = task.dueDate
-        ? new Date(task.dueDate).toLocaleDateString(i18n.language, {
-              month: 'short',
-              day: 'numeric',
-          })
+    const formatCardDate = (date: string) =>
+        new Date(date).toLocaleDateString(i18n.language, {
+            month: 'short',
+            day: 'numeric',
+        })
+
+    const formattedStartDate = task.startDate
+        ? formatCardDate(task.startDate)
         : null
+    const formattedDueDate = task.dueDate ? formatCardDate(task.dueDate) : null
+    const formattedDateRange =
+        formattedStartDate && formattedDueDate
+            ? `${formattedStartDate} - ${formattedDueDate}`
+            : formattedStartDate || formattedDueDate
     const assignee = task.assignees?.[0]
 
     function handleEdit() {
@@ -125,11 +133,11 @@ export function KanbanCard({
 
                     <div className="flex items-center justify-between">
                         <div className="text-default-400 flex items-center gap-1">
-                            {formattedDate && (
+                            {formattedDateRange && (
                                 <>
                                     <Calendar size={13} />
                                     <span className="text-xs">
-                                        {formattedDate}
+                                        {formattedDateRange}
                                     </span>
                                 </>
                             )}

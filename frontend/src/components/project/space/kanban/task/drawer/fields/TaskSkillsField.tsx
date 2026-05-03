@@ -8,6 +8,7 @@ import {
     Spinner,
     Tag,
     TagGroup,
+    toast,
     useFilter,
 } from '@heroui/react'
 import { useTranslation } from 'react-i18next'
@@ -30,7 +31,8 @@ export function TaskSkillsField({ task }: { task: Task }) {
             taskId: task.id,
             projectId,
             body: { skill_ids: keys as string[] },
-        })
+        }).unwrap()
+        toast.success(t('tasks.messages.taskUpdateSuccess'))
     }
 
     async function handleRemove(keys: Set<Key>) {
@@ -39,7 +41,8 @@ export function TaskSkillsField({ task }: { task: Task }) {
             taskId: task.id,
             projectId,
             body: { skill_ids: next },
-        })
+        }).unwrap()
+        toast.success(t('tasks.messages.taskUpdateSuccess'))
     }
 
     return (

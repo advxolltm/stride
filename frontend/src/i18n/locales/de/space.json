@@ -56,6 +56,8 @@
       "labelsSearch": "Labels suchen",
       "assignee": "Zuständiger",
       "assigneePlaceholder": "Zuständigen auswählen",
+      "startDate": "Startdatum",
+      "noStartDate": "Kein Startdatum",
       "dueDate": "Fälligkeitsdatum",
       "noDueDate": "Kein Fälligkeitsdatum",
       "skills": "Fähigkeiten",
