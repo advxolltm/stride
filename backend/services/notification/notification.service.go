@@ -16,6 +16,7 @@ type (
 	NotificationService interface {
 		SendNotification(ctx context.Context, userID uuid.UUID, objectType string, objectID uuid.UUID, message string) error
 		GetNotifications(ctx context.Context, userID uuid.UUID) ([]Notification, error)
+		DeleteNotification(ctx context.Context, userID uuid.UUID, notificationID uuid.UUID) error
 		MarkAsRead(ctx context.Context,userID uuid.UUID,notificationID uuid.UUID) error
 	}
 )
@@ -117,6 +118,41 @@ func (s *notificationService) MarkAsRead(ctx context.Context, userID uuid.UUID, 
 	}
 
 	return ErrNotificationNotFound
+}
+
+
+func (s *notificationService) DeleteNotification(ctx context.Context, userID uuid.UUID, notificationID uuid.UUID) error {
+    if s == nil || s.store == nil {
+        return ErrNotificationStoreUnavailable
+    }
+
+    if userID == uuid.Nil {
+        return ErrNotificationUserIDRequired
+    }
+
+    if notificationID == uuid.Nil {
+        return ErrNotificationIDRequired
+    }
+
+    entries, err := s.store.Range(ctx, userID, "-", defaultNotificationRangeCount)
+    if err != nil {
+        return err
+    }
+
+    redisIDs := make([]string, 0, len(entries))
+    for _, entry := range entries {
+        if entry.Notification.ID != notificationID {
+            continue
+        }
+
+        redisIDs = append(redisIDs, entry.RedisID)
+    }
+
+    if len(redisIDs) == 0 {
+        return ErrNotificationNotFound
+    }
+
+    return s.store.Delete(ctx, userID, redisIDs...)
 }
 
 func collapseNotifications(entries []notificationdb.NotificationStreamEntry) []Notification {

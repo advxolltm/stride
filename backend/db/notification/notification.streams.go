@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
@@ -31,7 +30,7 @@ type (
 	NotificationStreamStore interface {
 		Append(ctx context.Context, notification Notification) (string, error)
 		Range(ctx context.Context, userID uuid.UUID, start string, count int64) ([]NotificationStreamEntry, error)
-		EnsureConsumerGroup(ctx context.Context, userID uuid.UUID, group string) error
+		Delete(ctx context.Context, userID uuid.UUID, redisIDs ...string) error
 	}
 
 	notificationStreamStore struct {
@@ -68,6 +67,10 @@ func (s *notificationStreamStore) Append(ctx context.Context, notification Notif
 }
 
 func (s *notificationStreamStore) Range(ctx context.Context, userID uuid.UUID, start string, count int64) ([]NotificationStreamEntry, error) {
+	
+	if s.rdb == nil {
+		return nil, ErrRedisIsNil
+	}
 
 	if start == "" {
 		start = "-"
@@ -98,15 +101,6 @@ func (s *notificationStreamStore) Range(ctx context.Context, userID uuid.UUID, s
 	return result, nil
 }
 
-func (s *notificationStreamStore) EnsureConsumerGroup(ctx context.Context, userID uuid.UUID, group string) error {
-
-	err := s.rdb.XGroupCreateMkStream(ctx, s.streamKey(userID), group, "$").Err()
-	if err != nil && !strings.Contains(err.Error(), "BUSYGROUP") {
-		return fmt.Errorf("%w: %w", ErrCreateRedisStreamConsumerGroup, err)
-	}
-
-	return nil
-}
 
 func (s *notificationStreamStore) streamKey(userID uuid.UUID) string {
 	return fmt.Sprintf("%s:%s", s.streamPrefix, userID.String())
@@ -163,4 +157,20 @@ func streamValueAsString(value any) string {
 	default:
 		return fmt.Sprint(v)
 	}
+}
+
+func (s *notificationStreamStore) Delete(ctx context.Context, userID uuid.UUID, redisIDs ...string) error {
+    if s.rdb == nil {
+        return ErrRedisIsNil
+    }
+
+    if len(redisIDs) == 0 {
+        return nil
+    }
+
+    if err := s.rdb.XDel(ctx, s.streamKey(userID), redisIDs...).Err(); err != nil {
+        return fmt.Errorf("delete notifications from redis stream: %w", err)
+    }
+
+    return nil
 }

@@ -33,6 +33,7 @@ func (h notificationRouteHandler) AddRoutes(api *echo.Group) {
 	g := api.Group("/notifications", h.authService.AuthenticatedMiddleware())
 	g.GET("", h.notificationsGETHandle)
 	g.PATCH("/:id/read", h.notificationReadPATCHHandle)
+	g.DELETE("/:id", h.notificationDELETEHandle)
 }
 
 func (h notificationRouteHandler) mapServiceError(err error) (int, string) {
@@ -70,6 +71,21 @@ func (h notificationRouteHandler) notificationReadPATCHHandle(c *echo.Context) e
 
 	userID := h.authService.GetClaims(c).UserID
 	if err := h.notificationService.MarkAsRead(c.Request().Context(), userID, notificationID); err != nil {
+		status, msg := h.mapServiceError(err)
+		return c.JSON(status, ErrorResponse{Error: msg})
+	}
+
+	return c.NoContent(http.StatusNoContent)
+}
+
+func (h notificationRouteHandler) notificationDELETEHandle(c *echo.Context) error {
+	notificationID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid notification id"})
+	}
+
+	userID := h.authService.GetClaims(c).UserID
+	if err := h.notificationService.DeleteNotification(c.Request().Context(), userID, notificationID); err != nil {
 		status, msg := h.mapServiceError(err)
 		return c.JSON(status, ErrorResponse{Error: msg})
 	}
