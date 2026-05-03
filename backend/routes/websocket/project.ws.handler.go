@@ -19,6 +19,11 @@ type projectWSRouteHandler struct {
 	rdb            *redis.Client
 }
 
+type taskWSUpdateResponse struct {
+	Type    int `json:"type" example:"2"`
+	Payload any `json:"payload"`
+}
+
 func newProjectWSRouteHandler(authService auth.AuthService, projectService project.ProjectService, rdb *redis.Client) projectWSRouteHandler {
 	return projectWSRouteHandler{
 		authService:    authService,
@@ -34,6 +39,19 @@ func (h projectWSRouteHandler) addRoutes(ws *echo.Group) {
 	g.GET("/tasks", h.connectTasksGET)
 }
 
+// GET /ws/project/:projectId/tasks
+//
+//	@Summary	Connect to task updates websocket
+//	@Description	Upgrades HTTP connection to WebSocket. After successful handshake, server sends JSON task update envelopes with a numeric type and a payload.
+//	@Description	Payload depends on the event type: TaskCreate and TaskUpdate send Task, TaskDelete sends an object with deletedTaskID, TaskMove sends an array of Task, TaskAssign sends TaskAssignee, and TaskUnassign sends an object with taskID and projectMemberID.
+//	@Tags		task
+//	@Param		projectId	path		string	true	"Project ID"
+//	@Success	101		{object}	taskWSUpdateResponse	"Switching Protocols. Subsequent WebSocket text frames contain task update envelopes."
+//	@Failure	400		{object}	routes.ErrorResponse	"invalid project id"
+//	@Failure	401		{object}	routes.ErrorResponse	"unauthorized"
+//	@Failure	500		{object}	routes.ErrorResponse	"internal server error"
+//	@Security	Auth
+//	@Router		/ws/project/{projectId}/tasks [get]
 func (h projectWSRouteHandler) connectTasksGET(c *echo.Context) error {
 	ctx := c.Request().Context()
 	session, err := authorizeProjectWSSession(c, h.authService, h.projectService)
