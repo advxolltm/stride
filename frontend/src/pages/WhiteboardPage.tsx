@@ -10,6 +10,7 @@ import { getApiErrorMessage } from '../shared/utils/api/errors'
 import { useGetProjectByIdQuery } from '../store/features/project/project.api'
 import {
     useCreateProjectWhiteboardElementMutation,
+    useDeleteProjectWhiteboardElementMutation,
     useGetProjectWhiteboardElementsQuery,
     useGetProjectWhiteboardQuery,
     useUpdateProjectWhiteboardElementMutation,
@@ -31,11 +32,14 @@ export function WhiteboardPage() {
     const { t } = useTranslation('project')
     const excalidrawToBackendElementIdRef = useRef(new Map<string, string>())
     const pendingCreateElementIdsRef = useRef(new Set<string>())
+    const pendingDeleteElementIdsRef = useRef(new Set<string>())
     const pendingUpdateElementIdsRef = useRef(new Set<string>())
     const persistedElementSnapshotsRef = useRef(new Map<string, string>())
     const isElementIdMappingReadyRef = useRef(false)
     const [createProjectWhiteboardElement] =
         useCreateProjectWhiteboardElementMutation()
+    const [deleteProjectWhiteboardElement] =
+        useDeleteProjectWhiteboardElementMutation()
     const [updateProjectWhiteboardElement] =
         useUpdateProjectWhiteboardElementMutation()
     const {
@@ -64,6 +68,7 @@ export function WhiteboardPage() {
     useEffect(() => {
         excalidrawToBackendElementIdRef.current = new Map()
         pendingCreateElementIdsRef.current = new Set()
+        pendingDeleteElementIdsRef.current = new Set()
         pendingUpdateElementIdsRef.current = new Set()
         persistedElementSnapshotsRef.current = new Map()
         isElementIdMappingReadyRef.current = false
@@ -88,6 +93,37 @@ export function WhiteboardPage() {
         isElementIdMappingReadyRef.current = true
     }, [whiteboardElements])
 
+    const deletePersistedElement = (projectId: string, elementId: string) => {
+        const backendElementId =
+            excalidrawToBackendElementIdRef.current.get(elementId)
+
+        pendingCreateElementIdsRef.current.delete(elementId)
+        pendingUpdateElementIdsRef.current.delete(elementId)
+
+        if (
+            !backendElementId ||
+            pendingDeleteElementIdsRef.current.has(elementId)
+        ) {
+            persistedElementSnapshotsRef.current.delete(elementId)
+            return
+        }
+
+        pendingDeleteElementIdsRef.current.add(elementId)
+
+        void deleteProjectWhiteboardElement({
+            projectId,
+            elementId: backendElementId,
+        })
+            .unwrap()
+            .then(() => {
+                excalidrawToBackendElementIdRef.current.delete(elementId)
+                persistedElementSnapshotsRef.current.delete(elementId)
+            })
+            .finally(() => {
+                pendingDeleteElementIdsRef.current.delete(elementId)
+            })
+    }
+
     const handleShare = async () => {
         const shareUrl = project?.joinLink ?? window.location.href
 
@@ -97,6 +133,20 @@ export function WhiteboardPage() {
         } catch {
             toast.danger(t('whiteboardPage.shareError'))
         }
+    }
+
+    const handleCanvasChange = (elements: readonly ExcalidrawElement[]) => {
+        if (!projectId || !isElementIdMappingReadyRef.current) {
+            return
+        }
+
+        elements.forEach((element) => {
+            if (!element.isDeleted) {
+                return
+            }
+
+            deletePersistedElement(projectId, element.id)
+        })
     }
 
     const handleCanvasPointerUp = (elements: readonly ExcalidrawElement[]) => {
@@ -109,8 +159,12 @@ export function WhiteboardPage() {
             const backendElementId =
                 excalidrawToBackendElementIdRef.current.get(element.id)
 
+            if (element.isDeleted) {
+                deletePersistedElement(projectId, element.id)
+                return
+            }
+
             if (
-                element.isDeleted ||
                 isInvisiblySmallElement(element) ||
                 pendingCreateElementIdsRef.current.has(element.id)
             ) {
@@ -322,6 +376,7 @@ export function WhiteboardPage() {
             <WhiteboardCanvas
                 key={projectId}
                 elements={excalidrawElements}
+                onChange={handleCanvasChange}
                 onPointerUp={handleCanvasPointerUp}
             />
         </div>

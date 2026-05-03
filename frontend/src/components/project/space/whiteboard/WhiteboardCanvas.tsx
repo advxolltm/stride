@@ -8,6 +8,7 @@ import type { WhiteboardCanvasProps } from './types'
 
 export function WhiteboardCanvas({
     elements,
+    onChange,
     onPointerUp,
 }: WhiteboardCanvasProps) {
     const excalidrawApiRef = useRef<ExcalidrawImperativeAPI | null>(null)
@@ -30,6 +31,7 @@ export function WhiteboardCanvas({
                 excalidrawAPI={(api) => {
                     excalidrawApiRef.current = api
                 }}
+                onChange={onChange}
                 onPointerUp={() => {
                     onPointerUp?.(
                         excalidrawApiRef.current?.getSceneElementsIncludingDeleted() ??

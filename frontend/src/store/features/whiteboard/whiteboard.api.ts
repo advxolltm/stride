@@ -89,9 +89,6 @@ export const whiteboardApi = baseApi.injectEndpoints({
                 url: `/projects/${projectId}/whiteboard/elements/${elementId}`,
                 method: 'DELETE',
             }),
-            invalidatesTags: (_result, _error, { projectId }) => [
-                { type: 'WhiteboardElement' as const, id: projectId },
-            ],
         }),
     }),
 })
