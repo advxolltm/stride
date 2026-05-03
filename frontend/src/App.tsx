@@ -35,10 +35,11 @@ function App() {
                     <Route index element={<ProjectPage />} />
                     <Route path="tasks" element={<TasksPage />} />
                     <Route path="chat" element={<ChatPage />} />
-                    <Route path="whiteboard">
-                        <Route index element={<WhiteboardPage />} />
+                    <Route path="whiteboard" element={<WhiteboardPage />} />
+                    {/* <Route index element={<WhiteboardPage />} />
                         <Route path="test" element={<WhiteboardTestPage />} />
-                    </Route>
+                    </Route> */}
+                    <Route path="ws-test" element={<WhiteboardTestPage />} />
                     <Route
                         path="ws-playground"
                         element={<WsPlaygroundPage />}

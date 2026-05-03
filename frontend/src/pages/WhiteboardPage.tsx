@@ -73,9 +73,6 @@ export function WhiteboardPage() {
                 <span className="rounded-full px-2 py-1 font-semibold text-[var(--foreground)]">
                     Whiteboard
                 </span>
-                <Link to="test">
-                    <Button>Go to whiteboard test page</Button>
-                </Link>
             </nav>
 
             <div className="fixed top-3 right-3 z-40 flex items-center gap-2">
