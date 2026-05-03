@@ -36,7 +36,16 @@ func newProjectWSRouteHandler(authService auth.AuthService, projectService proje
 func (h projectWSRouteHandler) addRoutes(ws *echo.Group) {
 	g := ws.Group("/project/:projectId", h.authService.AuthenticatedMiddleware())
 	g.GET("/messages", h.connectMessagesGET)
-	g.GET("/kanban", h.connectTasksGET)
+	g.GET("/kanban", h.connectKanbanGET)
+}
+
+func consumeProjectWSDisconnect(conn *websocket.Conn, errCh chan<- error) {
+	for {
+		if _, _, err := conn.ReadMessage(); err != nil {
+			errCh <- err
+			return
+		}
+	}
 }
 
 // GET /ws/project/:projectId/tasks
@@ -52,7 +61,7 @@ func (h projectWSRouteHandler) addRoutes(ws *echo.Group) {
 //	@Failure	500		{object}	routes.ErrorResponse	"internal server error"
 //	@Security	Auth
 //	@Router		/ws/project/{projectId}/tasks [get]
-func (h projectWSRouteHandler) connectTasksGET(c *echo.Context) error {
+func (h projectWSRouteHandler) connectKanbanGET(c *echo.Context) error {
 	ctx := c.Request().Context()
 	session, err := authorizeProjectWSSession(c, h.authService, h.projectService)
 	if err != nil {
@@ -64,27 +73,49 @@ func (h projectWSRouteHandler) connectTasksGET(c *echo.Context) error {
 		slog.Error("failed to upgrade", "error", err)
 		return c.JSON(http.StatusInternalServerError, routes.ErrorResponse{Error: err.Error()})
 	}
-	defer ws.Close()
+	defer func() {
+		err := ws.Close()
+		if err != nil {
+			slog.Error("failed to close websocket connection", "error", err)
+		}
+	}()
 
 	sub := h.rdb.Subscribe(ctx, session.ProjectID.String())
-	defer sub.Close()
-	ch := sub.Channel()
-
-	for msg := range ch {
-		if isWSSessionExpired(session.Expiry) {
-			slog.Debug("Client session expired, closing ws connection", "userid", session.UserID)
-			break
+	defer func() {
+		err := sub.Close()
+		if err != nil {
+			slog.Error("failed to close redis sub", "error", err)
 		}
+	}()
+	ch := sub.Channel()
+	disconnectCh := make(chan error, 1)
 
-		if err := ws.WriteMessage(websocket.TextMessage, []byte(msg.Payload)); err != nil {
-			slog.Error("Write error", "error", err)
+	go consumeProjectWSDisconnect(ws, disconnectCh)
+
+	for {
+		select {
+		case err := <-disconnectCh:
+			if err != nil && !websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+				slog.Debug("project ws closed", "error", err, "user-id", session.UserID)
+			}
+			return nil
+		case msg, ok := <-ch:
+			if !ok {
+				return nil
+			}
+
+			if isWSSessionExpired(session.Expiry) {
+				slog.Debug("Client session expired, closing ws connection", "user-id", session.UserID)
+				return nil
+			}
+
+			if err := ws.WriteMessage(websocket.TextMessage, []byte(msg.Payload)); err != nil {
+				slog.Debug("project ws write failed, closing connection", "error", err, "user-id", session.UserID)
+				return nil
+			}
 		}
 	}
-
-	slog.Debug("Closing ws connection", "userid", session.UserID)
-	return nil
 }
-
 
 func (h projectWSRouteHandler) connectMessagesGET(c *echo.Context) error {
 	return c.NoContent(http.StatusNotImplemented)
