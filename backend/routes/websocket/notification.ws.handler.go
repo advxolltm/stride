@@ -80,8 +80,11 @@ func (h notificationWSRouteHandler) connectGET(c *echo.Context) error {
 		slog.Error("failed to upgrade notification websocket", "error", err)
 		return c.JSON(http.StatusInternalServerError, routes.ErrorResponse{Error: err.Error()})
 	}
-	defer ws.Close()
-
+	defer func() {
+    if err := ws.Close(); err != nil {
+        fmt.Printf("close websocket: %v", err)
+    }
+}()
 	lastID := "$"
 	for {
 		if expiry.Before(time.Now()) {

@@ -26,11 +26,6 @@ type notificationRouteHandler struct {
 	notificationService notificationService.NotificationService
 }
 
-type createNotificationRequest struct {
-	ObjectType string    `json:"object_type"`
-	ObjectID   uuid.UUID `json:"object_id"`
-	Message    string    `json:"message"`
-}
 
 func NewNotificationRouteHandler(ns notificationService.NotificationService, as authService.AuthService) *notificationRouteHandler {
 	return &notificationRouteHandler{
