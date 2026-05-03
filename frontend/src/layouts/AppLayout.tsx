@@ -27,7 +27,7 @@ export function AppLayout() {
                     onCreateProject={handleOpenCreateProjectDialog}
                 />
 
-                <div className="flex min-w-0 flex-1 flex-col overflow-auto bg-[var(--background)]">
+                <div className="flex min-w-0 flex-1 flex-col overflow-auto bg-background">
                     <AppBreadcrumb />
                     <Outlet
                         context={{
