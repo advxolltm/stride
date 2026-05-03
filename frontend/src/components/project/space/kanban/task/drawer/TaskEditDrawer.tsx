@@ -5,6 +5,7 @@ import { TaskAssigneeField } from './fields/TaskAssigneeField'
 import { TaskDescriptionField } from './fields/TaskDescriptionField'
 import { TaskDueDateField } from './fields/TaskDueDateField'
 import { TaskStatusField } from './fields/TaskStatusField'
+import { TaskStartDateField } from './fields/TaskStartDateField'
 import { TaskTitleField } from './fields/TaskTitleField'
 import { TaskSkillsField } from './fields/TaskSkillsField'
 interface TaskEditDrawerProps {
@@ -35,6 +36,7 @@ export function TaskEditDrawer({
                         <Drawer.Body className="flex flex-col gap-5">
                             <TaskTitleField task={task} />
                             <TaskDescriptionField task={task} />
+                            <TaskStartDateField task={task} />
                             <TaskDueDateField task={task} />
                             <TaskStatusField task={task} />
                             <TaskAssigneeField task={task} />
