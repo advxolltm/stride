@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from '@heroui/react'
 import { useTranslation } from 'react-i18next'
+import { useSearchParams } from 'react-router-dom'
 import type { Task } from '../../../../../store/features/tasks/task.types'
 import { useTaskBoard } from '../context/useTaskBoard'
 import { useKanbanDrag } from '../hooks/useKanbanDrag'
@@ -9,6 +10,9 @@ import {
     useMoveTaskMutation,
     useUpdateTaskMutation,
 } from '../../../../../store/features/tasks/task.api'
+
+const TASK_ID_PARAM = 'taskID'
+const LEGACY_TASK_ID_PARAM = 'taskId'
 
 function getColumnColor(status: 'todo' | 'in_progress' | 'done') {
     switch (status) {
@@ -26,7 +30,30 @@ export function useKanbanState() {
     const { tasks, isLoading, statusOptions, projectId } = useTaskBoard()
     const [updateTask] = useUpdateTaskMutation()
     const [moveTask] = useMoveTaskMutation()
+    const [searchParams, setSearchParams] = useSearchParams()
     const isPersistingMoveRef = useRef(false)
+    const taskIdFromUrl = searchParams.get(TASK_ID_PARAM)
+    const legacyTaskIdFromUrl = searchParams.get(LEGACY_TASK_ID_PARAM)
+    const requestedTaskId = taskIdFromUrl ?? legacyTaskIdFromUrl
+
+    function syncTaskSearchParam(taskId: string | null, replace = false) {
+        setSearchParams(
+            (currentParams) => {
+                const nextParams = new URLSearchParams(currentParams)
+
+                nextParams.delete(LEGACY_TASK_ID_PARAM)
+
+                if (taskId) {
+                    nextParams.set(TASK_ID_PARAM, taskId)
+                } else {
+                    nextParams.delete(TASK_ID_PARAM)
+                }
+
+                return nextParams
+            },
+            { replace },
+        )
+    }
 
     const serverColumns = useMemo(
         () =>
@@ -99,6 +126,7 @@ export function useKanbanState() {
         if (selectedTaskId === deleted.id) {
             setDrawerOpen(false)
             setSelectedTaskId(null)
+            syncTaskSearchParam(null, true)
         }
     })
 
@@ -107,6 +135,33 @@ export function useKanbanState() {
 
         setLocalColumns(serverColumns)
     }, [serverColumns, setLocalColumns])
+
+    useEffect(() => {
+        if (!requestedTaskId) {
+            setDrawerOpen(false)
+            setSelectedTaskId(null)
+            return
+        }
+
+        const taskFromUrl = tasks.find((task) => task.id === requestedTaskId)
+
+        if (taskFromUrl) {
+            setSelectedTaskId(taskFromUrl.id)
+            setDrawerOpen(true)
+
+            if (!taskIdFromUrl && legacyTaskIdFromUrl) {
+                syncTaskSearchParam(legacyTaskIdFromUrl, true)
+            }
+
+            return
+        }
+
+        if (!isLoading) {
+            setDrawerOpen(false)
+            setSelectedTaskId(null)
+            syncTaskSearchParam(null, true)
+        }
+    }, [isLoading, legacyTaskIdFromUrl, requestedTaskId, taskIdFromUrl, tasks])
 
     return {
         ...del,
@@ -124,10 +179,15 @@ export function useKanbanState() {
         handleTaskClick: (task: Task) => {
             setSelectedTaskId(task.id)
             setDrawerOpen(true)
+            syncTaskSearchParam(task.id)
         },
         handleDrawerOpenChange: (open: boolean) => {
             setDrawerOpen(open)
-            if (!open) setSelectedTaskId(null)
+
+            if (!open) {
+                setSelectedTaskId(null)
+                syncTaskSearchParam(null)
+            }
         },
     }
 }
