@@ -11,54 +11,69 @@ import {
     useFilter,
 } from '@heroui/react'
 import { useTranslation } from 'react-i18next'
-import { useUpdateTaskMutation } from '../../../../../../../store/features/tasks/task.api'
+import {
+    useAddSkillToTaskMutation,
+    useRemoveSkillFromTaskMutation,
+} from '../../../../../../../store/features/tasks/task.api'
 import type { Task } from '../../../../../../../store/features/tasks/task.types'
 import { useTaskBoard } from '../../../context/useTaskBoard'
 
 export function TaskSkillsField({ task }: { task: Task }) {
     const { t } = useTranslation('space')
     const { skills, projectId } = useTaskBoard()
-    const [updateTask, { isLoading: isSaving }] = useUpdateTaskMutation()
+    const [addSkill, { isLoading: isAdding }] = useAddSkillToTaskMutation()
+    const [removeSkill, { isLoading: isRemoving }] =
+        useRemoveSkillFromTaskMutation()
     const { contains } = useFilter({ sensitivity: 'base' })
 
-    const selectedKeys = (
-        (task as Task & { skills?: { id: string }[] }).skills ?? []
-    ).map((skill: { id: string }) => skill.id)
+    const selectedKeys = (task.skills ?? []).map(
+        (skill) => skill.projectSkillId,
+    )
 
     async function handleChange(keys: Key[]) {
-        await updateTask({
-            taskId: task.id,
-            projectId,
-            body: { skill_ids: keys as string[] },
-        })
+        const incoming = keys as string[]
+        const toAdd = incoming.filter((id) => !selectedKeys.includes(id))
+        const toRemove = selectedKeys.filter((id) => !incoming.includes(id))
+
+        for (const skillId of toAdd) {
+            await addSkill({ taskId: task.id, projectId, skillId })
+        }
+        for (const skillId of toRemove) {
+            await removeSkill({ taskId: task.id, projectId, skillId })
+        }
     }
 
     async function handleRemove(keys: Set<Key>) {
-        const next = selectedKeys.filter((id: string) => !keys.has(id))
-        await updateTask({
-            taskId: task.id,
-            projectId,
-            body: { skill_ids: next },
-        })
+        for (const skillId of keys) {
+            await removeSkill({
+                taskId: task.id,
+                projectId,
+                skillId: skillId as string,
+            })
+        }
     }
 
     return (
         <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
                 <Label>{t('tasks.form.skills')}</Label>
-                {isSaving && <Spinner color="current" size="sm" />}
+                {isAdding || isRemoving ? (
+                    <Spinner color="current" size="sm" />
+                ) : null}
             </div>
 
             <Autocomplete
+                fullWidth
                 variant="secondary"
-                className="w-full"
+                allowsEmptyCollection
                 placeholder={t('tasks.form.skillsPlaceholder')}
                 selectionMode="multiple"
                 value={selectedKeys}
-                isDisabled={isSaving}
+                isDisabled={isAdding || isRemoving}
                 onChange={(keys) => handleChange(keys as Key[])}
+                aria-label={t('tasks.form.skills')}
             >
-                <Autocomplete.Trigger className="w-full">
+                <Autocomplete.Trigger>
                     <Autocomplete.Value>
                         {({ defaultChildren, isPlaceholder, state }) => {
                             if (
@@ -68,21 +83,31 @@ export function TaskSkillsField({ task }: { task: Task }) {
                                 return defaultChildren
                             }
                             return (
-                                <TagGroup size="sm" onRemove={handleRemove}>
-                                    <TagGroup.List>
-                                        {state.selectedItems.map((item) => (
-                                            <Tag
-                                                key={item.key}
-                                                id={item.key as string}
-                                            >
-                                                {
+                                <TagGroup
+                                    aria-label={t('tasks.form.skills')}
+                                    selectionMode="none"
+                                    onRemove={handleRemove}
+                                    variant="surface"
+                                >
+                                    <TagGroup.List
+                                        items={state.selectedItems.map(
+                                            (item) => ({
+                                                id: item.key as string,
+                                                name:
                                                     skills.find(
                                                         (s) =>
                                                             s.id === item.key,
-                                                    )?.name
-                                                }
+                                                    )?.name ?? '',
+                                            }),
+                                        )}
+                                        renderEmptyState={() => null}
+                                    >
+                                        {(item) => (
+                                            <Tag key={item.id} id={item.id}>
+                                                {item.name}
+                                                <Tag.RemoveButton />
                                             </Tag>
-                                        ))}
+                                        )}
                                     </TagGroup.List>
                                 </TagGroup>
                             )
@@ -99,6 +124,7 @@ export function TaskSkillsField({ task }: { task: Task }) {
                             name="search"
                             variant="secondary"
                             className="w-full"
+                            aria-label={t('tasks.form.skillsSearch')}
                         >
                             <SearchField.Group>
                                 <SearchField.SearchIcon />

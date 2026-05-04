@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log/slog"
 	"os"
 	"strings"
 
@@ -19,6 +20,7 @@ import (
 	"backend/routes"
 	"backend/routes/projects"
 	taskHandler "backend/routes/task"
+	wsRoutes "backend/routes/websocket"
 	authService "backend/services/auth"
 	exampleService "backend/services/example"
 	projectService "backend/services/project"
@@ -121,7 +123,12 @@ func main() {
 	}
 	
 	rdb := db.InitRedis(db.RedisDSNFromEnv())
-	defer rdb.Close()
+	defer func() {
+		err := rdb.Close()
+		if err != nil {
+			slog.Error("failed to close redis client", "error", err)
+		}
+	}()
 
 	userStore := userDB.NewUserStore(mainDB)
 	projectStore := projectDB.NewProjectStore(mainDB)
@@ -134,7 +141,7 @@ func main() {
 	projectService := projectService.NewProjectService(projectStore)
 	authService := authService.NewAuthenticationService(userService)
 	whiteboardService := whiteboardService.NewWhiteboardService(whiteboardStore, projectService)
-	taskService := taskService.NewTaskService(taskStore)
+	taskService := taskService.NewTaskService(taskStore, projectService)
 
 	// Routes
 	// Register route handler by adding them to the array
@@ -148,7 +155,7 @@ func main() {
 		projects.NewProjectsGroup(projectService, whiteboardService, authService),
 		taskHandler.NewTaskRouteHandler(authService, taskService, projectService, rdb),
 		routes.NewUserRouteHandler(userService, authService),
-		routes.NewWSRouteHandler(authService, projectService, rdb),
+		wsRoutes.NewWSRouteHandler(authService, projectService, userService, rdb),
 	}
 
 	for _, handler := range handlers {

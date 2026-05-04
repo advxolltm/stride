@@ -48,7 +48,6 @@ export function HomePage() {
                 {isLoading ? (
                     <div className="flex h-full w-full items-center justify-center">
                         <Spinner
-                            type="wave"
                             className="block h-10 w-10 text-[var(--accent)]"
                             size="sm"
                         />

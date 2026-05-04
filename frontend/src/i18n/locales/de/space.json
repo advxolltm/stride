@@ -56,12 +56,15 @@
       "labelsSearch": "Labels suchen",
       "assignee": "Zuständiger",
       "assigneePlaceholder": "Zuständigen auswählen",
+      "startDate": "Startdatum",
+      "noStartDate": "Kein Startdatum",
       "dueDate": "Fälligkeitsdatum",
       "noDueDate": "Kein Fälligkeitsdatum",
       "skills": "Fähigkeiten",
       "skillsPlaceholder": "Fähigkeiten hinzufügen...",
       "skillsSearch": "Fähigkeiten suchen",
       "skillsEmpty": "Keine Fähigkeiten gefunden",
+      "skillsUnavailable": "Keine Fähigkeiten verfügbar",
       "assigneeSearch": "Benutzer suchen...",
       "assigneeEmpty": "Kein Zuständiger"
     }

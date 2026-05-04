@@ -40,6 +40,7 @@ type (
 		AddProjectSkill(ctx context.Context, projectId uuid.UUID, name string, description *string) (*models.ProjectSkill, error)
 		RemoveProjectSkill(ctx context.Context, skillId uuid.UUID) error
 		GetProjectIdBySkillId(ctx context.Context, skillId uuid.UUID) (uuid.UUID, error)
+		GetProjectIdByTaskId(ctx context.Context, taskId uuid.UUID) (uuid.UUID, error)
 	}
 	projectService struct {
 		projectStore project.ProjectStore
@@ -263,6 +264,17 @@ func (s projectService) GetProjectIdBySkillId(ctx context.Context, skillId uuid.
 		switch err {
 		case project.ErrNonExistentProjectSkill:
 			return uuid.Nil, ErrNonExistentProjectSkill
+		}
+		return uuid.Nil, fmt.Errorf("%w: %w", ErrProjectStoreFailed, err)
+	}
+	return projId, nil
+}
+
+func (s projectService) GetProjectIdByTaskId(ctx context.Context, taskId uuid.UUID) (uuid.UUID, error) {
+	projId, err := s.projectStore.GetProjectIdByTaskId(ctx, taskId)
+	if err != nil {
+		if errors.Is(err, project.ErrNonExistentProjectTask) {
+			return uuid.Nil, ErrNonExistentProjectTask
 		}
 		return uuid.Nil, fmt.Errorf("%w: %w", ErrProjectStoreFailed, err)
 	}

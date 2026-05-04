@@ -45,7 +45,7 @@ func newTestTaskHandler(db *gorm.DB, rdb *redis.Client) taskRouteHandler {
 	userService := userService.NewUserService(userStore)
 	projectService := projectService.NewProjectService(projectStore)
 	authService := authService.NewAuthenticationService(userService)
-	taskService := taskService.NewTaskService(taskStore)
+	taskService := taskService.NewTaskService(taskStore, projectService)
 
 	return taskRouteHandler{
 		authService,
@@ -89,17 +89,21 @@ func assertEqualTaskResponse(t *testing.T, expected models.Task, actual routes.T
 	assert.Equal(t, expected.DueDate, actual.DueDate, "task.DueDate")
 	assert.Equal(t, expected.ExpectedDurationMinutes, actual.ExpectedDurationMinutes, "task.ExpectedDurationMinutes")
 	assert.Equal(t, expected.Position, actual.Position, "task.Position")
-	assert.Equal(t, expected.CreatedAt, actual.CreatedAt, "task.CreatedAt")
-	assert.Equal(t, expected.UpdatedAt, actual.UpdatedAt, "task.UpdatedAt")
-	assert.Equal(t, expected.CompletedAt, actual.CompletedAt, "task.CompletedAt")
+	assert.True(t, expected.CreatedAt.UTC().Equal(actual.CreatedAt.UTC()), "task.CreatedAt")
+	assert.True(t, expected.UpdatedAt.UTC().Equal(actual.UpdatedAt.UTC()), "task.UpdatedAt")
+	if expected.CompletedAt != nil && actual.CompletedAt != nil {
+		assert.True(t, expected.CompletedAt.UTC().Equal(actual.CompletedAt.UTC()), "task.CompletedAt")
+	} else if expected.CompletedAt != nil || actual.CompletedAt != nil {
+		assert.Failf(t, "task.CompletedAt", "either is nil %v, %v", expected.CompletedAt, actual.CompletedAt)
+	}
 }
 
-func TestAuthHandler(t *testing.T) {
+func TestTaskHandler(t *testing.T) {
 	t.Setenv("SESSION_SECRET", "super-secret")
 
 	runTest := func(t *testing.T, db *gorm.DB, name string, f func(*testing.T, *gorm.DB, taskRouteHandler)) {
 		t.Run(name, func(t *testing.T) {
-			db.Transaction(func(tx *gorm.DB) error {
+			_ = db.Transaction(func(tx *gorm.DB) error {
 				f(t, tx, newTestTaskHandler(tx, rdb))
 				return fmt.Errorf("rollback %s", t.Name())
 			})
@@ -121,7 +125,8 @@ func TestAuthHandler(t *testing.T) {
 				c := e.NewContext(req, rec)
 				c.SetPathValues(echo.PathValues{{Name: "id", Value: tsk.ID.String()}})
 				loginUser(t, sut.authService, c, randomUserOfProject.User)
-				sut.authService.AuthenticatedMiddleware()(sut.taskGET)(c)
+				err := sut.authService.AuthenticatedMiddleware()(sut.taskGET)(c)
+				require.NoError(t, err)
 				require.Equal(t, http.StatusOK, rec.Code)
 
 				resp := parse[routes.Task](t, rec.Body)
@@ -148,7 +153,8 @@ func TestAuthHandler(t *testing.T) {
 				c := e.NewContext(req, rec)
 				c.SetPathValues(echo.PathValues{{Name: "id", Value: tsk.ID.String()}})
 				loginUser(t, sut.authService, c, randomUserOfProject.User)
-				sut.authService.AuthenticatedMiddleware()(sut.taskPATCH)(c)
+				err = sut.authService.AuthenticatedMiddleware()(sut.taskPATCH)(c)
+				require.NoError(t, err)
 				if !assert.Equal(t, http.StatusOK, rec.Code) {
 					t.Fatalf("PATCH /task/task/:id got error response: %s", rec.Body.String())
 				}
@@ -164,10 +170,15 @@ func TestAuthHandler(t *testing.T) {
 				assert.Equal(t, tsk.DueDate, resp.DueDate, "task.DueDate")
 				assert.Nil(t, resp.ExpectedDurationMinutes, "task.ExpectedDurationMinutes")
 				assert.Equal(t, tsk.Position, resp.Position, "task.Position")
-				assert.Equal(t, tsk.CreatedAt, resp.CreatedAt, "task.CreatedAt")
+				testutils.RequireEqualTime(t, tsk.CreatedAt, resp.CreatedAt, "task.CreatedAt")
 				assert.Greater(t, resp.UpdatedAt, tsk.UpdatedAt, "task.UpdatedAt")
 				testutils.RequireEqualDate(t, time.Now(), resp.UpdatedAt, "task.UpdatedAt")
-				assert.Equal(t, tsk.CompletedAt, resp.CompletedAt, "task.CompletedAt")
+
+				if tsk.CompletedAt != nil && resp.CompletedAt != nil {
+					testutils.RequireEqualTime(t, *tsk.CompletedAt, *resp.CompletedAt, "task.CompletedAt")
+				} else if tsk.CompletedAt != nil || resp.CompletedAt != nil {
+					assert.Fail(t, "one completedAt is nil while the other is not")
+				}
 			}
 
 			// test DELETE
@@ -177,10 +188,11 @@ func TestAuthHandler(t *testing.T) {
 				c := e.NewContext(req, rec)
 				c.SetPathValues(echo.PathValues{{Name: "id", Value: tsk.ID.String()}})
 				loginUser(t, sut.authService, c, randomUserOfProject.User)
-				sut.authService.AuthenticatedMiddleware()(sut.taskDELETE)(c)
+				err := sut.authService.AuthenticatedMiddleware()(sut.taskDELETE)(c)
+				require.NoError(t, err)
 				require.Equal(t, http.StatusOK, rec.Code)
 
-				_, err := sut.taskService.GetTask(t.Context(), tsk.ID)
+				_, err = sut.taskService.GetTask(t.Context(), tsk.ID)
 				require.Error(t, err)
 			}
 		}
@@ -215,7 +227,8 @@ func TestAuthHandler(t *testing.T) {
 				c.SetPathValues(echo.PathValues{{Name: "id", Value: tsk.ID.String()}})
 				loginUser(t, sut.authService, c, randomUserOfProject.User)
 
-				sut.authService.AuthenticatedMiddleware()(sut.taskUnassignPOST)(c)
+				err := sut.authService.AuthenticatedMiddleware()(sut.taskUnassignPOST)(c)
+				require.NoError(t, err)
 				require.Equal(t, http.StatusOK, rec.Code)
 
 				assignedTasks, err := sut.taskService.GetTasksAssignedToProjectMember(t.Context(), randomUserOfProject.ID)
@@ -234,7 +247,8 @@ func TestAuthHandler(t *testing.T) {
 				c.SetPathValues(echo.PathValues{{Name: "id", Value: tsk.ID.String()}})
 				loginUser(t, sut.authService, c, randomUserOfProject.User)
 
-				sut.authService.AuthenticatedMiddleware()(sut.taskAssignPOST)(c)
+				err := sut.authService.AuthenticatedMiddleware()(sut.taskAssignPOST)(c)
+				require.NoError(t, err)
 				require.Equal(t, http.StatusCreated, rec.Code)
 				returnedAssignedTask := parse[routes.TaskAssignee](t, rec.Body)
 				require.Equal(t, returnedAssignedTask.TaskID, tsk.ID)
@@ -255,7 +269,8 @@ func TestAuthHandler(t *testing.T) {
 				c.SetPathValues(echo.PathValues{{Name: "id", Value: tsk.ID.String()}})
 				loginUser(t, sut.authService, c, randomUserOfProject.User)
 
-				sut.authService.AuthenticatedMiddleware()(sut.taskUnassignPOST)(c)
+				err := sut.authService.AuthenticatedMiddleware()(sut.taskUnassignPOST)(c)
+				require.NoError(t, err)
 				require.Equal(t, http.StatusOK, rec.Code)
 
 				assignedTasks, err := sut.taskService.GetTasksAssignedToProjectMember(t.Context(), randomUserOfProject.ID)
@@ -289,17 +304,15 @@ func TestAuthHandler(t *testing.T) {
 		c.SetPathValues(echo.PathValues{{Name: "id", Value: from.ID.String()}})
 		loginUser(t, sut.authService, c, member.User)
 
-		sut.authService.AuthenticatedMiddleware()(sut.taskMovePOST)(c)
+		err = sut.authService.AuthenticatedMiddleware()(sut.taskMovePOST)(c)
+		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, rec.Code)
-		returnedMovedTasks := parse[[]routes.Task](t, rec.Body)
+		returnedMovedTask := parse[routes.Task](t, rec.Body)
 
 		// only check if the task is now actually at the position
 		// proper move testing is done in service and db layer
-		for _, tsk := range returnedMovedTasks {
-			if tsk.ID == from.ID {
-				require.Equal(t, tsk.Position, to.Position)
-			}
-		}
+		require.Equal(t, from.ID, returnedMovedTask.ID)
+		require.Equal(t, to.Position, returnedMovedTask.Position)
 	})
 
 	runTest(t, db, "tasks assigned to me response should include a task object", func(t *testing.T, db *gorm.DB, sut taskRouteHandler) {
@@ -312,7 +325,8 @@ func TestAuthHandler(t *testing.T) {
 		c := e.NewContext(req, rec)
 		c.SetPathValues(echo.PathValues{{Name: "id", Value: project.ID.String()}})
 		loginUser(t, sut.authService, c, member.User)
-		sut.authService.AuthenticatedMiddleware()(sut.tasksForProjectAssignedToMeGET)(c)
+		err := sut.authService.AuthenticatedMiddleware()(sut.tasksForProjectAssignedToMeGET)(c)
+		require.NoError(t, err)
 
 		require.Equal(t, http.StatusOK, rec.Code)
 		returnedMyTaskAssignments := parse[[]routes.TaskAssigneeWithTask](t, rec.Body)
@@ -331,7 +345,7 @@ func TestAuthHandler(t *testing.T) {
 
 			require.Equal(t, myTaskAssignment.TaskID, ret.TaskID)
 			require.Equal(t, myTaskAssignment.ProjectMemberID, ret.ProjectMemberID)
-			require.Equal(t, myTaskAssignment.AssignedAt, ret.AssignedAt)
+			testutils.RequireEqualTime(t, myTaskAssignment.AssignedAt, ret.AssignedAt)
 			assertEqualTaskResponse(t, myTaskAssignment.Task, ret.Task)
 		}
 	})

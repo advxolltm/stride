@@ -14,13 +14,9 @@ import { useAddProjectSkillMutation } from '../../../../store/features/project/p
 
 interface AddSkillFormProps {
     projectId: string
-    onCancel: () => void
 }
 
-export function AddSkillForm({
-    projectId,
-    onCancel,
-}: Readonly<AddSkillFormProps>) {
+export function AddSkillForm({ projectId }: Readonly<AddSkillFormProps>) {
     const { t } = useTranslation('project')
     const [name, setName] = useState('')
     const [description, setDescription] = useState('')
@@ -43,7 +39,9 @@ export function AddSkillForm({
                 },
             }).unwrap()
             toast.success(t('skillsSettings.addSuccess'))
-            onCancel()
+            setName('')
+            setDescription('')
+            setNameError('')
         } catch {
             toast.danger(t('skillsSettings.addError'))
         }
@@ -84,7 +82,7 @@ export function AddSkillForm({
                 <FieldError />
             </TextField>
 
-            <div className="flex gap-2">
+            <div className="flex">
                 <Button
                     variant="primary"
                     size="sm"
@@ -92,14 +90,6 @@ export function AddSkillForm({
                     isPending={isLoading}
                 >
                     {t('skillsSettings.save')}
-                </Button>
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onPress={onCancel}
-                    isDisabled={isLoading}
-                >
-                    {t('skillsSettings.cancel')}
                 </Button>
             </div>
         </Surface>

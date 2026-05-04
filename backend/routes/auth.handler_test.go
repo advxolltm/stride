@@ -15,7 +15,6 @@ import (
 	"gorm.io/gorm"
 
 	userStore "backend/db/user"
-	"backend/services/auth"
 	authService "backend/services/auth"
 	userService "backend/services/user"
 )
@@ -42,7 +41,7 @@ func TestAuthHandler(t *testing.T) {
 
 	runTest := func(t *testing.T, db *gorm.DB, name string, f func(*testing.T, *gorm.DB, authRouteHandler)) {
 		t.Run(name, func(t *testing.T) {
-			db.Transaction(func(tx *gorm.DB) error {
+			_ = db.Transaction(func(tx *gorm.DB) error {
 				f(t, tx, newTestAuthHandler(tx))
 				return fmt.Errorf("rollback %s", t.Name())
 			})
@@ -176,7 +175,7 @@ func TestAuthHandler(t *testing.T) {
 				}
 
 				cookie := rec.Result().Cookies()[0]
-				if cookie.Name != auth.SessionTokenName {
+				if cookie.Name != authService.SessionTokenName {
 					t.Errorf("expected sessionToken cookie to be set")
 				}
 

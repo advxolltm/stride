@@ -8,7 +8,6 @@ import {
 } from './middleware/themeListener'
 import themeReducer from './themeSlice'
 import taskReducer from './taskSlice'
-import { wsListener } from './middleware/wsListener'
 
 export const store = configureStore({
     reducer: {
@@ -20,8 +19,7 @@ export const store = configureStore({
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware()
             .concat(themeListener.middleware)
-            .concat(baseApi.middleware)
-            .concat(wsListener.middleware),
+            .concat(baseApi.middleware),
 })
 
 setupListeners(store.dispatch)
