@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from '@heroui/react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
@@ -36,24 +36,27 @@ export function useKanbanState() {
     const legacyTaskIdFromUrl = searchParams.get(LEGACY_TASK_ID_PARAM)
     const requestedTaskId = taskIdFromUrl ?? legacyTaskIdFromUrl
 
-    function syncTaskSearchParam(taskId: string | null, replace = false) {
-        setSearchParams(
-            (currentParams) => {
-                const nextParams = new URLSearchParams(currentParams)
+    const syncTaskSearchParam = useCallback(
+        (taskId: string | null, replace = false) => {
+            setSearchParams(
+                (currentParams) => {
+                    const nextParams = new URLSearchParams(currentParams)
 
-                nextParams.delete(LEGACY_TASK_ID_PARAM)
+                    nextParams.delete(LEGACY_TASK_ID_PARAM)
 
-                if (taskId) {
-                    nextParams.set(TASK_ID_PARAM, taskId)
-                } else {
-                    nextParams.delete(TASK_ID_PARAM)
-                }
+                    if (taskId) {
+                        nextParams.set(TASK_ID_PARAM, taskId)
+                    } else {
+                        nextParams.delete(TASK_ID_PARAM)
+                    }
 
-                return nextParams
-            },
-            { replace },
-        )
-    }
+                    return nextParams
+                },
+                { replace },
+            )
+        },
+        [setSearchParams],
+    )
 
     const serverColumns = useMemo(
         () =>
@@ -113,19 +116,16 @@ export function useKanbanState() {
             setLocalColumns(payload.columns)
         }
     })
-    const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
-    const [isDrawerOpen, setDrawerOpen] = useState(false)
     const [view, setView] = useState<'kanban' | 'list'>('kanban')
 
     const selectedTask = useMemo(
-        () => tasks.find((t) => t.id === selectedTaskId) ?? null,
-        [tasks, selectedTaskId],
+        () => tasks.find((task) => task.id === requestedTaskId) ?? null,
+        [requestedTaskId, tasks],
     )
+    const isDrawerOpen = Boolean(selectedTask)
 
     const del = useTaskDelete((deleted) => {
-        if (selectedTaskId === deleted.id) {
-            setDrawerOpen(false)
-            setSelectedTaskId(null)
+        if (requestedTaskId === deleted.id) {
             syncTaskSearchParam(null, true)
         }
     })
@@ -137,31 +137,22 @@ export function useKanbanState() {
     }, [serverColumns, setLocalColumns])
 
     useEffect(() => {
-        if (!requestedTaskId) {
-            setDrawerOpen(false)
-            setSelectedTaskId(null)
+        if (legacyTaskIdFromUrl && !taskIdFromUrl) {
+            syncTaskSearchParam(legacyTaskIdFromUrl, true)
             return
         }
 
-        const taskFromUrl = tasks.find((task) => task.id === requestedTaskId)
-
-        if (taskFromUrl) {
-            setSelectedTaskId(taskFromUrl.id)
-            setDrawerOpen(true)
-
-            if (!taskIdFromUrl && legacyTaskIdFromUrl) {
-                syncTaskSearchParam(legacyTaskIdFromUrl, true)
-            }
-
-            return
-        }
-
-        if (!isLoading) {
-            setDrawerOpen(false)
-            setSelectedTaskId(null)
+        if (requestedTaskId && !isLoading && !selectedTask) {
             syncTaskSearchParam(null, true)
         }
-    }, [isLoading, legacyTaskIdFromUrl, requestedTaskId, taskIdFromUrl, tasks])
+    }, [
+        isLoading,
+        legacyTaskIdFromUrl,
+        requestedTaskId,
+        selectedTask,
+        syncTaskSearchParam,
+        taskIdFromUrl,
+    ])
 
     return {
         ...del,
@@ -177,15 +168,10 @@ export function useKanbanState() {
         selectedTask,
         isDrawerOpen,
         handleTaskClick: (task: Task) => {
-            setSelectedTaskId(task.id)
-            setDrawerOpen(true)
             syncTaskSearchParam(task.id)
         },
         handleDrawerOpenChange: (open: boolean) => {
-            setDrawerOpen(open)
-
             if (!open) {
-                setSelectedTaskId(null)
                 syncTaskSearchParam(null)
             }
         },
