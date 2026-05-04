@@ -4,9 +4,9 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { LogoutButton } from '../../shared/components/LogoutButton'
 import { LogoutConfirmDialog } from '../../shared/components/LogoutConfirmDialog'
+import getInitials from '../../shared/utils/getInitials'
 import { useGetSessionQuery } from '../../store/features/auth/auth.api'
 import { useGetUserByIdQuery } from '../../store/features/user/user.api'
-import getInitials from '../../shared/utils/getInitials'
 
 export function UserMenu() {
     const { data: user } = useGetSessionQuery()
@@ -45,15 +45,14 @@ export function UserMenu() {
                 </Button>
 
                 <Dropdown.Popover>
-                    <Dropdown.Menu
-                        aria-label="User menu"
-                        onAction={(key) => {
-                            if (key === 'profile') {
+                    <Dropdown.Menu aria-label="User menu">
+                        <Dropdown.Item
+                            id="profile"
+                            textValue="Profile"
+                            onClick={() => {
                                 navigate('/settings')
-                            }
-                        }}
-                    >
-                        <Dropdown.Item id="profile" textValue="Profile">
+                            }}
+                        >
                             <div className="flex items-center gap-2">
                                 <User size={16} />
                                 <Label>Profile</Label>
