@@ -7,6 +7,7 @@ import { TaskDueDateField } from './fields/TaskDueDateField'
 import { TaskSkillsField } from './fields/TaskSkillsField'
 import { TaskStatusField } from './fields/TaskStatusField'
 import { TaskTitleField } from './fields/TaskTitleField'
+import { TaskStartDateField } from './fields/TaskStartDateField'
 interface TaskEditDrawerProps {
     task: Task | null
     isOpen: boolean
@@ -39,8 +40,12 @@ export function TaskEditDrawer({
                                 task={task}
                             />
                             <TaskDescriptionField task={task} />
+                            <TaskStartDateField
+                                key={`${task.id}:${"startDate"}`}
+                                task={task}
+                            />
                             <TaskDueDateField
-                                key={`${task.id}:${task.dueDate ?? ''}`}
+                                key={`${task.id}:${'dueDate'}`}
                                 task={task}
                             />
                             <TaskStatusField task={task} />
