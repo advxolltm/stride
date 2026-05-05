@@ -25,8 +25,8 @@ export function TaskEditDrawer({
     return (
         <Drawer isOpen={isOpen} onOpenChange={onOpenChange}>
             <Drawer.Backdrop>
-                <Drawer.Content placement="right" className="w-full max-w-md">
-                    <Drawer.Dialog>
+                <Drawer.Content placement="right">
+                    <Drawer.Dialog className="w-full max-w-md">
                         <Drawer.CloseTrigger />
                         <Drawer.Header>
                             <Drawer.Heading>

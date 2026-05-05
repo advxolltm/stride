@@ -1,8 +1,9 @@
 import { CheckSquare, Lightbulb, MessageCircle } from 'lucide-react'
 import type { JSX } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useParams } from 'react-router'
 import { IconBadge } from '../../../shared/components'
+import { useKeyboardGridNavigation } from '../../../shared/hooks/useKeyboardGridNavigation'
+import { useParams } from 'react-router'
 import ProjectSpaceCard from './ProjectSpaceCard'
 
 interface SpaceItem {
@@ -12,7 +13,6 @@ interface SpaceItem {
 }
 
 export function ProjectSpacesGrid() {
-    const navigate = useNavigate()
     const { projectId } = useParams()
     const { t } = useTranslation('project')
 
@@ -33,6 +33,20 @@ export function ProjectSpacesGrid() {
             icon: <IconBadge color="green" icon={MessageCircle} />,
         },
     ]
+    const keyboardNavigation = useKeyboardGridNavigation<HTMLAnchorElement>({
+        itemCount: spaces.length,
+        getColumnCount: () => {
+            if (window.matchMedia('(min-width: 1024px)').matches) {
+                return 3
+            }
+
+            if (window.matchMedia('(min-width: 640px)').matches) {
+                return 2
+            }
+
+            return 1
+        },
+    })
 
     return (
         <div>
@@ -40,17 +54,25 @@ export function ProjectSpacesGrid() {
 
             <div className="max-w-5xl">
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                    {spaces.map((space) => (
-                        <ProjectSpaceCard
-                            key={space.key}
-                            title={t(`spaces.${space.key}`)}
-                            description={t(`spaces.${space.key}Description`)}
-                            icon={space.icon}
-                            onClick={() =>
-                                navigate(`/project/${projectId}/${space.route}`)
-                            }
-                        />
-                    ))}
+                    {spaces.map((space, index) => {
+                        const itemProps = keyboardNavigation.getItemProps(index)
+
+                        return (
+                            <ProjectSpaceCard
+                                key={space.key}
+                                title={t(`spaces.${space.key}`)}
+                                description={t(
+                                    `spaces.${space.key}Description`,
+                                )}
+                                icon={space.icon}
+                                href={`/project/${projectId}/${space.route}`}
+                                linkRef={itemProps.itemRef}
+                                tabIndex={itemProps.tabIndex}
+                                onFocus={itemProps.onFocus}
+                                onKeyDown={itemProps.onKeyDown}
+                            />
+                        )
+                    })}
                 </div>
             </div>
         </div>

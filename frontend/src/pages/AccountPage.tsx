@@ -8,9 +8,9 @@ import {
     SecuritySection,
     SkillsSection,
 } from '../components/account'
+import { useGetSessionQuery } from '../store/features/auth/auth.api'
 import { useGetUserByIdQuery } from '../store/features/user/user.api'
 import { AccountPageSkeleton } from './AccountPageSkeleton'
-import { useGetSessionQuery } from '../store/features/auth/auth.api'
 
 export function AccountPage() {
     const { t } = useTranslation('setting')
