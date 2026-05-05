@@ -1,7 +1,5 @@
 import type { User } from '../../../shared/types'
 
-// --- Api types ---
-
 export type ApiTaskAssignee = {
     id: string
     task_id: string
@@ -58,8 +56,6 @@ export type ApiTask = {
     task_assignees: ApiTaskAssignee[]
     task_skills: ApiTaskSkill[]
 }
-
-// --- Domain types ---
 
 export type TaskStatus = 'todo' | 'in_progress' | 'done'
 

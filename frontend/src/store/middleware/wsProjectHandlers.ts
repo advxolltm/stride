@@ -10,7 +10,7 @@ import type {
     Project,
     ProjectMember,
 } from '../features/project/project.types'
-import { WSMessageType } from './wsMessageTypes'
+import { WSMessageType } from '../features/projectSocket/projectSocket.types'
 import type { WsListenerApi } from './wsTaskHandlers'
 
 type ProjectMemberRemovePayload = {
