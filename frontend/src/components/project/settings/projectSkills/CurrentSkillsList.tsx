@@ -1,3 +1,4 @@
+import { Inbox } from 'lucide-react'
 import type { ProjectSkill } from '../../../../store/features/project/project.types'
 import { SkillCard } from './SkillCard'
 
@@ -30,7 +31,10 @@ export function CurrentSkillsList({
                 ))}
 
             {skills.length === 0 && !isAddingCustom && (
-                <p className="py-4 text-center text-sm">{emptyLabel}</p>
+                <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-2 text-center text-sm">
+                    <Inbox size={28} />
+                    <p>{emptyLabel}</p>
+                </div>
             )}
         </div>
     )
