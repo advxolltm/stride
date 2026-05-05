@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from '@heroui/react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
-import type { Task } from '../../../../../store/features/tasks/task.types'
+import type { Column, Task } from '../../../../../store/features/tasks/task.types'
 import { useTaskBoard } from '../context/useTaskBoard'
 import { useKanbanDrag } from '../hooks/useKanbanDrag'
 import { useTaskDelete } from '../hooks/useTaskDelete'
@@ -23,6 +23,36 @@ function getColumnColor(status: 'todo' | 'in_progress' | 'done') {
         case 'done':
             return '#22c55e'
     }
+}
+
+function getTargetProjectPosition(
+    columns: Column[],
+    taskId: string,
+    toStatus: Task['status'],
+    currentPosition: number,
+) {
+    const targetColumn = columns.find((column) => column.id === toStatus)
+    const targetIndex =
+        targetColumn?.tasks.findIndex((task) => task.id === taskId) ?? -1
+
+    if (!targetColumn || targetIndex === -1) return null
+
+    const previousTask = targetColumn.tasks[targetIndex - 1]
+    const nextTask = targetColumn.tasks[targetIndex + 1]
+
+    if (nextTask) {
+        return currentPosition < nextTask.position
+            ? nextTask.position - 1
+            : nextTask.position
+    }
+
+    if (previousTask) {
+        return currentPosition < previousTask.position
+            ? previousTask.position
+            : previousTask.position + 1
+    }
+
+    return currentPosition
 }
 
 export function useKanbanState() {
@@ -82,11 +112,14 @@ export function useKanbanState() {
         const movedTask = tasks.find((task) => task.id === payload.taskId)
         if (!movedTask || !projectId) return
 
-        const nextPosition = payload.columns
-            .flatMap((column) => column.tasks)
-            .findIndex((task) => task.id === payload.taskId)
+        const nextPosition = getTargetProjectPosition(
+            payload.columns,
+            payload.taskId,
+            payload.toStatus,
+            movedTask.position,
+        )
 
-        if (nextPosition === -1) return
+        if (nextPosition === null) return
 
         isPersistingMoveRef.current = true
 
