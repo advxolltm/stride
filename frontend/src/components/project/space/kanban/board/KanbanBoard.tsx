@@ -34,6 +34,7 @@ export function KanbanBoard() {
         confirmDelete,
         cancelDelete,
         handleDragStart,
+        handleDragOver,
         handleDragEnd,
     } = useKanbanState()
 
@@ -95,10 +96,11 @@ export function KanbanBoard() {
                         sensors={sensors}
                         collisionDetection={closestCorners}
                         onDragStart={handleDragStart}
+                        onDragOver={handleDragOver}
                         onDragEnd={handleDragEnd}
                     >
-                        <div className="h-[calc(100vh-320px)] min-h-[420px] overflow-hidden">
-                            <div className="grid h-full min-h-0 grid-cols-3 grid-rows-1 gap-6">
+                        <div className="h-[calc(100vh-320px)] min-h-[420px] overflow-x-auto">
+                            <div className="flex h-full min-h-0 gap-6">
                                 {localColumns.map((col) => (
                                     <KanbanColumn
                                         key={col.id}

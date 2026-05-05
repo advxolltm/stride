@@ -64,6 +64,7 @@
       "skillsPlaceholder": "Fähigkeiten hinzufügen...",
       "skillsSearch": "Fähigkeiten suchen",
       "skillsEmpty": "Keine Fähigkeiten gefunden",
+      "skillsUnavailable": "Keine Fähigkeiten verfügbar",
       "assigneeSearch": "Benutzer suchen...",
       "assigneeEmpty": "Kein Zuständiger"
     }

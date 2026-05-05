@@ -1,22 +1,11 @@
-import { Outlet, useParams } from "react-router-dom";
-import { useEffect } from "react";
-import { useDispatch } from "react-redux";
-import { wsConnect, wsDisconnect } from "../store/middleware/wsListener";
+import { skipToken } from '@reduxjs/toolkit/query'
+import { Outlet, useParams } from 'react-router-dom'
+import { useWatchProjectSocketsQuery } from '../store/features/projectSocket/projectSocket.api'
 
 export default function ProjectLayout() {
-  const { projectId } = useParams();
-  const dispatch = useDispatch();
+    const { projectId } = useParams()
 
-  useEffect(() => {
-	console.log("connect triggered: ", projectId);
-    if (!projectId) return;
+    useWatchProjectSocketsQuery(projectId ?? skipToken)
 
-    dispatch(wsConnect(projectId));
-
-    return () => {
-      dispatch(wsDisconnect());
-    };
-  }, [dispatch, projectId]);
-
-  return <Outlet />;
+    return <Outlet />
 }

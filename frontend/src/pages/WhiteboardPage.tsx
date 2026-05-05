@@ -307,7 +307,10 @@ export function WhiteboardPage() {
                     </span>
                     <span>Stride</span>
                 </Link>
-                <ChevronRight size={14} className="shrink-0 text-[var(--muted)]" />
+                <ChevronRight
+                    size={14}
+                    className="shrink-0 text-[var(--muted)]"
+                />
                 <Link
                     to="/"
                     className="flex h-8 shrink-0 items-center gap-1.5 rounded-full px-2 font-medium text-[var(--muted)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]"
@@ -316,14 +319,20 @@ export function WhiteboardPage() {
                     <Home size={15} />
                     <span>{t('common:navigation.overview')}</span>
                 </Link>
-                <ChevronRight size={14} className="shrink-0 text-[var(--muted)]" />
+                <ChevronRight
+                    size={14}
+                    className="shrink-0 text-[var(--muted)]"
+                />
                 <Link
                     to={`/project/${projectId}`}
                     className="max-w-[160px] truncate rounded-full px-2 py-1 font-medium text-[var(--muted)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]"
                 >
                     {projectName}
                 </Link>
-                <ChevronRight size={14} className="shrink-0 text-[var(--muted)]" />
+                <ChevronRight
+                    size={14}
+                    className="shrink-0 text-[var(--muted)]"
+                />
                 <span className="rounded-full px-2 py-1 font-semibold text-[var(--foreground)]">
                     {t('spaces.whiteboard')}
                 </span>

@@ -307,15 +307,12 @@ func TestTaskHandler(t *testing.T) {
 		err = sut.authService.AuthenticatedMiddleware()(sut.taskMovePOST)(c)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, rec.Code)
-		returnedMovedTasks := parse[[]routes.Task](t, rec.Body)
+		returnedMovedTask := parse[routes.Task](t, rec.Body)
 
 		// only check if the task is now actually at the position
 		// proper move testing is done in service and db layer
-		for _, tsk := range returnedMovedTasks {
-			if tsk.ID == from.ID {
-				require.Equal(t, tsk.Position, to.Position)
-			}
-		}
+		require.Equal(t, from.ID, returnedMovedTask.ID)
+		require.Equal(t, to.Position, returnedMovedTask.Position)
 	})
 
 	runTest(t, db, "tasks assigned to me response should include a task object", func(t *testing.T, db *gorm.DB, sut taskRouteHandler) {

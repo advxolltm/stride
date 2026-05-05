@@ -34,7 +34,7 @@ export function KanbanColumn({
     const Icon = columnIcons[column.id]
 
     return (
-        <div className="bg-surface-secondary border-border flex h-full min-h-0 min-w-0 flex-1 flex-col gap-3 rounded-xl border p-3 shadow-sm">
+        <div className="bg-surface-secondary border-border flex h-full min-h-0 min-w-72 flex-1 flex-col gap-3 rounded-xl border p-3 shadow-sm">
             <div className="border-border/70 -mx-3 border-b pb-2">
                 <div className="flex items-center gap-2 px-3">
                     <Icon
@@ -50,7 +50,6 @@ export function KanbanColumn({
                     </span>
                 </div>
             </div>
-
             {/* Add Task Form (NOT scrollable anymore) */}
             {isAddingTask && (
                 <AddTaskForm
@@ -58,7 +57,6 @@ export function KanbanColumn({
                     onCancel={() => setIsAddingTask(false)}
                 />
             )}
-
             <SortableContext
                 items={column.tasks.map((task) => task.id)}
                 strategy={verticalListSortingStrategy}
@@ -78,7 +76,6 @@ export function KanbanColumn({
                     ))}
                 </div>
             </SortableContext>
-
             <Button
                 variant="ghost"
                 size="sm"

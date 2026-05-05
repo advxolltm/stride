@@ -7,6 +7,7 @@ import { useGetSessionQuery } from '../../../store/features/auth/auth.api'
 import type { Project } from '../../../store/features/project/project.types'
 import { ProjectSettingsModal } from '../settings/ProjectSettingsModal'
 import { AddMembersDialog } from './addMembersDialog/AddMembersDialog'
+import { Link } from 'react-router-dom'
 
 interface ProjectOverviewHeaderProps {
     project: Project
@@ -48,12 +49,17 @@ export function ProjectOverviewHeader({
                             </Button>
                         )}
 
-                        <Button
-                            onPress={() => setSettingsOpen(true)}
-                            isIconOnly
-                        >
-                            <Settings color="white" size={18} />
-                        </Button>
+                        <div className="flex flex-row gap-2">
+                            <Link to="ws-test">
+                                <Button>Go to whiteboard test page</Button>
+                            </Link>
+                            <Button
+                                onPress={() => setSettingsOpen(true)}
+                                isIconOnly
+                            >
+                                <Settings color="white" size={18} />
+                            </Button>
+                        </div>
                     </div>
                 </div>
             </div>

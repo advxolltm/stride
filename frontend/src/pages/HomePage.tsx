@@ -1,20 +1,34 @@
-import { useNavigate } from 'react-router'
-import { useOutletContext } from 'react-router-dom'
+import { Spinner } from '@heroui/react'
 import { useTranslation } from 'react-i18next'
-import { MainPageLayout } from '../components/main/MainPageLayout'
+import { useOutletContext } from 'react-router-dom'
+import { EmptyProjectsState } from '../components/main/EmptyProjectsState'
 import { MainPageCard } from '../components/main/MainPageCard'
 import { MainPageHeader } from '../components/main/MainPageHeader'
-import { EmptyProjectsState } from '../components/main/EmptyProjectsState'
+import { MainPageLayout } from '../components/main/MainPageLayout'
 import type { AppLayoutOutletContext } from '../layouts/AppLayout'
+import { useKeyboardGridNavigation } from '../shared/hooks/useKeyboardGridNavigation'
 import { useGetProjectsQuery } from '../store/features/project/project.api'
 
 export function HomePage() {
-    const navigate = useNavigate()
     const { t } = useTranslation('project')
     const { openCreateProjectDialog } =
         useOutletContext<AppLayoutOutletContext>()
     const { data: projects = [], isLoading } = useGetProjectsQuery()
     const hasProjects = projects.length > 0
+    const keyboardNavigation = useKeyboardGridNavigation<HTMLAnchorElement>({
+        itemCount: projects.length,
+        getColumnCount: () => {
+            if (window.matchMedia('(min-width: 1024px)').matches) {
+                return 4
+            }
+
+            if (window.matchMedia('(min-width: 640px)').matches) {
+                return 2
+            }
+
+            return 1
+        },
+    })
 
     const handleCreateProject = () => {
         openCreateProjectDialog()
@@ -32,20 +46,30 @@ export function HomePage() {
                 />
 
                 {isLoading ? (
-                    <div className="py-10 text-sm text-[var(--muted)]">
-                        Loading projects...
+                    <div className="flex h-full w-full items-center justify-center">
+                        <Spinner
+                            className="block h-10 w-10 text-[var(--accent)]"
+                            size="sm"
+                        />
                     </div>
                 ) : hasProjects ? (
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                        {projects.map((project) => (
-                            <MainPageCard
-                                key={project.id}
-                                project={project}
-                                onClick={() =>
-                                    navigate(`/project/${project.id}`)
-                                }
-                            />
-                        ))}
+                        {projects.map((project, index) => {
+                            const itemProps =
+                                keyboardNavigation.getItemProps(index)
+
+                            return (
+                                <MainPageCard
+                                    key={project.id}
+                                    project={project}
+                                    href={`/project/${project.id.toString()}`}
+                                    linkRef={itemProps.itemRef}
+                                    tabIndex={itemProps.tabIndex}
+                                    onFocus={itemProps.onFocus}
+                                    onKeyDown={itemProps.onKeyDown}
+                                />
+                            )
+                        })}
                     </div>
                 ) : (
                     <EmptyProjectsState onCreateProject={handleCreateProject} />

@@ -1,7 +1,6 @@
 import { Button, Tooltip } from '@heroui/react'
 import { useState } from 'react'
 import { FolderKanban, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
-import { useLocation, useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { SidebarItems, type SidebarProject } from '../main/SidebarItems'
 import { LogoutButton } from '../../shared/components/LogoutButton'
@@ -20,8 +19,6 @@ export function Sidebar({
     onToggle,
     onCreateProject,
 }: SidebarProps) {
-    const navigate = useNavigate()
-    const location = useLocation()
     const { t } = useTranslation('common')
     const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false)
     const { data: projects = [] } = useGetProjectsQuery()
@@ -31,28 +28,6 @@ export function Sidebar({
         label: project.name,
         icon: <FolderKanban size={14} />,
     }))
-
-    const getActiveKey = () => {
-        if (location.pathname === '/') {
-            return 'overview'
-        }
-
-        if (location.pathname.startsWith('/project/')) {
-            const projectId = location.pathname.split('/')[2]
-            return projectId || ''
-        }
-
-        return ''
-    }
-
-    const handleSelect = (key: string) => {
-        if (key === 'overview') {
-            navigate('/')
-            return
-        }
-
-        navigate(`/project/${key}`)
-    }
 
     const toggleButton = (
         <Button
@@ -98,8 +73,6 @@ export function Sidebar({
 
             <SidebarItems
                 collapsed={collapsed}
-                activeKey={getActiveKey()}
-                onSelect={handleSelect}
                 projects={sidebarProjects}
                 onCreateProject={onCreateProject}
             />
