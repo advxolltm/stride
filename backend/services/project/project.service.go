@@ -145,6 +145,9 @@ func (s projectService) CreateProject(ctx context.Context, createdBy *uuid.UUID,
 		if errors.Is(err, project.ErrDuplicateSlug) {
 			return nil, ErrDuplicateSlug
 		}
+		if errors.Is(err, project.ErrProjectNameTooLong) {
+			return nil, ErrProjectNameTooLong
+		}
 		return nil, fmt.Errorf("%w: %w", ErrProjectStoreFailed, err)
 	}
 	return p, nil
@@ -239,6 +242,10 @@ func (s projectService) AddProjectSkill(ctx context.Context, projectId uuid.UUID
 		switch err {
 		case project.ErrProjectNotFound:
 			return nil, ErrProjectNotFound
+		case project.ErrSkillNameTooLong:
+			return nil, ErrSkillNameTooLong
+		case project.ErrSkillDescriptionTooLong:
+			return nil, ErrSkillDescriptionTooLong
 		}
 		return nil, fmt.Errorf("%w: %w", ErrProjectStoreFailed, err)
 	}

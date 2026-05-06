@@ -67,6 +67,12 @@ func mapServiceErrorProj(err error) (int, string) {
 		return http.StatusNotFound, err.Error()
 	case errors.Is(err, projectService.ErrDuplicateSlug):
 		return http.StatusConflict, err.Error()
+	case errors.Is(err, projectService.ErrProjectNameTooLong):
+		return http.StatusBadRequest, err.Error()
+	case errors.Is(err, projectService.ErrSkillNameTooLong):
+		return http.StatusBadRequest, err.Error()
+	case errors.Is(err, projectService.ErrSkillDescriptionTooLong):
+		return http.StatusBadRequest, err.Error()
 	default:
 		return http.StatusInternalServerError, "internal server error"
 	}
