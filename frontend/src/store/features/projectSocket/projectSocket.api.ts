@@ -4,7 +4,10 @@ import {
     handleTaskWsMessage,
     type WsListenerApi,
 } from '../../middleware/wsTaskHandlers'
-import type { projectSocketSocketState, WSMessage } from './projectSocket.types'
+import {
+    type projectSocketSocketState,
+    type WSMessage,
+} from './projectSocket.types'
 
 const createProjectSocketSocketUrl = (projectId: string) =>
     buildApiWebSocketUrl(`/ws/project/${projectId}/kanban`)
@@ -86,8 +89,6 @@ export const projectSocketApi = baseApi.injectEndpoints({
                                 getState,
                             }
 
-                            console.log('projectSocket received message', message)
-
                             if (
                                 handleTaskWsMessage(
                                     message.type,
@@ -96,7 +97,6 @@ export const projectSocketApi = baseApi.injectEndpoints({
                                     api,
                                 )
                             ) {
-                                console.log('handled by task handlers')
                                 return
                             }
 

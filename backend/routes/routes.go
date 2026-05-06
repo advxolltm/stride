@@ -378,6 +378,8 @@ const (
 	// Project message types
 	ProjectMemberAdd
 	ProjectMemberRemove
+	ProjectSkillAdd
+	ProjectSkillRemove
 )
 
 type WSMessage[T any] struct {

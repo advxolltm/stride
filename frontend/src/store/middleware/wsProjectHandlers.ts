@@ -1,14 +1,20 @@
-import { baseApi } from '../api/base.api'
 import {
     applyProjectMembers,
+    applyProjectSkill,
     removeProjectMemberByIdOrUserId,
+    removeProjectSkillById,
 } from '../features/project/project.cache'
 import { projectApi } from '../features/project/project.api'
-import { transformProjectMember } from '../features/project/project.mappers'
+import {
+    transformProjectMember,
+    transformProjectSkill,
+} from '../features/project/project.mappers'
 import type {
     ApiProjectMember,
+    ApiProjectSkill,
     Project,
     ProjectMember,
+    ProjectSkill,
 } from '../features/project/project.types'
 import { WSMessageType } from '../features/projectSocket/projectSocket.types'
 import type { WsListenerApi } from './wsTaskHandlers'
@@ -20,6 +26,14 @@ type ProjectMemberRemovePayload = {
     memberId?: string
     user_id?: string
     userId?: string
+}
+
+type ProjectSkillRemovePayload = {
+    project_skill_id?: string
+    projectSkillId?: string
+    skill_id?: string
+    skillId?: string
+    id?: string
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -40,17 +54,13 @@ const isApiProjectMember = (value: unknown): value is ApiProjectMember =>
     typeof value.joined_at === 'string' &&
     isApiProjectUser(value.user)
 
-const invalidateProjectMembers = (api: WsListenerApi, projectId: string) => {
-    api.dispatch(
-        baseApi.util.invalidateTags([
-            { type: 'ProjectMember', id: projectId },
-            { type: 'Project', id: projectId },
-            { type: 'Project', id: 'LIST' },
-        ]),
-    )
-}
+const isApiProjectSkill = (value: unknown): value is ApiProjectSkill =>
+    isRecord(value) &&
+    typeof value.id === 'string' &&
+    typeof value.project_id === 'string' &&
+    typeof value.name === 'string'
 
-const patchProjectMemberCaches = (
+const patchProjectCaches = (
     api: WsListenerApi,
     projectId: string,
     apply: (project: Project) => void,
@@ -98,8 +108,52 @@ const patchAddedMembers = (
             },
         ),
     )
-    patchProjectMemberCaches(api, projectId, (project) => {
+    patchProjectCaches(api, projectId, (project) => {
         applyProjectMembers(project, members)
+    })
+}
+
+const patchProjectSkillCaches = (
+    api: WsListenerApi,
+    projectId: string,
+    skill: ProjectSkill,
+) => {
+    api.dispatch(
+        projectApi.util.updateQueryData(
+            'getProjectSkills',
+            projectId,
+            (draft) => {
+                const existingIndex = draft.findIndex(
+                    (item) => item.id === skill.id,
+                )
+
+                if (existingIndex === -1) {
+                    draft.push(skill)
+                } else {
+                    draft[existingIndex] = skill
+                }
+            },
+        ),
+    )
+    patchProjectCaches(api, projectId, (project) => {
+        applyProjectSkill(project, skill)
+    })
+}
+
+const removeProjectSkillFromCaches = (
+    api: WsListenerApi,
+    projectId: string,
+    skillId: string,
+) => {
+    api.dispatch(
+        projectApi.util.updateQueryData(
+            'getProjectSkills',
+            projectId,
+            (draft) => draft.filter((skill) => skill.id !== skillId),
+        ),
+    )
+    patchProjectCaches(api, projectId, (project) => {
+        removeProjectSkillById(project, skillId)
     })
 }
 
@@ -119,6 +173,21 @@ const getRemovedMemberId = (payload: unknown) => {
     )
 }
 
+const getRemovedSkillId = (payload: unknown) => {
+    if (isApiProjectSkill(payload)) {
+        return payload.id
+    }
+
+    const removePayload = payload as ProjectSkillRemovePayload
+    return (
+        removePayload.project_skill_id ??
+        removePayload.projectSkillId ??
+        removePayload.skill_id ??
+        removePayload.skillId ??
+        removePayload.id
+    )
+}
+
 export function handleProjectWsMessage(
     type: number,
     payload: unknown,
@@ -130,7 +199,6 @@ export function handleProjectWsMessage(
             const apiMembers = Array.isArray(payload) ? payload : [payload]
 
             if (!apiMembers.every(isApiProjectMember)) {
-                invalidateProjectMembers(api, projectId)
                 return true
             }
 
@@ -145,7 +213,6 @@ export function handleProjectWsMessage(
             const memberId = getRemovedMemberId(payload)
 
             if (!memberId) {
-                invalidateProjectMembers(api, projectId)
                 return true
             }
 
@@ -161,9 +228,31 @@ export function handleProjectWsMessage(
                         ),
                 ),
             )
-            patchProjectMemberCaches(api, projectId, (project) => {
+            patchProjectCaches(api, projectId, (project) => {
                 removeProjectMemberByIdOrUserId(project, memberId)
             })
+            return true
+        }
+        case WSMessageType.ProjectSkillAdd: {
+            if (!isApiProjectSkill(payload)) {
+                return true
+            }
+
+            patchProjectSkillCaches(
+                api,
+                projectId,
+                transformProjectSkill(payload),
+            )
+            return true
+        }
+        case WSMessageType.ProjectSkillRemove: {
+            const skillId = getRemovedSkillId(payload)
+
+            if (!skillId) {
+                return true
+            }
+
+            removeProjectSkillFromCaches(api, projectId, skillId)
             return true
         }
         default:

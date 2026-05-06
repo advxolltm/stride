@@ -60,7 +60,7 @@ func closeMigration(migration *migrate.Migrate) {
 	if migration == nil {
 		return
 	}
-	
+
 	srcErr, dbErr := migration.Close()
 	if srcErr != nil || dbErr != nil {
 		println("failed to close migration", "source_error", srcErr, "db_error", dbErr)
@@ -121,7 +121,7 @@ func main() {
 	if envEnabled("EXIT_AFTER_DB_SETUP") {
 		return
 	}
-	
+
 	rdb := db.InitRedis(db.RedisDSNFromEnv())
 	defer func() {
 		err := rdb.Close()
@@ -152,7 +152,7 @@ func main() {
 		routes.NewHealthRouteHandler(),
 		routes.NewAuthRouteHandler(authService, userService),
 		routes.NewExampleRouteHandler(exampleService, authService, rdb),
-		projects.NewProjectsGroup(projectService, whiteboardService, authService),
+		projects.NewProjectsGroup(projectService, whiteboardService, authService, rdb),
 		taskHandler.NewTaskRouteHandler(authService, taskService, projectService, rdb),
 		routes.NewUserRouteHandler(userService, authService),
 		wsRoutes.NewWSRouteHandler(authService, projectService, userService, rdb),

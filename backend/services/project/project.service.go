@@ -212,7 +212,30 @@ func (s projectService) AddUsersToProject(ctx context.Context, members []AddMemb
 		}
 		return nil, fmt.Errorf("%w: %w", ErrProjectStoreFailed, err)
 	}
-	return projectMembers, nil
+
+	allMembers, err := s.projectStore.GetProjectMembers(ctx, projectId)
+	if err != nil {
+		if errors.Is(err, project.ErrProjectNotFound) {
+			return nil, ErrProjectNotFound
+		}
+		return nil, fmt.Errorf("%w: %w", ErrProjectStoreFailed, err)
+	}
+
+	membersByUserID := make(map[uuid.UUID]models.ProjectMember, len(allMembers))
+	for _, member := range allMembers {
+		membersByUserID[member.UserID] = member
+	}
+
+	newMembers := make([]models.ProjectMember, 0, len(members))
+	for _, member := range members {
+		projectMember, ok := membersByUserID[member.UserId]
+		if !ok {
+			return nil, fmt.Errorf("%w: newly added project member %s was not found", ErrProjectStoreFailed, member.UserId)
+		}
+		newMembers = append(newMembers, projectMember)
+	}
+
+	return newMembers, nil
 }
 func (s projectService) RemoveUserFromProject(ctx context.Context, userId uuid.UUID, projectId uuid.UUID) error {
 	err := s.projectStore.RemoveUserFromProject(ctx, userId, projectId)
