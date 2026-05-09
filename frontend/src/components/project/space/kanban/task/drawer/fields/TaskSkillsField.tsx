@@ -20,7 +20,7 @@ import { useTaskBoard } from '../../../context/useTaskBoard'
 
 export function TaskSkillsField({ task }: { task: Task }) {
     const { t } = useTranslation('space')
-    const { skills, projectId } = useTaskBoard()
+    const { skills, projectId, isArchived } = useTaskBoard()
     const [addSkill, { isLoading: isAdding }] = useAddSkillToTaskMutation()
     const [removeSkill, { isLoading: isRemoving }] =
         useRemoveSkillFromTaskMutation()
@@ -29,6 +29,35 @@ export function TaskSkillsField({ task }: { task: Task }) {
     const selectedKeys = (task.skills ?? []).map(
         (skill) => skill.projectSkillId,
     )
+    const selectedSkills = selectedKeys
+        .map((skillId) => skills.find((skill) => skill.id === skillId))
+        .filter((skill): skill is NonNullable<typeof skill> => Boolean(skill))
+
+    if (isArchived) {
+        return (
+            <div className="flex flex-col gap-1.5">
+                <Label>{t('tasks.form.skills')}</Label>
+                <div className="border-border bg-surface-secondary flex min-h-9 w-full items-center rounded-lg border px-3 py-2">
+                    {selectedSkills.length > 0 ? (
+                        <div className="flex flex-wrap gap-1.5">
+                            {selectedSkills.map((skill) => (
+                                <span
+                                    key={skill.id}
+                                    className="bg-surface text-foreground border-border inline-flex min-h-6 items-center rounded-md border px-2 py-0.5 text-xs"
+                                >
+                                    {skill.name}
+                                </span>
+                            ))}
+                        </div>
+                    ) : (
+                        <span className="text-muted text-sm">
+                            {t('tasks.form.skillsUnavailable')}
+                        </span>
+                    )}
+                </div>
+            </div>
+        )
+    }
 
     async function handleChange(keys: Key[]) {
         const incoming = keys as string[]
@@ -69,7 +98,7 @@ export function TaskSkillsField({ task }: { task: Task }) {
                 placeholder={t('tasks.form.skillsPlaceholder')}
                 selectionMode="multiple"
                 value={selectedKeys}
-                isDisabled={isAdding || isRemoving}
+                isDisabled={isAdding || isRemoving || isArchived}
                 onChange={(keys) => handleChange(keys as Key[])}
                 aria-label={t('tasks.form.skills')}
             >
@@ -86,7 +115,9 @@ export function TaskSkillsField({ task }: { task: Task }) {
                                 <TagGroup
                                     aria-label={t('tasks.form.skills')}
                                     selectionMode="none"
-                                    onRemove={handleRemove}
+                                    onRemove={
+                                        isArchived ? undefined : handleRemove
+                                    }
                                     variant="surface"
                                 >
                                     <TagGroup.List
@@ -105,7 +136,9 @@ export function TaskSkillsField({ task }: { task: Task }) {
                                         {(item) => (
                                             <Tag key={item.id} id={item.id}>
                                                 {item.name}
-                                                <Tag.RemoveButton />
+                                                {!isArchived && (
+                                                    <Tag.RemoveButton />
+                                                )}
                                             </Tag>
                                         )}
                                     </TagGroup.List>

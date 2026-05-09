@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
+import { isProjectArchived } from '../../../../../shared/utils/projectStatus'
 import { useGetProjectByIdQuery } from '../../../../../store/features/project/project.api'
 import { useGetTasksForProjectQuery } from '../../../../../store/features/tasks/task.api'
 import type { TaskBoardContextValue } from './taskBoard.types'
@@ -15,16 +16,18 @@ export function TaskBoardProvider({ children }: { children: React.ReactNode }) {
     const { t } = useTranslation('space')
 
     // Fetch tasks for the given project
-    const { data: tasks = [], isLoading } = useGetTasksForProjectQuery(
-        projectId!,
-    )
+    const { data: tasks = [], isLoading: isTasksLoading } =
+        useGetTasksForProjectQuery(projectId!)
     // Fetch project in order to access its details (members, skills, etc.)
-    const { data: project } = useGetProjectByIdQuery(projectId!)
+    const { data: project, isLoading: isProjectLoading } =
+        useGetProjectByIdQuery(projectId!)
 
     // Memoize the context value to prevent unnecessary re-renders
     const value = useMemo<TaskBoardContextValue>(
         () => ({
             projectId: project?.id ?? '',
+            project: project ?? null,
+            isArchived: isProjectArchived(project),
             members: project?.members ?? [], // Provide project members, fallback to empty array if not loaded yet
             skills: project?.skills ?? [], // Provide project skills, fallback to empty array
             statusOptions: [
@@ -33,9 +36,9 @@ export function TaskBoardProvider({ children }: { children: React.ReactNode }) {
                 { id: 'done', label: t('tasks.columns.done') },
             ], // Static task status columns with translated labels
             tasks, // List of tasks for the board
-            isLoading, // Loading state for tasks fetching
+            isLoading: isTasksLoading || isProjectLoading, // Loading state for tasks and project fetching
         }),
-        [project, tasks, isLoading, t],
+        [project, tasks, isTasksLoading, isProjectLoading, t],
     )
 
     // Provide the computed value to all children components

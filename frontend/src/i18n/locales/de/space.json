@@ -31,7 +31,8 @@
       "dueDateUpdateError": "Faelligkeitsdatum konnte nicht aktualisiert werden.",
       "loading": "Aufgaben werden geladen...",
       "createSuccess": "Aufgabe erstellt.",
-      "createError": "Aufgabe konnte nicht erstellt werden."
+      "createError": "Aufgabe konnte nicht erstellt werden.",
+      "archivedReadOnly": "Archiviertes Projekt - schreibgeschuetzt"
     },
     "drawer": {
       "detailsTitle": "Aufgabendetails",

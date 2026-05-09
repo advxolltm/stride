@@ -18,7 +18,10 @@ interface TaskDateFieldProps {
     dateValue: string | null
     minDateValue?: string | null
     maxDateValue?: string | null
-    requestFieldName: Extract<keyof UpdateTaskRequest, 'start_date' | 'due_date'>
+    requestFieldName: Extract<
+        keyof UpdateTaskRequest,
+        'start_date' | 'due_date'
+    >
 }
 
 type OptimisticDateUpdate = {
@@ -37,7 +40,7 @@ export function TaskDateField({
     requestFieldName,
 }: Readonly<TaskDateFieldProps>) {
     const { t, i18n } = useTranslation('space')
-    const { projectId } = useTaskBoard()
+    const { projectId, isArchived } = useTaskBoard()
     const [updateTask, { isLoading: isSaving }] = useUpdateTaskMutation()
     const [isOpen, setIsOpen] = useState(false)
     const [optimisticDateUpdate, setOptimisticDateUpdate] =
@@ -62,6 +65,20 @@ export function TaskDateField({
               timeZone: 'UTC',
           })
         : emptyLabel
+
+    if (isArchived) {
+        return (
+            <div className="flex flex-col gap-1.5">
+                <Label>{label}</Label>
+                <div className="border-border bg-surface-secondary text-foreground flex min-h-9 w-full items-center gap-2 rounded-lg border px-3 py-2 text-sm">
+                    <CalendarDays size={14} className="text-muted shrink-0" />
+                    <span className={dateOnly ? '' : 'text-muted'}>
+                        {formattedLabel}
+                    </span>
+                </div>
+            </div>
+        )
+    }
 
     async function updateTaskDate(nextDate: string | null) {
         setOptimisticDateUpdate({
@@ -94,7 +111,7 @@ export function TaskDateField({
                         variant="outline"
                         size="sm"
                         className="w-full justify-start gap-2 font-normal"
-                        isDisabled={isSaving}
+                        isDisabled={isSaving || isArchived}
                     >
                         <CalendarDays
                             size={14}

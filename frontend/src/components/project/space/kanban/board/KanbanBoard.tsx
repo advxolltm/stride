@@ -6,8 +6,8 @@ import {
     useSensor,
     useSensors,
 } from '@dnd-kit/core'
-import { Button, Tabs } from '@heroui/react'
-import { LayoutGrid, UserPlus } from 'lucide-react'
+import { Button, Chip, Tabs } from '@heroui/react'
+import { Archive, LayoutGrid, UserPlus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { ConfirmDialog } from '../../../../../shared/components'
 import { useTaskBoard } from '../context/useTaskBoard'
@@ -18,7 +18,7 @@ import { useKanbanState } from './useKanbanState'
 
 export function KanbanBoard() {
     const { t } = useTranslation('space')
-    const { isLoading } = useTaskBoard()
+    const { isLoading, isArchived } = useTaskBoard()
     const {
         localColumns,
         activeTask,
@@ -84,7 +84,17 @@ export function KanbanBoard() {
                     </Tabs.ListContainer>
 
                     <div className="flex items-center gap-2">
-                        <Button size="sm" variant="secondary">
+                        {isArchived && (
+                            <Chip size="sm" variant="soft" className="flex flex-row gap-2 items-center shrink-0">
+                                <Archive size={14} />
+                                {t('tasks.messages.archivedReadOnly')}
+                            </Chip>
+                        )}
+                        <Button
+                            size="sm"
+                            variant="secondary"
+                            isDisabled={isArchived}
+                        >
                             <UserPlus size={16} />
                             {t('tasks.actions.assign')}
                         </Button>
@@ -107,14 +117,17 @@ export function KanbanBoard() {
                                         column={col}
                                         onTaskClick={handleTaskClick}
                                         onTaskDelete={promptDelete}
+                                        readOnly={isArchived}
                                     />
                                 ))}
                             </div>
                         </div>
 
-                        <DragOverlay>
-                            {activeTask && <KanbanCard task={activeTask} />}
-                        </DragOverlay>
+                        {!isArchived && (
+                            <DragOverlay>
+                                {activeTask && <KanbanCard task={activeTask} />}
+                            </DragOverlay>
+                        )}
                     </DndContext>
                 </Tabs.Panel>
 

@@ -2,7 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from '@heroui/react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
-import type { Column, Task } from '../../../../../store/features/tasks/task.types'
+import type {
+    Column,
+    Task,
+} from '../../../../../store/features/tasks/task.types'
 import { useTaskBoard } from '../context/useTaskBoard'
 import { useKanbanDrag } from '../hooks/useKanbanDrag'
 import { useTaskDelete } from '../hooks/useTaskDelete'
@@ -57,7 +60,8 @@ function getTargetProjectPosition(
 
 export function useKanbanState() {
     const { t } = useTranslation('space')
-    const { tasks, isLoading, statusOptions, projectId } = useTaskBoard()
+    const { tasks, isLoading, statusOptions, projectId, isArchived } =
+        useTaskBoard()
     const [updateTask] = useUpdateTaskMutation()
     const [moveTask] = useMoveTaskMutation()
     const [searchParams, setSearchParams] = useSearchParams()
@@ -108,47 +112,53 @@ export function useKanbanState() {
         handleDragStart,
         handleDragOver,
         handleDragEnd,
-    } = useKanbanDrag(serverColumns, async (payload) => {
-        const movedTask = tasks.find((task) => task.id === payload.taskId)
-        if (!movedTask || !projectId) return
+    } = useKanbanDrag(
+        serverColumns,
+        async (payload) => {
+            if (isArchived) return
 
-        const nextPosition = getTargetProjectPosition(
-            payload.columns,
-            payload.taskId,
-            payload.toStatus,
-            movedTask.position,
-        )
+            const movedTask = tasks.find((task) => task.id === payload.taskId)
+            if (!movedTask || !projectId) return
 
-        if (nextPosition === null) return
+            const nextPosition = getTargetProjectPosition(
+                payload.columns,
+                payload.taskId,
+                payload.toStatus,
+                movedTask.position,
+            )
 
-        isPersistingMoveRef.current = true
+            if (nextPosition === null) return
 
-        try {
-            if (payload.fromStatus !== payload.toStatus) {
-                await updateTask({
-                    taskId: payload.taskId,
-                    projectId,
-                    body: { status: payload.toStatus },
-                }).unwrap()
+            isPersistingMoveRef.current = true
+
+            try {
+                if (payload.fromStatus !== payload.toStatus) {
+                    await updateTask({
+                        taskId: payload.taskId,
+                        projectId,
+                        body: { status: payload.toStatus },
+                    }).unwrap()
+                }
+
+                if (movedTask.position !== nextPosition) {
+                    await moveTask({
+                        taskId: payload.taskId,
+                        projectId,
+                        body: { position: nextPosition },
+                    }).unwrap()
+                }
+
+                toast.success(t('tasks.messages.moveSuccess'))
+            } catch {
+                toast.danger(t('tasks.messages.moveError'))
+                throw new Error('Failed to persist task move')
+            } finally {
+                isPersistingMoveRef.current = false
+                setLocalColumns(payload.columns)
             }
-
-            if (movedTask.position !== nextPosition) {
-                await moveTask({
-                    taskId: payload.taskId,
-                    projectId,
-                    body: { position: nextPosition },
-                }).unwrap()
-            }
-
-            toast.success(t('tasks.messages.moveSuccess'))
-        } catch {
-            toast.danger(t('tasks.messages.moveError'))
-            throw new Error('Failed to persist task move')
-        } finally {
-            isPersistingMoveRef.current = false
-            setLocalColumns(payload.columns)
-        }
-    })
+        },
+        isArchived,
+    )
     const [view, setView] = useState<'kanban' | 'list'>('kanban')
 
     const selectedTask = useMemo(

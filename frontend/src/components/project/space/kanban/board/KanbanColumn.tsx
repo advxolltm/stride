@@ -15,6 +15,7 @@ interface KanbanColumnProps {
     column: Column
     onTaskClick: (task: Task) => void
     onTaskDelete: (task: Task) => void
+    readOnly?: boolean
 }
 
 const columnIcons: Record<Column['id'], typeof Circle> = {
@@ -27,6 +28,7 @@ export function KanbanColumn({
     column,
     onTaskClick,
     onTaskDelete,
+    readOnly = false,
 }: KanbanColumnProps) {
     const { t } = useTranslation('space')
     const { setNodeRef } = useDroppable({ id: column.id })
@@ -51,7 +53,7 @@ export function KanbanColumn({
                 </div>
             </div>
             {/* Add Task Form (NOT scrollable anymore) */}
-            {isAddingTask && (
+            {!readOnly && isAddingTask && (
                 <AddTaskForm
                     columnId={column.id}
                     onCancel={() => setIsAddingTask(false)}
@@ -72,19 +74,22 @@ export function KanbanColumn({
                             onClick={onTaskClick}
                             onEdit={onTaskClick}
                             onDelete={onTaskDelete}
+                            readOnly={readOnly}
                         />
                     ))}
                 </div>
             </SortableContext>
-            <Button
-                variant="ghost"
-                size="sm"
-                onPress={() => setIsAddingTask(true)}
-                className="text-muted hover:text-foreground mt-auto w-full justify-start gap-2"
-            >
-                <Plus size={14} />
-                {t('tasks.columns.addTask')}
-            </Button>
+            {!readOnly && (
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onPress={() => setIsAddingTask(true)}
+                    className="text-muted hover:text-foreground mt-auto w-full justify-start gap-2"
+                >
+                    <Plus size={14} />
+                    {t('tasks.columns.addTask')}
+                </Button>
+            )}
         </div>
     )
 }
