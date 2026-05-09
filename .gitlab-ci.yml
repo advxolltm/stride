@@ -83,8 +83,19 @@ test-backend:
     # Use the non-root Bitnami image to bypass the CI environment's user restrictions
     - name: bitnami/postgresql:latest
       alias: postgres
-    - name: redis:8.4-alpine
+    - name: bitnami/redis:8.4
       alias: redis
+      variables:
+        ALLOW_EMPTY_PASSWORD: "yes"
+        REDIS_AOF_ENABLED: "no"
+      command:
+        - /opt/bitnami/scripts/redis/run.sh
+        - --save
+        - ""
+        - --appendonly
+        - "no"
+        - --stop-writes-on-bgsave-error
+        - "no"
   needs:
     - job: build-backend
       artifacts: true
