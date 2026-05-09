@@ -4,9 +4,11 @@ import (
 	"backend/models"
 	"backend/routes"
 	authService "backend/services/auth"
+	notificationService "backend/services/notification"
 	projectService "backend/services/project"
 	taskService "backend/services/task"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -16,14 +18,27 @@ import (
 )
 
 type taskRouteHandler struct {
-	authService    authService.AuthService
-	taskService    taskService.TaskService
-	projectService projectService.ProjectService
-	rdb            *redis.Client
+	authService         authService.AuthService
+	taskService         taskService.TaskService
+	projectService      projectService.ProjectService
+	notificationService notificationService.NotificationService
+	rdb                 *redis.Client
 }
 
-func NewTaskRouteHandler(authService authService.AuthService, taskService taskService.TaskService, projectService projectService.ProjectService, rdb *redis.Client) *taskRouteHandler {
-	return &taskRouteHandler{authService, taskService, projectService, rdb}
+func NewTaskRouteHandler(
+	authService authService.AuthService,
+	taskService taskService.TaskService,
+	projectService projectService.ProjectService,
+	notificationService notificationService.NotificationService,
+	rdb *redis.Client,
+) *taskRouteHandler {
+	return &taskRouteHandler{
+		authService:         authService,
+		taskService:         taskService,
+		projectService:      projectService,
+		notificationService: notificationService,
+		rdb:                 rdb,
+	}
 }
 
 func (h taskRouteHandler) AddRoutes(api *echo.Group) {
@@ -454,7 +469,6 @@ func (h taskRouteHandler) taskMovePOST(c *echo.Context) error {
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
 	}
 
-
 	updatedTask, err := h.taskService.GetTask(ctx, taskID)
 	if err != nil {
 		status, msg := h.mapServiceError(err)
@@ -465,7 +479,35 @@ func (h taskRouteHandler) taskMovePOST(c *echo.Context) error {
 		slog.Error("taskMovePOST: Failed to send ws update", "error", err)
 	}
 
+	projectMembers, err := h.projectService.GetProjectMembers(ctx, task.ProjectID)
+	if err != nil {
+		slog.Error("taskMovePOST: Failed to get project members for notification", "error", err)
+	} else if err := h.notificationService.SendBulkNotification(
+		ctx,
+		projectMemberUserIDs(projectMembers),
+		"task",
+		taskID,
+		taskMovedNotificationMessage(*updatedTask),
+	); err != nil {
+		slog.Error("taskMovePOST: Failed to send notification", "error", err)
+	}
+
 	return c.JSON(http.StatusOK, mappedTask)
+}
+
+func taskMovedNotificationMessage(task models.Task) string {
+	return fmt.Sprintf("Task moved to position %d: %s", task.Position, task.Title)
+}
+
+func projectMemberUserIDs(projectMembers []models.ProjectMember) uuid.UUIDs {
+	userIDs := make(uuid.UUIDs, 0, len(projectMembers))
+	for _, projectMember := range projectMembers {
+		if projectMember.UserID == uuid.Nil {
+			continue
+		}
+		userIDs = append(userIDs, projectMember.UserID)
+	}
+	return userIDs
 }
 
 type addSkillToTaskRequest struct {

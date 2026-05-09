@@ -21,10 +21,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
+	notificationStore "backend/db/notification"
 	projectStore "backend/db/project"
 	taskStore "backend/db/task"
 	userStore "backend/db/user"
 	authService "backend/services/auth"
+	notificationService "backend/services/notification"
 	projectService "backend/services/project"
 	taskService "backend/services/task"
 	userService "backend/services/user"
@@ -41,17 +43,20 @@ func newTestTaskHandler(db *gorm.DB, rdb *redis.Client) taskRouteHandler {
 	userStore := userStore.NewUserStore(db)
 	projectStore := projectStore.NewProjectStore(db)
 	taskStore := taskStore.NewTaskStore(db)
+	notificationStore := notificationStore.NewNotificationStreamStore(rdb)
 
 	userService := userService.NewUserService(userStore)
 	projectService := projectService.NewProjectService(projectStore)
 	authService := authService.NewAuthenticationService(userService)
 	taskService := taskService.NewTaskService(taskStore, projectService)
+	notificationService := notificationService.NewNotificationService(notificationStore)
 
 	return taskRouteHandler{
-		authService,
-		taskService,
-		projectService,
-		rdb,
+		authService:         authService,
+		taskService:         taskService,
+		projectService:      projectService,
+		notificationService: notificationService,
+		rdb:                 rdb,
 	}
 }
 
@@ -313,6 +318,22 @@ func TestTaskHandler(t *testing.T) {
 		// proper move testing is done in service and db layer
 		require.Equal(t, from.ID, returnedMovedTask.ID)
 		require.Equal(t, to.Position, returnedMovedTask.Position)
+
+		expectedNotificationMessage := taskMovedNotificationMessage(models.Task{
+			Position: returnedMovedTask.Position,
+			Title:    returnedMovedTask.Title,
+		})
+		for _, projectMember := range project.Members {
+			notifications, err := sut.notificationService.GetNotifications(t.Context(), projectMember.UserID)
+			require.NoError(t, err)
+
+			hasTaskMoveNotification := slices.ContainsFunc(notifications, func(notification notificationService.Notification) bool {
+				return notification.ObjectType == "task" &&
+					notification.ObjectID == from.ID &&
+					notification.Message == expectedNotificationMessage
+			})
+			require.True(t, hasTaskMoveNotification, "missing task move notification for user %s", projectMember.UserID)
+		}
 	})
 
 	runTest(t, db, "tasks assigned to me response should include a task object", func(t *testing.T, db *gorm.DB, sut taskRouteHandler) {
