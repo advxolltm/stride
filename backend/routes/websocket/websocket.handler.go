@@ -23,7 +23,7 @@ func NewWSRouteHandler(
 ) *WSRouteHandler {
 	return &WSRouteHandler{
 		projectHandler:      newProjectWSRouteHandler(authService, projectService, rdb),
-		notificationHandler: newNotificationWSRouteHandler(authService, projectService, rdb),
+		notificationHandler: newNotificationWSRouteHandler(authService, rdb),
 		whiteboardHandler:   newWhiteboardWSRouteHandler(authService, projectService, userService, rdb),
 	}
 }
