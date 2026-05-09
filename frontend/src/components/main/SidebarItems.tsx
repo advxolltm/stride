@@ -1,16 +1,19 @@
 import type { ReactNode } from 'react'
-import { ChevronDown, ChevronRight, LayoutDashboard, Plus } from 'lucide-react'
+import { ArchiveX, FolderX, LayoutDashboard, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'react-router-dom'
 import clsx from 'clsx'
 import { SidebarNavigationItem } from './SidebarNavigationItem'
 import { SidebarTooltip } from './SidebarTooltip'
+import { SidebarProjectSection } from './SidebarProjectSection'
 
+type ProjectStatus = 'active' | 'archived'
 export interface SidebarProject {
     id: string
     label: string
     icon: ReactNode
+    status: ProjectStatus
 }
 
 interface SidebarItemsProps {
@@ -26,11 +29,21 @@ export function SidebarItems({
 }: SidebarItemsProps) {
     const { t } = useTranslation('common')
     const location = useLocation()
-    const [projectsExpanded, setProjectsExpanded] = useState(true)
+    const [activeProjectsExpanded, setActiveProjectsExpanded] = useState(true)
+    const [archivedProjectsExpanded, setArchivedProjectsExpanded] =
+        useState(true)
 
     const selectedProjectId = location.pathname.startsWith('/project/')
         ? (location.pathname.split('/')[2] ?? '')
         : ''
+
+    const activeProjects = projects.filter(
+        (project) => project.status === 'active',
+    )
+
+    const archivedProjects = projects.filter(
+        (project) => project.status === 'archived',
+    )
 
     return (
         <div
@@ -47,7 +60,7 @@ export function SidebarItems({
                 )}
             >
                 {!collapsed && (
-                    <p className="px-3 pb-2 text-xs font-medium text-[var(--muted)]">
+                    <p className="text-muted px-3 pb-2 text-xs font-medium">
                         {t('navigation.home')}
                     </p>
                 )}
@@ -63,54 +76,56 @@ export function SidebarItems({
 
             <div className="flex min-h-0 min-w-0 flex-1 flex-col">
                 {!collapsed && (
-                    <button
-                        type="button"
-                        onClick={() =>
-                            setProjectsExpanded((current) => !current)
-                        }
-                        className="flex items-center justify-between rounded-xl px-3 py-2 text-left text-xs font-medium text-[var(--muted)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]"
-                    >
-                        <span>{t('navigation.projects')}</span>
-                        {projectsExpanded ? (
-                            <ChevronDown size={14} />
-                        ) : (
-                            <ChevronRight size={14} />
-                        )}
-                    </button>
+                    <p className="text-muted px-3 pb-2 text-xs font-medium">
+                        {t('navigation.projects')}
+                    </p>
                 )}
 
-                {(collapsed || projectsExpanded) && (
-                    <nav
-                        aria-label="Projects navigation"
-                        className="min-h-0 flex-1 overflow-y-auto pb-2"
-                    >
-                        {collapsed && (
-                            <span className="sr-only">
-                                {t('navigation.projects')}
-                            </span>
-                        )}
+                <nav
+                    aria-label="Projects navigation"
+                    className="min-h-0 flex-1 overflow-y-auto pb-2"
+                >
+                    {collapsed && (
+                        <span className="sr-only">
+                            {t('navigation.projects')}
+                        </span>
+                    )}
 
-                        <div
-                            className={clsx(
-                                'flex w-full min-w-0 flex-col gap-1 overflow-visible',
-                                collapsed && 'items-center',
-                            )}
-                        >
-                            {projects.map((project) => (
-                                <SidebarNavigationItem
-                                    key={project.id}
-                                    href={`/project/${project.id}`}
-                                    icon={project.icon}
-                                    label={project.label}
-                                    collapsed={collapsed}
-                                    isSelected={
-                                        selectedProjectId === project.id
-                                    }
-                                />
-                            ))}
-                        </div>
-                    </nav>
-                )}
+                    <div
+                        className={clsx(
+                            'flex w-full min-w-0 flex-col overflow-visible',
+                            collapsed ? 'items-center gap-2' : 'gap-1',
+                        )}
+                    >
+                        <SidebarProjectSection
+                            label={t('navigation.activeProjects')}
+                            emptyLabel={t('navigation.noActiveProjects')}
+                            emptyIcon={<FolderX size={14} />}
+                            collapsed={collapsed}
+                            expanded={activeProjectsExpanded}
+                            onToggle={() =>
+                                setActiveProjectsExpanded((current) => !current)
+                            }
+                            projects={activeProjects}
+                            selectedProjectId={selectedProjectId}
+                        />
+
+                        <SidebarProjectSection
+                            label={t('navigation.archivedProjects')}
+                            emptyLabel={t('navigation.noArchivedProjects')}
+                            emptyIcon={<ArchiveX size={14} />}
+                            collapsed={collapsed}
+                            expanded={archivedProjectsExpanded}
+                            onToggle={() =>
+                                setArchivedProjectsExpanded(
+                                    (current) => !current,
+                                )
+                            }
+                            projects={archivedProjects}
+                            selectedProjectId={selectedProjectId}
+                        />
+                    </div>
+                </nav>
             </div>
 
             {collapsed ? (

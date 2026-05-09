@@ -1,6 +1,7 @@
-import { Button, Dropdown, Label, Tooltip } from '@heroui/react'
+import { Button, Dropdown, Label } from '@heroui/react'
 import { useTranslation } from 'react-i18next'
 import { LogOut } from 'lucide-react'
+import { SidebarTooltip } from '../../components/main/SidebarTooltip'
 
 interface LogoutButtonProps {
     collapsed?: boolean
@@ -70,10 +71,9 @@ export function LogoutButton({
     return (
         <>
             {isSidebar && collapsed ? (
-                <Tooltip>
-                    <Tooltip.Trigger>{button}</Tooltip.Trigger>
-                    <Tooltip.Content>{t('logout.label')}</Tooltip.Content>
-                </Tooltip>
+                <SidebarTooltip label={t('logout.label')}>
+                    {button}
+                </SidebarTooltip>
             ) : (
                 button
             )}

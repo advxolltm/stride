@@ -10,37 +10,38 @@ import {
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { getApiErrorMessage } from '../../shared/utils/api/errors'
-import { useCreateProjectMutation } from '../../store/features/project/project.api'
-import createProjectSlug from '../../shared/utils/createProjectSlug'
+import { useUpdateProjectMutation } from '../../store/features/project/project.api'
+import type { Project } from '../../store/features/project/project.types'
 
-interface CreateProjectDialogProps {
+interface EditProjectDialogProps {
     isOpen: boolean
     setIsOpen: (open: boolean) => void
+    project: Project
 }
 
-const EMPTY_FORM = {
-    title: '',
-    description: '',
-}
-
-export function CreateProjectDialog({
+export function EditProjectDialog({
     isOpen,
     setIsOpen,
-}: Readonly<CreateProjectDialogProps>) {
+    project,
+}: Readonly<EditProjectDialogProps>) {
     const { t } = useTranslation(['project', 'common'])
-    const [createProject, { isLoading: isCreatingProject }] =
-        useCreateProjectMutation()
-    const [title, setTitle] = useState(EMPTY_FORM.title)
-    const [description, setDescription] = useState(EMPTY_FORM.description)
+    const [updateProject, { isLoading: isUpdatingProject }] =
+        useUpdateProjectMutation()
+    const [name, setName] = useState(project.name)
+    const [description, setDescription] = useState(project.description || '')
     const [submitError, setSubmitError] = useState<string | null>(null)
 
     const resetForm = () => {
-        setTitle(EMPTY_FORM.title)
-        setDescription(EMPTY_FORM.description)
+        setName(project.name)
+        setDescription(project.description || '')
         setSubmitError(null)
     }
 
     const handleOpenChange = (open: boolean) => {
+        if (open) {
+            resetForm()
+        }
+
         setIsOpen(open)
 
         if (!open) {
@@ -48,15 +49,16 @@ export function CreateProjectDialog({
         }
     }
 
-    const handleCreateProject = async () => {
+    const handleUpdateProject = async () => {
         setSubmitError(null)
 
         try {
-            await createProject({
-                name: title.trim(),
-                slug: createProjectSlug(title),
-                description: description.trim(),
-                status: 'active',
+            await updateProject({
+                projectId: project.id,
+                body: {
+                    name: name.trim(),
+                    description: description.trim(),
+                },
             }).unwrap()
 
             handleOpenChange(false)
@@ -64,13 +66,16 @@ export function CreateProjectDialog({
             setSubmitError(
                 getApiErrorMessage(
                     error,
-                    'Unable to create the project right now.',
+                    'Unable to update the project right now.',
                 ),
             )
         }
     }
 
-    const isCreateDisabled = !title.trim()
+    const isUpdateDisabled =
+        !name.trim() ||
+        (name.trim() === project.name &&
+            description.trim() === (project.description || ''))
 
     return (
         <Modal.Backdrop isOpen={isOpen} onOpenChange={handleOpenChange}>
@@ -79,25 +84,25 @@ export function CreateProjectDialog({
                     <Modal.CloseTrigger />
 
                     <Modal.Header>
-                        <Modal.Heading>{t('createDialog.title')}</Modal.Heading>
+                        <Modal.Heading>{t('editDialog.title')}</Modal.Heading>
                     </Modal.Header>
 
                     <Modal.Body>
                         <div className="flex flex-col gap-4 p-1">
-                            <p className="text-sm text-muted">
-                                {t('createDialog.description')}
+                            <p className="text-muted text-sm">
+                                {t('editDialog.description')}
                             </p>
 
                             <TextField
-                                value={title}
-                                onChange={setTitle}
+                                value={name}
+                                onChange={setName}
                                 className="w-full"
                             >
-                                <Label>{t('createDialog.fields.title')}</Label>
+                                <Label>{t('editDialog.fields.title')}</Label>
                                 <Input
                                     variant="secondary"
                                     placeholder={t(
-                                        'createDialog.placeholders.title',
+                                        'editDialog.placeholders.title',
                                     )}
                                 />
                                 <FieldError />
@@ -109,13 +114,13 @@ export function CreateProjectDialog({
                                 className="w-full"
                             >
                                 <Label>
-                                    {t('createDialog.fields.description')}
+                                    {t('editDialog.fields.description')}
                                 </Label>
                                 <TextArea
                                     variant="secondary"
                                     rows={4}
                                     placeholder={t(
-                                        'createDialog.placeholders.description',
+                                        'editDialog.placeholders.description',
                                     )}
                                 />
                                 <FieldError />
@@ -139,11 +144,11 @@ export function CreateProjectDialog({
 
                         <Button
                             variant="primary"
-                            onPress={handleCreateProject}
-                            isDisabled={isCreateDisabled || isCreatingProject}
-                            isPending={isCreatingProject}
+                            onPress={handleUpdateProject}
+                            isDisabled={isUpdateDisabled || isUpdatingProject}
+                            isPending={isUpdatingProject}
                         >
-                            {t('createDialog.actions.create')}
+                            {t('editDialog.actions.save')}
                         </Button>
                     </Modal.Footer>
                 </Modal.Dialog>
