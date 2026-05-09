@@ -64,7 +64,7 @@ export function ProjectGeneralSettings({
             key: 'description',
             label: t('generalSettings.projectDescription'),
             value: description,
-            valueClassName: 'text-sm leading-relaxed',
+            valueClassName: 'text-sm leading-relaxed truncate',
         },
         ...metadataFields.map((field) => ({
             ...field,
@@ -152,7 +152,7 @@ export function ProjectGeneralSettings({
                     )}
                 </div>
             ) : (
-                <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1 [scrollbar-gutter:auto]">
+                <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-1 [scrollbar-gutter:auto]">
                     <TextField
                         value={name}
                         onChange={(val) => {
@@ -173,7 +173,7 @@ export function ProjectGeneralSettings({
                         className="w-full"
                     >
                         <Label>{t('generalSettings.descriptionLabel')}</Label>
-                        <TextArea variant="secondary" rows={3} />
+                        <TextArea variant="secondary" rows={5} />
                         <FieldError />
                     </TextField>
 

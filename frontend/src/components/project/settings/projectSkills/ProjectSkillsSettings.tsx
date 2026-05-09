@@ -1,5 +1,5 @@
 import { Button, toast } from '@heroui/react'
-import { Plus } from 'lucide-react'
+import { Inbox, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ConfirmDialog } from '../../../../shared/components'
@@ -31,7 +31,6 @@ export function ProjectSkillsSettings({
     const [skillToDelete, setSkillToDelete] = useState<ProjectSkill | null>(
         null,
     )
-
     const { data: projects = [] } = useGetProjectsQuery()
     const [createProjectSkill, { isLoading: isCreatingProjectSkill }] =
         useAddProjectSkillMutation()
@@ -132,13 +131,20 @@ export function ProjectSkillsSettings({
                     </div>
 
                     <div className="min-h-0 overflow-y-auto pr-1 [scrollbar-gutter:auto]">
-                        <CurrentSkillsList
-                            skills={skills}
-                            isOwner={isOwner}
-                            isAddingCustom={isAdding}
-                            emptyLabel={t('skillsSettings.empty')}
-                            onDelete={setSkillToDelete}
-                        />
+                        {skills.length > 0 ? (
+                            <CurrentSkillsList
+                                skills={skills}
+                                isOwner={isOwner}
+                                isAddingCustom={isAdding}
+                                emptyLabel={t('skillsSettings.empty')}
+                                onDelete={setSkillToDelete}
+                            />
+                        ) : (
+                            <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-2 text-center text-sm">
+                                <Inbox size={28} />
+                                <p>{t('skillsSettings.empty')}</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             ) : (

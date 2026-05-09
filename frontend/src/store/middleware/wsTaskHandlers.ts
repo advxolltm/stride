@@ -20,7 +20,7 @@ import type {
     ApiTaskSkill,
     Task,
 } from '../features/tasks/task.types'
-import { WSMessageType } from './wsMessageTypes'
+import { WSMessageType } from '../features/projectSocket/projectSocket.types'
 
 export type WsListenerApi = {
     dispatch: (action: unknown) => unknown
@@ -144,17 +144,31 @@ export function handleTaskWsMessage(
             return true
         }
         case WSMessageType.TaskMove: {
-            if (!isApiTaskList(payload)) {
+            if (!isApiTask(payload) && !isApiTaskList(payload)) {
                 invalidateProjectTasks(api, projectId)
                 return true
             }
 
-            const tasks = payload.map(transformTask)
+            const tasks = Array.isArray(payload)
+                ? payload.map(transformTask)
+                : [transformTask(payload)]
             api.dispatch(
                 taskApi.util.updateQueryData(
                     'getTasksForProject',
                     projectId,
-                    () => tasks,
+                    (draft) => {
+                        for (const task of tasks) {
+                            const existingIndex = draft.findIndex(
+                                (item) => item.id === task.id,
+                            )
+
+                            if (existingIndex === -1) {
+                                draft.push(task)
+                            } else {
+                                patchTask(draft[existingIndex], task)
+                            }
+                        }
+                    },
                 ),
             )
             for (const task of tasks) {

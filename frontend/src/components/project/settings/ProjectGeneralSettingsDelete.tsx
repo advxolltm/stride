@@ -34,7 +34,7 @@ export function ProjectGeneralSettingsDelete({
     return (
         <>
             <div className="border-t pt-6">
-                <Alert className="rounded-xl border" status="danger">
+                <Alert className="flex items-center rounded-xl border" status="danger">
                     <Alert.Indicator />
                     <Alert.Content>
                         <Alert.Title>

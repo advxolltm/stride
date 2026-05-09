@@ -1,6 +1,7 @@
 package projects
 
 import (
+	"log/slog"
 	"net/http"
 
 	"backend/routes"
@@ -9,15 +10,17 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
+	"github.com/redis/go-redis/v9"
 )
 
 type skillsRouteHandler struct {
 	projectService projectService.ProjectService
 	authService    authService.AuthService
+	rdb            *redis.Client
 }
 
-func newSkillsRouteHandler(ps projectService.ProjectService, as authService.AuthService) *skillsRouteHandler {
-	return &skillsRouteHandler{projectService: ps, authService: as}
+func newSkillsRouteHandler(ps projectService.ProjectService, as authService.AuthService, rdb *redis.Client) *skillsRouteHandler {
+	return &skillsRouteHandler{projectService: ps, authService: as, rdb: rdb}
 }
 
 func (h *skillsRouteHandler) registerRoutes(g *echo.Group) {
@@ -103,7 +106,12 @@ func (h *skillsRouteHandler) skillsPOSTHandle(c *echo.Context) error {
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
 	}
 
-	return c.JSON(http.StatusCreated, routes.MapToReturnSkill(*s))
+	mappedSkill := routes.MapToReturnSkill(*s)
+	if err := routes.SendWSUpdate(c.Request().Context(), h.rdb, id, routes.ProjectSkillAdd, mappedSkill); err != nil {
+		slog.Error("skillsPOSTHandle: Failed to send ws update", "error", err)
+	}
+
+	return c.JSON(http.StatusCreated, mappedSkill)
 }
 
 // @Summary		Delete project skill
@@ -139,6 +147,16 @@ func (h *skillsRouteHandler) skillsDELETEHandle(c *echo.Context) error {
 	if err := h.projectService.RemoveProjectSkill(c.Request().Context(), skillid); err != nil {
 		status, msg := mapServiceErrorProj(err)
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
+	}
+
+	type projectSkillRemoveWSUpdate struct {
+		ProjectSkillID uuid.UUID `json:"project_skill_id"`
+	} // @name ProjectSkillRemoveWSUpdate
+
+	if err := routes.SendWSUpdate(c.Request().Context(), h.rdb, projId, routes.ProjectSkillRemove, projectSkillRemoveWSUpdate{
+		ProjectSkillID: skillid,
+	}); err != nil {
+		slog.Error("skillsDELETEHandle: Failed to send ws update", "error", err)
 	}
 
 	return c.NoContent(http.StatusNoContent)
