@@ -1,3 +1,7 @@
+import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types'
+
 export interface WhiteboardCanvasProps {
-    projectId: string
+    elements: readonly ExcalidrawElement[]
+    onChange?: (elements: readonly ExcalidrawElement[]) => void
+    onPointerUp?: (elements: readonly ExcalidrawElement[]) => void
 }

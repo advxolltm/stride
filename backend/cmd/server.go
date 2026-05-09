@@ -29,9 +29,10 @@ import (
 	whiteboardService "backend/services/whiteboard"
 	"backend/testutils"
 
-	"backend/docs"
+	//"backend/docs"
 
 	echoSwagger "github.com/swaggo/echo-swagger/v2"
+	"github.com/swaggo/swag/example/basic/docs"
 )
 
 func getAPIBasePath() string {

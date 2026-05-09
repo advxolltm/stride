@@ -124,6 +124,15 @@ func (s *projectStore) CreateProject(ctx context.Context, project *models.Projec
 			if strings.Contains(err.Error(), "duplicate key") {
 				return ErrDuplicateSlug
 			}
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) {
+				if pgErr.Code == db.ValueTooLongCode {
+					if len(project.Name) > db.MaxProjectNameLength {
+						return ErrProjectNameTooLong
+					}
+				}
+			}
+
 			return err
 		}
 
@@ -241,6 +250,18 @@ func (s *projectStore) AddProjectSkill(ctx context.Context, projectSkill *models
 	}
 	result := s.db.WithContext(ctx).Create(projectSkill)
 	if result.Error != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(result.Error, &pgErr) {
+			if pgErr.Code == db.ValueTooLongCode {
+				if len(projectSkill.Name) > db.MaxSkillNameLength {
+					return ErrSkillNameTooLong
+				}
+				if projectSkill.Description != nil && len(*projectSkill.Description) > db.MaxSkillDescriptionLength {
+					return ErrSkillDescriptionTooLong
+				}
+
+			}
+		}
 		return result.Error
 	}
 	return nil
