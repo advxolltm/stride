@@ -4,6 +4,7 @@ import (
 	"backend/services/auth"
 	"backend/services/project"
 	"backend/services/user"
+	whiteboardSvc "backend/services/whiteboard"
 
 	"github.com/labstack/echo/v5"
 	"github.com/redis/go-redis/v9"
@@ -19,12 +20,13 @@ func NewWSRouteHandler(
 	authService auth.AuthService,
 	projectService project.ProjectService,
 	userService user.UserService,
+	whiteboardService whiteboardSvc.WhiteboardService,
 	rdb *redis.Client,
 ) *WSRouteHandler {
 	return &WSRouteHandler{
 		projectHandler:      newProjectWSRouteHandler(authService, projectService, rdb),
 		notificationHandler: newNotificationWSRouteHandler(authService),
-		whiteboardHandler:   newWhiteboardWSRouteHandler(authService, projectService, userService, rdb),
+		whiteboardHandler:   newWhiteboardWSRouteHandler(authService, projectService, userService, whiteboardService, rdb),
 	}
 }
 

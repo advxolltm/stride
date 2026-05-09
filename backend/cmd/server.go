@@ -156,7 +156,7 @@ func main() {
 		projects.NewProjectsGroup(projectService, whiteboardService, authService),
 		taskHandler.NewTaskRouteHandler(authService, taskService, projectService, rdb),
 		routes.NewUserRouteHandler(userService, authService),
-		wsRoutes.NewWSRouteHandler(authService, projectService, userService, rdb),
+		wsRoutes.NewWSRouteHandler(authService, projectService, userService, whiteboardService, rdb),
 	}
 
 	for _, handler := range handlers {
