@@ -13,6 +13,7 @@ import (
 	// NOTE: if you want to give multiple "layers" (route, service, db) the same package-name to group them together, you can provide a custom name on import to distinguish them like here
 	"backend/db"
 	exampleDB "backend/db/example"
+	notificationDB "backend/db/notification"
 	projectDB "backend/db/project"
 	taskDB "backend/db/task"
 	userDB "backend/db/user"
@@ -23,6 +24,7 @@ import (
 	wsRoutes "backend/routes/websocket"
 	authService "backend/services/auth"
 	exampleService "backend/services/example"
+	notificationService "backend/services/notification"
 	projectService "backend/services/project"
 	taskService "backend/services/task"
 	userService "backend/services/user"
@@ -135,6 +137,7 @@ func main() {
 	projectStore := projectDB.NewProjectStore(mainDB)
 	whiteboardStore := whiteboardDB.NewWhiteboardStore(mainDB)
 	taskStore := taskDB.NewTaskStore(mainDB)
+	notificationStore := notificationDB.NewNotificationStreamStore(rdb)
 
 	// Services
 	exampleService := exampleService.NewExampleService(exampleStore)
@@ -143,6 +146,7 @@ func main() {
 	authService := authService.NewAuthenticationService(userService)
 	whiteboardService := whiteboardService.NewWhiteboardService(whiteboardStore, projectService)
 	taskService := taskService.NewTaskService(taskStore, projectService)
+	notificationService := notificationService.NewNotificationService(notificationStore)
 
 	// Routes
 	// Register route handler by adding them to the array
@@ -155,6 +159,7 @@ func main() {
 		routes.NewExampleRouteHandler(exampleService, authService, rdb),
 		projects.NewProjectsGroup(projectService, whiteboardService, authService, rdb),
 		taskHandler.NewTaskRouteHandler(authService, taskService, projectService, rdb),
+		routes.NewNotificationRouteHandler(notificationService, authService),
 		routes.NewUserRouteHandler(userService, authService),
 		wsRoutes.NewWSRouteHandler(authService, projectService, userService, rdb),
 	}
