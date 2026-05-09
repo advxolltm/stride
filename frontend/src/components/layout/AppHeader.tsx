@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { NotificationsContainer } from '../notification/NotificationsContainer'
 import { Logo } from './AppLogo'
 import { LanguageSwitcher } from './LanguageSwitcher'
 import { ThemeSwitcher } from './ThemeSwitcher'
@@ -14,6 +15,8 @@ export function AppHeader() {
                 <LanguageSwitcher />
                 <div className="bg-border h-5 w-px" />
                 <ThemeSwitcher />
+                <div className="bg-border h-5 w-px" />
+                <NotificationsContainer />
                 <div className="bg-border h-5 w-px" />
                 <UserMenu />
             </div>
