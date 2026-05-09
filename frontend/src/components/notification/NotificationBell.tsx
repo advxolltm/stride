@@ -1,5 +1,6 @@
 import { Button } from '@heroui/react'
 import { Bell } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 interface NotificationBellProps {
     unreadCount: number
@@ -8,11 +9,12 @@ interface NotificationBellProps {
 export function NotificationBell({
     unreadCount,
 }: Readonly<NotificationBellProps>) {
+    const { t } = useTranslation('common')
     const badgeLabel = unreadCount > 99 ? '99+' : String(unreadCount)
 
     return (
         <Button
-            aria-label="Notifications"
+            aria-label={t('notification.ariaLabel')}
             variant="ghost"
             isIconOnly
             className="relative transition-all"

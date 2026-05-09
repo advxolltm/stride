@@ -1,5 +1,6 @@
 import { Button, Spinner } from '@heroui/react'
 import { X } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import type { Notification } from '../../store/features/notification/notification.types'
 
 interface NotificationRowProps {
@@ -11,7 +12,7 @@ interface NotificationRowProps {
 }
 
 const formatObjectType = (objectType: string) =>
-    objectType.replaceAll('_', ' ').trim() || 'Notification'
+    objectType.replaceAll('_', ' ').trim() || 'notification'
 
 export function NotificationRow({
     notification,
@@ -20,6 +21,12 @@ export function NotificationRow({
     onDelete,
     onView,
 }: Readonly<NotificationRowProps>) {
+    const { t } = useTranslation('common')
+    const objectTypeLabel = t(
+        `notification.objectTypes.${notification.objectType}`,
+        { defaultValue: formatObjectType(notification.objectType) },
+    )
+
     return (
         <button
             type="button"
@@ -45,7 +52,7 @@ export function NotificationRow({
                     {notification.message}
                 </span>
                 <span className="text-muted mt-1 block text-xs capitalize">
-                    {formatObjectType(notification.objectType)}
+                    {objectTypeLabel}
                 </span>
             </span>
 
@@ -58,7 +65,7 @@ export function NotificationRow({
                 onClick={(event) => event.stopPropagation()}
             >
                 <Button
-                    aria-label="Delete notification"
+                    aria-label={t('notification.deleteAriaLabel')}
                     variant="ghost"
                     isIconOnly
                     isDisabled={isDeleting}

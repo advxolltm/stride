@@ -1,4 +1,5 @@
 import { Spinner } from '@heroui/react'
+import { useTranslation } from 'react-i18next'
 import type { Notification } from '../../store/features/notification/notification.types'
 import { NotificationRow } from './NotificationRow'
 
@@ -21,13 +22,17 @@ export function NotificationPopoverContent({
     onDelete,
     onView,
 }: Readonly<NotificationPopoverContentProps>) {
+    const { t } = useTranslation('common')
+
     return (
         <div className="w-[min(380px,calc(100vw-2rem))] overflow-hidden rounded-lg">
             <div className="border-border border-b px-4 py-3">
                 <h2 className="text-foreground text-sm font-semibold">
-                    Notifications
+                    {t('notification.title')}
                 </h2>
-                <p className="text-muted mt-1 text-xs">{unreadCount} unread</p>
+                <p className="text-muted mt-1 text-xs">
+                    {t('notification.unreadCount', { count: unreadCount })}
+                </p>
             </div>
 
             {isLoading && (
@@ -39,10 +44,10 @@ export function NotificationPopoverContent({
             {!isLoading && notifications.length === 0 && (
                 <div className="flex min-h-40 flex-col items-center justify-center px-6 text-center">
                     <p className="text-foreground text-sm font-medium">
-                        No notifications
+                        {t('notification.emptyTitle')}
                     </p>
                     <p className="text-muted mt-1 text-sm">
-                        New updates will appear here.
+                        {t('notification.emptyDescription')}
                     </p>
                 </div>
             )}

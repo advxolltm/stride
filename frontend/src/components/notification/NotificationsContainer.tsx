@@ -1,5 +1,6 @@
 import { Popover, toast } from '@heroui/react'
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
     useDeleteNotificationMutation,
     useGetNotificationsQuery,
@@ -18,6 +19,7 @@ const orderNotifications = (notifications: Notification[]) => {
 }
 
 export function NotificationsContainer() {
+    const { t } = useTranslation('common')
     const [isOpen, setIsOpen] = useState(false)
     const [deletingNotificationId, setDeletingNotificationId] = useState<
         string | null
@@ -59,7 +61,7 @@ export function NotificationsContainer() {
         try {
             await markRead(notificationId).unwrap()
         } catch {
-            toast.danger('Unable to mark notification as read.')
+            toast.danger(t('notification.markAsReadError'))
         } finally {
             setReadingNotificationId(null)
         }
@@ -75,7 +77,7 @@ export function NotificationsContainer() {
         try {
             await deleteNotification(notificationId).unwrap()
         } catch {
-            toast.danger('Unable to delete notification.')
+            toast.danger(t('notification.deleteError'))
         } finally {
             setDeletingNotificationId(null)
         }

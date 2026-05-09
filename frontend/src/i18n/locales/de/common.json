@@ -19,6 +19,21 @@
     "confirm": "Abmelden",
     "pending": "Abmeldung laeuft..."
   },
+  "notification": {
+    "ariaLabel": "Benachrichtigungen",
+    "title": "Benachrichtigungen",
+    "unreadCount": "{{count}} ungelesen",
+    "emptyTitle": "Keine Benachrichtigungen",
+    "emptyDescription": "Neue Updates werden hier angezeigt.",
+    "deleteAriaLabel": "Benachrichtigung loeschen",
+    "markAsReadError": "Benachrichtigung konnte nicht als gelesen markiert werden.",
+    "deleteError": "Benachrichtigung konnte nicht geloescht werden.",
+    "objectTypes": {
+      "notification": "Benachrichtigung",
+      "project": "Projekt",
+      "task": "Aufgabe"
+    }
+  },
   "primary": "Primaer",
   "danger": "Gefahr",
   "tailwindMessage": "Tailwind + Theme funktioniert"
