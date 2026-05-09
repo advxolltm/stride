@@ -21,8 +21,8 @@ import (
 
 var ctx = context.Background()
 
-// SetupDBAndRedisFromEnv connects to an existing database using environment variables
-// (DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME).
+// SetupDBAndRedisFromEnv connects to existing services using environment variables
+// (DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME, REDIS_HOST, REDIS_PORT).
 func SetupDBAndRedisFromEnv() (*gorm.DB, *redis.Client) {
 	postgresDSN := db.PostgresDSNFromEnv()
 
@@ -30,7 +30,7 @@ func SetupDBAndRedisFromEnv() (*gorm.DB, *redis.Client) {
 	AssertNoError(err)
 
 	redisDSN := db.RedisDSNFromEnv()
-	testRedis := db.InitRedis(redisDSN)
+	testRedis := initRedisAndPing(redisDSN)
 
 	return testdb, testRedis
 }
@@ -39,16 +39,7 @@ func SetupDBAndRedisFromEnv() (*gorm.DB, *redis.Client) {
 // CI uses REDIS_HOST/REDIS_PORT; local runs use localhost:6379 by default.
 func SetupLiveRedisFromEnvOrLocal() *redis.Client {
 	addr := RedisAddrFromEnvOrLocal()
-	testRedis := db.InitRedis(addr)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	if err := testRedis.Ping(ctx).Err(); err != nil {
-		log.Fatalf("failed to connect to live redis at %s: %v", addr, err)
-	}
-
-	return testRedis
+	return initRedisAndPing(addr)
 }
 
 func RedisAddrFromEnvOrLocal() string {
@@ -63,6 +54,19 @@ func RedisAddrFromEnvOrLocal() string {
 	}
 
 	return net.JoinHostPort(host, port)
+}
+
+func initRedisAndPing(addr string) *redis.Client {
+	testRedis := db.InitRedis(addr)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := testRedis.Ping(ctx).Err(); err != nil {
+		log.Fatalf("failed to connect to redis at %s: %v", addr, err)
+	}
+
+	return testRedis
 }
 
 // RunRedisTestTransaction provides a test transaction boundary for Redis keys.
@@ -146,7 +150,7 @@ func setupRedisWithTestcontainers() *redis.Client {
 	rPort, err := redisContainer.MappedPort(ctx, "6379")
 	AssertNoError(err)
 
-	return db.InitRedis(fmt.Sprintf("%s:%s", rHost, rPort.Port()))
+	return initRedisAndPing(fmt.Sprintf("%s:%s", rHost, rPort.Port()))
 }
 
 func setupDBWithTestcontainers() *gorm.DB {
