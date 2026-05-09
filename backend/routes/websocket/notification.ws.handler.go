@@ -41,9 +41,16 @@ type notificationWSSnapshotMessage struct {
 	Payload notificationWSSnapshotPayload `json:"payload"`
 }
 
+type notificationWSSnapshotPayloadResponse struct { //nolint:unused
+	New      []routes.NotificationResponse `json:"new"`
+	Old      []routes.NotificationResponse `json:"old"`
+	NewCount int                           `json:"new_count"`
+	OldCount int                           `json:"old_count"`
+}
+
 type notificationWSSnapshotMessageResponse struct { //nolint:unused
-	Type    string                        `json:"type" example:"notifications.snapshot"`
-	Payload notificationWSSnapshotPayload `json:"payload"`
+	Type    string                                `json:"type" example:"notifications.snapshot"`
+	Payload notificationWSSnapshotPayloadResponse `json:"payload"`
 }
 
 type notificationWSRouteHandler struct {
