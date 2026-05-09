@@ -371,7 +371,7 @@ func (s *WhiteboardSceneStore) storeSnapshot(
 
 	pipe := s.rdb.TxPipeline()
 	pipe.Set(ctx, whiteboardSceneKey(projectID), payload, 0)
-	pipe.SetNX(ctx, whiteboardSceneRevisionKey(projectID), snapshot.Revision, 0)
+	pipe.SetArgs(ctx, whiteboardSceneRevisionKey(projectID), snapshot.Revision, redis.SetArgs{Mode: "NX"})
 	_, err = pipe.Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrStoreWhiteboardScene, err)
@@ -466,11 +466,17 @@ func (s *WhiteboardSceneStore) logFlushResult(ctx context.Context, projectID uui
 
 func (s *WhiteboardSceneStore) FlushDirty(ctx context.Context, projectID uuid.UUID) error {
 	lockToken := uuid.NewString()
-	lockAcquired, err := s.rdb.SetNX(ctx, whiteboardSceneFlushLockKey(projectID), lockToken, whiteboardSceneFlushLockTTL).Result()
+	lockResult, err := s.rdb.SetArgs(ctx, whiteboardSceneFlushLockKey(projectID), lockToken, redis.SetArgs{
+		Mode: "NX",
+		TTL:  whiteboardSceneFlushLockTTL,
+	}).Result()
+	if errors.Is(err, redis.Nil) {
+		return nil
+	}
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrFlushWhiteboardScene, err)
 	}
-	if !lockAcquired {
+	if lockResult != "OK" {
 		return nil
 	}
 	defer s.releaseFlushLock(context.Background(), projectID, lockToken)
