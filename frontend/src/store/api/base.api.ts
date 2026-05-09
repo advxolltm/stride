@@ -51,6 +51,7 @@ export const baseApi = createApi({
         'TaskAssignee',
         'Whiteboard',
         'WhiteboardElement',
+        'Notification',
     ],
     baseQuery: fetchBaseQuery({
         baseUrl: apiBasePath,
