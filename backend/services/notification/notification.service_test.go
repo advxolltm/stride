@@ -4,7 +4,6 @@ import (
 	notificationdb "backend/db/notification"
 	notificationservice "backend/services/notification"
 	"backend/testutils"
-	"fmt"
 	"log"
 	"os"
 	"testing"
@@ -303,5 +302,5 @@ func notificationStreamKeys(userIDs ...uuid.UUID) []string {
 }
 
 func notificationStreamKey(userID uuid.UUID) string {
-	return fmt.Sprintf("notifications:user:%s", userID.String())
+	return notificationdb.NotificationStreamKey(userID)
 }

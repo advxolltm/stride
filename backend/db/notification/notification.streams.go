@@ -4,12 +4,17 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 )
 
-const defaultNotificationStreamPrefix = "notifications:user"
+const (
+	defaultNotificationStreamPrefix       = "notifications:user"
+	NotificationStreamMaxLen        int64 = 100
+	NotificationStreamTTL                 = 30 * 24 * time.Hour
+)
 
 type Notification struct {
 	ID 			uuid.UUID	`json:"id" gorm:"primaryKey;default:gen_random_uuid()"`
@@ -47,19 +52,42 @@ func NewNotificationStreamStore(rdb *redis.Client) NotificationStreamStore {
 	}
 }
 
+func NotificationStreamKey(userID uuid.UUID) string {
+	return fmt.Sprintf("%s:%s", defaultNotificationStreamPrefix, userID.String())
+}
+
 func (s *notificationStreamStore) Append(ctx context.Context, notification Notification) (string, error) {
 	if s.rdb == nil {
 		return "", ErrRedisIsNil
 	}
 
 	notification = prepareNotification(notification)
+	streamKey := s.streamKey(notification.UserID)
 
-	redisID, err := s.rdb.XAdd(ctx, &redis.XAddArgs{
-		Stream: s.streamKey(notification.UserID),
+	pipe := s.rdb.Pipeline()
+	xAddCmd := pipe.XAdd(ctx, &redis.XAddArgs{
+		Stream: streamKey,
+		MaxLen: NotificationStreamMaxLen,
 		Values: notificationToValues(notification),
-	}).Result()
+	})
+	expireCmd := pipe.Expire(ctx, streamKey, NotificationStreamTTL)
+
+	if _, err := pipe.Exec(ctx); err != nil {
+		if xAddCmd.Err() != nil {
+			return "", fmt.Errorf("%w: %w", ErrAppendNotificationToRedisStream, xAddCmd.Err())
+		}
+		if expireCmd.Err() != nil {
+			return "", fmt.Errorf("%w: %w", ErrSetNotificationStreamTTL, expireCmd.Err())
+		}
+		return "", fmt.Errorf("%w: %w", ErrAppendNotificationToRedisStream, err)
+	}
+
+	redisID, err := xAddCmd.Result()
 	if err != nil {
 		return "", fmt.Errorf("%w: %w", ErrAppendNotificationToRedisStream, err)
+	}
+	if err := expireCmd.Err(); err != nil {
+		return "", fmt.Errorf("%w: %w", ErrSetNotificationStreamTTL, err)
 	}
 
 	return redisID, nil
@@ -76,15 +104,29 @@ func (s *notificationStreamStore) AppendMany(ctx context.Context, notifications 
 
 	pipe := s.rdb.Pipeline()
 	cmds := make([]*redis.StringCmd, 0, len(notifications))
+	expireCmds := make([]*redis.BoolCmd, 0, len(notifications))
 	for _, notification := range notifications {
 		notification = prepareNotification(notification)
+		streamKey := s.streamKey(notification.UserID)
 		cmds = append(cmds, pipe.XAdd(ctx, &redis.XAddArgs{
-			Stream: s.streamKey(notification.UserID),
+			Stream: streamKey,
+			MaxLen: NotificationStreamMaxLen,
 			Values: notificationToValues(notification),
 		}))
+		expireCmds = append(expireCmds, pipe.Expire(ctx, streamKey, NotificationStreamTTL))
 	}
 
 	if _, err := pipe.Exec(ctx); err != nil {
+		for _, cmd := range cmds {
+			if cmd.Err() != nil {
+				return nil, fmt.Errorf("%w: %w", ErrAppendNotificationToRedisStream, cmd.Err())
+			}
+		}
+		for _, cmd := range expireCmds {
+			if cmd.Err() != nil {
+				return nil, fmt.Errorf("%w: %w", ErrSetNotificationStreamTTL, cmd.Err())
+			}
+		}
 		return nil, fmt.Errorf("%w: %w", ErrAppendNotificationToRedisStream, err)
 	}
 
@@ -97,12 +139,16 @@ func (s *notificationStreamStore) AppendMany(ctx context.Context, notifications 
 
 		redisIDs = append(redisIDs, redisID)
 	}
+	for _, cmd := range expireCmds {
+		if err := cmd.Err(); err != nil {
+			return nil, fmt.Errorf("%w: %w", ErrSetNotificationStreamTTL, err)
+		}
+	}
 
 	return redisIDs, nil
 }
 
 func (s *notificationStreamStore) Range(ctx context.Context, userID uuid.UUID, start string, count int64) ([]NotificationStreamEntry, error) {
-	
 	if s.rdb == nil {
 		return nil, ErrRedisIsNil
 	}
@@ -112,7 +158,7 @@ func (s *notificationStreamStore) Range(ctx context.Context, userID uuid.UUID, s
 	}
 
 	if count <= 0 {
-		count = 100
+		count = NotificationStreamMaxLen
 	}
 
 	entries, err := s.rdb.XRangeN(ctx, s.streamKey(userID), start, "+", count).Result()
@@ -122,7 +168,7 @@ func (s *notificationStreamStore) Range(ctx context.Context, userID uuid.UUID, s
 
 	result := make([]NotificationStreamEntry, 0, len(entries))
 	for _, entry := range entries {
-		notification, err := notificationFromValues(entry.Values)
+		notification, err := NotificationFromStreamValues(entry.Values)
 		if err != nil {
 			return nil, fmt.Errorf("%w: %w", ErrParseNotificationFromStreamEntry, err)
 		}
@@ -136,8 +182,11 @@ func (s *notificationStreamStore) Range(ctx context.Context, userID uuid.UUID, s
 	return result, nil
 }
 
-
 func (s *notificationStreamStore) streamKey(userID uuid.UUID) string {
+	if s.streamPrefix == defaultNotificationStreamPrefix {
+		return NotificationStreamKey(userID)
+	}
+
 	return fmt.Sprintf("%s:%s", s.streamPrefix, userID.String())
 }
 
@@ -145,6 +194,7 @@ func notificationToValues(notification Notification) map[string]any {
 	return map[string]any{
 		"id":          notification.ID.String(),
 		"user_id":     notification.UserID.String(),
+		"edit_type":   notification.EditType,
 		"object_type": notification.ObjectType,
 		"object_id":   notification.ObjectID.String(),
 		"message":     notification.Message,
@@ -152,7 +202,7 @@ func notificationToValues(notification Notification) map[string]any {
 	}
 }
 
-func notificationFromValues(values map[string]any) (Notification, error) {
+func NotificationFromStreamValues(values map[string]any) (Notification, error) {
 	id, err := uuid.Parse(streamValueAsString(values["id"]))
 	if err != nil {
 		return Notification{}, err
@@ -176,6 +226,7 @@ func notificationFromValues(values map[string]any) (Notification, error) {
 	return Notification{
 		ID:         id,
 		UserID:     userID,
+		EditType:   streamValueAsString(values["edit_type"]),
 		ObjectType: streamValueAsString(values["object_type"]),
 		ObjectID:   objectID,
 		Message:    streamValueAsString(values["message"]),
@@ -184,6 +235,10 @@ func notificationFromValues(values map[string]any) (Notification, error) {
 }
 
 func streamValueAsString(value any) string {
+	if value == nil {
+		return ""
+	}
+
 	switch v := value.(type) {
 	case string:
 		return v
@@ -207,13 +262,13 @@ func (s *notificationStreamStore) Delete(ctx context.Context, userID uuid.UUID, 
         return ErrRedisIsNil
     }
 
-    if len(redisIDs) == 0 {
-        return nil
-    }
+	if len(redisIDs) == 0 {
+		return nil
+	}
 
-    if err := s.rdb.XDel(ctx, s.streamKey(userID), redisIDs...).Err(); err != nil {
-        return fmt.Errorf("delete notifications from redis stream: %w", err)
-    }
+	if err := s.rdb.XDel(ctx, s.streamKey(userID), redisIDs...).Err(); err != nil {
+		return fmt.Errorf("delete notifications from redis stream: %w", err)
+	}
 
-    return nil
+	return nil
 }

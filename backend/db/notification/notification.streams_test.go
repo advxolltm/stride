@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
@@ -33,6 +34,7 @@ func TestNotificationStreamStoreAppendAndRangeRoundTripsNotification(t *testing.
 	otherUserID := uuid.New()
 	runNotificationStreamStoreTransaction(t, []uuid.UUID{userID, otherUserID}, func(store notificationdb.NotificationStreamStore) {
 		expected := testNotification(userID, "task", "task assigned", false)
+		expected.EditType = "created"
 		otherNotification := testNotification(otherUserID, "project", "project updated", false)
 
 		redisID, err := store.Append(t.Context(), expected)
@@ -80,6 +82,9 @@ func TestNotificationStreamStoreAppendManyStoresNotificationsAcrossUsers(t *test
 		require.NoError(t, err)
 		require.Len(t, otherEntries, 1)
 		assert.Equal(t, second, otherEntries[0].Notification)
+
+		assertNotificationStreamTTL(t, userID)
+		assertNotificationStreamTTL(t, otherUserID)
 	})
 }
 
@@ -172,6 +177,36 @@ func testNotification(userID uuid.UUID, objectType string, message string, read 
 	}
 }
 
+func TestNotificationStreamStoreAppendRefreshesTTL(t *testing.T) {
+	userID := uuid.New()
+	runNotificationStreamStoreTransaction(t, []uuid.UUID{userID}, func(store notificationdb.NotificationStreamStore) {
+		_, err := store.Append(t.Context(), testNotification(userID, "task", "ttl", false))
+		require.NoError(t, err)
+
+		assertNotificationStreamTTL(t, userID)
+	})
+}
+
+func TestNotificationStreamStoreAppendCapsStreamAtMaximumLength(t *testing.T) {
+	userID := uuid.New()
+	runNotificationStreamStoreTransaction(t, []uuid.UUID{userID}, func(store notificationdb.NotificationStreamStore) {
+		extraNotifications := int64(5)
+		for i := int64(0); i < notificationdb.NotificationStreamMaxLen+extraNotifications; i++ {
+			_, err := store.Append(t.Context(), testNotification(userID, "task", fmt.Sprintf("notification-%03d", i), false))
+			require.NoError(t, err)
+		}
+
+		streamLength, err := rdb.XLen(t.Context(), notificationStreamKey(userID)).Result()
+		require.NoError(t, err)
+		require.Equal(t, notificationdb.NotificationStreamMaxLen, streamLength)
+
+		entries, err := store.Range(t.Context(), userID, "-", notificationdb.NotificationStreamMaxLen+extraNotifications)
+		require.NoError(t, err)
+		require.Len(t, entries, int(notificationdb.NotificationStreamMaxLen))
+		assert.Equal(t, "notification-005", entries[0].Notification.Message)
+	})
+}
+
 func runNotificationStreamStoreTransaction(
 	t *testing.T,
 	userIDs []uuid.UUID,
@@ -194,5 +229,14 @@ func notificationStreamKeys(userIDs ...uuid.UUID) []string {
 }
 
 func notificationStreamKey(userID uuid.UUID) string {
-	return fmt.Sprintf("notifications:user:%s", userID.String())
+	return notificationdb.NotificationStreamKey(userID)
+}
+
+func assertNotificationStreamTTL(t *testing.T, userID uuid.UUID) {
+	t.Helper()
+
+	ttl, err := rdb.TTL(t.Context(), notificationStreamKey(userID)).Result()
+	require.NoError(t, err)
+	assert.Greater(t, ttl, 29*24*time.Hour)
+	assert.LessOrEqual(t, ttl, notificationdb.NotificationStreamTTL)
 }
