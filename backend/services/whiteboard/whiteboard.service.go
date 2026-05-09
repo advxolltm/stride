@@ -20,6 +20,7 @@ type (
 		GetWhiteboardByProjectID(ctx context.Context, projectUUID uuid.UUID) (*models.Whiteboard, error)
 		CreateWhiteboard(ctx context.Context, whiteboard *models.Whiteboard) error
 		UpdateCanvasState(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, canvasState datatypes.JSON) (*models.Whiteboard, error)
+		PersistCanvasState(ctx context.Context, projectID uuid.UUID, canvasState datatypes.JSON) (*models.Whiteboard, error)
 
 		GetElements(ctx context.Context, userID uuid.UUID, projectID uuid.UUID) ([]models.WhiteboardElement, error)
 		GetElement(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, id uuid.UUID) (*models.WhiteboardElement, error)
@@ -95,6 +96,30 @@ func (s *whiteboardService) UpdateCanvasState(ctx context.Context, userID uuid.U
 	}
 
 	return s.store.UpdateCanvasState(ctx, projectID, normalizeCanvasState(canvasState))
+}
+
+func (s *whiteboardService) PersistCanvasState(ctx context.Context, projectID uuid.UUID, canvasState datatypes.JSON) (*models.Whiteboard, error) {
+	updated, err := s.store.UpdateCanvasState(ctx, projectID, normalizeCanvasState(canvasState))
+	if err == nil {
+		return updated, nil
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+
+	whiteboard := &models.Whiteboard{
+		ProjectID:   projectID,
+		CanvasState: normalizeCanvasState(canvasState),
+	}
+	if createErr := s.store.CreateWhiteboard(ctx, whiteboard); createErr != nil {
+		updated, retryErr := s.store.UpdateCanvasState(ctx, projectID, normalizeCanvasState(canvasState))
+		if retryErr == nil {
+			return updated, nil
+		}
+		return nil, createErr
+	}
+
+	return whiteboard, nil
 }
 
 func (s *whiteboardService) GetElements(ctx context.Context, userID uuid.UUID, projectID uuid.UUID) ([]models.WhiteboardElement, error) {
