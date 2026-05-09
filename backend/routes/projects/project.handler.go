@@ -2,6 +2,7 @@ package projects
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"backend/routes"
@@ -10,15 +11,17 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
+	"github.com/redis/go-redis/v9"
 )
 
 type projectRouteHandler struct {
 	projectService projectService.ProjectService
 	authService    authService.AuthService
+	rdb            *redis.Client
 }
 
-func newProjectRouteHandler(ps projectService.ProjectService, as authService.AuthService) *projectRouteHandler {
-	return &projectRouteHandler{projectService: ps, authService: as}
+func newProjectRouteHandler(ps projectService.ProjectService, as authService.AuthService, rdb *redis.Client) *projectRouteHandler {
+	return &projectRouteHandler{projectService: ps, authService: as, rdb: rdb}
 }
 
 func (h *projectRouteHandler) registerRoutes(g *echo.Group) {
@@ -247,7 +250,12 @@ func (h *projectRouteHandler) memberPOSTHandle(c *echo.Context) error {
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
 	}
 
-	return c.JSON(http.StatusCreated, routes.Map(u, routes.MapToReturnMember))
+	mappedMembers := routes.Map(u, routes.MapToReturnMember)
+	if err := routes.SendWSUpdate(c.Request().Context(), h.rdb, id, routes.ProjectMemberAdd, mappedMembers); err != nil {
+		slog.Error("memberPOSTHandle: Failed to send ws update", "error", err)
+	}
+
+	return c.JSON(http.StatusCreated, mappedMembers)
 }
 
 // @Summary		Update project
@@ -363,6 +371,16 @@ func (h *projectRouteHandler) memberDELETEHandle(c *echo.Context) error {
 	if err := h.projectService.RemoveUserFromProject(c.Request().Context(), userid, projid); err != nil {
 		status, msg := mapServiceErrorProj(err)
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
+	}
+
+	type projectMemberRemoveWSUpdate struct {
+		UserID uuid.UUID `json:"user_id"`
+	} // @name ProjectMemberRemoveWSUpdate
+
+	if err := routes.SendWSUpdate(c.Request().Context(), h.rdb, projid, routes.ProjectMemberRemove, projectMemberRemoveWSUpdate{
+		UserID: userid,
+	}); err != nil {
+		slog.Error("memberDELETEHandle: Failed to send ws update", "error", err)
 	}
 
 	return c.NoContent(http.StatusNoContent)

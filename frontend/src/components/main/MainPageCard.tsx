@@ -37,11 +37,11 @@ export function MainPageCard({
                         {getInitials(project.name)}
                     </div>
 
-                    <div className="min-w-0">
-                        <Card.Title className="text-sm font-bold text-(--foreground)">
+                    <div className="w-full">
+                        <Card.Title className="w-full truncate text-sm font-bold text-(--foreground)">
                             {project.name}
                         </Card.Title>
-                        <Card.Description className="text-muted text-smleading-relaxed mt-1 line-clamp-4 h-20">
+                        <Card.Description className="text-muted mt-1 line-clamp-4 w-full text-sm leading-relaxed">
                             {project.description}
                         </Card.Description>
                     </div>

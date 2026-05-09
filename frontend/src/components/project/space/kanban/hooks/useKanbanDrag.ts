@@ -46,7 +46,11 @@ export function useKanbanDrag(
         setActiveTask(task ?? null)
     }
 
-    function moveTaskBetweenColumns(activeId: string, overId: string) {
+    function moveTaskBetweenColumns(
+        activeId: string,
+        overId: string,
+        insertAfterOver = false,
+    ) {
         const activeCol = findColumn(activeId)
         const overCol =
             localColumns.find((c) => c.id === overId) ?? findColumn(overId)
@@ -68,8 +72,16 @@ export function useKanbanDrag(
 
         if (fromCol.id === toCol.id) {
             const overIndex = toCol.tasks.findIndex((t) => t.id === overId)
+            const isCrossColumnDrag =
+                dragStartRef.current?.fromStatus !== activeCol.id
             const targetIndex =
-                overIndex === -1 ? fromCol.tasks.length - 1 : overIndex
+                overIndex === -1
+                    ? fromCol.tasks.length - 1
+                    : Math.min(
+                          overIndex +
+                              (isCrossColumnDrag && insertAfterOver ? 1 : 0),
+                          fromCol.tasks.length - 1,
+                      )
 
             if (activeIndex === targetIndex) {
                 const fromStatus = dragStartRef.current?.fromStatus
@@ -92,7 +104,11 @@ export function useKanbanDrag(
             if (overIndex === -1) {
                 toCol.tasks.push(task)
             } else {
-                toCol.tasks.splice(overIndex, 0, task)
+                toCol.tasks.splice(
+                    overIndex + (insertAfterOver ? 1 : 0),
+                    0,
+                    task,
+                )
             }
         }
 
@@ -112,10 +128,22 @@ export function useKanbanDrag(
         const activeCol = findColumn(activeId)
         const overCol =
             localColumns.find((c) => c.id === overId) ?? findColumn(overId)
+        const isCrossColumnDrag =
+            activeCol && dragStartRef.current?.fromStatus !== activeCol.id
+        const activeRect = active.rect.current.translated
+        const insertAfterOver = activeRect
+            ? activeRect.top > over.rect.top + over.rect.height / 2
+            : false
 
-        if (!activeCol || !overCol || activeCol.id === overCol.id) return
+        if (
+            !activeCol ||
+            !overCol ||
+            (activeCol.id === overCol.id && !isCrossColumnDrag)
+        ) {
+            return
+        }
 
-        moveTaskBetweenColumns(activeId, overId)
+        moveTaskBetweenColumns(activeId, overId, insertAfterOver)
     }
 
     function handleDragEnd({ active, over }: DragEndEvent) {
@@ -130,7 +158,16 @@ export function useKanbanDrag(
         }
 
         const activeId = active.id as string
-        const result = moveTaskBetweenColumns(activeId, over.id as string)
+        const activeCol = findColumn(activeId)
+        const dragStart = dragStartRef.current
+        const result =
+            dragStart && activeCol && dragStart.fromStatus !== activeCol.id
+                ? {
+                      columns: localColumns,
+                      fromStatus: dragStart.fromStatus,
+                      toStatus: activeCol.id,
+                  }
+                : moveTaskBetweenColumns(activeId, over.id as string)
         dragStartRef.current = null
 
         if (!result) return
