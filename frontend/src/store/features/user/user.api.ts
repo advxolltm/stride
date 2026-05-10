@@ -2,6 +2,7 @@ import type { User } from '../../../shared/types'
 import { baseApi } from '../../api/base.api'
 import type {
     ApiUser,
+    ChangePasswordRequest,
     CreateUserRequest,
     UpdateUserRequest,
 } from './user.types'
@@ -61,6 +62,17 @@ export const userApi = baseApi.injectEndpoints({
             ],
         }),
 
+        changePassword: builder.mutation<
+            void,
+            { id: string; body: ChangePasswordRequest }
+        >({
+            query: ({ id, body }) => ({
+                url: `/users/${id}/password`,
+                method: 'PATCH',
+                body,
+            }),
+        }),
+
         deleteUser: builder.mutation<void, string>({
             query: (id) => ({ url: `/users/${id}`, method: 'DELETE' }),
             invalidatesTags: (_result, _error, id) => [{ type: 'User', id }],
@@ -73,5 +85,6 @@ export const {
     useGetUserByIdQuery,
     useCreateUserMutation,
     useUpdateUserMutation,
+    useChangePasswordMutation,
     useDeleteUserMutation,
 } = userApi

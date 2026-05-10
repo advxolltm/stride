@@ -8,12 +8,14 @@ import {
     toast,
 } from '@heroui/react'
 import { useNavigate } from 'react-router'
+import { useTranslation } from 'react-i18next'
 import AuthContainer from '../../components/auth/AuthContainer'
 import PasswordInput from '../../components/auth/PasswordInput'
 import { getApiErrorMessage } from '../../shared/utils/api/errors'
 import { useCreateUserMutation } from '../../store/features/user/user.api'
 
 export default function RegisterPage() {
+    const { t } = useTranslation('common')
     const navigate = useNavigate()
     const [createUser, { isLoading }] = useCreateUserMutation()
 
@@ -105,7 +107,7 @@ export default function RegisterPage() {
                 </TextField>
 
                 <PasswordInput
-                    placeholder="Create a password"
+                    placeholder={t('passwordInput.createPlaceholder')}
                     autoComplete="new-password"
                 />
 

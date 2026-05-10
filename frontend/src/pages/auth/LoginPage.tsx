@@ -8,11 +8,13 @@ import {
     toast,
 } from '@heroui/react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import AuthContainer from '../../components/auth/AuthContainer'
 import PasswordInput from '../../components/auth/PasswordInput'
 import { useLoginMutation } from '../../store/features/auth/auth.api'
 
 export default function LoginPage() {
+    const { t } = useTranslation('common')
     const navigate = useNavigate()
     const location = useLocation()
     const [login, { isLoading }] = useLoginMutation()
@@ -110,7 +112,7 @@ export default function LoginPage() {
 
                 <div className="flex w-full flex-col gap-1.5">
                     <PasswordInput
-                        placeholder="Enter your password"
+                        placeholder={t('passwordInput.placeholder')}
                         autoComplete="current-password"
                     />
                     <div className="flex justify-end">

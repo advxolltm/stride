@@ -26,7 +26,12 @@
     "confirmPassword": "Confirm new password",
     "confirmPasswordPlaceholder": "Confirm new password",
     "update": "Update password",
-    "reset": "Reset"
+    "reset": "Reset",
+    "passwordMismatch": "New passwords do not match.",
+    "passwordTooShort": "Password must be at least {{count}} characters.",
+    "passwordMissingSpecial": "Password must contain at least one special character.",
+    "updateSuccess": "Password updated successfully",
+    "updateError": "Failed to update password. Please try again."
   },
   "skills": {
     "title": "Your Skills by Project",

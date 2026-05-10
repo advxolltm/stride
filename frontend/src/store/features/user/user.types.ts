@@ -19,6 +19,10 @@ export type CreateUserRequest = {
 
 export type UpdateUserRequest = Partial<{
     email: string
-    password: string
     full_name: string
 }>
+
+export type ChangePasswordRequest = {
+    current_password: string
+    new_password: string
+}
