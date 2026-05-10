@@ -53,6 +53,43 @@ type WhiteboardEventsSocketLifecycleApi = {
 }
 
 const activeWhiteboardCursorSockets = new Map<string, WebSocket>()
+const WHITEBOARD_CLIENT_ID_STORAGE_KEY = 'whiteboard-client-id'
+
+let serverSideWhiteboardClientID: string | null = null
+
+const generateWhiteboardRequestID = () => {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID()
+    }
+
+    return `${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
+
+const getWhiteboardClientID = () => {
+    if (typeof window === 'undefined') {
+        serverSideWhiteboardClientID ??= generateWhiteboardRequestID()
+        return serverSideWhiteboardClientID
+    }
+
+    const storedClientID = window.sessionStorage.getItem(
+        WHITEBOARD_CLIENT_ID_STORAGE_KEY,
+    )
+    if (storedClientID) {
+        return storedClientID
+    }
+
+    const nextClientID = generateWhiteboardRequestID()
+    window.sessionStorage.setItem(
+        WHITEBOARD_CLIENT_ID_STORAGE_KEY,
+        nextClientID,
+    )
+    return nextClientID
+}
+
+const createWhiteboardMutationHeaders = () => ({
+    'X-Client-Id': getWhiteboardClientID(),
+    'X-Operation-Id': generateWhiteboardRequestID(),
+})
 
 const createWhiteboardCursorSocketUrl = (projectId: string) =>
     buildApiWebSocketUrl(`/ws/project/${projectId}/whiteboard/cursor`)
@@ -507,6 +544,7 @@ export const whiteboardApi = baseApi.injectEndpoints({
                 url: `/projects/${projectId}/whiteboard/elements`,
                 method: 'POST',
                 body,
+                headers: createWhiteboardMutationHeaders(),
             }),
             transformResponse: (response: ApiWhiteboardElement) =>
                 transformWhiteboardElement(response),
@@ -524,6 +562,7 @@ export const whiteboardApi = baseApi.injectEndpoints({
                 url: `/projects/${projectId}/whiteboard/elements/${elementId}`,
                 method: 'PATCH',
                 body,
+                headers: createWhiteboardMutationHeaders(),
             }),
             transformResponse: (response: ApiWhiteboardElement) =>
                 transformWhiteboardElement(response),
@@ -536,6 +575,7 @@ export const whiteboardApi = baseApi.injectEndpoints({
             query: ({ projectId, elementId }) => ({
                 url: `/projects/${projectId}/whiteboard/elements/${elementId}`,
                 method: 'DELETE',
+                headers: createWhiteboardMutationHeaders(),
             }),
         }),
 
