@@ -83,8 +83,19 @@ test-backend:
     # Use the non-root Bitnami image to bypass the CI environment's user restrictions
     - name: bitnami/postgresql:latest
       alias: postgres
-    - name: redis:8.4-alpine
+    - name: bitnami/redis:latest
       alias: redis
+      variables:
+        ALLOW_EMPTY_PASSWORD: "yes"
+        REDIS_AOF_ENABLED: "no"
+      command:
+        - /opt/bitnami/scripts/redis/run.sh
+        - --save
+        - ""
+        - --appendonly
+        - "no"
+        - --stop-writes-on-bgsave-error
+        - "no"
   needs:
     - job: build-backend
       artifacts: true
@@ -101,6 +112,7 @@ test-backend:
     - if [ -z "$CI" ]; then echo "CI variable is not set"; exit 1; fi
     - echo "CI=$CI"
     - until PGPASSWORD=$DB_PASSWORD psql -h "postgres" -U stride -d stride -c "SELECT 'OK' AS status;"; do echo "Waiting for postgres..."; sleep 2; done
+    - until bash -c 'exec 3<>/dev/tcp/$REDIS_HOST/$REDIS_PORT; printf "*1\r\n\$4\r\nPING\r\n" >&3; IFS= read -r -t 2 response <&3; [[ "$response" == "+PONG"* ]]' 2>/dev/null; do echo "Waiting for redis..."; sleep 2; done
     - go mod download
     - swag init -g server.go -d ./cmd,./routes
     - ../gosec -exclude-dir testutils ./...

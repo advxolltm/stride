@@ -23,6 +23,21 @@
     "confirm": "Log Out",
     "pending": "Logging out..."
   },
+  "notification": {
+    "ariaLabel": "Notifications",
+    "title": "Notifications",
+    "unreadCount": "{{count}} unread",
+    "emptyTitle": "No notifications",
+    "emptyDescription": "New updates will appear here.",
+    "deleteAriaLabel": "Delete notification",
+    "markAsReadError": "Unable to mark notification as read.",
+    "deleteError": "Unable to delete notification.",
+    "objectTypes": {
+      "notification": "Notification",
+      "project": "Project",
+      "task": "Task"
+    }
+  },
   "primary": "Primary",
   "danger": "Danger",
   "tailwindMessage": "Tailwind + theme working"
