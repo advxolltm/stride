@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react'
+import type { PointerEvent } from 'react'
 import { Button, toast } from '@heroui/react'
 import { isInvisiblySmallElement, restoreElements } from '@excalidraw/excalidraw'
 import { skipToken } from '@reduxjs/toolkit/query'
@@ -10,6 +11,7 @@ import { WhiteboardCanvas } from '../components/project/space/whiteboard/Whitebo
 import { getApiErrorMessage } from '../shared/utils/api/errors'
 import { useGetProjectByIdQuery } from '../store/features/project/project.api'
 import {
+    sendWhiteboardCursor,
     useCreateProjectWhiteboardElementMutation,
     useDeleteProjectWhiteboardElementMutation,
     useGetProjectWhiteboardElementsQuery,
@@ -18,7 +20,12 @@ import {
     useWatchWhiteboardCursorQuery,
     useWatchWhiteboardEventsQuery,
 } from '../store/features/whiteboard/whiteboard.api'
+import type { WhiteboardCursorClientMessage } from '../store/features/whiteboard/whiteboard.types'
 import getInitials from '../shared/utils/getInitials'
+
+const emptyCursorMessage: WhiteboardCursorClientMessage = {
+    cursor: { x: null, y: null },
+}
 
 const serializeElementSnapshot = (
     element: ExcalidrawElement,
@@ -53,6 +60,9 @@ export function WhiteboardPage() {
     const pendingUpdateElementIdsRef = useRef(new Set<string>())
     const persistedElementSnapshotsRef = useRef(new Map<string, string>())
     const isElementIdMappingReadyRef = useRef(false)
+    const cursorFrameRef = useRef<number | null>(null)
+    const pendingCursorMessageRef =
+        useRef<WhiteboardCursorClientMessage | null>(null)
     const [createProjectWhiteboardElement] =
         useCreateProjectWhiteboardElementMutation()
     const [deleteProjectWhiteboardElement] =
@@ -95,6 +105,28 @@ export function WhiteboardPage() {
         isElementIdMappingReadyRef.current = false
     }, [projectId])
 
+    const flushPendingCursor = () => {
+        cursorFrameRef.current = null
+        if (!projectId || !pendingCursorMessageRef.current) {
+            return
+        }
+
+        sendWhiteboardCursor(projectId, pendingCursorMessageRef.current)
+        pendingCursorMessageRef.current = null
+    }
+
+    const queueCursorUpdate = (message: WhiteboardCursorClientMessage) => {
+        pendingCursorMessageRef.current = message
+
+        if (cursorFrameRef.current !== null) {
+            return
+        }
+
+        cursorFrameRef.current = window.requestAnimationFrame(
+            flushPendingCursor,
+        )
+    }
+
     useEffect(() => {
         const persistedElementIDs = new Set(
             whiteboardElements.map((backendElement) => backendElement.props.id),
@@ -129,6 +161,18 @@ export function WhiteboardPage() {
         )
         isElementIdMappingReadyRef.current = true
     }, [whiteboardElements])
+
+    useEffect(() => {
+        return () => {
+            if (cursorFrameRef.current !== null) {
+                window.cancelAnimationFrame(cursorFrameRef.current)
+            }
+
+            if (projectId) {
+                sendWhiteboardCursor(projectId, emptyCursorMessage)
+            }
+        }
+    }, [projectId])
 
     const deletePersistedElement = (projectId: string, elementId: string) => {
         const backendElementId =
@@ -259,6 +303,21 @@ export function WhiteboardPage() {
                 })
         })
     }
+
+    const handleCanvasPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+        const bounds = event.currentTarget.getBoundingClientRect()
+        queueCursorUpdate({
+            cursor: {
+                x: event.clientX - bounds.left,
+                y: event.clientY - bounds.top,
+            },
+        })
+    }
+
+    const handleCanvasPointerLeave = () => {
+        queueCursorUpdate(emptyCursorMessage)
+    }
+
     const excalidrawElements = useMemo(
         () =>
             restoreElements(
@@ -420,6 +479,8 @@ export function WhiteboardPage() {
                 }
                 onChange={handleCanvasChange}
                 onPointerUp={handleCanvasPointerUp}
+                onPointerMove={handleCanvasPointerMove}
+                onPointerLeave={handleCanvasPointerLeave}
             />
         </div>
     )

@@ -62,6 +62,8 @@ export function WhiteboardCanvas({
     viewportStorageKey,
     onChange,
     onPointerUp,
+    onPointerMove,
+    onPointerLeave,
 }: WhiteboardCanvasProps) {
     const excalidrawApiRef = useRef<ExcalidrawImperativeAPI | null>(null)
     const sceneElements = useMemo(
@@ -88,7 +90,11 @@ export function WhiteboardCanvas({
     }, [sceneElements])
 
     return (
-        <div className="whiteboard-excalidraw h-full w-full overflow-hidden">
+        <div
+            className="whiteboard-excalidraw h-full w-full overflow-hidden"
+            onPointerMove={onPointerMove}
+            onPointerLeave={onPointerLeave}
+        >
             <Excalidraw
                 initialData={{
                     elements: sceneElements,
