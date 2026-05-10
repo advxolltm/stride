@@ -65,6 +65,7 @@ type userTestEnv struct {
 	ctx          context.Context
 	e            *echo.Echo
 	testUser     *models.User
+	testPassword string
 	globalCookie *http.Cookie
 	uServe       userService.UserService
 	aServ        authService.AuthService
@@ -94,6 +95,7 @@ func newUserTestEnv(t *testing.T, tx *gorm.DB) userTestEnv {
 		ctx:          ctx,
 		e:            e,
 		testUser:     testUser,
+		testPassword: pass,
 		globalCookie: getCookie(t, aServ, email, pass),
 		uServe:       uServe,
 		aServ:        aServ,
@@ -302,7 +304,149 @@ func TestUserRouteHandler_Integration(t *testing.T) {
 		assert.Equal(t, http.StatusUnauthorized, rec.Code)
 	})
 
-	// ── DELETE /users/:id ───────────────────────────────────────────
+	// PATCH /users/:id password guard
+
+	runTest(t, "PATCH /users/:id ignores password changes", func(t *testing.T, tx *gorm.DB) {
+		env := newUserTestEnv(t, tx)
+		newPassword := "NewValid!123"
+		body := map[string]string{"password": newPassword}
+		b, _ := json.Marshal(body)
+		req := httptest.NewRequest(http.MethodPatch, "/api/users/"+env.testUser.ID.String(), bytes.NewReader(b))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		req.AddCookie(env.globalCookie)
+		rec := httptest.NewRecorder()
+		env.e.ServeHTTP(rec, req)
+
+		require.Equal(t, http.StatusOK, rec.Code)
+
+		_, _, err := env.aServ.AuthenticateUser(env.ctx, env.testUser.Email, newPassword)
+		assert.Error(t, err)
+
+		_, _, err = env.aServ.AuthenticateUser(env.ctx, env.testUser.Email, env.testPassword)
+		require.NoError(t, err)
+	})
+
+	// PATCH /users/:id/password
+
+	runTest(t, "PATCH /users/:id/password returns 204 and changes password when current password is correct", func(t *testing.T, tx *gorm.DB) {
+		env := newUserTestEnv(t, tx)
+		newPassword := "NewValid!123"
+		body := map[string]string{
+			"current_password": env.testPassword,
+			"new_password":     newPassword,
+		}
+		b, _ := json.Marshal(body)
+		req := httptest.NewRequest(http.MethodPatch, "/api/users/"+env.testUser.ID.String()+"/password", bytes.NewReader(b))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		req.AddCookie(env.globalCookie)
+		rec := httptest.NewRecorder()
+		env.e.ServeHTTP(rec, req)
+
+		require.Equal(t, http.StatusNoContent, rec.Code)
+
+		_, _, err = env.aServ.AuthenticateUser(env.ctx, env.testUser.Email, env.testPassword)
+		assert.Error(t, err)
+
+		_, _, err = env.aServ.AuthenticateUser(env.ctx, env.testUser.Email, newPassword)
+		require.NoError(t, err)
+	})
+
+	runTest(t, "PATCH /users/:id/password returns 401 when current password is wrong", func(t *testing.T, tx *gorm.DB) {
+		env := newUserTestEnv(t, tx)
+		body := map[string]string{
+			"current_password": "Wrong!123",
+			"new_password":     "NewValid!123",
+		}
+		b, _ := json.Marshal(body)
+		req := httptest.NewRequest(http.MethodPatch, "/api/users/"+env.testUser.ID.String()+"/password", bytes.NewReader(b))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		req.AddCookie(env.globalCookie)
+		rec := httptest.NewRecorder()
+		env.e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusUnauthorized, rec.Code)
+
+		_, _, err := env.aServ.AuthenticateUser(env.ctx, env.testUser.Email, env.testPassword)
+		require.NoError(t, err)
+	})
+
+	runTest(t, "PATCH /users/:id/password returns 400 when new password is weak", func(t *testing.T, tx *gorm.DB) {
+		env := newUserTestEnv(t, tx)
+		body := map[string]string{
+			"current_password": env.testPassword,
+			"new_password":     "weak",
+		}
+		b, _ := json.Marshal(body)
+		req := httptest.NewRequest(http.MethodPatch, "/api/users/"+env.testUser.ID.String()+"/password", bytes.NewReader(b))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		req.AddCookie(env.globalCookie)
+		rec := httptest.NewRecorder()
+		env.e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+	})
+
+	runTest(t, "PATCH /users/:id/password returns 400 when new password matches current password", func(t *testing.T, tx *gorm.DB) {
+		env := newUserTestEnv(t, tx)
+		body := map[string]string{
+			"current_password": env.testPassword,
+			"new_password":     env.testPassword,
+		}
+		b, _ := json.Marshal(body)
+		req := httptest.NewRequest(http.MethodPatch, "/api/users/"+env.testUser.ID.String()+"/password", bytes.NewReader(b))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		req.AddCookie(env.globalCookie)
+		rec := httptest.NewRecorder()
+		env.e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+	})
+
+	runTest(t, "PATCH /users/:id/password returns 401 when changing another user's password", func(t *testing.T, tx *gorm.DB) {
+		env := newUserTestEnv(t, tx)
+		otherUser, err := env.uServe.CreateUser(env.ctx, "otherPasswordUser", "other-password@test.com", "OtherValid!123")
+		require.NoError(t, err)
+		body := map[string]string{
+			"current_password": "OtherValid!123",
+			"new_password":     "NewValid!123",
+		}
+		b, _ := json.Marshal(body)
+		req := httptest.NewRequest(http.MethodPatch, "/api/users/"+otherUser.ID.String()+"/password", bytes.NewReader(b))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		req.AddCookie(env.globalCookie)
+		rec := httptest.NewRecorder()
+		env.e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusUnauthorized, rec.Code)
+	})
+
+	runTest(t, "PATCH /users/:id/password returns 400 on invalid UUID", func(t *testing.T, tx *gorm.DB) {
+		env := newUserTestEnv(t, tx)
+		req := httptest.NewRequest(http.MethodPatch, "/api/users/bad-uuid/password", bytes.NewReader([]byte("{}")))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		req.AddCookie(env.globalCookie)
+		rec := httptest.NewRecorder()
+		env.e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+	})
+
+	runTest(t, "PATCH /users/:id/password returns 401 without auth", func(t *testing.T, tx *gorm.DB) {
+		env := newUserTestEnv(t, tx)
+		body := map[string]string{
+			"current_password": env.testPassword,
+			"new_password":     "NewValid!123",
+		}
+		b, _ := json.Marshal(body)
+		req := httptest.NewRequest(http.MethodPatch, "/api/users/"+env.testUser.ID.String()+"/password", bytes.NewReader(b))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
+		env.e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusUnauthorized, rec.Code)
+	})
+
+	// DELETE /users/:id
 
 	runTest(t, "DELETE /users/:id returns 401 when deleting another user", func(t *testing.T, tx *gorm.DB) {
 		env := newUserTestEnv(t, tx)

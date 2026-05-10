@@ -443,6 +443,86 @@ func TestUserService_DeleteAvatar(t *testing.T) {
 	})
 }
 
+func TestUserService_ChangePassword(t *testing.T) {
+	runServiceTest(t, "updates password hash when current password is correct", func(t *testing.T, service userService, store *stubUserStore) {
+		ctx := context.Background()
+		userID := uuid.New()
+		currentPassword := "Current!123"
+		newPassword := "NewValid!123"
+
+		store.getUserFn = func(_ context.Context, id uuid.UUID) (*models.User, error) {
+			require.Equal(t, userID, id)
+			return &models.User{ID: id, PasswordHash: mustHashPassword(t, currentPassword)}, nil
+		}
+		store.updateUserFn = func(_ context.Context, id uuid.UUID, fields userStore.UpdateUserFields) (*models.User, error) {
+			require.Equal(t, userID, id)
+			require.NotNil(t, fields.PasswordHash)
+			assert.NotEqual(t, newPassword, *fields.PasswordHash)
+			assert.NoError(t, bcrypt.CompareHashAndPassword([]byte(*fields.PasswordHash), []byte(newPassword)))
+			return &models.User{ID: id, PasswordHash: *fields.PasswordHash}, nil
+		}
+
+		err := service.ChangePassword(ctx, userID, currentPassword, newPassword)
+
+		assert.NoError(t, err)
+	})
+
+	runServiceTest(t, "returns ErrInvalidPassword and does not update when current password is wrong", func(t *testing.T, service userService, store *stubUserStore) {
+		store.getUserFn = func(_ context.Context, id uuid.UUID) (*models.User, error) {
+			return &models.User{ID: id, PasswordHash: mustHashPassword(t, "Current!123")}, nil
+		}
+
+		err := service.ChangePassword(context.Background(), uuid.New(), "Wrong!123", "NewValid!123")
+
+		assert.ErrorIs(t, err, ErrInvalidPassword)
+	})
+
+	runServiceTest(t, "returns password validation error before updating", func(t *testing.T, service userService, store *stubUserStore) {
+		store.getUserFn = func(_ context.Context, id uuid.UUID) (*models.User, error) {
+			return &models.User{ID: id, PasswordHash: mustHashPassword(t, "Current!123")}, nil
+		}
+
+		err := service.ChangePassword(context.Background(), uuid.New(), "Current!123", "weak")
+
+		assert.ErrorIs(t, err, ErrPasswordTooShort)
+	})
+
+	runServiceTest(t, "returns ErrPasswordUnchanged and does not update when new password matches current password", func(t *testing.T, service userService, store *stubUserStore) {
+		currentPassword := "Current!123"
+		store.getUserFn = func(_ context.Context, id uuid.UUID) (*models.User, error) {
+			return &models.User{ID: id, PasswordHash: mustHashPassword(t, currentPassword)}, nil
+		}
+
+		err := service.ChangePassword(context.Background(), uuid.New(), currentPassword, currentPassword)
+
+		assert.ErrorIs(t, err, ErrPasswordUnchanged)
+	})
+
+	runServiceTest(t, "maps missing user from lookup", func(t *testing.T, service userService, store *stubUserStore) {
+		store.getUserFn = func(_ context.Context, _ uuid.UUID) (*models.User, error) {
+			return nil, gorm.ErrRecordNotFound
+		}
+
+		err := service.ChangePassword(context.Background(), uuid.New(), "Current!123", "NewValid!123")
+
+		assert.ErrorIs(t, err, ErrUserNotFound)
+	})
+
+	runServiceTest(t, "wraps unexpected update errors", func(t *testing.T, service userService, store *stubUserStore) {
+		store.getUserFn = func(_ context.Context, id uuid.UUID) (*models.User, error) {
+			return &models.User{ID: id, PasswordHash: mustHashPassword(t, "Current!123")}, nil
+		}
+		store.updateUserFn = func(_ context.Context, _ uuid.UUID, _ userStore.UpdateUserFields) (*models.User, error) {
+			return nil, errors.New("update failed")
+		}
+
+		err := service.ChangePassword(context.Background(), uuid.New(), "Current!123", "NewValid!123")
+
+		assert.ErrorIs(t, err, ErrUserStoreFailed)
+		assert.ErrorContains(t, err, "update failed")
+	})
+}
+
 func TestUserService_DeleteUser(t *testing.T) {
 	runServiceTest(t, "wraps delete errors without remapping them to not found", func(t *testing.T, service userService, store *stubUserStore) {
 		store.deleteUserFn = func(_ context.Context, _ uuid.UUID) error {

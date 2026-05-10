@@ -48,6 +48,7 @@ type (
 		GetUser(ctx context.Context, id uuid.UUID) (*models.User, error)
 		CreateUser(ctx context.Context, username string, email string, password string) (*models.User, error)
 		UpdateUser(ctx context.Context, id uuid.UUID, input UpdateUserInput) (*models.User, error)
+		ChangePassword(ctx context.Context, id uuid.UUID, currentPassword string, newPassword string) error
 		DeleteUser(ctx context.Context, id uuid.UUID) error
 		GetByEmailAndPassword(ctx context.Context, email, password string) (uuid.UUID, error)
 	}
@@ -242,6 +243,24 @@ func (s userService) UpdateUser(ctx context.Context, id uuid.UUID, input UpdateU
 		}
 	}
 	return u, nil
+}
+
+func (s userService) ChangePassword(ctx context.Context, id uuid.UUID, currentPassword string, newPassword string) error {
+	u, err := s.GetUser(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if err := s.CheckPassword(u.PasswordHash, currentPassword); err != nil {
+		return err
+	}
+
+	if err := s.CheckPassword(u.PasswordHash, newPassword); err == nil {
+		return ErrPasswordUnchanged
+	}
+
+	_, err = s.UpdateUser(ctx, id, UpdateUserInput{Password: &newPassword})
+	return err
 }
 
 func (s userService) DeleteUser(ctx context.Context, id uuid.UUID) error {

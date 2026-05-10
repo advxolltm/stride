@@ -27,6 +27,7 @@ func (h userRouteHandler) AddRoutes(api *echo.Group) {
 	g.GET("", h.usersGETHandle)
 	g.GET("/:id", h.userGETHandle)
 	g.PATCH("/:id", h.userPATCHHandle)
+	g.PATCH("/:id/password", h.userPasswordPATCHHandle)
 	g.DELETE("/:id", h.userDELETEHandle)
 }
 
@@ -38,15 +39,21 @@ type createUserRequest struct {
 
 type updateUserRequest struct {
 	Email        *string `json:"email" form:"email"`
-	Password     *string `json:"password" form:"password"`
 	FullName     *string `json:"full_name" form:"full_name"`
 	RemoveAvatar *bool   `json:"remove_avatar" form:"remove_avatar"`
 }
+
+type changePasswordRequest struct {
+	CurrentPassword string `json:"current_password" form:"current_password"`
+	NewPassword     string `json:"new_password" form:"new_password"`
+} //	@name	ChangePasswordRequest
 
 func (h userRouteHandler) mapServiceError(err error) (int, string) {
 	switch {
 	case errors.Is(err, userService.ErrUserNotFound):
 		return http.StatusNotFound, err.Error()
+	case errors.Is(err, userService.ErrInvalidPassword):
+		return http.StatusUnauthorized, err.Error()
 	case errors.Is(err, userService.ErrDuplicateEmail),
 		errors.Is(err, userService.ErrDuplicateUsername):
 		return http.StatusConflict, err.Error()
@@ -54,6 +61,7 @@ func (h userRouteHandler) mapServiceError(err error) (int, string) {
 		errors.Is(err, userService.ErrInvalidUsername),
 		errors.Is(err, userService.ErrPasswordTooShort),
 		errors.Is(err, userService.ErrPasswordMissingSpecial),
+		errors.Is(err, userService.ErrPasswordUnchanged),
 		errors.Is(err, userService.ErrAvatarTooLarge),
 		errors.Is(err, userService.ErrAvatarInvalidType),
 		errors.Is(err, userService.ErrAvatarCorruptImage):
@@ -151,7 +159,6 @@ func (h userRouteHandler) userPOSTHandle(c *echo.Context) error {
 //	@Produce		json
 //	@Param			id			path		string	true	"User ID (UUID)"
 //	@Param			email		formData	string	false	"New email"
-//	@Param			password	formData	string	false	"New password"
 //	@Param			full_name	formData	string	false	"Full name"
 //	@Param			remove_avatar	formData	boolean	false	"Delete the current avatar and clear avatar_url"
 //	@Param			avatar		formData	file	false	"Avatar image (jpeg, png, gif, webp; max 2MB). Generates 300x300, 600x600 thumbnails + original."
@@ -179,7 +186,6 @@ func (h userRouteHandler) userPATCHHandle(c *echo.Context) error {
 
 	input := userService.UpdateUserInput{
 		Email:        req.Email,
-		Password:     req.Password,
 		FullName:     req.FullName,
 		RemoveAvatar: req.RemoveAvatar != nil && *req.RemoveAvatar,
 	}
@@ -210,6 +216,47 @@ func (h userRouteHandler) userPATCHHandle(c *echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, MapUser(*u))
+}
+
+// PATCH /users/:id/password
+//
+//	@Summary	Change user password (self only)
+//	@Tags		users
+//	@Accept		json
+//	@Produce	json
+//	@Param		id		path	string				true	"User ID (UUID)"
+//	@Param		data	body	changePasswordRequest	true	"Current and new password"
+//	@Success	204
+//	@Failure	400	{object}	ErrorResponse	"invalid user id, request body, missing password, or weak new password"
+//	@Failure	401	{object}	ErrorResponse	"unauthorized or invalid current password"
+//	@Failure	404	{object}	ErrorResponse	"user not found"
+//	@Router		/users/{id}/password [patch]
+func (h userRouteHandler) userPasswordPATCHHandle(c *echo.Context) error {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid user id"})
+	}
+
+	callerID := h.authService.GetClaims(c).UserID
+	if callerID != id {
+		return c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "unauthorized"})
+	}
+
+	var req changePasswordRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid request body"})
+	}
+
+	if req.CurrentPassword == "" || req.NewPassword == "" {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "missing current_password or new_password"})
+	}
+
+	if err := h.userService.ChangePassword(c.Request().Context(), id, req.CurrentPassword, req.NewPassword); err != nil {
+		status, msg := h.mapServiceError(err)
+		return c.JSON(status, ErrorResponse{Error: msg})
+	}
+
+	return c.NoContent(http.StatusNoContent)
 }
 
 // DELETE /users/:id
