@@ -56,6 +56,7 @@ export const userApi = baseApi.injectEndpoints({
             transformResponse: (response: ApiUser) =>
                 mapApiUserToUser(response),
             invalidatesTags: (_result, _error, { id }) => [
+                'User',
                 { type: 'User', id },
             ],
         }),

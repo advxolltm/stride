@@ -380,8 +380,11 @@ func TestUserRouteHandler_Integration(t *testing.T) {
 		require.NotNil(t, u.FullName)
 		assert.Contains(t, u.AvatarURL.Small, "/media/avatars/")
 		assert.Contains(t, u.AvatarURL.Small, "/300.png")
+		assert.Contains(t, u.AvatarURL.Small, "?v=")
 		assert.Contains(t, u.AvatarURL.Medium, "/600.png")
+		assert.Contains(t, u.AvatarURL.Medium, "?v=")
 		assert.Contains(t, u.AvatarURL.Original, "/original.png")
+		assert.Contains(t, u.AvatarURL.Original, "?v=")
 		assert.Equal(t, "Avatar User", *u.FullName)
 	})
 

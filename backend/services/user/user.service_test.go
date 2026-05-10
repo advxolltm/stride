@@ -6,8 +6,11 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"image"
+	"image/png"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/google/uuid"
@@ -294,6 +297,50 @@ func TestUserService_UpdateUser(t *testing.T) {
 		assert.Nil(t, updated)
 		assert.ErrorIs(t, err, ErrAvatarSaveFailed)
 		assert.ErrorContains(t, err, "read failed")
+	})
+
+	runServiceTest(t, "saves avatar files with permissions readable by nginx", func(t *testing.T, service userService, store *stubUserStore) {
+		ctx := context.Background()
+		userID := uuid.New()
+
+		var avatar bytes.Buffer
+		require.NoError(t, png.Encode(&avatar, image.NewNRGBA(image.Rect(0, 0, 1, 1))))
+
+		store.updateUserFn = func(_ context.Context, id uuid.UUID, fields userStore.UpdateUserFields) (*models.User, error) {
+			require.Equal(t, userID, id)
+			require.True(t, fields.SetAvatarURL)
+			require.NotNil(t, fields.AvatarURL)
+			return &models.User{ID: id, AvatarURL: fields.AvatarURL}, nil
+		}
+
+		updated, err := service.UpdateUser(ctx, userID, UpdateUserInput{
+			Avatar: &AvatarInput{
+				Filename: "avatar.png",
+				File:     bytes.NewReader(avatar.Bytes()),
+				Size:     int64(avatar.Len()),
+			},
+		})
+
+		require.NoError(t, err)
+		require.NotNil(t, updated)
+
+		avatarDir := filepath.Join(service.mediaDir, "avatars", userID.String())
+		dirInfo, err := os.Stat(avatarDir)
+		require.NoError(t, err)
+
+		originalInfo, err := os.Stat(filepath.Join(avatarDir, "original.png"))
+		require.NoError(t, err)
+		smallInfo, err := os.Stat(filepath.Join(avatarDir, "300.png"))
+		require.NoError(t, err)
+		mediumInfo, err := os.Stat(filepath.Join(avatarDir, "600.png"))
+		require.NoError(t, err)
+
+		if runtime.GOOS != "windows" {
+			assert.Equal(t, avatarDirMode, dirInfo.Mode().Perm())
+			assert.Equal(t, avatarFileMode, originalInfo.Mode().Perm())
+			assert.Equal(t, avatarFileMode, smallInfo.Mode().Perm())
+			assert.Equal(t, avatarFileMode, mediumInfo.Mode().Perm())
+		}
 	})
 
 	runServiceTest(t, "clears avatar_url and deletes avatar files when RemoveAvatar is requested", func(t *testing.T, service userService, store *stubUserStore) {

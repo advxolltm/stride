@@ -12,7 +12,7 @@ export type ApiProjectUser = {
     username: string
     email: string
     full_name: string | null
-    avatar_url: string | null
+    avatar_url: { 300: string; 600: string; original: string } | null
 }
 
 export type ApiProjectSkill = {
@@ -74,6 +74,7 @@ export type ProjectUser = {
     email: string
     fullName: string | null
     avatarUrl: string | null
+    avatarSmallUrl?: string | null
 }
 
 export type CreateProjectRequest = {

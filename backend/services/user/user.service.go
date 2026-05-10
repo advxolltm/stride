@@ -18,6 +18,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/disintegration/imaging"
 	"github.com/google/uuid"
@@ -58,6 +59,8 @@ type (
 )
 
 const maxAvatarSize = 2 << 20 // 2MB
+const avatarDirMode os.FileMode = 0o755
+const avatarFileMode os.FileMode = 0o644
 
 var allowedAvatarTypes = map[string]bool{
 	".jpg": true, ".jpeg": true, ".png": true, ".gif": true, ".webp": true,
@@ -313,21 +316,22 @@ func (s userService) processAndSaveAvatar(userID uuid.UUID, avatar *AvatarInput)
 	}
 
 	userDir := filepath.Join(s.mediaDir, "avatars", userID.String())
-	if err := os.MkdirAll(userDir, 0o750); err != nil {
+	if err := os.MkdirAll(userDir, avatarDirMode); err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrAvatarSaveFailed, err)
 	}
 
 	ext := strings.ToLower(filepath.Ext(avatar.Filename))
 	basePath := fmt.Sprintf("/media/avatars/%s", userID.String())
+	cacheVersion := fmt.Sprintf("v=%d", time.Now().UnixNano())
 
 	originalName := "original" + ext
 	originalPath := filepath.Join(userDir, originalName)
-	if err := os.WriteFile(originalPath, data, 0o600); err != nil {
+	if err := os.WriteFile(originalPath, data, avatarFileMode); err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrAvatarSaveFailed, err)
 	}
 
 	result := &models.AvatarURLMap{
-		Original: basePath + "/" + originalName,
+		Original: basePath + "/" + originalName + "?" + cacheVersion,
 	}
 
 	for _, size := range thumbnailSizes {
@@ -339,12 +343,15 @@ func (s userService) processAndSaveAvatar(userID uuid.UUID, avatar *AvatarInput)
 		if err := imaging.Save(thumb, thumbPath); err != nil {
 			return nil, fmt.Errorf("%w: %w", ErrAvatarProcessingFailed, err)
 		}
+		if err := os.Chmod(thumbPath, avatarFileMode); err != nil {
+			return nil, fmt.Errorf("%w: %w", ErrAvatarSaveFailed, err)
+		}
 
 		switch size {
 		case 300:
-			result.Small = basePath + "/" + thumbName
+			result.Small = basePath + "/" + thumbName + "?" + cacheVersion
 		case 600:
-			result.Medium = basePath + "/" + thumbName
+			result.Medium = basePath + "/" + thumbName + "?" + cacheVersion
 		}
 	}
 
