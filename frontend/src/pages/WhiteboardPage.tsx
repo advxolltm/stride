@@ -9,6 +9,7 @@ import { Link, useParams } from 'react-router-dom'
 import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types'
 import { WhiteboardCanvas } from '../components/project/space/whiteboard/WhiteboardCanvas'
 import { getApiErrorMessage } from '../shared/utils/api/errors'
+import { useAppSelector } from '../shared/hooks/redux'
 import { useGetProjectByIdQuery } from '../store/features/project/project.api'
 import {
     sendWhiteboardCursor,
@@ -21,6 +22,7 @@ import {
     useWatchWhiteboardEventsQuery,
 } from '../store/features/whiteboard/whiteboard.api'
 import type { WhiteboardCursorClientMessage } from '../store/features/whiteboard/whiteboard.types'
+import { selectUserId } from '../store/userSlice'
 import getInitials from '../shared/utils/getInitials'
 
 const emptyCursorMessage: WhiteboardCursorClientMessage = {
@@ -54,6 +56,7 @@ const toWhiteboardElementPayload = (
 export function WhiteboardPage() {
     const { projectId } = useParams()
     const { t } = useTranslation('project')
+    const currentUserId = useAppSelector(selectUserId)
     const excalidrawToBackendElementIdRef = useRef(new Map<string, string>())
     const pendingCreateElementIdsRef = useRef(new Set<string>())
     const pendingDeleteElementIdsRef = useRef(new Set<string>())
@@ -380,6 +383,9 @@ export function WhiteboardPage() {
     const projectName = project?.name ?? projectId
     const collaborators = project?.members ?? []
     const presence = whiteboardCursorWS.data?.presence ?? []
+    const remotePresence = currentUserId
+        ? presence.filter((item) => item.user.id !== currentUserId)
+        : presence
     const visibleCollaborators = collaborators.slice(0, 3)
     const hiddenCollaborators = Math.max(collaborators.length - 3, 0)
 
@@ -474,6 +480,7 @@ export function WhiteboardPage() {
             <WhiteboardCanvas
                 key={projectId}
                 elements={excalidrawElements}
+                presence={remotePresence}
                 viewportStorageKey={
                     projectId ? `whiteboard:${projectId}:viewport` : undefined
                 }
