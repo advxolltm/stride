@@ -306,6 +306,7 @@ func (h *whiteboardRouteHandler) elementPOSTHandle(c *echo.Context) error {
 	}
 
 	element := &models.WhiteboardElement{
+		CreatedBy:   &userID,
 		ElementType: req.ElementType,
 		Props:       req.Props,
 		ZIndex:      req.ZIndex,
