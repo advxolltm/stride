@@ -29,6 +29,11 @@ const serializeElementSnapshot = (
         zIndex,
     })
 
+const filterElementIDSet = (
+    elementIDs: Set<string>,
+    predicate: (elementID: string) => boolean,
+) => new Set([...elementIDs].filter(predicate))
+
 export function WhiteboardPage() {
     const { projectId } = useParams()
     const { t } = useTranslation('project')
@@ -78,6 +83,10 @@ export function WhiteboardPage() {
     }, [projectId])
 
     useEffect(() => {
+        const persistedElementIDs = new Set(
+            whiteboardElements.map((backendElement) => backendElement.props.id),
+        )
+
         excalidrawToBackendElementIdRef.current = new Map(
             whiteboardElements.map((backendElement) => [
                 backendElement.props.id,
@@ -92,6 +101,18 @@ export function WhiteboardPage() {
                     backendElement.zIndex,
                 ),
             ]),
+        )
+        pendingCreateElementIdsRef.current = filterElementIDSet(
+            pendingCreateElementIdsRef.current,
+            (elementID) => !persistedElementIDs.has(elementID),
+        )
+        pendingDeleteElementIdsRef.current = filterElementIDSet(
+            pendingDeleteElementIdsRef.current,
+            (elementID) => persistedElementIDs.has(elementID),
+        )
+        pendingUpdateElementIdsRef.current = filterElementIDSet(
+            pendingUpdateElementIdsRef.current,
+            (elementID) => persistedElementIDs.has(elementID),
         )
         isElementIdMappingReadyRef.current = true
     }, [whiteboardElements])
