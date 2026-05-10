@@ -28,7 +28,7 @@ func NewProjectsGroup(
 	return &ProjectsGroup{
 		projectHandler:    newProjectRouteHandler(ps, as, rdb),
 		skillsHandler:     newSkillsRouteHandler(ps, as, rdb),
-		whiteboardHandler: newWhiteboardRouteHandler(ws, as),
+		whiteboardHandler: newWhiteboardRouteHandler(ws, as, rdb),
 		authService:       as,
 	}
 }

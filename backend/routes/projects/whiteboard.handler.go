@@ -12,18 +12,25 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/datatypes"
 )
 
 type whiteboardRouteHandler struct {
 	authService       authSvc.AuthService
 	whiteboardService whiteboardSvc.WhiteboardService
+	rdb               *redis.Client
 }
 
-func newWhiteboardRouteHandler(ws whiteboardSvc.WhiteboardService, authService authSvc.AuthService) *whiteboardRouteHandler {
+func newWhiteboardRouteHandler(
+	ws whiteboardSvc.WhiteboardService,
+	authService authSvc.AuthService,
+	rdb *redis.Client,
+) *whiteboardRouteHandler {
 	return &whiteboardRouteHandler{
 		authService:       authService,
 		whiteboardService: ws,
+		rdb:               rdb,
 	}
 }
 
