@@ -3,12 +3,13 @@ import { UserPlus } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ConfirmDialog } from '../../../../shared/components'
-import { useGetSessionQuery } from '../../../../store/features/auth/auth.api'
+import { useAppSelector } from '../../../../shared/hooks/redux'
 import { useRemoveProjectMemberMutation } from '../../../../store/features/project/project.api'
 import type {
     Project,
     ProjectMember,
 } from '../../../../store/features/project/project.types'
+import { selectUserId } from '../../../../store/userSlice'
 import { AddMembersDialog } from '../../overview/addMembersDialog/AddMembersDialog'
 import { MemberCard } from './MemberCard'
 
@@ -22,7 +23,7 @@ export function ProjectMembersSettings({
     project,
 }: Readonly<ProjectMembersSettingsProps>) {
     const { t } = useTranslation('project')
-    const { data: sessionUser } = useGetSessionQuery()
+    const userId = useAppSelector(selectUserId)
     const [isInviteOpen, setIsInviteOpen] = useState(false)
     const [memberToRemove, setMemberToRemove] = useState<ProjectMember | null>(
         null,
@@ -99,7 +100,7 @@ export function ProjectMembersSettings({
                 existingMemberIds={project.members.map(
                     (member) => member.userId,
                 )}
-                currentUserId={sessionUser?.id ?? ''}
+                currentUserId={userId ?? ''}
             />
         </div>
     )

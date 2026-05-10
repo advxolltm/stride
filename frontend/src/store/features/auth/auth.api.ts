@@ -1,5 +1,6 @@
 import type { User } from '../../../shared/types'
 import { baseApi } from '../../api/base.api'
+import { clearUserId, setUserId } from '../../userSlice'
 import type { LoginRequest } from './auth.types'
 
 export const authApi = baseApi.injectEndpoints({
@@ -24,6 +25,14 @@ export const authApi = baseApi.injectEndpoints({
                 url: '/auth/logout',
                 method: 'POST',
             }),
+            async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
+                try {
+                    await queryFulfilled
+                    dispatch(clearUserId())
+                } catch {
+                    // Keep the current id if the logout request fails.
+                }
+            },
             invalidatesTags: ['Auth'],
         }),
 
@@ -33,6 +42,14 @@ export const authApi = baseApi.injectEndpoints({
                 method: 'GET',
                 credentials: 'include',
             }),
+            async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
+                try {
+                    const { data } = await queryFulfilled
+                    dispatch(setUserId(data.id))
+                } catch {
+                    dispatch(clearUserId())
+                }
+            },
             providesTags: ['Auth'],
         }),
     }),

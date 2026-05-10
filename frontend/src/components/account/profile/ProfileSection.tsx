@@ -11,8 +11,9 @@ import type { ApiErrorResponse } from '../../../store/features/user/user.types'
 import type { User } from '../../../shared/types'
 import { ProfileAvatarUpload } from './ProfileAvatarUpload'
 import { ProfileDetailsForm } from './ProfileDetailsForm'
-import { useGetSessionQuery } from '../../../store/features/auth/auth.api'
 import { isFetchBaseQueryError } from '../../../shared/utils/api/errors'
+import { useAppSelector } from '../../../shared/hooks/redux'
+import { selectUserId } from '../../../store/userSlice'
 
 export type ProfileForm = {
     fullName: string
@@ -31,8 +32,8 @@ const createProfileForm = (user: User): ProfileForm => ({
 })
 
 export function ProfileSection() {
-    const { data: sessionUser } = useGetSessionQuery()
-    const { data: user } = useGetUserByIdQuery(sessionUser?.id ?? skipToken)
+    const userId = useAppSelector(selectUserId)
+    const { data: user } = useGetUserByIdQuery(userId ?? skipToken)
 
     if (!user) {
         return (
