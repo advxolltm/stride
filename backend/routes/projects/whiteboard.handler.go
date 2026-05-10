@@ -82,6 +82,10 @@ type updateElementRequest struct {
 	ZIndex      *int            `json:"zIndex"`
 }
 
+func readWhiteboardRequestMetadata(c *echo.Context) (clientID string, operationID string) {
+	return c.Request().Header.Get("X-Client-Id"), c.Request().Header.Get("X-Operation-Id")
+}
+
 func mapServiceErrorWB(err error) (int, string) {
 	switch {
 	case errors.Is(err, authSvc.ErrUserIDNotInContext):
@@ -257,6 +261,10 @@ func (h *whiteboardRouteHandler) elementPOSTHandle(c *echo.Context) error {
 	if userID == uuid.Nil {
 		return c.JSON(http.StatusUnauthorized, routes.ErrorResponse{Error: authSvc.ErrUnauthorized.Error()})
 	}
+	clientID, operationID := readWhiteboardRequestMetadata(c)
+	_ = clientID
+	_ = operationID
+
 	projectID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid project id"})
@@ -302,6 +310,10 @@ func (h *whiteboardRouteHandler) elementPATCHHandle(c *echo.Context) error {
 	if userID == uuid.Nil {
 		return c.JSON(http.StatusUnauthorized, routes.ErrorResponse{Error: authSvc.ErrUnauthorized.Error()})
 	}
+	clientID, operationID := readWhiteboardRequestMetadata(c)
+	_ = clientID
+	_ = operationID
+
 	projectID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid project id"})
@@ -349,6 +361,10 @@ func (h *whiteboardRouteHandler) elementDELETEHandle(c *echo.Context) error {
 	if userID == uuid.Nil {
 		return c.JSON(http.StatusUnauthorized, routes.ErrorResponse{Error: authSvc.ErrUnauthorized.Error()})
 	}
+	clientID, operationID := readWhiteboardRequestMetadata(c)
+	_ = clientID
+	_ = operationID
+
 	projectID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid project id"})
