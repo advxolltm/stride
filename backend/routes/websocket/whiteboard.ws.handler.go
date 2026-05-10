@@ -54,6 +54,28 @@ type whiteboardWSMessageEnvelope struct {
 	Type routes.WSMessageType `json:"type"`
 }
 
+type whiteboardWSClientMessageMeta struct {
+	ClientID    string `json:"clientId"`
+	OperationID string `json:"operationId"`
+}
+
+type whiteboardWSClientMessage struct {
+	Type    routes.WSMessageType           `json:"type"`
+	Meta    *whiteboardWSClientMessageMeta `json:"meta,omitempty"`
+	Payload json.RawMessage                `json:"payload"`
+}
+
+type whiteboardElementLiveWSUpdate struct {
+	ElementID   string          `json:"elementId"`
+	ElementType string          `json:"elementType"`
+	Props       json.RawMessage `json:"props"`
+	ZIndex      int             `json:"zIndex"`
+}
+
+type whiteboardElementLiveClearWSUpdate struct {
+	ElementID string `json:"elementId"`
+}
+
 func newWhiteboardWSRouteHandler(
 	authService auth.AuthService,
 	projectService project.ProjectService,
@@ -126,7 +148,14 @@ func (h whiteboardWSRouteHandler) connectGET(c *echo.Context) error {
 
 	ch := sub.Channel()
 	disconnectCh := make(chan error, 1)
-	go consumeProjectWSDisconnect(ws, disconnectCh)
+	go h.consumeWhiteboardLiveClientMessages(
+		ctx,
+		ws,
+		session.ProjectID,
+		session.UserID,
+		session.Expiry,
+		disconnectCh,
+	)
 
 	for {
 		select {
@@ -165,10 +194,103 @@ func (h whiteboardWSRouteHandler) connectGET(c *echo.Context) error {
 
 func isWhiteboardWSEventType(t routes.WSMessageType) bool {
 	switch t {
-	case routes.WhiteboardElementCreate, routes.WhiteboardElementUpdate, routes.WhiteboardElementDelete:
+	case routes.WhiteboardElementCreate,
+		routes.WhiteboardElementUpdate,
+		routes.WhiteboardElementDelete,
+		routes.WhiteboardElementLiveUpdate,
+		routes.WhiteboardElementLiveClear:
 		return true
 	default:
 		return false
+	}
+}
+
+func parseWhiteboardLiveClientMessage(
+	payload []byte,
+) (routes.WSMessageType, string, string, any, bool) {
+	var message whiteboardWSClientMessage
+	if err := json.Unmarshal(payload, &message); err != nil {
+		return 0, "", "", nil, false
+	}
+
+	clientID := ""
+	operationID := ""
+	if message.Meta != nil {
+		clientID = message.Meta.ClientID
+		operationID = message.Meta.OperationID
+	}
+
+	switch message.Type {
+	case routes.WhiteboardElementLiveUpdate:
+		var liveUpdate whiteboardElementLiveWSUpdate
+		if err := json.Unmarshal(message.Payload, &liveUpdate); err != nil {
+			return 0, "", "", nil, false
+		}
+
+		if liveUpdate.ElementID == "" || liveUpdate.ElementType == "" || len(liveUpdate.Props) == 0 {
+			return 0, "", "", nil, false
+		}
+
+		return message.Type, clientID, operationID, liveUpdate, true
+	case routes.WhiteboardElementLiveClear:
+		var liveClear whiteboardElementLiveClearWSUpdate
+		if err := json.Unmarshal(message.Payload, &liveClear); err != nil {
+			return 0, "", "", nil, false
+		}
+
+		if liveClear.ElementID == "" {
+			return 0, "", "", nil, false
+		}
+
+		return message.Type, clientID, operationID, liveClear, true
+	default:
+		return 0, "", "", nil, false
+	}
+}
+
+func (h whiteboardWSRouteHandler) consumeWhiteboardLiveClientMessages(
+	ctx context.Context,
+	conn *websocket.Conn,
+	projectID uuid.UUID,
+	userID uuid.UUID,
+	expiry time.Time,
+	errCh chan<- error,
+) {
+	for {
+		if isWSSessionExpired(expiry) {
+			errCh <- websocket.ErrCloseSent
+			return
+		}
+
+		_, payload, err := conn.ReadMessage()
+		if err != nil {
+			errCh <- err
+			return
+		}
+
+		messageType, clientID, operationID, parsedPayload, ok := parseWhiteboardLiveClientMessage(payload)
+		if !ok {
+			slog.Debug("ignored invalid whiteboard live client payload", "userID", userID)
+			continue
+		}
+
+		meta := &routes.WSMessageMeta{
+			OriginUserID: &userID,
+			ClientID:     clientID,
+			OperationID:  operationID,
+		}
+
+		if err := routes.SendWSUpdateWithMeta(
+			ctx,
+			h.rdb,
+			projectID,
+			messageType,
+			meta,
+			parsedPayload,
+		); err != nil {
+			errCh <- err
+			return
+		}
 	}
 }
 

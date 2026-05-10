@@ -80,6 +80,23 @@ type wsEnvelope struct {
 	Type routes.WSMessageType `json:"type"`
 }
 
+type wsMetaEnvelope struct {
+	Type routes.WSMessageType `json:"type"`
+	Meta struct {
+		ProjectID    string `json:"projectId"`
+		OriginUserID string `json:"originUserId"`
+		ClientID     string `json:"clientId"`
+		OperationID  string `json:"operationId"`
+		SentAt       string `json:"sentAt"`
+	} `json:"meta"`
+	Payload struct {
+		ElementID   string          `json:"elementId"`
+		ElementType string          `json:"elementType"`
+		Props       json.RawMessage `json:"props"`
+		ZIndex      int             `json:"zIndex"`
+	} `json:"payload"`
+}
+
 func dialWS(t *testing.T, serverURL string, path string, cookie *http.Cookie) (*websocket.Conn, *http.Response, error) {
 	t.Helper()
 	wsURL := "ws" + strings.TrimPrefix(serverURL, "http") + path
@@ -167,5 +184,99 @@ func TestWhiteboardWSEndpoint(t *testing.T) {
 		}
 		require.NotNil(t, resp)
 		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+	})
+
+	runTest(t, "republishes valid live update messages with server meta", func(t *testing.T, tx *gorm.DB, deps wsTestDeps) {
+		ctx := t.Context()
+		user, err := deps.userService.CreateUser(ctx, "ws-owner-3", "ws-owner-3@test.com", "Password123!")
+		require.NoError(t, err)
+		project, err := deps.projectService.CreateProject(ctx, &user.ID, "WS Project 3", "ws-project-3-"+uuid.NewString(), nil, "active")
+		require.NoError(t, err)
+
+		server := newTestWSServer(deps.handler)
+		defer server.Close()
+
+		cookie := getCookie(t, deps.authService, user.Email, "Password123!")
+		conn, resp, err := dialWS(t, server.URL, "/api/ws/project/"+project.ID.String()+"/whiteboard", cookie)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		defer func() {
+			require.NoError(t, conn.Close())
+		}()
+
+		clientMessage := map[string]any{
+			"type": routes.WhiteboardElementLiveUpdate,
+			"meta": map[string]any{
+				"clientId":    "client-123",
+				"operationId": "operation-456",
+			},
+			"payload": map[string]any{
+				"elementId":   "element-789",
+				"elementType": "rectangle",
+				"props": map[string]any{
+					"id":   "element-789",
+					"type": "rectangle",
+				},
+				"zIndex": 7,
+			},
+		}
+
+		err = conn.WriteJSON(clientMessage)
+		require.NoError(t, err)
+
+		err = conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+		require.NoError(t, err)
+		_, message, err := conn.ReadMessage()
+		require.NoError(t, err)
+
+		var envelope wsMetaEnvelope
+		err = json.Unmarshal(message, &envelope)
+		require.NoError(t, err)
+
+		assert.Equal(t, routes.WhiteboardElementLiveUpdate, envelope.Type)
+		assert.Equal(t, project.ID.String(), envelope.Meta.ProjectID)
+		assert.Equal(t, user.ID.String(), envelope.Meta.OriginUserID)
+		assert.Equal(t, "client-123", envelope.Meta.ClientID)
+		assert.Equal(t, "operation-456", envelope.Meta.OperationID)
+		assert.NotEmpty(t, envelope.Meta.SentAt)
+		assert.Equal(t, "element-789", envelope.Payload.ElementID)
+		assert.Equal(t, "rectangle", envelope.Payload.ElementType)
+		assert.Equal(t, 7, envelope.Payload.ZIndex)
+		assert.JSONEq(t, `{"id":"element-789","type":"rectangle"}`, string(envelope.Payload.Props))
+	})
+
+	runTest(t, "ignores invalid non-live client message types", func(t *testing.T, tx *gorm.DB, deps wsTestDeps) {
+		ctx := t.Context()
+		user, err := deps.userService.CreateUser(ctx, "ws-owner-4", "ws-owner-4@test.com", "Password123!")
+		require.NoError(t, err)
+		project, err := deps.projectService.CreateProject(ctx, &user.ID, "WS Project 4", "ws-project-4-"+uuid.NewString(), nil, "active")
+		require.NoError(t, err)
+
+		server := newTestWSServer(deps.handler)
+		defer server.Close()
+
+		cookie := getCookie(t, deps.authService, user.Email, "Password123!")
+		conn, resp, err := dialWS(t, server.URL, "/api/ws/project/"+project.ID.String()+"/whiteboard", cookie)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		defer func() {
+			require.NoError(t, conn.Close())
+		}()
+
+		err = conn.WriteJSON(map[string]any{
+			"type": routes.TaskCreate,
+			"payload": map[string]any{
+				"id": uuid.NewString(),
+			},
+		})
+		require.NoError(t, err)
+
+		err = conn.SetReadDeadline(time.Now().Add(300 * time.Millisecond))
+		require.NoError(t, err)
+		_, _, err = conn.ReadMessage()
+		require.Error(t, err)
+		netErr, ok := err.(interface{ Timeout() bool })
+		require.True(t, ok)
+		assert.True(t, netErr.Timeout())
 	})
 }
