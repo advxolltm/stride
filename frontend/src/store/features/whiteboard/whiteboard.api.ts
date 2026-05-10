@@ -399,6 +399,15 @@ const patchWhiteboardElementsCacheFromEvent = (
     }
 }
 
+const isSelfOriginatedWhiteboardEvent = (message: WhiteboardEventMessage) => {
+    const originClientID = message.meta?.clientId
+    if (!originClientID) {
+        return false
+    }
+
+    return originClientID === getWhiteboardClientID()
+}
+
 const watchWhiteboardEventsSocket = async (
     projectId: string,
     lifecycleApi: WhiteboardEventsSocketLifecycleApi,
@@ -440,11 +449,13 @@ const watchWhiteboardEventsSocket = async (
             }
 
             logWhiteboardEventMessage(message)
-            patchWhiteboardElementsCacheFromEvent(
-                projectId,
-                message,
-                lifecycleApi,
-            )
+            if (!isSelfOriginatedWhiteboardEvent(message)) {
+                patchWhiteboardElementsCacheFromEvent(
+                    projectId,
+                    message,
+                    lifecycleApi,
+                )
+            }
 
             lifecycleApi.updateCachedData((draft) => {
                 draft.lastMessage = message
