@@ -104,22 +104,6 @@ export const parseWhiteboardEventMessage = (
     }
 }
 
-export const logWhiteboardEventMessage = (message: WhiteboardEventMessage) => {
-    switch (message.type) {
-        case WSMessageType.WhiteboardElementCreate:
-            console.log('WhiteboardElementCreate event:', message)
-            return
-        case WSMessageType.WhiteboardElementUpdate:
-            console.log('WhiteboardElementUpdate event:', message)
-            return
-        case WSMessageType.WhiteboardElementDelete:
-            console.log('WhiteboardElementDelete event:', message)
-            return
-        default:
-            return
-    }
-}
-
 export const isSelfOriginatedWhiteboardEvent = (
     message: WhiteboardEventMessage,
 ) => {

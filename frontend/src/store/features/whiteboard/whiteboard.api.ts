@@ -15,7 +15,6 @@ import {
     applyWhiteboardEventToElementsCache,
     createWhiteboardMutationHeaders,
     isSelfOriginatedWhiteboardEvent,
-    logWhiteboardEventMessage,
     parseWhiteboardEventMessage,
 } from './whiteboard.ws'
 
@@ -88,6 +87,26 @@ const createWhiteboardEventsSocketState = (
 
 const whiteboardReconnectDelaysMs = [1000, 2000, 5000] as const
 
+const closeSocketIfActive = (socket: WebSocket | null) => {
+    if (
+        socket &&
+        (socket.readyState === WebSocket.OPEN ||
+            socket.readyState === WebSocket.CONNECTING)
+    ) {
+        socket.close()
+    }
+}
+
+const getReconnectDelay = (attempt: number) =>
+    whiteboardReconnectDelaysMs[
+        Math.min(attempt, whiteboardReconnectDelaysMs.length - 1)
+    ]
+
+const waitForDelay = (delayMs: number) =>
+    new Promise<void>((resolve) => {
+        window.setTimeout(resolve, delayMs)
+    })
+
 const isWhiteboardCursorPresence = (
     value: unknown,
 ): value is WhiteboardCursorPresence => {
@@ -151,11 +170,10 @@ const watchWhiteboardCursorSocket = async (
         let socket: WebSocket | null = new WebSocket(
             createWhiteboardCursorSocketUrl(projectId),
         )
-        let settled = false
-
-        const settle = () => {
-            settled = true
-        }
+        let settleSocketLifecycle: (() => void) | null = null
+        const socketLifecycleSettled = new Promise<void>((resolve) => {
+            settleSocketLifecycle = resolve
+        })
 
         const handleOpen = () => {
             activeWhiteboardCursorSockets.set(projectId, socket!)
@@ -212,7 +230,7 @@ const watchWhiteboardCursorSocket = async (
                     draft.status = 'disconnected'
                 }
             })
-            settle()
+            settleSocketLifecycle?.()
         }
 
         socket.addEventListener('open', handleOpen)
@@ -222,18 +240,7 @@ const watchWhiteboardCursorSocket = async (
 
         await Promise.race([
             cacheEntryRemoved,
-            new Promise<void>((resolve) => {
-                const poll = () => {
-                    if (settled) {
-                        resolve()
-                        return
-                    }
-
-                    window.setTimeout(poll, 50)
-                }
-
-                poll()
-            }),
+            socketLifecycleSettled,
         ])
 
         socket.removeEventListener('open', handleOpen)
@@ -245,12 +252,7 @@ const watchWhiteboardCursorSocket = async (
             activeWhiteboardCursorSockets.delete(projectId)
         }
 
-        if (
-            socket.readyState === WebSocket.OPEN ||
-            socket.readyState === WebSocket.CONNECTING
-        ) {
-            socket.close()
-        }
+        closeSocketIfActive(socket)
 
         socket = null
 
@@ -258,25 +260,16 @@ const watchWhiteboardCursorSocket = async (
             break
         }
 
-        const reconnectDelay =
-            whiteboardReconnectDelaysMs[
-                Math.min(
-                    reconnectAttempt,
-                    whiteboardReconnectDelaysMs.length - 1,
-                )
-            ]
-
-        reconnectAttempt += 1
-
         lifecycleApi.updateCachedData((draft) => {
             draft.status = 'connecting'
         })
 
+        const reconnectDelay = getReconnectDelay(reconnectAttempt)
+        reconnectAttempt += 1
+
         await Promise.race([
             cacheEntryRemoved,
-            new Promise((resolve) => {
-                window.setTimeout(resolve, reconnectDelay)
-            }),
+            waitForDelay(reconnectDelay),
         ])
     }
 }
@@ -331,11 +324,10 @@ const watchWhiteboardEventsSocket = async (
         let socket: WebSocket | null = new WebSocket(
             createWhiteboardEventsSocketUrl(projectId),
         )
-        let settled = false
-
-        const settle = () => {
-            settled = true
-        }
+        let settleSocketLifecycle: (() => void) | null = null
+        const socketLifecycleSettled = new Promise<void>((resolve) => {
+            settleSocketLifecycle = resolve
+        })
 
         const handleOpen = () => {
             lifecycleApi.updateCachedData((draft) => {
@@ -372,7 +364,6 @@ const watchWhiteboardEventsSocket = async (
                 return
             }
 
-            logWhiteboardEventMessage(message)
             if (!isSelfOriginatedWhiteboardEvent(message)) {
                 patchWhiteboardElementsCacheFromEvent(
                     projectId,
@@ -409,7 +400,7 @@ const watchWhiteboardEventsSocket = async (
                     draft.status = 'disconnected'
                 }
             })
-            settle()
+            settleSocketLifecycle?.()
         }
 
         socket.addEventListener('open', handleOpen)
@@ -419,18 +410,7 @@ const watchWhiteboardEventsSocket = async (
 
         await Promise.race([
             cacheEntryRemoved,
-            new Promise<void>((resolve) => {
-                const poll = () => {
-                    if (settled) {
-                        resolve()
-                        return
-                    }
-
-                    window.setTimeout(poll, 50)
-                }
-
-                poll()
-            }),
+            socketLifecycleSettled,
         ])
 
         socket.removeEventListener('open', handleOpen)
@@ -438,12 +418,7 @@ const watchWhiteboardEventsSocket = async (
         socket.removeEventListener('error', handleError)
         socket.removeEventListener('close', handleClose)
 
-        if (
-            socket.readyState === WebSocket.OPEN ||
-            socket.readyState === WebSocket.CONNECTING
-        ) {
-            socket.close()
-        }
+        closeSocketIfActive(socket)
 
         socket = null
 
@@ -451,25 +426,16 @@ const watchWhiteboardEventsSocket = async (
             break
         }
 
-        const reconnectDelay =
-            whiteboardReconnectDelaysMs[
-                Math.min(
-                    reconnectAttempt,
-                    whiteboardReconnectDelaysMs.length - 1,
-                )
-            ]
-
-        reconnectAttempt += 1
-
         lifecycleApi.updateCachedData((draft) => {
             draft.status = 'connecting'
         })
 
+        const reconnectDelay = getReconnectDelay(reconnectAttempt)
+        reconnectAttempt += 1
+
         await Promise.race([
             cacheEntryRemoved,
-            new Promise((resolve) => {
-                window.setTimeout(resolve, reconnectDelay)
-            }),
+            waitForDelay(reconnectDelay),
         ])
     }
 }
