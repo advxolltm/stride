@@ -97,9 +97,7 @@ export function WhiteboardCanvas({
                 excalidrawAPI={(api) => {
                     excalidrawApiRef.current = api
                 }}
-                onChange={(nextElements) => {
-                    onChange?.(nextElements)
-                }}
+                onChange={onChange}
                 onScrollChange={(scrollX, scrollY, zoom) => {
                     persistViewport(viewportStorageKey, {
                         scrollX,

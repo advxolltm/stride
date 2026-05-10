@@ -34,6 +34,15 @@ const filterElementIDSet = (
     predicate: (elementID: string) => boolean,
 ) => new Set([...elementIDs].filter(predicate))
 
+const toWhiteboardElementPayload = (
+    element: ExcalidrawElement,
+    zIndex: number,
+) => ({
+    elementType: element.type,
+    props: element,
+    zIndex,
+})
+
 export function WhiteboardPage() {
     const { projectId } = useParams()
     const { t } = useTranslation('project')
@@ -200,11 +209,7 @@ export function WhiteboardPage() {
 
                 void createProjectWhiteboardElement({
                     projectId,
-                    body: {
-                        elementType: element.type,
-                        props: element,
-                        zIndex: index,
-                    },
+                    body: toWhiteboardElementPayload(element, index),
                 })
                     .unwrap()
                     .then((createdElement) => {
@@ -236,11 +241,7 @@ export function WhiteboardPage() {
             void updateProjectWhiteboardElement({
                 projectId,
                 elementId: backendElementId,
-                body: {
-                    elementType: element.type,
-                    props: element,
-                    zIndex: index,
-                },
+                body: toWhiteboardElementPayload(element, index),
             })
                 .unwrap()
                 .then(() => {
