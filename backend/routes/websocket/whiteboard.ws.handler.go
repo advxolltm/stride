@@ -91,9 +91,26 @@ func (h whiteboardWSRouteHandler) addRoutes(ws *echo.Group) {
 func (h whiteboardWSRouteHandler) connectGET(c *echo.Context) error {
 	ctx := c.Request().Context()
 	session, err := authorizeProjectWSSession(c, h.authService, h.projectService)
-	if err != nil {
+	if err != nil || session == nil {
 		return err
 	}
+
+	if h.rdb == nil {
+		slog.Error("whiteboard websocket missing redis client", "projectID", session.ProjectID, "userID", session.UserID)
+		return c.JSON(http.StatusInternalServerError, routes.ErrorResponse{Error: "internal server error"})
+	}
+
+	sub := h.rdb.Subscribe(ctx, session.ProjectID.String())
+	if _, err := sub.Receive(ctx); err != nil {
+		slog.Error("failed to subscribe whiteboard websocket to redis", "error", err, "projectID", session.ProjectID, "userID", session.UserID)
+		return c.JSON(http.StatusInternalServerError, routes.ErrorResponse{Error: "internal server error"})
+	}
+	defer func() {
+		err := sub.Close()
+		if err != nil {
+			slog.Error("failed to close whiteboard redis sub", "error", err)
+		}
+	}()
 
 	ws, err := h.upgrader.Upgrade(c.Response(), c.Request(), nil)
 	if err != nil {
@@ -104,14 +121,6 @@ func (h whiteboardWSRouteHandler) connectGET(c *echo.Context) error {
 		err := ws.Close()
 		if err != nil {
 			slog.Error("failed to close whiteboard websocket connection", "error", err)
-		}
-	}()
-
-	sub := h.rdb.Subscribe(ctx, session.ProjectID.String())
-	defer func() {
-		err := sub.Close()
-		if err != nil {
-			slog.Error("failed to close whiteboard redis sub", "error", err)
 		}
 	}()
 
@@ -178,8 +187,13 @@ func isWhiteboardWSEventType(t routes.WSMessageType) bool {
 func (h whiteboardWSRouteHandler) cursorConnectGET(c *echo.Context) error {
 	requestCtx := c.Request().Context()
 	session, err := authorizeProjectWSSession(c, h.authService, h.projectService)
-	if err != nil {
+	if err != nil || session == nil {
 		return err
+	}
+
+	if h.rdb == nil || h.presenceStore == nil {
+		slog.Error("whiteboard cursor websocket missing redis client", "projectID", session.ProjectID, "userID", session.UserID)
+		return c.JSON(http.StatusInternalServerError, routes.ErrorResponse{Error: "internal server error"})
 	}
 
 	if isWSSessionExpired(session.Expiry) {

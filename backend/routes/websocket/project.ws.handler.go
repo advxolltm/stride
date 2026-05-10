@@ -64,7 +64,7 @@ func consumeProjectWSDisconnect(conn *websocket.Conn, errCh chan<- error) {
 func (h projectWSRouteHandler) connectKanbanGET(c *echo.Context) error {
 	ctx := c.Request().Context()
 	session, err := authorizeProjectWSSession(c, h.authService, h.projectService)
-	if err != nil {
+	if err != nil || session == nil {
 		return err
 	}
 
