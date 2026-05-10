@@ -135,7 +135,9 @@ func TestWhiteboardHandlerPublishesWSEvents(t *testing.T) {
 		require.NoError(t, err)
 
 		sub, ch := subscribeProjectChannel(t, rdb, project.ID)
-		defer sub.Close()
+		defer func() {
+			require.NoError(t, sub.Close())
+		}()
 
 		body := `{"elementType":"rectangle","props":{"id":"shape-1","type":"rectangle"},"zIndex":1}`
 		req := httptest.NewRequest(http.MethodPost, "/projects/:id/whiteboard/elements", strings.NewReader(body))
@@ -185,7 +187,9 @@ func TestWhiteboardHandlerPublishesWSEvents(t *testing.T) {
 		require.NoError(t, err)
 
 		sub, ch := subscribeProjectChannel(t, rdb, project.ID)
-		defer sub.Close()
+		defer func() {
+			require.NoError(t, sub.Close())
+		}()
 
 		body := `{"elementType":"diamond","props":{"id":"shape-2","type":"diamond"},"zIndex":4}`
 		req := httptest.NewRequest(http.MethodPatch, "/projects/:id/whiteboard/elements/:elementId", strings.NewReader(body))
@@ -234,7 +238,9 @@ func TestWhiteboardHandlerPublishesWSEvents(t *testing.T) {
 		require.NoError(t, err)
 
 		sub, ch := subscribeProjectChannel(t, rdb, project.ID)
-		defer sub.Close()
+		defer func() {
+			require.NoError(t, sub.Close())
+		}()
 
 		req := httptest.NewRequest(http.MethodDelete, "/projects/:id/whiteboard/elements/:elementId", nil)
 		rec := httptest.NewRecorder()

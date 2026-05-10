@@ -116,7 +116,9 @@ func TestWhiteboardWSEndpoint(t *testing.T) {
 		conn, resp, err := dialWS(t, server.URL, "/api/ws/project/"+project.ID.String()+"/whiteboard", cookie)
 		require.NoError(t, err)
 		require.NotNil(t, resp)
-		defer conn.Close()
+		defer func() {
+			require.NoError(t, conn.Close())
+		}()
 
 		taskMessage := `{"type":1,"payload":{"id":"` + uuid.NewString() + `"}}`
 		whiteboardMessage := `{"type":13,"payload":{"id":"` + uuid.NewString() + `"}}`
@@ -161,7 +163,7 @@ func TestWhiteboardWSEndpoint(t *testing.T) {
 		conn, resp, err := dialWS(t, server.URL, "/api/ws/project/"+project.ID.String()+"/whiteboard", cookie)
 		require.Error(t, err)
 		if conn != nil {
-			conn.Close()
+			require.NoError(t, conn.Close())
 		}
 		require.NotNil(t, resp)
 		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
