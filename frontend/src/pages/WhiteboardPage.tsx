@@ -20,7 +20,10 @@ import {
     useWatchWhiteboardCursorQuery,
     useWatchWhiteboardEventsQuery,
 } from '../store/features/whiteboard/whiteboard.api'
-import type { WhiteboardCursorClientMessage } from '../store/features/whiteboard/whiteboard.types'
+import type {
+    WhiteboardCursorClientMessage,
+    WhiteboardLiveUpdateEventPayload,
+} from '../store/features/whiteboard/whiteboard.types'
 import { selectUserId } from '../store/userSlice'
 import getInitials from '../shared/utils/getInitials'
 
@@ -52,6 +55,48 @@ const toWhiteboardElementPayload = (
     zIndex,
 })
 
+const mergeRenderedWhiteboardElements = (
+    persistedElements: WhiteboardPagePersistedElement[],
+    liveElementsById: Record<string, WhiteboardLiveUpdateEventPayload>,
+) => {
+    const mergedElements = persistedElements.map((element) => {
+        const liveOverlay = liveElementsById[element.props.id]
+        if (!liveOverlay) {
+            return {
+                props: element.props,
+                zIndex: element.zIndex,
+            }
+        }
+
+        return {
+            props: liveOverlay.props,
+            zIndex: liveOverlay.zIndex,
+        }
+    })
+
+    const persistedElementIDs = new Set(
+        persistedElements.map((element) => element.props.id),
+    )
+
+    Object.values(liveElementsById).forEach((liveOverlay) => {
+        if (persistedElementIDs.has(liveOverlay.elementId)) {
+            return
+        }
+
+        mergedElements.push({
+            props: liveOverlay.props,
+            zIndex: liveOverlay.zIndex,
+        })
+    })
+
+    return mergedElements
+}
+
+type WhiteboardPagePersistedElement = {
+    props: ExcalidrawElement
+    zIndex: number
+}
+
 export function WhiteboardPage() {
     const { projectId } = useParams()
     const { t } = useTranslation('project')
@@ -74,7 +119,9 @@ export function WhiteboardPage() {
     const whiteboardCursorWS = useWatchWhiteboardCursorQuery(
         projectId ?? skipToken,
     )
-    useWatchWhiteboardEventsQuery(projectId ?? skipToken)
+    const whiteboardEventsWS = useWatchWhiteboardEventsQuery(
+        projectId ?? skipToken,
+    )
     const {
         data: project,
         isLoading: isProjectLoading,
@@ -313,12 +360,15 @@ export function WhiteboardPage() {
     const excalidrawElements = useMemo(
         () =>
             restoreElements(
-                [...whiteboardElements]
+                mergeRenderedWhiteboardElements(
+                    whiteboardElements,
+                    whiteboardEventsWS.data?.liveElementsById ?? {},
+                )
                     .sort((left, right) => left.zIndex - right.zIndex)
                     .map((element) => element.props),
                 null,
             ),
-        [whiteboardElements],
+        [whiteboardElements, whiteboardEventsWS.data?.liveElementsById],
     )
 
     if (!projectId) {
