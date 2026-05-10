@@ -4,6 +4,10 @@ import type {
     WhiteboardDeleteEventPayload,
     WhiteboardElement,
     WhiteboardEventMessage,
+    WhiteboardLiveClearEventPayload,
+    WhiteboardLiveEventMessage,
+    WhiteboardLiveUpdateEventPayload,
+    WhiteboardSocketEventMessage,
 } from './whiteboard.types'
 
 const WHITEBOARD_CLIENT_ID_STORAGE_KEY = 'whiteboard-client-id'
@@ -27,10 +31,27 @@ const isWhiteboardDeleteEventPayload = (
 ): value is WhiteboardDeleteEventPayload =>
     isRecord(value) && typeof value.elementId === 'string'
 
+const isWhiteboardLiveUpdateEventPayload = (
+    value: unknown,
+): value is WhiteboardLiveUpdateEventPayload =>
+    isRecord(value) &&
+    typeof value.elementId === 'string' &&
+    typeof value.elementType === 'string' &&
+    typeof value.zIndex === 'number' &&
+    isRecord(value.props) &&
+    typeof value.props.id === 'string'
+
+const isWhiteboardLiveClearEventPayload = (
+    value: unknown,
+): value is WhiteboardLiveClearEventPayload =>
+    isRecord(value) && typeof value.elementId === 'string'
+
 const isWhiteboardEventType = (value: unknown): value is number =>
     value === WSMessageType.WhiteboardElementCreate ||
     value === WSMessageType.WhiteboardElementUpdate ||
-    value === WSMessageType.WhiteboardElementDelete
+    value === WSMessageType.WhiteboardElementDelete ||
+    value === WSMessageType.WhiteboardElementLiveUpdate ||
+    value === WSMessageType.WhiteboardElementLiveClear
 
 export const generateWhiteboardRequestID = () => {
     if (
@@ -71,11 +92,11 @@ export const createWhiteboardMutationHeaders = () => ({
 
 export const parseWhiteboardEventMessage = (
     rawMessage: string,
-): WhiteboardEventMessage | null => {
+): WhiteboardSocketEventMessage | null => {
     try {
         const parsed = JSON.parse(rawMessage) as Partial<{
             type: number
-            meta?: WhiteboardEventMessage['meta']
+            meta?: WhiteboardSocketEventMessage['meta']
             payload: unknown
         }>
 
@@ -98,13 +119,29 @@ export const parseWhiteboardEventMessage = (
             return null
         }
 
-        return parsed as WhiteboardEventMessage
+        if (
+            parsed.type === WSMessageType.WhiteboardElementLiveUpdate &&
+            !isWhiteboardLiveUpdateEventPayload(parsed.payload)
+        ) {
+            return null
+        }
+
+        if (
+            parsed.type === WSMessageType.WhiteboardElementLiveClear &&
+            !isWhiteboardLiveClearEventPayload(parsed.payload)
+        ) {
+            return null
+        }
+
+        return parsed as WhiteboardSocketEventMessage
     } catch {
         return null
     }
 }
 
-export const logWhiteboardEventMessage = (message: WhiteboardEventMessage) => {
+export const logWhiteboardEventMessage = (
+    message: WhiteboardSocketEventMessage,
+) => {
     switch (message.type) {
         case WSMessageType.WhiteboardElementCreate:
             console.log('WhiteboardElementCreate event:', message)
@@ -115,13 +152,19 @@ export const logWhiteboardEventMessage = (message: WhiteboardEventMessage) => {
         case WSMessageType.WhiteboardElementDelete:
             console.log('WhiteboardElementDelete event:', message)
             return
+        case WSMessageType.WhiteboardElementLiveUpdate:
+            console.log('WhiteboardElementLiveUpdate event:', message)
+            return
+        case WSMessageType.WhiteboardElementLiveClear:
+            console.log('WhiteboardElementLiveClear event:', message)
+            return
         default:
             return
     }
 }
 
 export const isSelfOriginatedWhiteboardEvent = (
-    message: WhiteboardEventMessage,
+    message: WhiteboardSocketEventMessage,
 ) => {
     const originClientID = message.meta?.clientId
     if (!originClientID) {
@@ -156,6 +199,22 @@ export const applyWhiteboardEventToElementsCache = (
         }
         case WSMessageType.WhiteboardElementDelete:
             return draft.filter((item) => item.id !== message.payload.elementId)
+        default:
+            return
+    }
+}
+
+export const applyWhiteboardLiveEventToOverlay = (
+    liveElementsByID: Record<string, WhiteboardLiveUpdateEventPayload>,
+    message: WhiteboardLiveEventMessage,
+) => {
+    switch (message.type) {
+        case WSMessageType.WhiteboardElementLiveUpdate:
+            liveElementsByID[message.payload.elementId] = message.payload
+            return
+        case WSMessageType.WhiteboardElementLiveClear:
+            delete liveElementsByID[message.payload.elementId]
+            return
         default:
             return
     }

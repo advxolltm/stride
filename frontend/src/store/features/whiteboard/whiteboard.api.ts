@@ -1,4 +1,5 @@
 import { baseApi, buildApiWebSocketUrl } from '../../api/base.api'
+import { WSMessageType } from '../projectSocket/projectSocket.types'
 import type {
     ApiWhiteboard,
     ApiWhiteboardElement,
@@ -9,10 +10,13 @@ import type {
     WhiteboardCursorClientMessage,
     WhiteboardCursorPresence,
     WhiteboardCursorSocketState,
+    WhiteboardEventMessage,
     WhiteboardEventsSocketState,
+    WhiteboardSocketEventMessage,
 } from './whiteboard.types'
 import {
     applyWhiteboardEventToElementsCache,
+    applyWhiteboardLiveEventToOverlay,
     createWhiteboardMutationHeaders,
     isSelfOriginatedWhiteboardEvent,
     logWhiteboardEventMessage,
@@ -51,6 +55,7 @@ type WhiteboardEventsSocketLifecycleApi = {
     cacheDataLoaded: Promise<unknown>
     cacheEntryRemoved: Promise<void>
     dispatch: (action: unknown) => unknown
+    getState: () => unknown
     updateCachedData: (
         recipe: (draft: WhiteboardEventsSocketState) => void,
     ) => void
@@ -81,6 +86,7 @@ const createWhiteboardEventsSocketState = (
     projectId,
     url: createWhiteboardEventsSocketUrl(projectId),
     status: 'connecting',
+    liveElementsById: {},
     lastMessage: null,
     lastMessageAt: null,
     lastError: null,
@@ -223,13 +229,9 @@ const watchWhiteboardCursorSocket = async (
 
 const patchWhiteboardElementsCacheFromEvent = (
     projectId: string,
-    message: WhiteboardEventsSocketState['lastMessage'],
+    message: WhiteboardEventMessage,
     lifecycleApi: WhiteboardEventsSocketLifecycleApi,
 ) => {
-    if (!message) {
-        return
-    }
-
     lifecycleApi.dispatch(
         whiteboardApi.util.updateQueryData(
             'getProjectWhiteboardElements',
@@ -242,6 +244,59 @@ const patchWhiteboardElementsCacheFromEvent = (
                 ),
         ),
     )
+}
+
+const isPersistedWhiteboardEventMessage = (
+    message: WhiteboardSocketEventMessage,
+): message is WhiteboardEventMessage =>
+    message.type !== WSMessageType.WhiteboardElementLiveUpdate &&
+    message.type !== WSMessageType.WhiteboardElementLiveClear
+
+const resolveLiveElementIDToClear = (
+    projectId: string,
+    message: WhiteboardEventMessage,
+    lifecycleApi: WhiteboardEventsSocketLifecycleApi,
+) => {
+    switch (message.type) {
+        case WSMessageType.WhiteboardElementCreate:
+        case WSMessageType.WhiteboardElementUpdate:
+            return message.payload.props.id
+        case WSMessageType.WhiteboardElementDelete: {
+            const state = lifecycleApi.getState()
+            const elementsResult =
+                whiteboardApi.endpoints.getProjectWhiteboardElements.select(
+                    projectId,
+                )(state as never)
+            const persistedElement = elementsResult.data?.find(
+                (element) => element.id === message.payload.elementId,
+            )
+            return persistedElement?.props.id ?? null
+        }
+        default:
+            return null
+    }
+}
+
+const patchWhiteboardLiveOverlayFromEvent = (
+    projectId: string,
+    message: WhiteboardSocketEventMessage,
+    lifecycleApi: WhiteboardEventsSocketLifecycleApi,
+) => {
+    lifecycleApi.updateCachedData((draft) => {
+        if (isPersistedWhiteboardEventMessage(message)) {
+            const liveElementID = resolveLiveElementIDToClear(
+                projectId,
+                message,
+                lifecycleApi,
+            )
+            if (liveElementID) {
+                delete draft.liveElementsById[liveElementID]
+            }
+            return
+        }
+
+        applyWhiteboardLiveEventToOverlay(draft.liveElementsById, message)
+    })
 }
 
 const watchWhiteboardEventsSocket = async (
@@ -286,7 +341,14 @@ const watchWhiteboardEventsSocket = async (
 
             logWhiteboardEventMessage(message)
             if (!isSelfOriginatedWhiteboardEvent(message)) {
-                patchWhiteboardElementsCacheFromEvent(
+                if (isPersistedWhiteboardEventMessage(message)) {
+                    patchWhiteboardElementsCacheFromEvent(
+                        projectId,
+                        message,
+                        lifecycleApi,
+                    )
+                }
+                patchWhiteboardLiveOverlayFromEvent(
                     projectId,
                     message,
                     lifecycleApi,

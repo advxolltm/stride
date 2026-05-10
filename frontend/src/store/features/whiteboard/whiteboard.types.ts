@@ -140,15 +140,16 @@ export type WhiteboardLiveEventMessage =
     | WhiteboardLiveUpdateEventMessage
     | WhiteboardLiveClearEventMessage
 
+export type WhiteboardSocketEventMessage =
+    | WhiteboardEventMessage
+    | WhiteboardLiveEventMessage
+
 export type WhiteboardEventsSocketState = {
     projectId: string
     url: string
     status: WhiteboardSocketStatus
-    lastMessage:
-        | WhiteboardCreateEventMessage
-        | WhiteboardUpdateEventMessage
-        | WhiteboardDeleteEventMessage
-        | null
+    liveElementsById: Record<string, WhiteboardLiveUpdateEventPayload>
+    lastMessage: WhiteboardSocketEventMessage | null
     lastMessageAt: string | null
     lastError: string | null
 }
