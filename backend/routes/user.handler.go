@@ -26,8 +26,10 @@ func (h userRouteHandler) AddRoutes(api *echo.Group) {
 	g := api.Group("/users", h.authService.AuthenticatedMiddleware())
 	g.GET("", h.usersGETHandle)
 	g.GET("/:id", h.userGETHandle)
+	g.GET("/:id/skills", h.userSkillsGETHandle)
 	g.PATCH("/:id", h.userPATCHHandle)
 	g.PATCH("/:id/password", h.userPasswordPATCHHandle)
+	g.PUT("/:id/projects/:projectId/skills", h.userProjectSkillsPUTHandle)
 	g.DELETE("/:id", h.userDELETEHandle)
 }
 
@@ -48,6 +50,10 @@ type changePasswordRequest struct {
 	NewPassword     string `json:"new_password" form:"new_password"`
 } //	@name	ChangePasswordRequest
 
+type updateUserProjectSkillsRequest struct {
+	ProjectSkillIDs []uuid.UUID `json:"project_skill_ids"`
+} // @name UpdateUserProjectSkillsRequest
+
 func (h userRouteHandler) mapServiceError(err error) (int, string) {
 	switch {
 	case errors.Is(err, userService.ErrUserNotFound):
@@ -57,6 +63,11 @@ func (h userRouteHandler) mapServiceError(err error) (int, string) {
 	case errors.Is(err, userService.ErrDuplicateEmail),
 		errors.Is(err, userService.ErrDuplicateUsername):
 		return http.StatusConflict, err.Error()
+	case errors.Is(err, userService.ErrProjectNotFound),
+		errors.Is(err, userService.ErrProjectSkillNotFound):
+		return http.StatusNotFound, err.Error()
+	case errors.Is(err, userService.ErrUserNotProjectMember):
+		return http.StatusUnauthorized, err.Error()
 	case errors.Is(err, userService.ErrInvalidEmail),
 		errors.Is(err, userService.ErrInvalidUsername),
 		errors.Is(err, userService.ErrPasswordTooShort),
@@ -69,6 +80,82 @@ func (h userRouteHandler) mapServiceError(err error) (int, string) {
 	default:
 		return http.StatusInternalServerError, "internal server error"
 	}
+}
+
+// GET /users/:id/skills
+//
+//	@Summary	Get user skills (self only)
+//	@Tags		users
+//	@Param		id	path		string	true	"User ID (UUID)"
+//	@Produce	json
+//	@Success	200	{array}		UserSkill
+//	@Failure	400	{object}	ErrorResponse	"invalid user id"
+//	@Failure	401	{object}	ErrorResponse	"unauthorized"
+//	@Failure	500	{object}	ErrorResponse	"internal server error"
+//	@Router		/users/{id}/skills [get]
+func (h userRouteHandler) userSkillsGETHandle(c *echo.Context) error {
+	userID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid user id"})
+	}
+
+	callerID := h.authService.GetClaims(c).UserID
+	if callerID != userID {
+		return c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "unauthorized"})
+	}
+
+	userSkills, err := h.userService.GetUserSkills(c.Request().Context(), userID)
+	if err != nil {
+		status, msg := h.mapServiceError(err)
+		return c.JSON(status, ErrorResponse{Error: msg})
+	}
+
+	return c.JSON(http.StatusOK, Map(userSkills, MapUserSkill))
+}
+
+// PUT /users/:id/projects/:projectId/skills
+//
+//	@Summary	Update user skills for a project (self only)
+//	@Tags		users
+//	@Accept		json
+//	@Produce	json
+//	@Param		id		path		string							true	"User ID (UUID)"
+//	@Param		projectId	path		string							true	"Project ID"
+//	@Param		data		body		updateUserProjectSkillsRequest	true	"Selected project skill IDs"
+//	@Success	200			{array}		UserSkill
+//	@Failure	400			{object}	ErrorResponse	"invalid user id, project id or request body"
+//	@Failure	401			{object}	ErrorResponse	"unauthorized or user is not a project member"
+//	@Failure	404			{object}	ErrorResponse	"project or project skill not found"
+//	@Failure	500			{object}	ErrorResponse	"internal server error"
+//	@Router		/users/{id}/projects/{projectId}/skills [put]
+func (h userRouteHandler) userProjectSkillsPUTHandle(c *echo.Context) error {
+	userID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid user id"})
+	}
+
+	callerID := h.authService.GetClaims(c).UserID
+	if callerID != userID {
+		return c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "unauthorized"})
+	}
+
+	projectID, err := uuid.Parse(c.Param("projectId"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid project id"})
+	}
+
+	var req updateUserProjectSkillsRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid request body"})
+	}
+
+	userSkills, err := h.userService.UpdateUserProjectSkills(c.Request().Context(), userID, projectID, req.ProjectSkillIDs)
+	if err != nil {
+		status, msg := h.mapServiceError(err)
+		return c.JSON(status, ErrorResponse{Error: msg})
+	}
+
+	return c.JSON(http.StatusOK, Map(userSkills, MapUserSkill))
 }
 
 // GET /users

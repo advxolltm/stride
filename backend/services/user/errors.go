@@ -21,4 +21,7 @@ var (
 	ErrAvatarDeleteFailed     = errors.New("failed to delete avatar files")
 	ErrAvatarCorruptImage     = errors.New("uploaded file is not a valid image")
 	ErrAvatarProcessingFailed = errors.New("failed to process avatar thumbnails")
+	ErrProjectNotFound        = errors.New("project not found")
+	ErrProjectSkillNotFound   = errors.New("project skill not found")
+	ErrUserNotProjectMember   = errors.New("user is not a project member")
 )

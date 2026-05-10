@@ -61,6 +61,20 @@ type avatarURLResponse struct {
 	Original string `json:"original"`
 }
 
+type userSkillResponse struct {
+	ID             string               `json:"id"`
+	UserID         string               `json:"user_id"`
+	ProjectSkillID string               `json:"project_skill_id"`
+	ProjectSkill   projectSkillResponse `json:"project_skill"`
+}
+
+type projectSkillResponse struct {
+	ID          string  `json:"id"`
+	ProjectID   string  `json:"project_id"`
+	Name        string  `json:"name"`
+	Description *string `json:"description"`
+}
+
 type userTestEnv struct {
 	ctx          context.Context
 	e            *echo.Echo
@@ -440,6 +454,123 @@ func TestUserRouteHandler_Integration(t *testing.T) {
 		b, _ := json.Marshal(body)
 		req := httptest.NewRequest(http.MethodPatch, "/api/users/"+env.testUser.ID.String()+"/password", bytes.NewReader(b))
 		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
+		env.e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusUnauthorized, rec.Code)
+	})
+
+	// User skills
+
+	runTest(t, "GET /users/:id/skills returns selected skills for authenticated user", func(t *testing.T, tx *gorm.DB) {
+		env := newUserTestEnv(t, tx)
+		desc := "Search engine optimization"
+		project := models.Project{
+			CreatedBy: &env.testUser.ID,
+			Name:      "Marketing",
+			Slug:      "marketing-" + uuid.NewString(),
+			Status:    "active",
+		}
+		require.NoError(t, tx.Create(&project).Error)
+		require.NoError(t, tx.Create(&models.ProjectMember{
+			UserID:    env.testUser.ID,
+			ProjectID: project.ID,
+			Role:      "owner",
+		}).Error)
+		skill := models.ProjectSkill{
+			ProjectID:   project.ID,
+			Name:        "SEO",
+			Description: &desc,
+		}
+		require.NoError(t, tx.Create(&skill).Error)
+		require.NoError(t, tx.Create(&models.UserSkill{
+			UserID:         env.testUser.ID,
+			ProjectSkillID: skill.ID,
+		}).Error)
+
+		req := httptest.NewRequest(http.MethodGet, "/api/users/"+env.testUser.ID.String()+"/skills", nil)
+		req.AddCookie(env.globalCookie)
+		rec := httptest.NewRecorder()
+		env.e.ServeHTTP(rec, req)
+
+		require.Equal(t, http.StatusOK, rec.Code)
+
+		var skills []userSkillResponse
+		err := json.Unmarshal(rec.Body.Bytes(), &skills)
+		require.NoError(t, err)
+		require.Len(t, skills, 1)
+		assert.Equal(t, env.testUser.ID.String(), skills[0].UserID)
+		assert.Equal(t, skill.ID.String(), skills[0].ProjectSkillID)
+		assert.Equal(t, project.ID.String(), skills[0].ProjectSkill.ProjectID)
+		assert.Equal(t, "SEO", skills[0].ProjectSkill.Name)
+	})
+
+	runTest(t, "PUT /users/:id/projects/:projectId/skills replaces selected skills for one project", func(t *testing.T, tx *gorm.DB) {
+		env := newUserTestEnv(t, tx)
+		project := models.Project{
+			CreatedBy: &env.testUser.ID,
+			Name:      "Product Launch",
+			Slug:      "product-launch-" + uuid.NewString(),
+			Status:    "active",
+		}
+		require.NoError(t, tx.Create(&project).Error)
+		require.NoError(t, tx.Create(&models.ProjectMember{
+			UserID:    env.testUser.ID,
+			ProjectID: project.ID,
+			Role:      "owner",
+		}).Error)
+		oldSkill := models.ProjectSkill{ProjectID: project.ID, Name: "Old Skill"}
+		firstSkill := models.ProjectSkill{ProjectID: project.ID, Name: "SEO"}
+		secondSkill := models.ProjectSkill{ProjectID: project.ID, Name: "Analytics"}
+		require.NoError(t, tx.Create(&oldSkill).Error)
+		require.NoError(t, tx.Create(&firstSkill).Error)
+		require.NoError(t, tx.Create(&secondSkill).Error)
+		require.NoError(t, tx.Create(&models.UserSkill{
+			UserID:         env.testUser.ID,
+			ProjectSkillID: oldSkill.ID,
+		}).Error)
+
+		body := map[string][]uuid.UUID{
+			"project_skill_ids": {firstSkill.ID, secondSkill.ID},
+		}
+		b, _ := json.Marshal(body)
+		req := httptest.NewRequest(http.MethodPut, "/api/users/"+env.testUser.ID.String()+"/projects/"+project.ID.String()+"/skills", bytes.NewReader(b))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		req.AddCookie(env.globalCookie)
+		rec := httptest.NewRecorder()
+		env.e.ServeHTTP(rec, req)
+
+		require.Equal(t, http.StatusOK, rec.Code)
+
+		var skills []userSkillResponse
+		err := json.Unmarshal(rec.Body.Bytes(), &skills)
+		require.NoError(t, err)
+
+		selectedSkillIDs := map[string]bool{}
+		for _, skill := range skills {
+			if skill.ProjectSkill.ProjectID == project.ID.String() {
+				selectedSkillIDs[skill.ProjectSkillID] = true
+			}
+		}
+		assert.False(t, selectedSkillIDs[oldSkill.ID.String()])
+		assert.True(t, selectedSkillIDs[firstSkill.ID.String()])
+		assert.True(t, selectedSkillIDs[secondSkill.ID.String()])
+	})
+
+	runTest(t, "PUT /users/:id/projects/:projectId/skills returns 401 when user is not a project member", func(t *testing.T, tx *gorm.DB) {
+		env := newUserTestEnv(t, tx)
+		project := models.Project{
+			Name:   "Private Project",
+			Slug:   "private-" + uuid.NewString(),
+			Status: "active",
+		}
+		require.NoError(t, tx.Create(&project).Error)
+
+		body := map[string][]uuid.UUID{"project_skill_ids": {}}
+		b, _ := json.Marshal(body)
+		req := httptest.NewRequest(http.MethodPut, "/api/users/"+env.testUser.ID.String()+"/projects/"+project.ID.String()+"/skills", bytes.NewReader(b))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		req.AddCookie(env.globalCookie)
 		rec := httptest.NewRecorder()
 		env.e.ServeHTTP(rec, req)
 

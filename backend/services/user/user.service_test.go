@@ -21,12 +21,14 @@ import (
 )
 
 type stubUserStore struct {
-	getAllUsersFn           func(ctx context.Context) ([]models.User, error)
-	getUserFn               func(ctx context.Context, id uuid.UUID) (*models.User, error)
-	createUserFn            func(ctx context.Context, user *models.User) error
-	updateUserFn            func(ctx context.Context, id uuid.UUID, fields userStore.UpdateUserFields) (*models.User, error)
-	deleteUserFn            func(ctx context.Context, id uuid.UUID) error
-	getByEmailAndPasswordFn func(ctx context.Context, email, password string) (uuid.UUID, error)
+	getAllUsersFn              func(ctx context.Context) ([]models.User, error)
+	getUserFn                  func(ctx context.Context, id uuid.UUID) (*models.User, error)
+	createUserFn               func(ctx context.Context, user *models.User) error
+	updateUserFn               func(ctx context.Context, id uuid.UUID, fields userStore.UpdateUserFields) (*models.User, error)
+	deleteUserFn               func(ctx context.Context, id uuid.UUID) error
+	getByEmailAndPasswordFn    func(ctx context.Context, email, password string) (uuid.UUID, error)
+	getUserSkillsFn           func(ctx context.Context, userID uuid.UUID) ([]models.UserSkill, error)
+	updateUserProjectSkillsFn func(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, skillIDs []uuid.UUID) ([]models.UserSkill, error)
 }
 
 func (s *stubUserStore) GetAllUsers(ctx context.Context) ([]models.User, error) {
@@ -69,6 +71,20 @@ func (s *stubUserStore) GetByEmailAndPassword(ctx context.Context, email, passwo
 		panic("unexpected GetByEmailAndPassword call")
 	}
 	return s.getByEmailAndPasswordFn(ctx, email, password)
+}
+
+func (s *stubUserStore) GetUserSkills(ctx context.Context, userID uuid.UUID) ([]models.UserSkill, error) {
+	if s.getUserSkillsFn == nil {
+		panic("unexpected GetUserSkills call")
+	}
+	return s.getUserSkillsFn(ctx, userID)
+}
+
+func (s *stubUserStore) UpdateUserProjectSkills(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, skillIDs []uuid.UUID) ([]models.UserSkill, error) {
+	if s.updateUserProjectSkillsFn == nil {
+		panic("unexpected UpdateUserProjectSkills call")
+	}
+	return s.updateUserProjectSkillsFn(ctx, userID, projectID, skillIDs)
 }
 
 func newTestService(t *testing.T, store *stubUserStore) userService {

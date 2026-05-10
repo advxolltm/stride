@@ -51,6 +51,8 @@ type (
 		ChangePassword(ctx context.Context, id uuid.UUID, currentPassword string, newPassword string) error
 		DeleteUser(ctx context.Context, id uuid.UUID) error
 		GetByEmailAndPassword(ctx context.Context, email, password string) (uuid.UUID, error)
+		GetUserSkills(ctx context.Context, userID uuid.UUID) ([]models.UserSkill, error)
+		UpdateUserProjectSkills(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, skillIDs []uuid.UUID) ([]models.UserSkill, error)
 	}
 	userService struct {
 		userStore user.UserStore
@@ -285,6 +287,31 @@ func (s userService) GetByEmailAndPassword(ctx context.Context, email, password 
 	}
 
 	return userId, nil
+}
+
+func (s userService) GetUserSkills(ctx context.Context, userID uuid.UUID) ([]models.UserSkill, error) {
+	userSkills, err := s.userStore.GetUserSkills(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrUserStoreFailed, err)
+	}
+	return userSkills, nil
+}
+
+func (s userService) UpdateUserProjectSkills(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, skillIDs []uuid.UUID) ([]models.UserSkill, error) {
+	userSkills, err := s.userStore.UpdateUserProjectSkills(ctx, userID, projectID, skillIDs)
+	if err != nil {
+		switch {
+		case errors.Is(err, user.ErrProjectNotFound):
+			return nil, ErrProjectNotFound
+		case errors.Is(err, user.ErrProjectSkillNotFound):
+			return nil, ErrProjectSkillNotFound
+		case errors.Is(err, user.ErrUserNotProjectMember):
+			return nil, ErrUserNotProjectMember
+		default:
+			return nil, fmt.Errorf("%w: %w", ErrUserStoreFailed, err)
+		}
+	}
+	return userSkills, nil
 }
 
 func validateAvatarFile(filename string, size int64) error {
