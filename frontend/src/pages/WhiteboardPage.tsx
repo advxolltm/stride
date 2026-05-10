@@ -15,6 +15,7 @@ import {
     useGetProjectWhiteboardElementsQuery,
     useGetProjectWhiteboardQuery,
     useUpdateProjectWhiteboardElementMutation,
+    useWatchWhiteboardCursorQuery,
     useWatchWhiteboardEventsQuery,
 } from '../store/features/whiteboard/whiteboard.api'
 import getInitials from '../shared/utils/getInitials'
@@ -58,6 +59,9 @@ export function WhiteboardPage() {
         useDeleteProjectWhiteboardElementMutation()
     const [updateProjectWhiteboardElement] =
         useUpdateProjectWhiteboardElementMutation()
+    const whiteboardCursorWS = useWatchWhiteboardCursorQuery(
+        projectId ?? skipToken,
+    )
     useWatchWhiteboardEventsQuery(projectId ?? skipToken)
     const {
         data: project,
@@ -316,6 +320,7 @@ export function WhiteboardPage() {
 
     const projectName = project?.name ?? projectId
     const collaborators = project?.members ?? []
+    const presence = whiteboardCursorWS.data?.presence ?? []
     const visibleCollaborators = collaborators.slice(0, 3)
     const hiddenCollaborators = Math.max(collaborators.length - 3, 0)
 
@@ -368,7 +373,7 @@ export function WhiteboardPage() {
                     size="sm"
                     variant="ghost"
                     className="h-10 min-w-10 gap-0 -space-x-2 rounded-full border border-[var(--border)] bg-[color-mix(in_oklch,var(--surface)_94%,transparent)] px-2 text-[var(--foreground)] shadow-lg backdrop-blur-xl hover:bg-[var(--surface-secondary)]"
-                    aria-label={`${collaborators.length} collaborators`}
+                    aria-label={`${collaborators.length} collaborators, ${presence.length} whiteboard users connected`}
                 >
                     {visibleCollaborators.map((member) => {
                         const displayName =
