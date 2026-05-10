@@ -129,12 +129,7 @@ export function WhiteboardPage() {
         projectId ?? skipToken,
         {
             selectFromResult: ({ data }) => ({
-                liveElementsById:
-                    data?.liveElementsById ??
-                    (emptyLiveElementsById as Record<
-                        string,
-                        WhiteboardLiveUpdateEventPayload
-                    >),
+                liveElementsById: data?.liveElementsById ?? emptyLiveElementsById,
             }),
         },
     )
@@ -263,7 +258,7 @@ export function WhiteboardPage() {
             return
         }
 
-        ;[...touchedLiveElementIdsRef.current].forEach(clearLiveElement)
+        Array.from(touchedLiveElementIdsRef.current).forEach(clearLiveElement)
     }
 
     useEffect(() => {
@@ -311,7 +306,14 @@ export function WhiteboardPage() {
             }
 
             if (projectId) {
-                clearTouchedLiveElements()
+                Array.from(touchedLiveElementIdsRef.current).forEach(
+                    (elementId) => {
+                        sendWhiteboardLiveClear(projectId, elementId)
+                        pendingLiveElementsRef.current.delete(elementId)
+                        lastSentLiveSnapshotsRef.current.delete(elementId)
+                        touchedLiveElementIdsRef.current.delete(elementId)
+                    },
+                )
                 sendWhiteboardCursor(projectId, emptyCursorMessage)
             }
         }
@@ -462,18 +464,20 @@ export function WhiteboardPage() {
         queueCursorUpdate(emptyCursorMessage)
     }
 
+    const liveElementsById = whiteboardEventsWS.liveElementsById
+
     const excalidrawElements = useMemo(
         () =>
             restoreElements(
                 mergeRenderedWhiteboardElements(
                     whiteboardElements,
-                    whiteboardEventsWS.liveElementsById,
+                    liveElementsById,
                 )
                     .sort((left, right) => left.zIndex - right.zIndex)
                     .map((element) => element.props),
                 null,
             ),
-        [whiteboardElements, whiteboardEventsWS.liveElementsById],
+        [whiteboardElements, liveElementsById],
     )
 
     if (!projectId) {
