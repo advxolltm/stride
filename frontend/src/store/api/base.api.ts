@@ -43,6 +43,7 @@ export const baseApi = createApi({
     reducerPath: 'baseApi',
     tagTypes: [
         'User',
+        'UserSkill',
         'Auth',
         'Project',
         'ProjectMember',

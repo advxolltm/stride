@@ -11,6 +11,30 @@ export type ApiUser = {
     avatar_url: { 300: string; 600: string; original: string } | null
 }
 
+export type ApiUserSkill = {
+    id: string
+    user_id: string
+    project_skill_id: string
+    project_skill: {
+        id: string
+        project_id: string
+        name: string
+        description: string | null
+    }
+}
+
+export type UserSkill = {
+    id: string
+    userId: string
+    projectSkillId: string
+    projectSkill: {
+        id: string
+        projectId: string
+        name: string
+        description: string | null
+    }
+}
+
 export type CreateUserRequest = {
     username: string
     email: string
@@ -25,4 +49,8 @@ export type UpdateUserRequest = Partial<{
 export type ChangePasswordRequest = {
     current_password: string
     new_password: string
+}
+
+export type UpdateUserProjectSkillsRequest = {
+    project_skill_ids: string[]
 }

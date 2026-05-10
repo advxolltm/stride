@@ -2,9 +2,12 @@ import type { User } from '../../../shared/types'
 import { baseApi } from '../../api/base.api'
 import type {
     ApiUser,
+    ApiUserSkill,
     ChangePasswordRequest,
     CreateUserRequest,
     UpdateUserRequest,
+    UpdateUserProjectSkillsRequest,
+    UserSkill,
 } from './user.types'
 
 export const mapApiUserToUser = ({
@@ -20,6 +23,23 @@ export const mapApiUserToUser = ({
     fullName: full_name,
     avatarUrl: avatar_url?.original ?? null,
     avatarSmallUrl: avatar_url?.[300] ?? avatar_url?.original ?? null,
+})
+
+export const mapApiUserSkillToUserSkill = ({
+    id,
+    user_id,
+    project_skill_id,
+    project_skill,
+}: ApiUserSkill): UserSkill => ({
+    id,
+    userId: user_id,
+    projectSkillId: project_skill_id,
+    projectSkill: {
+        id: project_skill.id,
+        projectId: project_skill.project_id,
+        name: project_skill.name,
+        description: project_skill.description,
+    },
 })
 
 export const userApi = baseApi.injectEndpoints({
@@ -77,6 +97,44 @@ export const userApi = baseApi.injectEndpoints({
             query: (id) => ({ url: `/users/${id}`, method: 'DELETE' }),
             invalidatesTags: (_result, _error, id) => [{ type: 'User', id }],
         }),
+
+        getMyUserSkills: builder.query<UserSkill[], string>({
+            query: (id) => `/users/${id}/skills`,
+            transformResponse: (response: ApiUserSkill[]) =>
+                response.map(mapApiUserSkillToUserSkill),
+            providesTags: (_result, _error, id) => [{ type: 'UserSkill', id }],
+        }),
+
+        updateUserProjectSkills: builder.mutation<
+            UserSkill[],
+            {
+                userId: string
+                projectId: string
+                body: UpdateUserProjectSkillsRequest
+            }
+        >({
+            query: ({ userId, projectId, body }) => ({
+                url: `/users/${userId}/projects/${projectId}/skills`,
+                method: 'PUT',
+                body,
+            }),
+            transformResponse: (response: ApiUserSkill[]) =>
+                response.map(mapApiUserSkillToUserSkill),
+            async onQueryStarted({ userId }, { dispatch, queryFulfilled }) {
+                try {
+                    const { data } = await queryFulfilled
+                    dispatch(
+                        userApi.util.updateQueryData(
+                            'getMyUserSkills',
+                            userId,
+                            () => data,
+                        ),
+                    )
+                } catch {
+                    // The hook that called this mutation will surface the error.
+                }
+            },
+        }),
     }),
 })
 
@@ -87,4 +145,6 @@ export const {
     useUpdateUserMutation,
     useChangePasswordMutation,
     useDeleteUserMutation,
+    useGetMyUserSkillsQuery,
+    useUpdateUserProjectSkillsMutation,
 } = userApi

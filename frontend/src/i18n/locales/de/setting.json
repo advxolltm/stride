@@ -1,41 +1,50 @@
 {
   "title": "Einstellungen",
-  "description": "Verwalten Sie Ihre Kontoeinstellungen und Projektfähigkeiten",
+  "description": "Verwalten Sie Ihre Kontoeinstellungen und ProjektfÃƒÂ¤higkeiten",
   "tabs": {
     "profile": "Profil",
     "security": "Sicherheit",
-    "skills": "Fähigkeiten"
+    "skills": "FÃƒÂ¤higkeiten"
   },
   "profile": {
-    "title": "Persönliche Informationen",
-    "fullName": "Vollständiger Name",
+    "title": "PersÃƒÂ¶nliche Informationen",
+    "fullName": "VollstÃƒÂ¤ndiger Name",
     "username": "Benutzername",
     "email": "E-Mail",
-    "save": "Änderungen speichern",
-    "reset": "Änderungen verwerfen",
+    "save": "Ãƒâ€žnderungen speichern",
+    "reset": "Ãƒâ€žnderungen verwerfen",
     "updateSuccess": "Profil erfolgreich aktualisiert",
     "updateError": "Profil konnte nicht aktualisiert werden. Bitte versuchen Sie es erneut."
   },
   "security": {
-    "title": "Passwort ändern",
+    "title": "Passwort ÃƒÂ¤ndern",
     "description": "Stellen Sie sicher, dass Ihr Konto ein starkes, einzigartiges Passwort verwendet",
     "currentPassword": "Aktuelles Passwort",
     "currentPasswordPlaceholder": "Aktuelles Passwort eingeben",
     "newPassword": "Neues Passwort",
     "newPasswordPlaceholder": "Neues Passwort eingeben",
-    "confirmPassword": "Neues Passwort bestätigen",
-    "confirmPasswordPlaceholder": "Neues Passwort bestätigen",
+    "confirmPassword": "Neues Passwort bestÃƒÂ¤tigen",
+    "confirmPasswordPlaceholder": "Neues Passwort bestÃƒÂ¤tigen",
     "update": "Passwort aktualisieren",
-    "reset": "Zurücksetzen",
-    "passwordMismatch": "Die neuen Passwörter stimmen nicht überein.",
+    "reset": "ZurÃƒÂ¼cksetzen",
+    "passwordMismatch": "Die neuen PasswÃƒÂ¶rter stimmen nicht ÃƒÂ¼berein.",
     "passwordTooShort": "Das Passwort muss mindestens {{count}} Zeichen lang sein.",
     "passwordMissingSpecial": "Das Passwort muss mindestens ein Sonderzeichen enthalten.",
     "updateSuccess": "Passwort erfolgreich aktualisiert",
     "updateError": "Passwort konnte nicht aktualisiert werden. Bitte versuchen Sie es erneut."
   },
   "skills": {
-    "title": "Ihre Fähigkeiten pro Projekt",
-    "description": "Wählen Sie die Fähigkeiten aus, die Sie zu jedem Projekt beitragen",
-    "placeholder": "Fähigkeiten auswählen"
+    "title": "Ihre FÃƒÂ¤higkeiten pro Projekt",
+    "description": "WÃƒÂ¤hlen Sie die FÃƒÂ¤higkeiten aus, die Sie zu jedem Projekt beitragen",
+    "selectLabel": "FÃƒÂ¤higkeiten auswÃƒÂ¤hlen",
+    "placeholder": "FÃƒÂ¤higkeiten auswÃƒÂ¤hlen",
+    "searchPlaceholder": "FÃƒÂ¤higkeiten suchen",
+    "selectedCount": "{{selected}} / {{total}} ausgewÃƒÂ¤hlt",
+    "save": "Ãƒâ€žnderungen speichern",
+    "reset": "Ãƒâ€žnderungen verwerfen",
+    "updateSuccess": "FÃƒÂ¤higkeiten erfolgreich aktualisiert",
+    "updateError": "FÃƒÂ¤higkeiten konnten nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
+    "emptySkills": "Fuer dieses Projekt sind noch keine Faehigkeiten verfuegbar.",
+    "emptyProjects": "Sie sind noch kein Mitglied eines Projekts."
   }
 }

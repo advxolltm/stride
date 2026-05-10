@@ -36,6 +36,15 @@
   "skills": {
     "title": "Your Skills by Project",
     "description": "Select the skills you contribute to each project",
-    "placeholder": "Select skills"
+    "selectLabel": "Select skills",
+    "placeholder": "Select skills",
+    "searchPlaceholder": "Search skills",
+    "selectedCount": "{{selected}} / {{total}} selected",
+    "save": "Save changes",
+    "reset": "Discard changes",
+    "updateSuccess": "Skills updated successfully",
+    "updateError": "Failed to update skills. Please try again.",
+    "emptySkills": "No skills available for this project yet.",
+    "emptyProjects": "You are not a member of any projects yet."
   }
 }

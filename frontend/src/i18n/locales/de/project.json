@@ -1,6 +1,6 @@
 {
   "header": {
-    "add": "Mitglieder hinzufügen",
+    "add": "Mitglieder hinzufÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼gen",
     "settings": "Einstellungen",
     "projects": "PROJEKTE"
   },
@@ -59,16 +59,16 @@
     "title": "Aufgabenuebersicht"
   },
   "addMembersDialog": {
-    "title": "Mitglieder hinzufügen",
-    "description": "Füge Personen aus deinem Arbeitsbereich zu {{project}} hinzu",
+    "title": "Mitglieder hinzufÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼gen",
+    "description": "FÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼ge Personen aus deinem Arbeitsbereich zu {{project}} hinzu",
     "searchPlaceholder": "Nach Name oder E-Mail suchen...",
     "noResults": "Keine Benutzer gefunden",
     "alreadyMember": "Bereits ein Mitglied",
-    "selectedCount": "{{count}} ausgewählt",
-    "add": "Hinzufügen",
+    "selectedCount": "{{count}} ausgewÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¤hlt",
+    "add": "HinzufÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼gen",
     "cancel": "Abbrechen",
-    "membersAdded": "Mitglieder erfolgreich hinzugefügt",
-    "membersAddError": "Fehler beim Hinzufügen der Mitglieder"
+    "membersAdded": "Mitglieder erfolgreich hinzugefÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼gt",
+    "membersAddError": "Fehler beim HinzufÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼gen der Mitglieder"
   },
   "createDialog": {
     "title": "Projekt erstellen",
@@ -105,7 +105,7 @@
     "edit": "Bearbeiten",
     "projectName": "Projektname",
     "projectDescription": "Projektbeschreibung",
-    "skills": "Faehigkeiten",
+      "skills": "FÃƒÆ’Ã‚Â¤higkeiten",
     "nameLabel": "Name",
     "descriptionLabel": "Beschreibung",
     "skillsPlaceholder": "Faehigkeiten auswaehlen",
@@ -136,10 +136,10 @@
   "membersSettings": {
     "title": "Teammitglieder",
     "add": "Mitglieder hinzufuegen",
-    "owner": "Eigentümer",
+    "owner": "EigentÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼mer",
     "member": "Mitglied",
     "removeTitle": "Mitglied entfernen",
-    "removeMessage": "Möchten Sie dieses Mitglied wirklich aus dem Projekt entfernen?",
+    "removeMessage": "MÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¶chten Sie dieses Mitglied wirklich aus dem Projekt entfernen?",
     "removeConfirm": "Entfernen",
     "removeConfirmPending": "Wird entfernt...",
     "removeCancel": "Abbrechen",
@@ -147,9 +147,9 @@
     "removeError": "Mitglied konnte nicht entfernt werden"
   },
   "skillsSettings": {
-    "title": "Fähigkeiten",
-    "description": "Verwalten Sie die für dieses Projekt erforderlichen Fähigkeiten.",
-    "addSkillTabsLabel": "Optionen zum Hinzufügen von Skills",
+    "title": "FÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¤higkeiten",
+    "description": "Verwalten Sie die fÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼r dieses Projekt erforderlichen FÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¤higkeiten.",
+    "addSkillTabsLabel": "Optionen zum HinzufÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼gen von Skills",
     "addSkillTabs": {
       "templates": "Vorlagen",
       "projects": "Aus Projekten",
@@ -157,37 +157,53 @@
     },
     "searchTemplates": "Vorlagen-Skills suchen...",
     "searchProjects": "Projekt-Skills suchen...",
-    "add": "Hinzufügen",
-    "addAll": "Alle hinzufügen",
-    "added": "Hinzugefügt",
+    "add": "HinzufÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼gen",
+    "addAll": "Alle hinzufÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼gen",
+    "added": "HinzugefÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼gt",
     "done": "Fertig",
-    "addSuccess": "Fähigkeit erfolgreich hinzugefügt",
-    "addAllSuccess": "Fähigkeiten erfolgreich hinzugefügt",
-    "addError": "Fähigkeit konnte nicht hinzugefügt werden",
-    "addSkill": "Fähigkeit hinzufügen",
+    "addSuccess": "FÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¤higkeit erfolgreich hinzugefÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼gt",
+    "addAllSuccess": "FÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¤higkeiten erfolgreich hinzugefÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼gt",
+    "addError": "FÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¤higkeit konnte nicht hinzugefÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼gt werden",
+    "addSkill": "FÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¤higkeit hinzufÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼gen",
     "noSkillsFound": "Keine Skills gefunden",
     "noProjectSkills": "Keine wiederverwendbaren Projekt-Skills gefunden",
     "nameLabel": "Name",
-    "namePlaceholder": "Fähigkeitsname eingeben",
+    "namePlaceholder": "FÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¤higkeitsname eingeben",
     "descriptionLabel": "Beschreibung",
-    "descriptionPlaceholder": "Fähigkeitsbeschreibung eingeben",
-    "empty": "Noch keine Fähigkeiten hinzugefügt",
-    "save": "Fähigkeit speichern",
+    "descriptionPlaceholder": "FÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¤higkeitsbeschreibung eingeben",
+    "empty": "Noch keine FÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¤higkeiten hinzugefÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼gt",
+    "save": "FÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¤higkeit speichern",
     "cancel": "Abbrechen",
-    "nameRequired": "Fähigkeitsname ist erforderlich",
-    "deleteTitle": "Fähigkeit löschen",
-    "deleteMessage": "Möchten Sie \"{{name}}\" wirklich löschen?",
-    "deleteConfirm": "Löschen",
+    "nameRequired": "FÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¤higkeitsname ist erforderlich",
+    "deleteTitle": "FÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¤higkeit lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¶schen",
+    "deleteMessage": "MÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¶chten Sie \"{{name}}\" wirklich lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¶schen?",
+    "deleteConfirm": "LÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¶schen",
     "deleteCancel": "Abbrechen",
-    "deleteSuccess": "Fähigkeit erfolgreich gelöscht",
-    "deleteError": "Fähigkeit konnte nicht gelöscht werden"
+    "deleteSuccess": "FÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¤higkeit erfolgreich gelÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¶scht",
+    "deleteError": "FÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¤higkeit konnte nicht gelÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¶scht werden"
+  },
+  "mySkillsSettings": {
+    "title": "Meine FÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¤higkeiten",
+    "description": "Waehle die Faehigkeiten aus, die du in dieses Projekt einbringst.",
+    "edit": "Bearbeiten",
+    "selectLabel": "Ausgewaehlte Faehigkeiten",
+    "placeholder": "Faehigkeiten auswaehlen",
+    "searchPlaceholder": "Faehigkeiten suchen",
+    "selectedLabel": "{{selected}} von {{total}} ausgewaehlt",
+    "emptySkills": "Fuer dieses Projekt sind noch keine Faehigkeiten verfuegbar.",
+    "empty": "Noch keine Faehigkeiten ausgewaehlt",
+    "cancel": "Abbrechen",
+    "save": "Aenderungen speichern",
+    "saveSuccess": "Deine Projektfaehigkeiten wurden aktualisiert",
+    "saveError": "Projektfaehigkeiten konnten nicht aktualisiert werden"
   },
   "settingsSidebar": {
     "title": "Projekteinstellungen",
     "tabs": {
       "general": "Allgemein",
       "members": "Team",
-      "skills": "Fähigkeiten"
+      "skills": "FÃ¤higkeiten",
+      "mySkills": "Meine FÃ¤higkeiten"
     }
   }
 }

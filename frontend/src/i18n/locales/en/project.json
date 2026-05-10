@@ -182,12 +182,28 @@
     "deleteSuccess": "Skill deleted successfully",
     "deleteError": "Failed to delete skill"
   },
+  "mySkillsSettings": {
+    "title": "My Skills",
+    "description": "Choose the skills you contribute to this project.",
+    "edit": "Edit",
+    "selectLabel": "Selected skills",
+    "placeholder": "Select skills",
+    "searchPlaceholder": "Search skills",
+    "selectedLabel": "{{selected}} of {{total}} selected",
+    "emptySkills": "No skills available for this project yet.",
+    "empty": "No skills selected yet",
+    "cancel": "Cancel",
+    "save": "Save changes",
+    "saveSuccess": "Your project skills were updated",
+    "saveError": "Failed to update your project skills"
+  },
   "settingsSidebar": {
     "title": "Project settings",
     "tabs": {
       "general": "General",
       "members": "Team",
-      "skills": "Skills"
+      "skills": "Skills",
+      "mySkills": "My Skills"
     }
   }
 }
