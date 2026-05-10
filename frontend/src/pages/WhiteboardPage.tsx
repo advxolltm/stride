@@ -106,6 +106,7 @@ export function WhiteboardPage() {
     const pendingDeleteElementIdsRef = useRef(new Set<string>())
     const pendingUpdateElementIdsRef = useRef(new Set<string>())
     const persistedElementSnapshotsRef = useRef(new Map<string, string>())
+    const localSceneSnapshotsRef = useRef(new Map<string, string>())
     const isElementIdMappingReadyRef = useRef(false)
     const cursorFrameRef = useRef<number | null>(null)
     const pendingCursorMessageRef =
@@ -162,6 +163,7 @@ export function WhiteboardPage() {
         pendingDeleteElementIdsRef.current = new Set()
         pendingUpdateElementIdsRef.current = new Set()
         persistedElementSnapshotsRef.current = new Map()
+        localSceneSnapshotsRef.current = new Map()
         pendingLiveElementsRef.current = new Map()
         touchedLiveElementIdsRef.current = new Set()
         lastSentLiveSnapshotsRef.current = new Map()
@@ -253,14 +255,6 @@ export function WhiteboardPage() {
         )
     }
 
-    const clearTouchedLiveElements = () => {
-        if (!projectId) {
-            return
-        }
-
-        Array.from(touchedLiveElementIdsRef.current).forEach(clearLiveElement)
-    }
-
     useEffect(() => {
         const persistedElementIDs = new Set(
             whiteboardElements.map((backendElement) => backendElement.props.id),
@@ -273,6 +267,15 @@ export function WhiteboardPage() {
             ]),
         )
         persistedElementSnapshotsRef.current = new Map(
+            whiteboardElements.map((backendElement) => [
+                backendElement.props.id,
+                serializeElementSnapshot(
+                    backendElement.props,
+                    backendElement.zIndex,
+                ),
+            ]),
+        )
+        localSceneSnapshotsRef.current = new Map(
             whiteboardElements.map((backendElement) => [
                 backendElement.props.id,
                 serializeElementSnapshot(
@@ -368,11 +371,21 @@ export function WhiteboardPage() {
         }
 
         elements.forEach((element, index) => {
+            const nextSnapshot = serializeElementSnapshot(element, index)
+            const previousSnapshot =
+                localSceneSnapshotsRef.current.get(element.id)
+
             if (element.isDeleted) {
+                localSceneSnapshotsRef.current.delete(element.id)
                 deletePersistedElement(projectId, element.id)
                 return
             }
 
+            if (previousSnapshot === nextSnapshot) {
+                return
+            }
+
+            localSceneSnapshotsRef.current.set(element.id, nextSnapshot)
             queueLiveUpdate(element, index)
         })
     }
@@ -393,9 +406,12 @@ export function WhiteboardPage() {
                 excalidrawToBackendElementIdRef.current.get(element.id)
 
             if (element.isDeleted) {
+                localSceneSnapshotsRef.current.delete(element.id)
                 deletePersistedElement(projectId, element.id)
                 return
             }
+
+            localSceneSnapshotsRef.current.set(element.id, nextSnapshot)
 
             if (
                 isInvisiblySmallElement(element) ||

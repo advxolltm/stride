@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { CaptureUpdateAction, Excalidraw } from '@excalidraw/excalidraw'
+import {
+    CaptureUpdateAction,
+    Excalidraw,
+    reconcileElements,
+} from '@excalidraw/excalidraw'
 import type {
     ExcalidrawImperativeAPI,
     AppState,
@@ -88,6 +92,18 @@ const toViewportCoordinates = (
     y: (sceneY + viewport.scrollY) * viewport.zoom,
 })
 
+const getSceneSignature = (elements: readonly ExcalidrawElement[]) =>
+    elements
+        .map((element) =>
+            [
+                element.id,
+                element.version,
+                element.versionNonce,
+                element.isDeleted ? 1 : 0,
+            ].join(':'),
+        )
+        .join('|')
+
 export function WhiteboardCanvas({
     elements,
     presence = [],
@@ -98,7 +114,9 @@ export function WhiteboardCanvas({
     onCursorLeave,
 }: WhiteboardCanvasProps) {
     const excalidrawApiRef = useRef<ExcalidrawImperativeAPI | null>(null)
-    const isApplyingExternalSceneRef = useRef(false)
+    const latestExternalSceneRef = useRef<readonly ExcalidrawElement[]>(elements)
+    const isLocallyInteractingRef = useRef(false)
+    const externalSceneSignatureRef = useRef<string | null>(null)
     const sceneElements = useMemo(
         () => elements.map((element) => ({ ...element })),
         [elements],
@@ -118,15 +136,32 @@ export function WhiteboardCanvas({
         initialViewport ?? defaultViewport,
     )
 
-    useEffect(() => {
-        isApplyingExternalSceneRef.current = true
-        excalidrawApiRef.current?.updateScene({
-            elements: sceneElements,
+    const applyExternalScene = (nextSceneElements: readonly ExcalidrawElement[]) => {
+        const excalidrawApi = excalidrawApiRef.current
+        if (!excalidrawApi) {
+            return
+        }
+
+        const reconciledElements = reconcileElements(
+            excalidrawApi.getSceneElementsIncludingDeleted(),
+            nextSceneElements,
+            excalidrawApi.getAppState(),
+        )
+
+        externalSceneSignatureRef.current = getSceneSignature(reconciledElements)
+        excalidrawApi.updateScene({
+            elements: reconciledElements,
             captureUpdate: CaptureUpdateAction.NEVER,
         })
-        window.requestAnimationFrame(() => {
-            isApplyingExternalSceneRef.current = false
-        })
+    }
+
+    useEffect(() => {
+        latestExternalSceneRef.current = sceneElements
+        if (isLocallyInteractingRef.current) {
+            return
+        }
+
+        applyExternalScene(sceneElements)
     }, [sceneElements])
 
     return (
@@ -143,11 +178,20 @@ export function WhiteboardCanvas({
                     excalidrawApiRef.current = api
                 }}
                 onChange={(nextElements) => {
-                    if (isApplyingExternalSceneRef.current) {
+                    const nextSceneSignature = getSceneSignature(nextElements)
+
+                    if (
+                        externalSceneSignatureRef.current !== null &&
+                        nextSceneSignature === externalSceneSignatureRef.current
+                    ) {
+                        externalSceneSignatureRef.current = null
                         return
                     }
 
                     onChange?.(nextElements)
+                }}
+                onPointerDown={() => {
+                    isLocallyInteractingRef.current = true
                 }}
                 onPointerUpdate={(payload) => {
                     onCursorChange?.({
@@ -168,6 +212,8 @@ export function WhiteboardCanvas({
                     persistViewport(viewportStorageKey, nextViewport)
                 }}
                 onPointerUp={() => {
+                    isLocallyInteractingRef.current = false
+                    applyExternalScene(latestExternalSceneRef.current)
                     onPointerUp?.(
                         excalidrawApiRef.current?.getSceneElementsIncludingDeleted() ??
                             [],
