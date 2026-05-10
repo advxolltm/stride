@@ -24,6 +24,7 @@ import {
 } from '../store/features/whiteboard/whiteboard.api'
 import type {
     WhiteboardCursorClientMessage,
+    WhiteboardElement,
     WhiteboardLiveUpdateEventPayload,
 } from '../store/features/whiteboard/whiteboard.types'
 import { selectUserId } from '../store/userSlice'
@@ -32,6 +33,8 @@ import getInitials from '../shared/utils/getInitials'
 const emptyCursorMessage: WhiteboardCursorClientMessage = {
     cursor: { x: null, y: null },
 }
+const emptyLiveElementsById: Record<string, WhiteboardLiveUpdateEventPayload> =
+    {}
 
 const serializeElementSnapshot = (
     element: ExcalidrawElement,
@@ -58,7 +61,7 @@ const toWhiteboardElementPayload = (
 })
 
 const mergeRenderedWhiteboardElements = (
-    persistedElements: WhiteboardPagePersistedElement[],
+    persistedElements: WhiteboardElement[],
     liveElementsById: Record<string, WhiteboardLiveUpdateEventPayload>,
 ) => {
     const mergedElements = persistedElements.map((element) => {
@@ -94,11 +97,6 @@ const mergeRenderedWhiteboardElements = (
     return mergedElements
 }
 
-type WhiteboardPagePersistedElement = {
-    props: ExcalidrawElement
-    zIndex: number
-}
-
 export function WhiteboardPage() {
     const { projectId } = useParams()
     const { t } = useTranslation('project')
@@ -129,6 +127,16 @@ export function WhiteboardPage() {
     )
     const whiteboardEventsWS = useWatchWhiteboardEventsQuery(
         projectId ?? skipToken,
+        {
+            selectFromResult: ({ data }) => ({
+                liveElementsById:
+                    data?.liveElementsById ??
+                    (emptyLiveElementsById as Record<
+                        string,
+                        WhiteboardLiveUpdateEventPayload
+                    >),
+            }),
+        },
     )
     const {
         data: project,
@@ -204,19 +212,30 @@ export function WhiteboardPage() {
         pendingLiveElementsRef.current.clear()
     }
 
+    const clearLiveElement = (elementId: string) => {
+        if (!projectId || !touchedLiveElementIdsRef.current.has(elementId)) {
+            return
+        }
+
+        sendWhiteboardLiveClear(projectId, elementId)
+        pendingLiveElementsRef.current.delete(elementId)
+        lastSentLiveSnapshotsRef.current.delete(elementId)
+        touchedLiveElementIdsRef.current.delete(elementId)
+    }
+
     const queueLiveUpdate = (
         element: ExcalidrawElement,
         zIndex: number,
     ) => {
         const nextSnapshot = serializeElementSnapshot(element, zIndex)
-        const previousSnapshot =
-            pendingLiveElementsRef.current.has(element.id)
-                ? serializeElementSnapshot(
-                      pendingLiveElementsRef.current.get(element.id)!.props,
-                      pendingLiveElementsRef.current.get(element.id)!.zIndex,
-                  )
-                : lastSentLiveSnapshotsRef.current.get(element.id) ??
-                  persistedElementSnapshotsRef.current.get(element.id)
+        const pendingLiveElement = pendingLiveElementsRef.current.get(element.id)
+        const previousSnapshot = pendingLiveElement
+            ? serializeElementSnapshot(
+                  pendingLiveElement.props,
+                  pendingLiveElement.zIndex,
+              )
+            : lastSentLiveSnapshotsRef.current.get(element.id) ??
+              persistedElementSnapshotsRef.current.get(element.id)
 
         if (previousSnapshot === nextSnapshot) {
             return
@@ -244,12 +263,7 @@ export function WhiteboardPage() {
             return
         }
 
-        touchedLiveElementIdsRef.current.forEach((elementId) => {
-            sendWhiteboardLiveClear(projectId, elementId)
-            pendingLiveElementsRef.current.delete(elementId)
-            lastSentLiveSnapshotsRef.current.delete(elementId)
-        })
-        touchedLiveElementIdsRef.current.clear()
+        ;[...touchedLiveElementIdsRef.current].forEach(clearLiveElement)
     }
 
     useEffect(() => {
@@ -331,6 +345,7 @@ export function WhiteboardPage() {
             })
             .finally(() => {
                 pendingDeleteElementIdsRef.current.delete(elementId)
+                clearLiveElement(elementId)
             })
     }
 
@@ -370,8 +385,6 @@ export function WhiteboardPage() {
             flushPendingLiveUpdates()
         }
 
-        clearTouchedLiveElements()
-
         elements.forEach((element, index) => {
             const nextSnapshot = serializeElementSnapshot(element, index)
             const backendElementId =
@@ -386,6 +399,7 @@ export function WhiteboardPage() {
                 isInvisiblySmallElement(element) ||
                 pendingCreateElementIdsRef.current.has(element.id)
             ) {
+                clearLiveElement(element.id)
                 return
             }
 
@@ -409,6 +423,7 @@ export function WhiteboardPage() {
                     })
                     .finally(() => {
                         pendingCreateElementIdsRef.current.delete(element.id)
+                        clearLiveElement(element.id)
                     })
                 return
             }
@@ -418,6 +433,7 @@ export function WhiteboardPage() {
                 persistedElementSnapshotsRef.current.get(element.id) ===
                     nextSnapshot
             ) {
+                clearLiveElement(element.id)
                 return
             }
 
@@ -437,6 +453,7 @@ export function WhiteboardPage() {
                 })
                 .finally(() => {
                     pendingUpdateElementIdsRef.current.delete(element.id)
+                    clearLiveElement(element.id)
                 })
         })
     }
@@ -450,13 +467,13 @@ export function WhiteboardPage() {
             restoreElements(
                 mergeRenderedWhiteboardElements(
                     whiteboardElements,
-                    whiteboardEventsWS.data?.liveElementsById ?? {},
+                    whiteboardEventsWS.liveElementsById,
                 )
                     .sort((left, right) => left.zIndex - right.zIndex)
                     .map((element) => element.props),
                 null,
             ),
-        [whiteboardElements, whiteboardEventsWS.data?.liveElementsById],
+        [whiteboardElements, whiteboardEventsWS.liveElementsById],
     )
 
     if (!projectId) {

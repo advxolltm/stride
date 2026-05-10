@@ -83,17 +83,6 @@ type whiteboardElementDeleteWSUpdate struct {
 	ElementID uuid.UUID `json:"elementId"`
 }
 
-type whiteboardElementLiveWSUpdate struct {
-	ElementID   string         `json:"elementId"`
-	ElementType string         `json:"elementType"`
-	Props       datatypes.JSON `json:"props"`
-	ZIndex      int            `json:"zIndex"`
-}
-
-type whiteboardElementLiveClearWSUpdate struct {
-	ElementID string `json:"elementId"`
-}
-
 type createElementRequest struct {
 	ElementType string         `json:"elementType"`
 	Props       datatypes.JSON `json:"props" swaggertype:"object"`

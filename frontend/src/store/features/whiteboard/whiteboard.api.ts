@@ -22,7 +22,6 @@ import {
     createWhiteboardLiveClientMessageMeta,
     createWhiteboardMutationHeaders,
     isSelfOriginatedWhiteboardEvent,
-    logWhiteboardEventMessage,
     parseWhiteboardEventMessage,
     serializeWhiteboardLiveClientMessage,
 } from './whiteboard.ws'
@@ -345,15 +344,22 @@ const watchWhiteboardEventsSocket = async (
                 return
             }
 
-            logWhiteboardEventMessage(message)
-            if (!isSelfOriginatedWhiteboardEvent(message)) {
-                if (isPersistedWhiteboardEventMessage(message)) {
-                    patchWhiteboardElementsCacheFromEvent(
-                        projectId,
-                        message,
-                        lifecycleApi,
-                    )
-                }
+            const isPersistedEvent = isPersistedWhiteboardEventMessage(message)
+            const isSelfOriginated = isSelfOriginatedWhiteboardEvent(message)
+
+            if (isSelfOriginated && !isPersistedEvent) {
+                return
+            }
+
+            if (!isSelfOriginated && isPersistedEvent) {
+                patchWhiteboardElementsCacheFromEvent(
+                    projectId,
+                    message,
+                    lifecycleApi,
+                )
+            }
+
+            if (!isSelfOriginated) {
                 patchWhiteboardLiveOverlayFromEvent(
                     projectId,
                     message,

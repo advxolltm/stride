@@ -98,6 +98,7 @@ export function WhiteboardCanvas({
     onCursorLeave,
 }: WhiteboardCanvasProps) {
     const excalidrawApiRef = useRef<ExcalidrawImperativeAPI | null>(null)
+    const isApplyingExternalSceneRef = useRef(false)
     const sceneElements = useMemo(
         () => elements.map((element) => ({ ...element })),
         [elements],
@@ -118,9 +119,13 @@ export function WhiteboardCanvas({
     )
 
     useEffect(() => {
+        isApplyingExternalSceneRef.current = true
         excalidrawApiRef.current?.updateScene({
             elements: sceneElements,
             captureUpdate: CaptureUpdateAction.NEVER,
+        })
+        window.requestAnimationFrame(() => {
+            isApplyingExternalSceneRef.current = false
         })
     }, [sceneElements])
 
@@ -137,7 +142,13 @@ export function WhiteboardCanvas({
                 excalidrawAPI={(api) => {
                     excalidrawApiRef.current = api
                 }}
-                onChange={onChange}
+                onChange={(nextElements) => {
+                    if (isApplyingExternalSceneRef.current) {
+                        return
+                    }
+
+                    onChange?.(nextElements)
+                }}
                 onPointerUpdate={(payload) => {
                     onCursorChange?.({
                         cursor: {

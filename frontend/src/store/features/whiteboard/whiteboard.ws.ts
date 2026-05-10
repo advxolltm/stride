@@ -149,30 +149,6 @@ export const parseWhiteboardEventMessage = (
     }
 }
 
-export const logWhiteboardEventMessage = (
-    message: WhiteboardSocketEventMessage,
-) => {
-    switch (message.type) {
-        case WSMessageType.WhiteboardElementCreate:
-            console.log('WhiteboardElementCreate event:', message)
-            return
-        case WSMessageType.WhiteboardElementUpdate:
-            console.log('WhiteboardElementUpdate event:', message)
-            return
-        case WSMessageType.WhiteboardElementDelete:
-            console.log('WhiteboardElementDelete event:', message)
-            return
-        case WSMessageType.WhiteboardElementLiveUpdate:
-            console.log('WhiteboardElementLiveUpdate event:', message)
-            return
-        case WSMessageType.WhiteboardElementLiveClear:
-            console.log('WhiteboardElementLiveClear event:', message)
-            return
-        default:
-            return
-    }
-}
-
 export const isSelfOriginatedWhiteboardEvent = (
     message: WhiteboardSocketEventMessage,
 ) => {
@@ -215,15 +191,15 @@ export const applyWhiteboardEventToElementsCache = (
 }
 
 export const applyWhiteboardLiveEventToOverlay = (
-    liveElementsByID: Record<string, WhiteboardLiveUpdateEventPayload>,
+    liveElementsById: Record<string, WhiteboardLiveUpdateEventPayload>,
     message: WhiteboardLiveEventMessage,
 ) => {
     switch (message.type) {
         case WSMessageType.WhiteboardElementLiveUpdate:
-            liveElementsByID[message.payload.elementId] = message.payload
+            liveElementsById[message.payload.elementId] = message.payload
             return
         case WSMessageType.WhiteboardElementLiveClear:
-            delete liveElementsByID[message.payload.elementId]
+            delete liveElementsById[message.payload.elementId]
             return
         default:
             return
