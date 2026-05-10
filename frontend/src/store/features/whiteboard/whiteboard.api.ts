@@ -86,7 +86,7 @@ const createWhiteboardEventsSocketState = (
     lastError: null,
 })
 
-const whiteboardEventsReconnectDelaysMs = [1000, 2000, 5000] as const
+const whiteboardReconnectDelaysMs = [1000, 2000, 5000] as const
 
 const isWhiteboardCursorPresence = (
     value: unknown,
@@ -133,26 +133,40 @@ const watchWhiteboardCursorSocket = async (
         return
     }
 
-    let socket: WebSocket | null = null
-    let handleOpen: (() => void) | null = null
-    let handleMessage: ((event: MessageEvent) => void) | null = null
-    let handleError: (() => void) | null = null
-    let handleClose: (() => void) | null = null
+    let isCacheEntryRemoved = false
+
+    const cacheEntryRemoved = lifecycleApi.cacheEntryRemoved.then(() => {
+        isCacheEntryRemoved = true
+    })
 
     try {
         await lifecycleApi.cacheDataLoaded
+    } catch {
+        return
+    }
 
-        socket = new WebSocket(createWhiteboardCursorSocketUrl(projectId))
+    let reconnectAttempt = 0
 
-        handleOpen = () => {
+    while (!isCacheEntryRemoved) {
+        let socket: WebSocket | null = new WebSocket(
+            createWhiteboardCursorSocketUrl(projectId),
+        )
+        let settled = false
+
+        const settle = () => {
+            settled = true
+        }
+
+        const handleOpen = () => {
             activeWhiteboardCursorSockets.set(projectId, socket!)
             lifecycleApi.updateCachedData((draft) => {
                 draft.status = 'connected'
                 draft.lastError = null
             })
+            reconnectAttempt = 0
         }
 
-        handleMessage = (event: MessageEvent) => {
+        const handleMessage = (event: MessageEvent) => {
             if (typeof event.data !== 'string') {
                 return
             }
@@ -172,21 +186,33 @@ const watchWhiteboardCursorSocket = async (
             })
         }
 
-        handleError = () => {
+        const handleError = () => {
             lifecycleApi.updateCachedData((draft) => {
                 draft.status = 'error'
                 draft.lastError =
                     'Failed to establish whiteboard cursor websocket connection'
             })
+
+            if (
+                socket &&
+                (socket.readyState === WebSocket.OPEN ||
+                    socket.readyState === WebSocket.CONNECTING)
+            ) {
+                socket.close()
+            }
         }
 
-        handleClose = () => {
-            activeWhiteboardCursorSockets.delete(projectId)
+        const handleClose = () => {
+            if (activeWhiteboardCursorSockets.get(projectId) === socket) {
+                activeWhiteboardCursorSockets.delete(projectId)
+            }
+
             lifecycleApi.updateCachedData((draft) => {
                 if (draft.status !== 'error') {
                     draft.status = 'disconnected'
                 }
             })
+            settle()
         }
 
         socket.addEventListener('open', handleOpen)
@@ -194,32 +220,64 @@ const watchWhiteboardCursorSocket = async (
         socket.addEventListener('error', handleError)
         socket.addEventListener('close', handleClose)
 
-        await lifecycleApi.cacheEntryRemoved
-    } catch {
-        return
-    } finally {
-        activeWhiteboardCursorSockets.delete(projectId)
+        await Promise.race([
+            cacheEntryRemoved,
+            new Promise<void>((resolve) => {
+                const poll = () => {
+                    if (settled) {
+                        resolve()
+                        return
+                    }
 
-        if (
-            socket &&
-            handleOpen &&
-            handleMessage &&
-            handleError &&
-            handleClose
-        ) {
-            socket.removeEventListener('open', handleOpen)
-            socket.removeEventListener('message', handleMessage)
-            socket.removeEventListener('error', handleError)
-            socket.removeEventListener('close', handleClose)
+                    window.setTimeout(poll, 50)
+                }
+
+                poll()
+            }),
+        ])
+
+        socket.removeEventListener('open', handleOpen)
+        socket.removeEventListener('message', handleMessage)
+        socket.removeEventListener('error', handleError)
+        socket.removeEventListener('close', handleClose)
+
+        if (activeWhiteboardCursorSockets.get(projectId) === socket) {
+            activeWhiteboardCursorSockets.delete(projectId)
         }
 
         if (
-            socket &&
-            (socket.readyState === WebSocket.OPEN ||
-                socket.readyState === WebSocket.CONNECTING)
+            socket.readyState === WebSocket.OPEN ||
+            socket.readyState === WebSocket.CONNECTING
         ) {
             socket.close()
         }
+
+        socket = null
+
+        if (isCacheEntryRemoved) {
+            break
+        }
+
+        const reconnectDelay =
+            whiteboardReconnectDelaysMs[
+                Math.min(
+                    reconnectAttempt,
+                    whiteboardReconnectDelaysMs.length - 1,
+                )
+            ]
+
+        reconnectAttempt += 1
+
+        lifecycleApi.updateCachedData((draft) => {
+            draft.status = 'connecting'
+        })
+
+        await Promise.race([
+            cacheEntryRemoved,
+            new Promise((resolve) => {
+                window.setTimeout(resolve, reconnectDelay)
+            }),
+        ])
     }
 }
 
@@ -394,10 +452,10 @@ const watchWhiteboardEventsSocket = async (
         }
 
         const reconnectDelay =
-            whiteboardEventsReconnectDelaysMs[
+            whiteboardReconnectDelaysMs[
                 Math.min(
                     reconnectAttempt,
-                    whiteboardEventsReconnectDelaysMs.length - 1,
+                    whiteboardReconnectDelaysMs.length - 1,
                 )
             ]
 
