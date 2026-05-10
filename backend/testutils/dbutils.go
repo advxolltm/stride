@@ -5,10 +5,13 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/redis/go-redis/v9"
+	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	redisTestcontainers "github.com/testcontainers/testcontainers-go/modules/redis"
@@ -18,8 +21,8 @@ import (
 
 var ctx = context.Background()
 
-// SetupDBAndRedisFromEnv connects to an existing database using environment variables
-// (DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME).
+// SetupDBAndRedisFromEnv connects to existing services using environment variables
+// (DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME, REDIS_HOST, REDIS_PORT).
 func SetupDBAndRedisFromEnv() (*gorm.DB, *redis.Client) {
 	postgresDSN := db.PostgresDSNFromEnv()
 
@@ -27,9 +30,73 @@ func SetupDBAndRedisFromEnv() (*gorm.DB, *redis.Client) {
 	AssertNoError(err)
 
 	redisDSN := db.RedisDSNFromEnv()
-	testRedis := db.InitRedis(redisDSN)
+	testRedis := initRedisAndPing(redisDSN)
 
 	return testdb, testRedis
+}
+
+// SetupLiveRedisFromEnvOrLocal connects to a real Redis instance.
+// CI uses REDIS_HOST/REDIS_PORT; local runs use localhost:6379 by default.
+func SetupLiveRedisFromEnvOrLocal() *redis.Client {
+	addr := RedisAddrFromEnvOrLocal()
+	return initRedisAndPing(addr)
+}
+
+func RedisAddrFromEnvOrLocal() string {
+	host := os.Getenv("REDIS_HOST")
+	if host == "" {
+		host = "localhost"
+	}
+
+	port := os.Getenv("REDIS_PORT")
+	if port == "" {
+		port = "6379"
+	}
+
+	return net.JoinHostPort(host, port)
+}
+
+func initRedisAndPing(addr string) *redis.Client {
+	testRedis := db.InitRedis(addr)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := testRedis.Ping(ctx).Err(); err != nil {
+		log.Fatalf("failed to connect to redis at %s: %v", addr, err)
+	}
+
+	return testRedis
+}
+
+// RunRedisTestTransaction provides a test transaction boundary for Redis keys.
+// Redis transactions cannot roll back, so tests use exact-key cleanup before and after.
+func RunRedisTestTransaction(t *testing.T, rdb *redis.Client, keys []string, f func()) {
+	t.Helper()
+
+	cleanup := func() {
+		t.Helper()
+
+		if len(keys) == 0 {
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		require.NoError(t, rdb.Del(ctx, keys...).Err())
+
+		for _, key := range keys {
+			exists, err := rdb.Exists(ctx, key).Result()
+			require.NoError(t, err)
+			require.Zero(t, exists, "redis key must not remain after test: %s", key)
+		}
+	}
+
+	cleanup()
+	defer cleanup()
+
+	f()
 }
 
 func SeedDB(db *gorm.DB) {
@@ -83,7 +150,7 @@ func setupRedisWithTestcontainers() *redis.Client {
 	rPort, err := redisContainer.MappedPort(ctx, "6379")
 	AssertNoError(err)
 
-	return db.InitRedis(fmt.Sprintf("%s:%s", rHost, rPort.Port()))
+	return initRedisAndPing(fmt.Sprintf("%s:%s", rHost, rPort.Port()))
 }
 
 func setupDBWithTestcontainers() *gorm.DB {
