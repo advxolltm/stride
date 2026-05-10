@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef } from 'react'
-import type { PointerEvent } from 'react'
 import { Button, toast } from '@heroui/react'
 import { isInvisiblySmallElement, restoreElements } from '@excalidraw/excalidraw'
 import { skipToken } from '@reduxjs/toolkit/query'
@@ -307,16 +306,6 @@ export function WhiteboardPage() {
         })
     }
 
-    const handleCanvasPointerMove = (event: PointerEvent<HTMLDivElement>) => {
-        const bounds = event.currentTarget.getBoundingClientRect()
-        queueCursorUpdate({
-            cursor: {
-                x: event.clientX - bounds.left,
-                y: event.clientY - bounds.top,
-            },
-        })
-    }
-
     const handleCanvasPointerLeave = () => {
         queueCursorUpdate(emptyCursorMessage)
     }
@@ -486,8 +475,8 @@ export function WhiteboardPage() {
                 }
                 onChange={handleCanvasChange}
                 onPointerUp={handleCanvasPointerUp}
-                onPointerMove={handleCanvasPointerMove}
-                onPointerLeave={handleCanvasPointerLeave}
+                onCursorChange={queueCursorUpdate}
+                onCursorLeave={handleCanvasPointerLeave}
             />
         </div>
     )

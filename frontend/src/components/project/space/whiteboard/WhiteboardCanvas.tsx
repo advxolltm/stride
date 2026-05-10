@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { CaptureUpdateAction, Excalidraw } from '@excalidraw/excalidraw'
 import type {
     ExcalidrawImperativeAPI,
@@ -29,6 +29,12 @@ interface PersistedViewport {
     scrollX: number
     scrollY: number
     zoom: number
+}
+
+const defaultViewport: PersistedViewport = {
+    scrollX: 0,
+    scrollY: 0,
+    zoom: 1,
 }
 
 const readPersistedViewport = (
@@ -73,14 +79,23 @@ const persistViewport = (
 const toZoomValue = (zoom: number): AppState['zoom']['value'] =>
     zoom as AppState['zoom']['value']
 
+const toViewportCoordinates = (
+    sceneX: number,
+    sceneY: number,
+    viewport: PersistedViewport,
+) => ({
+    x: (sceneX + viewport.scrollX) * viewport.zoom,
+    y: (sceneY + viewport.scrollY) * viewport.zoom,
+})
+
 export function WhiteboardCanvas({
     elements,
     presence = [],
     viewportStorageKey,
     onChange,
     onPointerUp,
-    onPointerMove,
-    onPointerLeave,
+    onCursorChange,
+    onCursorLeave,
 }: WhiteboardCanvasProps) {
     const excalidrawApiRef = useRef<ExcalidrawImperativeAPI | null>(null)
     const sceneElements = useMemo(
@@ -98,6 +113,9 @@ export function WhiteboardCanvas({
               zoom: { value: toZoomValue(initialViewport.zoom) },
           }
         : undefined
+    const [viewport, setViewport] = useState<PersistedViewport>(
+        initialViewport ?? defaultViewport,
+    )
 
     useEffect(() => {
         excalidrawApiRef.current?.updateScene({
@@ -109,8 +127,7 @@ export function WhiteboardCanvas({
     return (
         <div
             className="whiteboard-excalidraw relative h-full w-full overflow-hidden"
-            onPointerMove={onPointerMove}
-            onPointerLeave={onPointerLeave}
+            onPointerLeave={onCursorLeave}
         >
             <Excalidraw
                 initialData={{
@@ -121,12 +138,23 @@ export function WhiteboardCanvas({
                     excalidrawApiRef.current = api
                 }}
                 onChange={onChange}
+                onPointerUpdate={(payload) => {
+                    onCursorChange?.({
+                        cursor: {
+                            x: payload.pointer.x,
+                            y: payload.pointer.y,
+                        },
+                    })
+                }}
                 onScrollChange={(scrollX, scrollY, zoom) => {
-                    persistViewport(viewportStorageKey, {
+                    const nextViewport = {
                         scrollX,
                         scrollY,
                         zoom: zoom.value,
-                    })
+                    }
+
+                    setViewport(nextViewport)
+                    persistViewport(viewportStorageKey, nextViewport)
                 }}
                 onPointerUp={() => {
                     onPointerUp?.(
@@ -141,6 +169,11 @@ export function WhiteboardCanvas({
                         return null
                     }
 
+                    const cursorPosition = toViewportCoordinates(
+                        item.cursor.x,
+                        item.cursor.y,
+                        viewport,
+                    )
                     const label =
                         formatCursorLabel(item.user.name) ||
                         getInitials(item.user.name)
@@ -150,8 +183,8 @@ export function WhiteboardCanvas({
                             key={item.user.id}
                             className="absolute"
                             style={{
-                                left: `${item.cursor.x}px`,
-                                top: `${item.cursor.y}px`,
+                                left: `${cursorPosition.x}px`,
+                                top: `${cursorPosition.y}px`,
                             }}
                             title={item.user.name}
                         >
