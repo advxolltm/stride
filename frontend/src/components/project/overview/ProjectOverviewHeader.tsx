@@ -1,13 +1,13 @@
-import { Button } from '@heroui/react'
+import { Button, Chip } from '@heroui/react'
 import { Settings, UserPlus } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { Link } from 'react-router-dom'
 import { useGetSessionQuery } from '../../../store/features/auth/auth.api'
 import type { Project } from '../../../store/features/project/project.types'
 import { ProjectSettingsModal } from '../settings/ProjectSettingsModal'
 import { AddMembersDialog } from './addMembersDialog/AddMembersDialog'
-import { Link } from 'react-router-dom'
 
 interface ProjectOverviewHeaderProps {
     project: Project
@@ -33,9 +33,20 @@ export function ProjectOverviewHeader({
                         <span className="text-muted">
                             {t('header.projects')}
                         </span>
-                        <h1 className="text-2xl font-bold tracking-tight">
-                            {project.name}
-                        </h1>
+                        <div className="flex flex-row items-center gap-2">
+                            <h1 className="text-2xl font-bold tracking-tight">
+                                {project.name}
+                            </h1>
+                            {project.status === 'archived' && (
+                                <Chip
+                                    size="sm"
+                                    variant="soft"
+                                    className="shrink-0"
+                                >
+                                    {t('projectCard.archived')}
+                                </Chip>
+                            )}
+                        </div>
                     </div>
 
                     <div className="flex items-center gap-2">

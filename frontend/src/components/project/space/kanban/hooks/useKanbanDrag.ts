@@ -17,6 +17,7 @@ interface DragPersistPayload {
 export function useKanbanDrag(
     initialColumns: Column[],
     onPersist?: (payload: DragPersistPayload) => void | Promise<void>,
+    disabled = false,
 ) {
     const [localColumns, setLocalColumns] = useState<Column[]>(initialColumns)
     const [activeTask, setActiveTask] = useState<Task | null>(null)
@@ -32,6 +33,8 @@ export function useKanbanDrag(
     }
 
     function handleDragStart({ active }: DragStartEvent) {
+        if (disabled) return
+
         const column = findColumn(active.id as string)
         const task = column?.tasks.find((t) => t.id === active.id)
         dragStartRef.current = column
@@ -121,6 +124,8 @@ export function useKanbanDrag(
     }
 
     function handleDragOver({ active, over }: DragOverEvent) {
+        if (disabled) return
+
         if (!over) return
 
         const activeId = active.id as string
@@ -147,6 +152,11 @@ export function useKanbanDrag(
     }
 
     function handleDragEnd({ active, over }: DragEndEvent) {
+        if (disabled) {
+            setActiveTask(null)
+            dragStartRef.current = null
+            return
+        }
         setActiveTask(null)
 
         if (!over) {

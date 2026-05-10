@@ -7,7 +7,7 @@ import { TaskTextField } from './TaskTextField'
 
 export function TaskTitleField({ task }: Readonly<{ task: Task }>) {
     const { t } = useTranslation('space')
-    const { projectId } = useTaskBoard()
+    const { projectId, isArchived } = useTaskBoard()
     const [updateTask, { isLoading: isSaving }] = useUpdateTaskMutation()
 
     async function handleSave(value: string) {
@@ -33,6 +33,7 @@ export function TaskTitleField({ task }: Readonly<{ task: Task }>) {
             }
             onSave={handleSave}
             isSaving={isSaving}
+            readOnly={isArchived}
         />
     )
 }

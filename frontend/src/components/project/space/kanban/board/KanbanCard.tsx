@@ -1,13 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import {
-    Avatar,
-    Button,
-    Card,
-    Dropdown,
-    Label,
-    Tooltip,
-} from '@heroui/react'
+import { Avatar, Button, Card, Dropdown, Label, Tooltip } from '@heroui/react'
 import { Calendar, MoreHorizontal } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { Task } from '../../../../../store/features/tasks/task.types'
@@ -19,6 +12,7 @@ interface KanbanCardProps {
     onClick?: (task: Task) => void
     onEdit?: (task: Task) => void
     onDelete?: (task: Task) => void
+    readOnly?: boolean
 }
 
 export function KanbanCard({
@@ -26,6 +20,7 @@ export function KanbanCard({
     onClick,
     onEdit,
     onDelete,
+    readOnly = false,
 }: KanbanCardProps) {
     const { t, i18n } = useTranslation('space')
 
@@ -36,7 +31,7 @@ export function KanbanCard({
         transform,
         transition,
         isDragging,
-    } = useSortable({ id: task.id })
+    } = useSortable({ id: task.id, disabled: readOnly })
 
     const style = {
         transform: CSS.Transform.toString(transform),
@@ -61,6 +56,7 @@ export function KanbanCard({
     const assigneeName = assignee
         ? (assignee.user.fullName ?? assignee.user.username)
         : ''
+    const sortableProps = readOnly ? {} : { ...attributes, ...listeners }
 
     function handleEdit() {
         if (onEdit) {
@@ -78,12 +74,13 @@ export function KanbanCard({
         <div
             ref={setNodeRef}
             style={style}
-            {...attributes}
-            {...listeners}
+            {...sortableProps}
             onClick={() => onClick?.(task)}
-            className={`shrink-0 cursor-grab active:cursor-grabbing ${
-                isDragging ? 'opacity-40' : ''
-            }`}
+            className={`shrink-0 ${
+                readOnly
+                    ? 'cursor-default'
+                    : 'cursor-grab active:cursor-grabbing'
+            } ${isDragging ? 'opacity-40' : ''}`}
         >
             <Card
                 variant="default"
@@ -95,51 +92,57 @@ export function KanbanCard({
                             {task.title}
                         </p>
 
-                        <Dropdown>
-                            <Button
-                                aria-label={t('tasks.actions.menuAria')}
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 w-7 min-w-0 rounded-md p-0"
-                                onPointerDown={(event) =>
-                                    event.stopPropagation()
-                                }
-                                onClick={(event) => event.stopPropagation()}
-                            >
-                                <MoreHorizontal size={14} />
-                            </Button>
-
-                            <Dropdown.Popover>
-                                <Dropdown.Menu
+                        {!readOnly && (
+                            <Dropdown>
+                                <Button
                                     aria-label={t('tasks.actions.menuAria')}
-                                    onAction={(key) => {
-                                        if (key === 'edit') {
-                                            handleEdit()
-                                        }
-                                        if (key === 'delete') {
-                                            handleDelete()
-                                        }
-                                    }}
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 w-7 min-w-0 rounded-md p-0"
+                                    onPointerDown={(event) =>
+                                        event.stopPropagation()
+                                    }
+                                    onClick={(event) => event.stopPropagation()}
                                 >
-                                    <Dropdown.Item
-                                        id="edit"
-                                        textValue={t('tasks.actions.edit')}
-                                    >
-                                        <Label>{t('tasks.actions.edit')}</Label>
-                                    </Dropdown.Item>
+                                    <MoreHorizontal size={14} />
+                                </Button>
 
-                                    <Dropdown.Item
-                                        id="delete"
-                                        textValue={t('tasks.actions.delete')}
-                                        variant="danger"
+                                <Dropdown.Popover>
+                                    <Dropdown.Menu
+                                        aria-label={t('tasks.actions.menuAria')}
+                                        onAction={(key) => {
+                                            if (key === 'edit') {
+                                                handleEdit()
+                                            }
+                                            if (key === 'delete') {
+                                                handleDelete()
+                                            }
+                                        }}
                                     >
-                                        <Label>
-                                            {t('tasks.actions.delete')}
-                                        </Label>
-                                    </Dropdown.Item>
-                                </Dropdown.Menu>
-                            </Dropdown.Popover>
-                        </Dropdown>
+                                        <Dropdown.Item
+                                            id="edit"
+                                            textValue={t('tasks.actions.edit')}
+                                        >
+                                            <Label>
+                                                {t('tasks.actions.edit')}
+                                            </Label>
+                                        </Dropdown.Item>
+
+                                        <Dropdown.Item
+                                            id="delete"
+                                            textValue={t(
+                                                'tasks.actions.delete',
+                                            )}
+                                            variant="danger"
+                                        >
+                                            <Label>
+                                                {t('tasks.actions.delete')}
+                                            </Label>
+                                        </Dropdown.Item>
+                                    </Dropdown.Menu>
+                                </Dropdown.Popover>
+                            </Dropdown>
+                        )}
                     </div>
 
                     <TaskSkillChips skills={task.skills} />

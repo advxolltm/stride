@@ -10,6 +10,10 @@
     "home": "Home",
     "overview": "Overview",
     "projects": "Projects",
+    "activeProjects": "Active projects",
+    "archivedProjects": "Archived projects",
+    "noActiveProjects": "No active projects",
+    "noArchivedProjects": "No archived projects",
     "expandSidebar": "Expand sidebar"
   },
   "logout": {

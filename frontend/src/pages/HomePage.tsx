@@ -1,4 +1,5 @@
 import { Spinner } from '@heroui/react'
+import { useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useOutletContext } from 'react-router-dom'
 import { EmptyProjectsState } from '../components/main/EmptyProjectsState'
@@ -7,6 +8,7 @@ import { MainPageHeader } from '../components/main/MainPageHeader'
 import { MainPageLayout } from '../components/main/MainPageLayout'
 import type { AppLayoutOutletContext } from '../layouts/AppLayout'
 import { useKeyboardGridNavigation } from '../shared/hooks/useKeyboardGridNavigation'
+import { useGetSessionQuery } from '../store/features/auth/auth.api'
 import { useGetProjectsQuery } from '../store/features/project/project.api'
 
 export function HomePage() {
@@ -14,25 +16,19 @@ export function HomePage() {
     const { openCreateProjectDialog } =
         useOutletContext<AppLayoutOutletContext>()
     const { data: projects = [], isLoading } = useGetProjectsQuery()
+    const { data: sessionUser } = useGetSessionQuery()
     const hasProjects = projects.length > 0
+    const projectsGridRef = useRef<HTMLDivElement>(null)
+
     const keyboardNavigation = useKeyboardGridNavigation<HTMLAnchorElement>({
         itemCount: projects.length,
         getColumnCount: () => {
-            if (window.matchMedia('(min-width: 1024px)').matches) {
-                return 4
-            }
-
-            if (window.matchMedia('(min-width: 640px)').matches) {
-                return 2
-            }
-
-            return 1
+            const grid = projectsGridRef.current
+            if (!grid) return 1
+            return window.getComputedStyle(grid).gridTemplateColumns.split(' ')
+                .length
         },
     })
-
-    const handleCreateProject = () => {
-        openCreateProjectDialog()
-    }
 
     return (
         <MainPageLayout>
@@ -41,19 +37,22 @@ export function HomePage() {
                     title={t('home.title')}
                     description={t('home.description')}
                     onCreateProject={
-                        hasProjects ? handleCreateProject : undefined
+                        hasProjects ? openCreateProjectDialog : undefined
                     }
                 />
 
                 {isLoading ? (
                     <div className="flex h-full w-full items-center justify-center">
                         <Spinner
-                            className="block h-10 w-10 text-[var(--accent)]"
+                            className="block h-10 w-10 text-(--accent)"
                             size="sm"
                         />
                     </div>
                 ) : hasProjects ? (
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <div
+                        ref={projectsGridRef}
+                        className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                    >
                         {projects.map((project, index) => {
                             const itemProps =
                                 keyboardNavigation.getItemProps(index)
@@ -63,6 +62,9 @@ export function HomePage() {
                                     key={project.id}
                                     project={project}
                                     href={`/project/${project.id.toString()}`}
+                                    isOwner={
+                                        project.creator?.id === sessionUser?.id
+                                    }
                                     linkRef={itemProps.itemRef}
                                     tabIndex={itemProps.tabIndex}
                                     onFocus={itemProps.onFocus}
@@ -72,7 +74,9 @@ export function HomePage() {
                         })}
                     </div>
                 ) : (
-                    <EmptyProjectsState onCreateProject={handleCreateProject} />
+                    <EmptyProjectsState
+                        onCreateProject={openCreateProjectDialog}
+                    />
                 )}
             </div>
         </MainPageLayout>

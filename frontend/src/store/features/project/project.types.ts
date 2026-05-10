@@ -84,7 +84,7 @@ export type CreateProjectRequest = {
 }
 
 export type UpdateProjectRequest = {
-    name: string
+    name?: string
     description?: string
     status?: 'active' | 'archived'
 }

@@ -8,9 +8,13 @@ interface SidebarTooltipProps {
 
 export function SidebarTooltip({ label, children }: SidebarTooltipProps) {
     return (
-        <Tooltip>
-            <Tooltip.Trigger>{children}</Tooltip.Trigger>
-            <Tooltip.Content>{label}</Tooltip.Content>
+        <Tooltip delay={0} closeDelay={0}>
+            <Tooltip.Trigger className="inline-flex">
+                {children}
+            </Tooltip.Trigger>
+            <Tooltip.Content placement="right" offset={8}>
+                {label}
+            </Tooltip.Content>
         </Tooltip>
     )
 }

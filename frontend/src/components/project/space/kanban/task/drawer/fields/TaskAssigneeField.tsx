@@ -21,7 +21,7 @@ import { useTaskBoard } from '../../../context/useTaskBoard'
 
 export function TaskAssigneeField({ task }: { task: Task }) {
     const { t } = useTranslation('space')
-    const { projectId, members } = useTaskBoard()
+    const { projectId, members, isArchived } = useTaskBoard()
     const { contains } = useFilter({ sensitivity: 'base' })
 
     const [assignTask, { isLoading: isAssigning }] = useAssignTaskMutation()
@@ -37,6 +37,34 @@ export function TaskAssigneeField({ task }: { task: Task }) {
         id: m.id,
         label: m.user.fullName ?? m.user.username,
     }))
+    const currentMember = currentAssignee
+        ? members.find(
+              (member) => member.id === currentAssignee.projectMemberId,
+          )
+        : null
+    const currentAssigneeName = currentMember
+        ? (currentMember.user.fullName ?? currentMember.user.username)
+        : t('tasks.form.assigneeEmpty')
+
+    if (isArchived) {
+        return (
+            <div className="flex flex-col gap-1.5">
+                <Label>{t('tasks.form.assignee')}</Label>
+                <div className="border-border bg-surface-secondary text-foreground flex min-h-9 w-full items-center gap-2 rounded-lg border px-3 py-2 text-sm">
+                    {currentMember && (
+                        <Avatar className="h-6 w-6 text-xs">
+                            <Avatar.Fallback className="bg-accent text-white">
+                                {getInitials(currentAssigneeName)}
+                            </Avatar.Fallback>
+                        </Avatar>
+                    )}
+                    <span className={currentMember ? '' : 'text-muted'}>
+                        {currentAssigneeName}
+                    </span>
+                </div>
+            </div>
+        )
+    }
 
     async function handleChange(key: Key | null) {
         if (!key) {
@@ -79,7 +107,7 @@ export function TaskAssigneeField({ task }: { task: Task }) {
                 placeholder={t('tasks.form.assigneeEmpty')}
                 selectionMode="single"
                 value={selectedKey}
-                isDisabled={isSaving}
+                isDisabled={isSaving || isArchived}
                 onChange={handleChange}
                 aria-label={t('tasks.form.assignee')}
             >

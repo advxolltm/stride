@@ -17,6 +17,7 @@ interface TaskTextFieldProps {
     validate?: (value: string) => string
     multiline?: boolean
     isSaving?: boolean
+    readOnly?: boolean
 }
 
 type EditState = {
@@ -31,6 +32,7 @@ export function TaskTextField({
     validate,
     multiline = false,
     isSaving = false,
+    readOnly = false,
 }: Readonly<TaskTextFieldProps>) {
     const [editState, setEditState] = useState<EditState | null>(null)
     const inputRef = useRef<HTMLInputElement & HTMLTextAreaElement>(null)
@@ -40,6 +42,8 @@ export function TaskTextField({
     const error = isEditing ? validate?.(currentValue) || '' : ''
 
     function startEditing() {
+        if (readOnly) return
+
         setEditState({ initialValue: value, currentValue: value })
         setTimeout(() => inputRef.current?.focus(), 0)
     }
@@ -86,7 +90,7 @@ export function TaskTextField({
                     <Label>{label}</Label>
                     <div className="flex items-center gap-1">
                         {isSaving && <Spinner color="current" size="sm" />}
-                        {isEditing ? (
+                        {!readOnly && isEditing ? (
                             <>
                                 <Button
                                     isIconOnly
@@ -109,7 +113,7 @@ export function TaskTextField({
                                     <Check size={14} />
                                 </Button>
                             </>
-                        ) : (
+                        ) : !readOnly ? (
                             <Button
                                 isIconOnly
                                 size="sm"
@@ -120,7 +124,7 @@ export function TaskTextField({
                             >
                                 <Pencil size={14} />
                             </Button>
-                        )}
+                        ) : null}
                     </div>
                 </div>
                 {multiline ? (

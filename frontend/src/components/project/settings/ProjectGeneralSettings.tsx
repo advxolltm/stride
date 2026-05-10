@@ -13,6 +13,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useUpdateProjectMutation } from '../../../store/features/project/project.api'
 import type { Project } from '../../../store/features/project/project.types'
+import { ProjectGeneralSettingsArchive } from './ProjectGeneralSettingsArchive'
 import { ProjectGeneralSettingsDelete } from './ProjectGeneralSettingsDelete'
 
 interface ProjectGeneralSettingsProps {
@@ -97,7 +98,6 @@ export function ProjectGeneralSettings({
                 body: {
                     name: name.trim(),
                     description: description.trim(),
-                    status: 'active',
                 },
             }).unwrap()
             toast.success(t('generalSettings.saveSuccess'))
@@ -146,6 +146,10 @@ export function ProjectGeneralSettings({
                             </p>
                         </div>
                     ))}
+
+                    {isOwner && (
+                        <ProjectGeneralSettingsArchive project={project} />
+                    )}
 
                     {isOwner && (
                         <ProjectGeneralSettingsDelete project={project} />

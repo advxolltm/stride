@@ -27,7 +27,9 @@ export const applyProjectUpdate = (
     project: Project,
     update: UpdateProjectRequest,
 ) => {
-    project.name = update.name
+    if ('name' in update && update.name) {
+        project.name = update.name
+    }
 
     if ('description' in update) {
         project.description = update.description ?? ''
