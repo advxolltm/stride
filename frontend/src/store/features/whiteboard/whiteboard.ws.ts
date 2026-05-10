@@ -4,6 +4,7 @@ import type {
     WhiteboardDeleteEventPayload,
     WhiteboardElement,
     WhiteboardEventMessage,
+    WhiteboardLiveClientMessage,
     WhiteboardLiveClearEventPayload,
     WhiteboardLiveEventMessage,
     WhiteboardLiveUpdateEventPayload,
@@ -89,6 +90,15 @@ export const createWhiteboardMutationHeaders = () => ({
     'X-Client-Id': getWhiteboardClientID(),
     'X-Operation-Id': generateWhiteboardRequestID(),
 })
+
+export const createWhiteboardLiveClientMessageMeta = () => ({
+    clientId: getWhiteboardClientID(),
+    operationId: generateWhiteboardRequestID(),
+})
+
+export const serializeWhiteboardLiveClientMessage = (
+    message: WhiteboardLiveClientMessage,
+) => JSON.stringify(message)
 
 export const parseWhiteboardEventMessage = (
     rawMessage: string,

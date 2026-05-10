@@ -12,15 +12,19 @@ import type {
     WhiteboardCursorSocketState,
     WhiteboardEventMessage,
     WhiteboardEventsSocketState,
+    WhiteboardLiveClientMessage,
+    WhiteboardLiveUpdateEventPayload,
     WhiteboardSocketEventMessage,
 } from './whiteboard.types'
 import {
     applyWhiteboardEventToElementsCache,
     applyWhiteboardLiveEventToOverlay,
+    createWhiteboardLiveClientMessageMeta,
     createWhiteboardMutationHeaders,
     isSelfOriginatedWhiteboardEvent,
     logWhiteboardEventMessage,
     parseWhiteboardEventMessage,
+    serializeWhiteboardLiveClientMessage,
 } from './whiteboard.ws'
 
 const transformWhiteboard = (whiteboard: ApiWhiteboard): Whiteboard => ({
@@ -62,6 +66,7 @@ type WhiteboardEventsSocketLifecycleApi = {
 }
 
 const activeWhiteboardCursorSockets = new Map<string, WebSocket>()
+const activeWhiteboardEventSockets = new Map<string, WebSocket>()
 
 const createWhiteboardCursorSocketUrl = (projectId: string) =>
     buildApiWebSocketUrl(`/ws/project/${projectId}/whiteboard/cursor`)
@@ -319,6 +324,7 @@ const watchWhiteboardEventsSocket = async (
         socket = new WebSocket(createWhiteboardEventsSocketUrl(projectId))
 
         handleOpen = () => {
+            activeWhiteboardEventSockets.set(projectId, socket!)
             lifecycleApi.updateCachedData((draft) => {
                 draft.status = 'connected'
                 draft.lastError = null
@@ -370,6 +376,7 @@ const watchWhiteboardEventsSocket = async (
         }
 
         handleClose = () => {
+            activeWhiteboardEventSockets.delete(projectId)
             lifecycleApi.updateCachedData((draft) => {
                 if (draft.status !== 'error') {
                     draft.status = 'disconnected'
@@ -386,6 +393,8 @@ const watchWhiteboardEventsSocket = async (
     } catch {
         return
     } finally {
+        activeWhiteboardEventSockets.delete(projectId)
+
         if (
             socket &&
             handleOpen &&
@@ -421,6 +430,39 @@ export const sendWhiteboardCursor = (
     socket.send(JSON.stringify(message))
     return true
 }
+
+export const sendWhiteboardLiveMessage = (
+    projectId: string,
+    message: WhiteboardLiveClientMessage,
+) => {
+    const socket = activeWhiteboardEventSockets.get(projectId)
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+        return false
+    }
+
+    socket.send(serializeWhiteboardLiveClientMessage(message))
+    return true
+}
+
+export const sendWhiteboardLiveUpdate = (
+    projectId: string,
+    payload: WhiteboardLiveUpdateEventPayload,
+) =>
+    sendWhiteboardLiveMessage(projectId, {
+        type: WSMessageType.WhiteboardElementLiveUpdate,
+        meta: createWhiteboardLiveClientMessageMeta(),
+        payload,
+    })
+
+export const sendWhiteboardLiveClear = (
+    projectId: string,
+    elementId: string,
+) =>
+    sendWhiteboardLiveMessage(projectId, {
+        type: WSMessageType.WhiteboardElementLiveClear,
+        meta: createWhiteboardLiveClientMessageMeta(),
+        payload: { elementId },
+    })
 
 export const whiteboardApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({

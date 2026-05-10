@@ -12,6 +12,8 @@ import { useAppSelector } from '../shared/hooks/redux'
 import { useGetProjectByIdQuery } from '../store/features/project/project.api'
 import {
     sendWhiteboardCursor,
+    sendWhiteboardLiveClear,
+    sendWhiteboardLiveUpdate,
     useCreateProjectWhiteboardElementMutation,
     useDeleteProjectWhiteboardElementMutation,
     useGetProjectWhiteboardElementsQuery,
@@ -110,6 +112,12 @@ export function WhiteboardPage() {
     const cursorFrameRef = useRef<number | null>(null)
     const pendingCursorMessageRef =
         useRef<WhiteboardCursorClientMessage | null>(null)
+    const liveFrameRef = useRef<number | null>(null)
+    const pendingLiveElementsRef = useRef(
+        new Map<string, WhiteboardLiveUpdateEventPayload>(),
+    )
+    const touchedLiveElementIdsRef = useRef(new Set<string>())
+    const lastSentLiveSnapshotsRef = useRef(new Map<string, string>())
     const [createProjectWhiteboardElement] =
         useCreateProjectWhiteboardElementMutation()
     const [deleteProjectWhiteboardElement] =
@@ -151,6 +159,9 @@ export function WhiteboardPage() {
         pendingDeleteElementIdsRef.current = new Set()
         pendingUpdateElementIdsRef.current = new Set()
         persistedElementSnapshotsRef.current = new Map()
+        pendingLiveElementsRef.current = new Map()
+        touchedLiveElementIdsRef.current = new Set()
+        lastSentLiveSnapshotsRef.current = new Map()
         isElementIdMappingReadyRef.current = false
     }, [projectId])
 
@@ -174,6 +185,71 @@ export function WhiteboardPage() {
         cursorFrameRef.current = window.requestAnimationFrame(
             flushPendingCursor,
         )
+    }
+
+    const flushPendingLiveUpdates = () => {
+        liveFrameRef.current = null
+        if (!projectId || pendingLiveElementsRef.current.size === 0) {
+            return
+        }
+
+        pendingLiveElementsRef.current.forEach((payload, elementId) => {
+            if (sendWhiteboardLiveUpdate(projectId, payload)) {
+                lastSentLiveSnapshotsRef.current.set(
+                    elementId,
+                    serializeElementSnapshot(payload.props, payload.zIndex),
+                )
+            }
+        })
+        pendingLiveElementsRef.current.clear()
+    }
+
+    const queueLiveUpdate = (
+        element: ExcalidrawElement,
+        zIndex: number,
+    ) => {
+        const nextSnapshot = serializeElementSnapshot(element, zIndex)
+        const previousSnapshot =
+            pendingLiveElementsRef.current.has(element.id)
+                ? serializeElementSnapshot(
+                      pendingLiveElementsRef.current.get(element.id)!.props,
+                      pendingLiveElementsRef.current.get(element.id)!.zIndex,
+                  )
+                : lastSentLiveSnapshotsRef.current.get(element.id) ??
+                  persistedElementSnapshotsRef.current.get(element.id)
+
+        if (previousSnapshot === nextSnapshot) {
+            return
+        }
+
+        pendingLiveElementsRef.current.set(element.id, {
+            elementId: element.id,
+            elementType: element.type,
+            props: element,
+            zIndex,
+        })
+        touchedLiveElementIdsRef.current.add(element.id)
+
+        if (liveFrameRef.current !== null) {
+            return
+        }
+
+        liveFrameRef.current = window.requestAnimationFrame(
+            flushPendingLiveUpdates,
+        )
+    }
+
+    const clearTouchedLiveElements = () => {
+        if (!projectId) {
+            return
+        }
+
+        touchedLiveElementIdsRef.current.forEach((elementId) => {
+            sendWhiteboardLiveClear(projectId, elementId)
+            pendingLiveElementsRef.current.delete(elementId)
+            lastSentLiveSnapshotsRef.current.delete(elementId)
+        })
+        touchedLiveElementIdsRef.current.clear()
     }
 
     useEffect(() => {
@@ -216,8 +292,12 @@ export function WhiteboardPage() {
             if (cursorFrameRef.current !== null) {
                 window.cancelAnimationFrame(cursorFrameRef.current)
             }
+            if (liveFrameRef.current !== null) {
+                window.cancelAnimationFrame(liveFrameRef.current)
+            }
 
             if (projectId) {
+                clearTouchedLiveElements()
                 sendWhiteboardCursor(projectId, emptyCursorMessage)
             }
         }
@@ -270,12 +350,13 @@ export function WhiteboardPage() {
             return
         }
 
-        elements.forEach((element) => {
-            if (!element.isDeleted) {
+        elements.forEach((element, index) => {
+            if (element.isDeleted) {
+                deletePersistedElement(projectId, element.id)
                 return
             }
 
-            deletePersistedElement(projectId, element.id)
+            queueLiveUpdate(element, index)
         })
     }
 
@@ -283,6 +364,13 @@ export function WhiteboardPage() {
         if (!projectId || !isElementIdMappingReadyRef.current) {
             return
         }
+
+        if (liveFrameRef.current !== null) {
+            window.cancelAnimationFrame(liveFrameRef.current)
+            flushPendingLiveUpdates()
+        }
+
+        clearTouchedLiveElements()
 
         elements.forEach((element, index) => {
             const nextSnapshot = serializeElementSnapshot(element, index)

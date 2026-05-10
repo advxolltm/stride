@@ -101,6 +101,27 @@ export type WhiteboardLiveClearEventPayload = {
     elementId: string
 }
 
+export type WhiteboardLiveClientMessageMeta = {
+    clientId: string
+    operationId?: string
+}
+
+export type WhiteboardLiveUpdateClientMessage = {
+    type: typeof ProjectWSMessageType.WhiteboardElementLiveUpdate
+    meta: WhiteboardLiveClientMessageMeta
+    payload: WhiteboardLiveUpdateEventPayload
+}
+
+export type WhiteboardLiveClearClientMessage = {
+    type: typeof ProjectWSMessageType.WhiteboardElementLiveClear
+    meta: WhiteboardLiveClientMessageMeta
+    payload: WhiteboardLiveClearEventPayload
+}
+
+export type WhiteboardLiveClientMessage =
+    | WhiteboardLiveUpdateClientMessage
+    | WhiteboardLiveClearClientMessage
+
 export type WhiteboardCreateEventMessage = {
     type: typeof ProjectWSMessageType.WhiteboardElementCreate
     meta?: WSMessageMeta
