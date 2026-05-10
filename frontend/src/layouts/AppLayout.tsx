@@ -4,18 +4,44 @@ import { AppBreadcrumb, AppHeader } from '../components/layout'
 import { Sidebar } from '../components/layout/SideBar'
 import { CreateProjectDialog } from '../components/project/CreateProjectDialog'
 
+const SIDEBAR_COLLAPSED_STORAGE_KEY = 'sidebarCollapsed'
+
+const getInitialSidebarCollapsed = () => {
+    if (typeof window === 'undefined') {
+        return false
+    }
+
+    return (
+        window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === 'true'
+    )
+}
+
 export interface AppLayoutOutletContext {
     openCreateProjectDialog: () => void
 }
 
 export function AppLayout() {
     const location = useLocation()
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(
+        getInitialSidebarCollapsed,
+    )
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
     const isWhiteboardRoute = location.pathname.endsWith('/whiteboard')
 
     const handleOpenCreateProjectDialog = () => {
         setIsCreateDialogOpen(true)
+    }
+
+    const handleToggleSidebar = () => {
+        setSidebarCollapsed((prev) => {
+            const next = !prev
+            window.localStorage.setItem(
+                SIDEBAR_COLLAPSED_STORAGE_KEY,
+                String(next),
+            )
+
+            return next
+        })
     }
 
     return (
@@ -31,7 +57,7 @@ export function AppLayout() {
                 {!isWhiteboardRoute && (
                     <Sidebar
                         collapsed={sidebarCollapsed}
-                        onToggle={() => setSidebarCollapsed((prev) => !prev)}
+                        onToggle={handleToggleSidebar}
                         onCreateProject={handleOpenCreateProjectDialog}
                     />
                 )}
