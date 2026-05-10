@@ -409,6 +409,9 @@ export function WhiteboardPage() {
             <WhiteboardCanvas
                 key={projectId}
                 elements={excalidrawElements}
+                viewportStorageKey={
+                    projectId ? `whiteboard:${projectId}:viewport` : undefined
+                }
                 onChange={handleCanvasChange}
                 onPointerUp={handleCanvasPointerUp}
             />
