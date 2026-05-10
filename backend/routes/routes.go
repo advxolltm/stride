@@ -380,11 +380,25 @@ const (
 	ProjectMemberRemove
 	ProjectSkillAdd
 	ProjectSkillRemove
+
+	// Whiteboard message types
+	WhiteboardElementCreate
+	WhiteboardElementUpdate
+	WhiteboardElementDelete
 )
 
+type WSMessageMeta struct {
+	ProjectID    uuid.UUID  `json:"projectId"`
+	OriginUserID *uuid.UUID `json:"originUserId,omitempty"`
+	ClientID     string     `json:"clientId,omitempty"`
+	OperationID  string     `json:"operationId,omitempty"`
+	SentAt       time.Time  `json:"sentAt"`
+}
+
 type WSMessage[T any] struct {
-	Type    WSMessageType `json:"type"`
-	Payload T             `json:"payload"`
+	Type    WSMessageType  `json:"type"`
+	Meta    *WSMessageMeta `json:"meta,omitempty"`
+	Payload T              `json:"payload"`
 }
 
 func validateWSMessageStruct(v reflect.Value) {
@@ -430,10 +444,29 @@ func SendWSUpdate[T any](
 	t WSMessageType,
 	payload T,
 ) error {
+	return SendWSUpdateWithMeta(ctx, rdb, projectID, t, nil, payload)
+}
+
+func SendWSUpdateWithMeta[T any](
+	ctx context.Context,
+	rdb *redis.Client,
+	projectID uuid.UUID,
+	t WSMessageType,
+	meta *WSMessageMeta,
+	payload T,
+) error {
 	validateWSMessage(payload)
+
+	if meta != nil {
+		meta.ProjectID = projectID
+		if meta.SentAt.IsZero() {
+			meta.SentAt = time.Now().UTC()
+		}
+	}
 
 	wsMsg := WSMessage[T]{
 		Type:    t,
+		Meta:    meta,
 		Payload: payload,
 	}
 	msg, err := json.Marshal(wsMsg)

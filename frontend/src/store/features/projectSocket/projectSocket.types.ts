@@ -12,12 +12,24 @@ export const WSMessageType = {
     ProjectMemberRemove: 10,
     ProjectSkillAdd: 11,
     ProjectSkillRemove: 12,
+    WhiteboardElementCreate: 13,
+    WhiteboardElementUpdate: 14,
+    WhiteboardElementDelete: 15,
 } as const
 
 export type WSMessageType = (typeof WSMessageType)[keyof typeof WSMessageType]
 
+export type WSMessageMeta = {
+    projectId: string
+    originUserId?: string
+    clientId?: string
+    operationId?: string
+    sentAt: string
+}
+
 export type WSMessage<T> = {
     type: WSMessageType
+    meta?: WSMessageMeta
     payload: T
 }
 
