@@ -90,6 +90,17 @@ export type WhiteboardDeleteEventPayload = {
     elementId: string
 }
 
+export type WhiteboardLiveUpdateEventPayload = {
+    elementId: string
+    elementType: string
+    props: ExcalidrawElement
+    zIndex: number
+}
+
+export type WhiteboardLiveClearEventPayload = {
+    elementId: string
+}
+
 export type WhiteboardCreateEventMessage = {
     type: typeof ProjectWSMessageType.WhiteboardElementCreate
     meta?: WSMessageMeta
@@ -108,10 +119,26 @@ export type WhiteboardDeleteEventMessage = {
     payload: WhiteboardDeleteEventPayload
 }
 
+export type WhiteboardLiveUpdateEventMessage = {
+    type: typeof ProjectWSMessageType.WhiteboardElementLiveUpdate
+    meta?: WSMessageMeta
+    payload: WhiteboardLiveUpdateEventPayload
+}
+
+export type WhiteboardLiveClearEventMessage = {
+    type: typeof ProjectWSMessageType.WhiteboardElementLiveClear
+    meta?: WSMessageMeta
+    payload: WhiteboardLiveClearEventPayload
+}
+
 export type WhiteboardEventMessage =
     | WhiteboardCreateEventMessage
     | WhiteboardUpdateEventMessage
     | WhiteboardDeleteEventMessage
+
+export type WhiteboardLiveEventMessage =
+    | WhiteboardLiveUpdateEventMessage
+    | WhiteboardLiveClearEventMessage
 
 export type WhiteboardEventsSocketState = {
     projectId: string

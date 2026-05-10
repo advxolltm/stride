@@ -385,6 +385,8 @@ const (
 	WhiteboardElementCreate
 	WhiteboardElementUpdate
 	WhiteboardElementDelete
+	WhiteboardElementLiveUpdate
+	WhiteboardElementLiveClear
 )
 
 type WSMessageMeta struct {
