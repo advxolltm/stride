@@ -86,6 +86,8 @@ const createWhiteboardEventsSocketState = (
     lastError: null,
 })
 
+const whiteboardEventsReconnectDelaysMs = [1000, 2000, 5000] as const
+
 const isWhiteboardCursorPresence = (
     value: unknown,
 ): value is WhiteboardCursorPresence => {
@@ -252,25 +254,53 @@ const watchWhiteboardEventsSocket = async (
         return
     }
 
-    let socket: WebSocket | null = null
-    let handleOpen: (() => void) | null = null
-    let handleMessage: ((event: MessageEvent) => void) | null = null
-    let handleError: (() => void) | null = null
-    let handleClose: (() => void) | null = null
+    let isCacheEntryRemoved = false
+    let hasConnectedOnce = false
+
+    const cacheEntryRemoved = lifecycleApi.cacheEntryRemoved.then(() => {
+        isCacheEntryRemoved = true
+    })
 
     try {
         await lifecycleApi.cacheDataLoaded
+    } catch {
+        return
+    }
 
-        socket = new WebSocket(createWhiteboardEventsSocketUrl(projectId))
+    let reconnectAttempt = 0
 
-        handleOpen = () => {
+    while (!isCacheEntryRemoved) {
+        let socket: WebSocket | null = new WebSocket(
+            createWhiteboardEventsSocketUrl(projectId),
+        )
+        let settled = false
+
+        const settle = () => {
+            settled = true
+        }
+
+        const handleOpen = () => {
             lifecycleApi.updateCachedData((draft) => {
                 draft.status = 'connected'
                 draft.lastError = null
             })
+
+            if (hasConnectedOnce) {
+                const refetch = lifecycleApi.dispatch(
+                    whiteboardApi.endpoints.getProjectWhiteboardElements.initiate(
+                        projectId,
+                        { forceRefetch: true },
+                    ),
+                ) as { unsubscribe?: () => void }
+
+                refetch.unsubscribe?.()
+            }
+
+            hasConnectedOnce = true
+            reconnectAttempt = 0
         }
 
-        handleMessage = (event: MessageEvent) => {
+        const handleMessage = (event: MessageEvent) => {
             if (typeof event.data !== 'string') {
                 return
             }
@@ -299,20 +329,29 @@ const watchWhiteboardEventsSocket = async (
             })
         }
 
-        handleError = () => {
+        const handleError = () => {
             lifecycleApi.updateCachedData((draft) => {
                 draft.status = 'error'
                 draft.lastError =
                     'Failed to establish whiteboard websocket connection'
             })
+
+            if (
+                socket &&
+                (socket.readyState === WebSocket.OPEN ||
+                    socket.readyState === WebSocket.CONNECTING)
+            ) {
+                socket.close()
+            }
         }
 
-        handleClose = () => {
+        const handleClose = () => {
             lifecycleApi.updateCachedData((draft) => {
                 if (draft.status !== 'error') {
                     draft.status = 'disconnected'
                 }
             })
+            settle()
         }
 
         socket.addEventListener('open', handleOpen)
@@ -320,30 +359,60 @@ const watchWhiteboardEventsSocket = async (
         socket.addEventListener('error', handleError)
         socket.addEventListener('close', handleClose)
 
-        await lifecycleApi.cacheEntryRemoved
-    } catch {
-        return
-    } finally {
-        if (
-            socket &&
-            handleOpen &&
-            handleMessage &&
-            handleError &&
-            handleClose
-        ) {
-            socket.removeEventListener('open', handleOpen)
-            socket.removeEventListener('message', handleMessage)
-            socket.removeEventListener('error', handleError)
-            socket.removeEventListener('close', handleClose)
-        }
+        await Promise.race([
+            cacheEntryRemoved,
+            new Promise<void>((resolve) => {
+                const poll = () => {
+                    if (settled) {
+                        resolve()
+                        return
+                    }
+
+                    window.setTimeout(poll, 50)
+                }
+
+                poll()
+            }),
+        ])
+
+        socket.removeEventListener('open', handleOpen)
+        socket.removeEventListener('message', handleMessage)
+        socket.removeEventListener('error', handleError)
+        socket.removeEventListener('close', handleClose)
 
         if (
-            socket &&
-            (socket.readyState === WebSocket.OPEN ||
-                socket.readyState === WebSocket.CONNECTING)
+            socket.readyState === WebSocket.OPEN ||
+            socket.readyState === WebSocket.CONNECTING
         ) {
             socket.close()
         }
+
+        socket = null
+
+        if (isCacheEntryRemoved) {
+            break
+        }
+
+        const reconnectDelay =
+            whiteboardEventsReconnectDelaysMs[
+                Math.min(
+                    reconnectAttempt,
+                    whiteboardEventsReconnectDelaysMs.length - 1,
+                )
+            ]
+
+        reconnectAttempt += 1
+
+        lifecycleApi.updateCachedData((draft) => {
+            draft.status = 'connecting'
+        })
+
+        await Promise.race([
+            cacheEntryRemoved,
+            new Promise((resolve) => {
+                window.setTimeout(resolve, reconnectDelay)
+            }),
+        ])
     }
 }
 
