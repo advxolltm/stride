@@ -46,6 +46,7 @@ type WhiteboardCursorSocketLifecycleApi = {
 type WhiteboardEventsSocketLifecycleApi = {
     cacheDataLoaded: Promise<unknown>
     cacheEntryRemoved: Promise<void>
+    dispatch: (action: unknown) => unknown
     updateCachedData: (
         recipe: (draft: WhiteboardEventsSocketState) => void,
     ) => void
@@ -105,15 +106,13 @@ const isWhiteboardEventType = (value: unknown): value is number =>
 
 const parseWhiteboardEventMessage = (
     rawMessage: string,
-):
-    | WhiteboardEventMessage<
-          ApiWhiteboardElement | WhiteboardDeleteEventPayload
-      >
-    | null => {
+): WhiteboardEventMessage | null => {
     try {
-        const parsed = JSON.parse(rawMessage) as Partial<
-            WhiteboardEventMessage<unknown>
-        >
+        const parsed = JSON.parse(rawMessage) as Partial<{
+            type: number
+            meta?: WhiteboardEventMessage['meta']
+            payload: unknown
+        }>
 
         if (!isWhiteboardEventType(parsed.type)) {
             return null
@@ -134,9 +133,7 @@ const parseWhiteboardEventMessage = (
             return null
         }
 
-        return parsed as WhiteboardEventMessage<
-            ApiWhiteboardElement | WhiteboardDeleteEventPayload
-        >
+        return parsed as WhiteboardEventMessage
     } catch {
         return null
     }
@@ -278,9 +275,7 @@ const watchWhiteboardCursorSocket = async (
 }
 
 const logWhiteboardEventMessage = (
-    message: WhiteboardEventMessage<
-        ApiWhiteboardElement | WhiteboardDeleteEventPayload
-    >,
+    message: WhiteboardEventMessage,
 ) => {
     switch (message.type) {
         case WSMessageType.WhiteboardElementCreate:
@@ -292,6 +287,76 @@ const logWhiteboardEventMessage = (
         case WSMessageType.WhiteboardElementDelete:
             console.log('WhiteboardElementDelete event:', message)
             return
+        default:
+            return
+    }
+}
+
+const patchWhiteboardElementsCacheFromEvent = (
+    projectId: string,
+    message: WhiteboardEventMessage,
+    lifecycleApi: WhiteboardEventsSocketLifecycleApi,
+) => {
+    switch (message.type) {
+        case WSMessageType.WhiteboardElementCreate: {
+            const element = transformWhiteboardElement(message.payload)
+
+            lifecycleApi.dispatch(
+                whiteboardApi.util.updateQueryData(
+                    'getProjectWhiteboardElements',
+                    projectId,
+                    (draft) => {
+                        const existingIndex = draft.findIndex(
+                            (item) => item.id === element.id,
+                        )
+
+                        if (existingIndex === -1) {
+                            draft.push(element as never)
+                            return
+                        }
+
+                        Object.assign(draft[existingIndex], element)
+                    },
+                ),
+            )
+            return
+        }
+        case WSMessageType.WhiteboardElementUpdate: {
+            const element = transformWhiteboardElement(message.payload)
+
+            lifecycleApi.dispatch(
+                whiteboardApi.util.updateQueryData(
+                    'getProjectWhiteboardElements',
+                    projectId,
+                    (draft) => {
+                        const existingIndex = draft.findIndex(
+                            (item) => item.id === element.id,
+                        )
+
+                        if (existingIndex === -1) {
+                            draft.push(element as never)
+                            return
+                        }
+
+                        Object.assign(draft[existingIndex], element)
+                    },
+                ),
+            )
+            return
+        }
+        case WSMessageType.WhiteboardElementDelete: {
+            lifecycleApi.dispatch(
+                whiteboardApi.util.updateQueryData(
+                    'getProjectWhiteboardElements',
+                    projectId,
+                    (draft) =>
+                        draft.filter(
+                            (item) => item.id !== message.payload.elementId,
+                        ),
+                ),
+            )
+            return
+        }
         default:
             return
     }
@@ -338,15 +403,14 @@ const watchWhiteboardEventsSocket = async (
             }
 
             logWhiteboardEventMessage(message)
+            patchWhiteboardElementsCacheFromEvent(
+                projectId,
+                message,
+                lifecycleApi,
+            )
 
             lifecycleApi.updateCachedData((draft) => {
-                draft.lastMessage = {
-                    ...message,
-                    payload:
-                        message.type === WSMessageType.WhiteboardElementDelete
-                            ? message.payload
-                            : transformWhiteboardElement(message.payload),
-                }
+                draft.lastMessage = message
                 draft.lastMessageAt = new Date().toISOString()
             })
         }

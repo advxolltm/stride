@@ -1,4 +1,8 @@
 import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types'
+import type {
+    WSMessageMeta,
+    WSMessageType as ProjectWSMessageType,
+} from '../projectSocket/projectSocket.types'
 
 export type ApiWhiteboard = {
     id: string
@@ -86,26 +90,37 @@ export type WhiteboardDeleteEventPayload = {
     elementId: string
 }
 
-export type WhiteboardEventMessage<T = unknown> = {
-    type: number
-    meta?: {
-        projectId: string
-        originUserId?: string
-        clientId?: string
-        operationId?: string
-        sentAt: string
-    }
-    payload: T
+export type WhiteboardCreateEventMessage = {
+    type: typeof ProjectWSMessageType.WhiteboardElementCreate
+    meta?: WSMessageMeta
+    payload: ApiWhiteboardElement
 }
+
+export type WhiteboardUpdateEventMessage = {
+    type: typeof ProjectWSMessageType.WhiteboardElementUpdate
+    meta?: WSMessageMeta
+    payload: ApiWhiteboardElement
+}
+
+export type WhiteboardDeleteEventMessage = {
+    type: typeof ProjectWSMessageType.WhiteboardElementDelete
+    meta?: WSMessageMeta
+    payload: WhiteboardDeleteEventPayload
+}
+
+export type WhiteboardEventMessage =
+    | WhiteboardCreateEventMessage
+    | WhiteboardUpdateEventMessage
+    | WhiteboardDeleteEventMessage
 
 export type WhiteboardEventsSocketState = {
     projectId: string
     url: string
     status: WhiteboardSocketStatus
     lastMessage:
-        | WhiteboardEventMessage<
-              WhiteboardElement | WhiteboardDeleteEventPayload
-          >
+        | WhiteboardCreateEventMessage
+        | WhiteboardUpdateEventMessage
+        | WhiteboardDeleteEventMessage
         | null
     lastMessageAt: string | null
     lastError: string | null
