@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { Button, toast } from '@heroui/react'
 import { isInvisiblySmallElement, restoreElements } from '@excalidraw/excalidraw'
+import { skipToken } from '@reduxjs/toolkit/query'
 import { useTranslation } from 'react-i18next'
 import { ChevronRight, Home, Share2, Zap } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
@@ -14,6 +15,7 @@ import {
     useGetProjectWhiteboardElementsQuery,
     useGetProjectWhiteboardQuery,
     useUpdateProjectWhiteboardElementMutation,
+    useWatchWhiteboardEventsQuery,
 } from '../store/features/whiteboard/whiteboard.api'
 import getInitials from '../shared/utils/getInitials'
 
@@ -42,6 +44,7 @@ export function WhiteboardPage() {
         useDeleteProjectWhiteboardElementMutation()
     const [updateProjectWhiteboardElement] =
         useUpdateProjectWhiteboardElementMutation()
+    useWatchWhiteboardEventsQuery(projectId ?? skipToken)
     const {
         data: project,
         isLoading: isProjectLoading,

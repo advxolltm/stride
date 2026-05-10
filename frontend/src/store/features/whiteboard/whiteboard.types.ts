@@ -81,3 +81,32 @@ export type WhiteboardCursorSocketState = {
     lastSnapshotAt: string | null
     lastError: string | null
 }
+
+export type WhiteboardDeleteEventPayload = {
+    elementId: string
+}
+
+export type WhiteboardEventMessage<T = unknown> = {
+    type: number
+    meta?: {
+        projectId: string
+        originUserId?: string
+        clientId?: string
+        operationId?: string
+        sentAt: string
+    }
+    payload: T
+}
+
+export type WhiteboardEventsSocketState = {
+    projectId: string
+    url: string
+    status: WhiteboardSocketStatus
+    lastMessage:
+        | WhiteboardEventMessage<
+              WhiteboardElement | WhiteboardDeleteEventPayload
+          >
+        | null
+    lastMessageAt: string | null
+    lastError: string | null
+}
