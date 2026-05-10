@@ -8,6 +8,7 @@ import {
 } from './middleware/themeListener'
 import themeReducer from './themeSlice'
 import taskReducer from './taskSlice'
+import userReducer from './userSlice'
 
 export const store = configureStore({
     reducer: {
@@ -15,6 +16,7 @@ export const store = configureStore({
         chat: chatReducer,
         tasks: taskReducer,
         theme: themeReducer,
+        user: userReducer,
     },
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware()

@@ -4,13 +4,17 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { LogoutButton } from '../../shared/components/LogoutButton'
 import { LogoutConfirmDialog } from '../../shared/components/LogoutConfirmDialog'
+import { useAppSelector } from '../../shared/hooks/redux'
 import getInitials from '../../shared/utils/getInitials'
 import { useGetSessionQuery } from '../../store/features/auth/auth.api'
 import { useGetUserByIdQuery } from '../../store/features/user/user.api'
+import { selectUserId } from '../../store/userSlice'
+import { skipToken } from '@reduxjs/toolkit/query'
 
 export function UserMenu() {
     const { data: user } = useGetSessionQuery()
-    const { data: userData } = useGetUserByIdQuery(user!.id)
+    const userId = useAppSelector(selectUserId)
+    const { data: userData } = useGetUserByIdQuery(userId ?? skipToken)
 
     const navigate = useNavigate()
     const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false)

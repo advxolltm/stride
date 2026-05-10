@@ -4,8 +4,9 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Link } from 'react-router-dom'
-import { useGetSessionQuery } from '../../../store/features/auth/auth.api'
+import { useAppSelector } from '../../../shared/hooks/redux'
 import type { Project } from '../../../store/features/project/project.types'
+import { selectUserId } from '../../../store/userSlice'
 import { ProjectSettingsModal } from '../settings/ProjectSettingsModal'
 import { AddMembersDialog } from './addMembersDialog/AddMembersDialog'
 
@@ -20,10 +21,10 @@ export function ProjectOverviewHeader({
     const [isInviteOpen, setIsInviteOpen] = useState(false)
     const [isSettingsOpen, setSettingsOpen] = useState(false)
 
-    const { data: sessionUser } = useGetSessionQuery()
+    const userId = useAppSelector(selectUserId)
 
     const existingMemberIds = project.members.map((m) => m.userId)
-    const isOwner = project.creator?.id === sessionUser?.id
+    const isOwner = project.creator?.id === userId
 
     return (
         <>
@@ -81,7 +82,7 @@ export function ProjectOverviewHeader({
                 projectId={project.id}
                 projectName={project.name}
                 existingMemberIds={existingMemberIds}
-                currentUserId={sessionUser?.id ?? ''}
+                currentUserId={userId ?? ''}
             />
 
             <ProjectSettingsModal

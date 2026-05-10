@@ -8,16 +8,17 @@ import {
     SecuritySection,
     SkillsSection,
 } from '../components/account'
-import { useGetSessionQuery } from '../store/features/auth/auth.api'
+import { useAppSelector } from '../shared/hooks/redux'
 import { useGetUserByIdQuery } from '../store/features/user/user.api'
+import { selectUserId } from '../store/userSlice'
 import { AccountPageSkeleton } from './AccountPageSkeleton'
+import { skipToken } from '@reduxjs/toolkit/query'
 
 export function AccountPage() {
     const { t } = useTranslation('setting')
     const navigate = useNavigate()
-    const { data: user } = useGetSessionQuery()
-    const userId = user!.id
-    const { isLoading } = useGetUserByIdQuery(userId)
+    const userId = useAppSelector(selectUserId)
+    const { isLoading } = useGetUserByIdQuery(userId ?? skipToken)
 
     if (isLoading) return <AccountPageSkeleton />
 

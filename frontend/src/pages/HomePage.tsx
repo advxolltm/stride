@@ -7,16 +7,17 @@ import { MainPageCard } from '../components/main/MainPageCard'
 import { MainPageHeader } from '../components/main/MainPageHeader'
 import { MainPageLayout } from '../components/main/MainPageLayout'
 import type { AppLayoutOutletContext } from '../layouts/AppLayout'
+import { useAppSelector } from '../shared/hooks/redux'
 import { useKeyboardGridNavigation } from '../shared/hooks/useKeyboardGridNavigation'
-import { useGetSessionQuery } from '../store/features/auth/auth.api'
 import { useGetProjectsQuery } from '../store/features/project/project.api'
+import { selectUserId } from '../store/userSlice'
 
 export function HomePage() {
     const { t } = useTranslation('project')
     const { openCreateProjectDialog } =
         useOutletContext<AppLayoutOutletContext>()
     const { data: projects = [], isLoading } = useGetProjectsQuery()
-    const { data: sessionUser } = useGetSessionQuery()
+    const userId = useAppSelector(selectUserId)
     const hasProjects = projects.length > 0
     const projectsGridRef = useRef<HTMLDivElement>(null)
 
@@ -63,7 +64,7 @@ export function HomePage() {
                                     project={project}
                                     href={`/project/${project.id.toString()}`}
                                     isOwner={
-                                        project.creator?.id === sessionUser?.id
+                                        project.creator?.id === userId
                                     }
                                     linkRef={itemProps.itemRef}
                                     tabIndex={itemProps.tabIndex}
