@@ -1,8 +1,14 @@
-import { Button, Tooltip } from '@heroui/react'
+import { Button } from '@heroui/react'
 import { useState } from 'react'
-import { FolderKanban, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import {
+    Archive,
+    FolderKanban,
+    PanelLeftClose,
+    PanelLeftOpen,
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { SidebarItems, type SidebarProject } from '../main/SidebarItems'
+import { SidebarTooltip } from '../main/SidebarTooltip'
 import { LogoutButton } from '../../shared/components/LogoutButton'
 import { LogoutConfirmDialog } from '../../shared/components/LogoutConfirmDialog'
 import { useGetProjectsQuery } from '../../store/features/project/project.api'
@@ -23,11 +29,22 @@ export function Sidebar({
     const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false)
     const { data: projects = [] } = useGetProjectsQuery()
 
-    const sidebarProjects: SidebarProject[] = projects.map((project) => ({
-        id: project.id,
-        label: project.name,
-        icon: <FolderKanban size={14} />,
-    }))
+    const sidebarProjects: SidebarProject[] = projects.map((project) => {
+        const status: SidebarProject['status'] =
+            project.status === 'archived' ? 'archived' : 'active'
+
+        return {
+            id: project.id,
+            label: project.name,
+            status,
+            icon:
+                status === 'archived' ? (
+                    <Archive size={14} />
+                ) : (
+                    <FolderKanban size={14} />
+                ),
+        }
+    })
 
     const toggleButton = (
         <Button
@@ -35,7 +52,7 @@ export function Sidebar({
             size="sm"
             variant="ghost"
             onPress={onToggle}
-            className="border-none text-[var(--muted)] hover:text-[var(--foreground)]"
+            className="text-muted border-none hover:text-(--foreground)"
         >
             {collapsed ? (
                 <PanelLeftOpen size={16} />
@@ -48,7 +65,7 @@ export function Sidebar({
     return (
         <aside
             className={clsx(
-                'relative flex h-full shrink-0 flex-col overflow-hidden border-r border-[var(--border)] bg-[var(--surface)]',
+                'border-border bg-surface relative flex h-full shrink-0 flex-col overflow-hidden border-r',
                 'transition-[width] duration-300 ease-in-out',
                 collapsed ? 'w-[68px]' : 'w-[240px]',
             )}
@@ -60,12 +77,9 @@ export function Sidebar({
                 )}
             >
                 {collapsed ? (
-                    <Tooltip>
-                        <Tooltip.Trigger>{toggleButton}</Tooltip.Trigger>
-                        <Tooltip.Content>
-                            {t('navigation.expandSidebar')}
-                        </Tooltip.Content>
-                    </Tooltip>
+                    <SidebarTooltip label={t('navigation.expandSidebar')}>
+                        {toggleButton}
+                    </SidebarTooltip>
                 ) : (
                     toggleButton
                 )}
@@ -77,7 +91,12 @@ export function Sidebar({
                 onCreateProject={onCreateProject}
             />
 
-            <div className="shrink-0 border-t border-[var(--border)] px-2 py-3">
+            <div
+                className={clsx(
+                    'border-border flex shrink-0 border-t px-2 py-3',
+                    collapsed ? 'justify-center' : 'justify-end',
+                )}
+            >
                 <LogoutButton
                     collapsed={collapsed}
                     variant="sidebar"

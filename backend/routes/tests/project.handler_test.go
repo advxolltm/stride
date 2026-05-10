@@ -49,7 +49,7 @@ func runTest(t *testing.T, name string, f func(t *testing.T, tx *gorm.DB, as aut
 			uStore := userStore.NewUserStore(tx)
 			uServ := userService.NewUserService(uStore)
 			aServ := authService.NewAuthenticationService(uServ)
-			handler := projectsHandler.NewProjectsGroup(pServ, nil, aServ)
+			handler := projectsHandler.NewProjectsGroup(pServ, nil, aServ, rdb)
 
 			e := echo.New()
 			handler.AddRoutes(e.Group("/api"))
@@ -209,6 +209,10 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 
 		assert.Len(t, respMembers, 1)
 		assert.Equal(t, memberProj.ID, respMembers[0].ProjectID)
+		require.NotNil(t, respMembers[0].User)
+		assert.Equal(t, newUser2.ID, respMembers[0].User.ID)
+		assert.Equal(t, newUser2.Username, respMembers[0].User.Username)
+		assert.Equal(t, newUser2.Email, respMembers[0].User.Email)
 
 		members, err := ps.GetProjectMembers(ctx, memberProj.ID)
 		require.NoError(t, err)

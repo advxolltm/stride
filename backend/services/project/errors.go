@@ -13,4 +13,7 @@ var (
 	ErrNonExistentProjectSkill = errors.New("project skill not found")
 	ErrProjectMemberNotFound   = errors.New("user is not a member of the project")
 	ErrNonExistentProjectTask  = errors.New("task not found")
+	ErrProjectNameTooLong      = errors.New("project name cannot be longer than 255 characters")
+	ErrSkillNameTooLong        = errors.New("skill name cannot be longer than 255 characters")
+	ErrSkillDescriptionTooLong = errors.New("skill description cannot be longer than 255 characters")
 )

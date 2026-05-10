@@ -8,6 +8,26 @@
     "title": "Projekte",
     "description": "Verwalte deine Projekte, arbeite mit deinem Team zusammen und organisiere deine Arbeitsbereiche."
   },
+  "projectCard": {
+    "actionsMenu": "Projektaktionen",
+    "archived": "Archiviert",
+    "edit": "Bearbeiten",
+    "archive": "Archivieren",
+    "unarchive": "Wieder aktivieren",
+    "delete": "Loeschen",
+    "archiveConfirmTitle": "Projekt archivieren?",
+    "archiveConfirmMessage": "Moechten Sie das Projekt '{{name}}' wirklich archivieren?",
+    "archiveConfirm": "Projekt archivieren",
+    "archiveConfirmPending": "Wird archiviert...",
+    "archiveSuccess": "Projekt erfolgreich archiviert",
+    "archiveError": "Projekt konnte nicht archiviert werden",
+    "unarchiveConfirmTitle": "Projekt wieder aktivieren?",
+    "unarchiveConfirmMessage": "Moechten Sie das Projekt '{{name}}' wirklich zurueck zu den aktiven Projekten verschieben?",
+    "unarchiveConfirm": "Projekt wieder aktivieren",
+    "unarchiveConfirmPending": "Wird wieder aktiviert...",
+    "unarchiveSuccess": "Projekt wurde zu den aktiven Projekten verschoben",
+    "unarchiveError": "Projekt konnte nicht wieder aktiviert werden"
+  },
   "emptyState": {
     "title": "Noch keine Projekte",
     "description": "Erstelle dein erstes Projekt, um Arbeitsbereiche, Personen und Fortschritt an einem Ort zu organisieren."
@@ -65,6 +85,21 @@
       "create": "Projekt erstellen"
     }
   },
+  "editDialog": {
+    "title": "Projekt bearbeiten",
+    "description": "Aktualisiere den Projektnamen und die Beschreibung.",
+    "fields": {
+      "title": "Titel",
+      "description": "Beschreibung"
+    },
+    "placeholders": {
+      "title": "Projekttitel eingeben",
+      "description": "Beschreibe das Ziel dieses Projekts"
+    },
+    "actions": {
+      "save": "Aenderungen speichern"
+    }
+  },
   "generalSettings": {
     "title": "Projektinformationen",
     "edit": "Bearbeiten",
@@ -84,6 +119,10 @@
     "saveSuccess": "Projekt erfolgreich aktualisiert",
     "saveError": "Projekt konnte nicht aktualisiert werden",
     "nameRequired": "Projektname ist erforderlich",
+    "archiveTitle": "Projekt archivieren",
+    "archiveDescription": "Archivierte Projekte werden aus der aktiven Projektliste verschoben und bleiben unter archivierten Projekten auffindbar.",
+    "unarchiveTitle": "Projekt wieder aktivieren",
+    "unarchiveDescription": "Verschiebe dieses Projekt zurueck in die aktive Projektliste.",
     "delete": "Loeschen",
     "deleteTitle": "Projekt loeschen",
     "deleteDescription": "Sobald Sie ein Projekt loeschen, kann es nicht wiederhergestellt werden. Bitte seien Sie sicher.",

@@ -1,4 +1,5 @@
 import type {
+    Project,
     ProjectMember,
     ProjectSkill,
 } from '../../../../../store/features/project/project.types'
@@ -14,6 +15,8 @@ export interface StatusOption {
 
 export interface TaskBoardContextValue {
     projectId: string
+    project: Project | null
+    isArchived: boolean
     members: ProjectMember[]
     skills: ProjectSkill[]
     statusOptions: StatusOption[]

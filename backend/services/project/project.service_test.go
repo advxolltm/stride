@@ -339,6 +339,12 @@ func TestProjectService(t *testing.T) {
 		assert.Len(t, membersToAdd, 2)
 		assert.NotNil(t, newMembers[0].ID)
 		assert.NotNil(t, newMembers[1].ID)
+		assert.Equal(t, user1.ID, newMembers[0].User.ID)
+		assert.Equal(t, user1.Username, newMembers[0].User.Username)
+		assert.Equal(t, user1.Email, newMembers[0].User.Email)
+		assert.Equal(t, user2.ID, newMembers[1].User.ID)
+		assert.Equal(t, user2.Username, newMembers[1].User.Username)
+		assert.Equal(t, user2.Email, newMembers[1].User.Email)
 
 		members, err := service.GetProjectMembers(ctx, proj.ID)
 		require.NoError(t, err)

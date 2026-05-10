@@ -31,7 +31,8 @@
       "dueDateUpdateSuccess": "Due date updated.",
       "dueDateUpdateError": "Could not update due date.",
       "createSuccess": "Task created.",
-      "createError": "Could not create task."
+      "createError": "Could not create task.",
+      "archivedReadOnly": "Archived project - read only"
     },
     "drawer": {
       "detailsTitle": "Task Details",

@@ -1,6 +1,13 @@
 import { baseApi, buildApiWebSocketUrl } from '../../api/base.api'
-import { taskCreate, type Task } from '../../taskSlice'
-import type { projectSocketSocketState, WSMessage } from './projectSocket.types'
+import { handleProjectWsMessage } from '../../middleware/wsProjectHandlers'
+import {
+    handleTaskWsMessage,
+    type WsListenerApi,
+} from '../../middleware/wsTaskHandlers'
+import {
+    type projectSocketSocketState,
+    type WSMessage,
+} from './projectSocket.types'
 
 const createProjectSocketSocketUrl = (projectId: string) =>
     buildApiWebSocketUrl(`/ws/project/${projectId}/kanban`)
@@ -28,6 +35,7 @@ export const projectSocketApi = baseApi.injectEndpoints({
                     cacheDataLoaded,
                     cacheEntryRemoved,
                     dispatch,
+                    getState,
                     updateCachedData,
                 },
             ) {
@@ -76,8 +84,31 @@ export const projectSocketApi = baseApi.injectEndpoints({
                                 draft.lastMessageAt = new Date().toISOString()
                             })
 
-                            if (message.type === 1) {
-                                dispatch(taskCreate(message.payload as Task))
+                            const api: WsListenerApi = {
+                                dispatch: dispatch as WsListenerApi['dispatch'],
+                                getState,
+                            }
+
+                            if (
+                                handleTaskWsMessage(
+                                    message.type,
+                                    message.payload,
+                                    projectId,
+                                    api,
+                                )
+                            ) {
+                                return
+                            }
+
+                            if (
+                                handleProjectWsMessage(
+                                    message.type,
+                                    message.payload,
+                                    projectId,
+                                    api,
+                                )
+                            ) {
+                                return
                             }
                         } catch {
                             updateCachedData((draft) => {

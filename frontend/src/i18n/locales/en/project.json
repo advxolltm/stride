@@ -8,6 +8,26 @@
     "title": "Projects",
     "description": "Manage your projects, collaborate with your team, and organize your workspaces."
   },
+  "projectCard": {
+    "actionsMenu": "Project actions",
+    "archived": "Archived",
+    "edit": "Edit",
+    "archive": "Archive",
+    "unarchive": "Unarchive",
+    "delete": "Delete",
+    "archiveConfirmTitle": "Archive Project?",
+    "archiveConfirmMessage": "Are you sure you want to archive the project '{{name}}'?",
+    "archiveConfirm": "Archive Project",
+    "archiveConfirmPending": "Archiving...",
+    "archiveSuccess": "Project archived successfully",
+    "archiveError": "Failed to archive project",
+    "unarchiveConfirmTitle": "Unarchive Project?",
+    "unarchiveConfirmMessage": "Are you sure you want to move the project '{{name}}' back to active projects?",
+    "unarchiveConfirm": "Unarchive Project",
+    "unarchiveConfirmPending": "Unarchiving...",
+    "unarchiveSuccess": "Project moved to active projects",
+    "unarchiveError": "Failed to unarchive project"
+  },
   "emptyState": {
     "title": "No projects yet",
     "description": "Create your first project to start organizing workspaces, people, and progress in one place."
@@ -65,6 +85,21 @@
       "create": "Create project"
     }
   },
+  "editDialog": {
+    "title": "Edit Project",
+    "description": "Update the project name and description.",
+    "fields": {
+      "title": "Title",
+      "description": "Description"
+    },
+    "placeholders": {
+      "title": "Enter project title",
+      "description": "Describe the goal of this project"
+    },
+    "actions": {
+      "save": "Save changes"
+    }
+  },
   "generalSettings": {
     "title": "Project Info",
     "edit": "Edit",
@@ -84,6 +119,10 @@
     "saveSuccess": "Project updated successfully",
     "saveError": "Failed to update project",
     "nameRequired": "Project name is required",
+    "archiveTitle": "Archive Project",
+    "archiveDescription": "Archived projects move out of the active project list and can still be found in archived projects.",
+    "unarchiveTitle": "Unarchive Project",
+    "unarchiveDescription": "Move this project back to the active project list.",
     "delete": "Delete",
     "deleteTitle": "Delete Project",
     "deleteDescription": "Once you delete a project, there is no going back. Please be certain.",

@@ -8,6 +8,7 @@ import (
 	whiteboardSvc "backend/services/whiteboard"
 
 	"github.com/labstack/echo/v5"
+	"github.com/redis/go-redis/v9"
 )
 
 // ProjectsGroup wires all /projects sub-handlers behind a single auth-protected group.
@@ -22,10 +23,11 @@ func NewProjectsGroup(
 	ps projectService.ProjectService,
 	ws whiteboardSvc.WhiteboardService,
 	as authService.AuthService,
+	rdb *redis.Client,
 ) *ProjectsGroup {
 	return &ProjectsGroup{
-		projectHandler:    newProjectRouteHandler(ps, as),
-		skillsHandler:     newSkillsRouteHandler(ps, as),
+		projectHandler:    newProjectRouteHandler(ps, as, rdb),
+		skillsHandler:     newSkillsRouteHandler(ps, as, rdb),
 		whiteboardHandler: newWhiteboardRouteHandler(ws, as),
 		authService:       as,
 	}

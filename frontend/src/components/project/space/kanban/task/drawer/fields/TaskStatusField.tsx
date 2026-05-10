@@ -9,7 +9,7 @@ import type {
 
 export function TaskStatusField({ task }: { task: Task }) {
     const { t } = useTranslation('space')
-    const { projectId, statusOptions } = useTaskBoard()
+    const { projectId, statusOptions, isArchived } = useTaskBoard()
     const [updateTask, { isLoading: isSaving }] = useUpdateTaskMutation()
 
     const label = statusOptions.find((o) => o.id === task.status)?.label ?? ''
@@ -30,7 +30,7 @@ export function TaskStatusField({ task }: { task: Task }) {
             aria-label={t('tasks.form.status')}
             value={task.status}
             onChange={(key) => handleChange(key as TaskStatus)}
-            isDisabled={isSaving}
+            isDisabled={isSaving || isArchived}
         >
             <div className="flex w-full items-center justify-between gap-2">
                 <Label>{t('tasks.form.status')}</Label>
