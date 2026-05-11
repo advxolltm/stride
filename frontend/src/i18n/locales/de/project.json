@@ -1,6 +1,6 @@
 {
   "header": {
-    "add": "Mitglieder hinzufÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼gen",
+    "add": "Mitglieder hinzufügen",
     "settings": "Einstellungen",
     "projects": "PROJEKTE"
   },
@@ -14,15 +14,15 @@
     "edit": "Bearbeiten",
     "archive": "Archivieren",
     "unarchive": "Wieder aktivieren",
-    "delete": "Loeschen",
+    "delete": "Löschen",
     "archiveConfirmTitle": "Projekt archivieren?",
-    "archiveConfirmMessage": "Moechten Sie das Projekt '{{name}}' wirklich archivieren?",
+    "archiveConfirmMessage": "Möchten Sie das Projekt '{{name}}' wirklich archivieren?",
     "archiveConfirm": "Projekt archivieren",
     "archiveConfirmPending": "Wird archiviert...",
     "archiveSuccess": "Projekt erfolgreich archiviert",
     "archiveError": "Projekt konnte nicht archiviert werden",
     "unarchiveConfirmTitle": "Projekt wieder aktivieren?",
-    "unarchiveConfirmMessage": "Moechten Sie das Projekt '{{name}}' wirklich zurueck zu den aktiven Projekten verschieben?",
+    "unarchiveConfirmMessage": "Möchten Sie das Projekt '{{name}}' wirklich zurück zu den aktiven Projekten verschieben?",
     "unarchiveConfirm": "Projekt wieder aktivieren",
     "unarchiveConfirmPending": "Wird wieder aktiviert...",
     "unarchiveSuccess": "Projekt wurde zu den aktiven Projekten verschoben",
@@ -38,12 +38,12 @@
   "whiteboardPage": {
     "loading": "Whiteboard wird geladen...",
     "loadingElements": "Whiteboard-Elemente werden geladen...",
-    "loadingDescription": "Die Zeichenflaeche fuer dieses Projekt wird vorbereitet.",
+    "loadingDescription": "Die Zeichenfläche für dieses Projekt wird vorbereitet.",
     "errorTitle": "Whiteboard konnte nicht geladen werden",
     "errorFallback": "Bitte versuchen Sie es in einem Moment erneut.",
     "shareSuccess": "Freigabelink kopiert",
     "shareError": "Freigabelink konnte nicht kopiert werden",
-    "overviewAriaLabel": "Uebersicht",
+    "overviewAriaLabel": "Übersicht",
     "shareAriaLabel": "Whiteboard teilen"
   },
   "spaces": {
@@ -56,19 +56,19 @@
     "chatDescription": "Mit deinem Team kommunizieren"
   },
   "tasks": {
-    "title": "Aufgabenuebersicht"
+    "title": "Aufgabenübersicht"
   },
   "addMembersDialog": {
-    "title": "Mitglieder hinzufÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼gen",
-    "description": "FÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼ge Personen aus deinem Arbeitsbereich zu {{project}} hinzu",
+    "title": "Mitglieder hinzufügen",
+    "description": "Füge Personen aus deinem Arbeitsbereich zu {{project}} hinzu",
     "searchPlaceholder": "Nach Name oder E-Mail suchen...",
     "noResults": "Keine Benutzer gefunden",
     "alreadyMember": "Bereits ein Mitglied",
-    "selectedCount": "{{count}} ausgewÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¤hlt",
-    "add": "HinzufÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼gen",
+    "selectedCount": "{{count}} ausgewählt",
+    "add": "Hinzufügen",
     "cancel": "Abbrechen",
-    "membersAdded": "Mitglieder erfolgreich hinzugefÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼gt",
-    "membersAddError": "Fehler beim HinzufÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼gen der Mitglieder"
+    "membersAdded": "Mitglieder erfolgreich hinzugefügt",
+    "membersAddError": "Fehler beim Hinzufügen der Mitglieder"
   },
   "createDialog": {
     "title": "Projekt erstellen",
@@ -97,7 +97,7 @@
       "description": "Beschreibe das Ziel dieses Projekts"
     },
     "actions": {
-      "save": "Aenderungen speichern"
+      "save": "Änderungen speichern"
     }
   },
   "generalSettings": {
@@ -105,41 +105,41 @@
     "edit": "Bearbeiten",
     "projectName": "Projektname",
     "projectDescription": "Projektbeschreibung",
-      "skills": "FÃƒÆ’Ã‚Â¤higkeiten",
+    "skills": "Fähigkeiten",
     "nameLabel": "Name",
     "descriptionLabel": "Beschreibung",
-    "skillsPlaceholder": "Faehigkeiten auswaehlen",
-    "skillsSearchPlaceholder": "Faehigkeiten suchen",
-    "projectSkills": "Projektfaehigkeiten",
+    "skillsPlaceholder": "Fähigkeiten auswählen",
+    "skillsSearchPlaceholder": "Fähigkeiten suchen",
+    "projectSkills": "Projektfähigkeiten",
     "createdBy": "Erstellt von",
     "createdAt": "Erstellt am",
     "updatedAt": "Aktualisiert am",
     "cancel": "Abbrechen",
-    "save": "Aenderungen speichern",
+    "save": "Änderungen speichern",
     "saveSuccess": "Projekt erfolgreich aktualisiert",
     "saveError": "Projekt konnte nicht aktualisiert werden",
     "nameRequired": "Projektname ist erforderlich",
     "archiveTitle": "Projekt archivieren",
     "archiveDescription": "Archivierte Projekte werden aus der aktiven Projektliste verschoben und bleiben unter archivierten Projekten auffindbar.",
     "unarchiveTitle": "Projekt wieder aktivieren",
-    "unarchiveDescription": "Verschiebe dieses Projekt zurueck in die aktive Projektliste.",
-    "delete": "Loeschen",
-    "deleteTitle": "Projekt loeschen",
-    "deleteDescription": "Sobald Sie ein Projekt loeschen, kann es nicht wiederhergestellt werden. Bitte seien Sie sicher.",
-    "deleteConfirmTitle": "Projekt loeschen?",
-    "deleteConfirmMessage": "Sind Sie sicher, dass Sie das Projekt '{{name}}' loeschen moechten? Diese Aktion kann nicht rueckgaengig gemacht werden.",
-    "deleteConfirm": "Projekt loeschen",
+    "unarchiveDescription": "Verschiebe dieses Projekt zurück in die aktive Projektliste.",
+    "delete": "Löschen",
+    "deleteTitle": "Projekt löschen",
+    "deleteDescription": "Sobald Sie ein Projekt löschen, kann es nicht wiederhergestellt werden. Bitte seien Sie sicher.",
+    "deleteConfirmTitle": "Projekt löschen?",
+    "deleteConfirmMessage": "Sind Sie sicher, dass Sie das Projekt '{{name}}' löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "deleteConfirm": "Projekt löschen",
     "deleteCancel": "Abbrechen",
-    "deleteSuccess": "Projekt erfolgreich geloescht",
-    "deleteError": "Projekt konnte nicht geloescht werden"
+    "deleteSuccess": "Projekt erfolgreich gelöscht",
+    "deleteError": "Projekt konnte nicht gelöscht werden"
   },
   "membersSettings": {
     "title": "Teammitglieder",
-    "add": "Mitglieder hinzufuegen",
-    "owner": "EigentÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼mer",
+    "add": "Mitglieder hinzufügen",
+    "owner": "Eigentümer",
     "member": "Mitglied",
     "removeTitle": "Mitglied entfernen",
-    "removeMessage": "MÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¶chten Sie dieses Mitglied wirklich aus dem Projekt entfernen?",
+    "removeMessage": "Möchten Sie dieses Mitglied wirklich aus dem Projekt entfernen?",
     "removeConfirm": "Entfernen",
     "removeConfirmPending": "Wird entfernt...",
     "removeCancel": "Abbrechen",
@@ -147,9 +147,9 @@
     "removeError": "Mitglied konnte nicht entfernt werden"
   },
   "skillsSettings": {
-    "title": "FÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¤higkeiten",
-    "description": "Verwalten Sie die fÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼r dieses Projekt erforderlichen FÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¤higkeiten.",
-    "addSkillTabsLabel": "Optionen zum HinzufÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼gen von Skills",
+    "title": "Fähigkeiten",
+    "description": "Verwalten Sie die für dieses Projekt erforderlichen Fähigkeiten.",
+  "addSkillTabsLabel": "Optionen zum Hinzufügen von Skills",
     "addSkillTabs": {
       "templates": "Vorlagen",
       "projects": "Aus Projekten",
@@ -157,53 +157,53 @@
     },
     "searchTemplates": "Vorlagen-Skills suchen...",
     "searchProjects": "Projekt-Skills suchen...",
-    "add": "HinzufÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼gen",
-    "addAll": "Alle hinzufÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼gen",
-    "added": "HinzugefÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼gt",
+    "add": "Hinzufügen",
+    "addAll": "Alle hinzufügen",
+    "added": "Hinzugefügt",
     "done": "Fertig",
-    "addSuccess": "FÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¤higkeit erfolgreich hinzugefÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼gt",
-    "addAllSuccess": "FÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¤higkeiten erfolgreich hinzugefÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼gt",
-    "addError": "FÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¤higkeit konnte nicht hinzugefÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼gt werden",
-    "addSkill": "FÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¤higkeit hinzufÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼gen",
+    "addSuccess": "Fähigkeit erfolgreich hinzugefügt",
+    "addAllSuccess": "Fähigkeiten erfolgreich hinzugefügt",
+    "addError": "Fähigkeit konnte nicht hinzugefügt werden",
+    "addSkill": "Fähigkeit hinzufügen",
     "noSkillsFound": "Keine Skills gefunden",
     "noProjectSkills": "Keine wiederverwendbaren Projekt-Skills gefunden",
     "nameLabel": "Name",
-    "namePlaceholder": "FÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¤higkeitsname eingeben",
+    "namePlaceholder": "Fähigkeitsname eingeben",
     "descriptionLabel": "Beschreibung",
-    "descriptionPlaceholder": "FÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¤higkeitsbeschreibung eingeben",
-    "empty": "Noch keine FÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¤higkeiten hinzugefÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼gt",
-    "save": "FÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¤higkeit speichern",
+    "descriptionPlaceholder": "Fähigkeitsbeschreibung eingeben",
+    "empty": "Noch keine Fähigkeiten hinzugefügt",
+    "save": "Fähigkeit speichern",
     "cancel": "Abbrechen",
-    "nameRequired": "FÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¤higkeitsname ist erforderlich",
-    "deleteTitle": "FÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¤higkeit lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¶schen",
-    "deleteMessage": "MÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¶chten Sie \"{{name}}\" wirklich lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¶schen?",
-    "deleteConfirm": "LÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¶schen",
+    "nameRequired": "Fähigkeitsname ist erforderlich",
+    "deleteTitle": "Fähigkeit löschen",
+    "deleteMessage": "Möchten Sie \"{{name}}\" wirklich löschen?",
+    "deleteConfirm": "Löschen",
     "deleteCancel": "Abbrechen",
-    "deleteSuccess": "FÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¤higkeit erfolgreich gelÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¶scht",
-    "deleteError": "FÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¤higkeit konnte nicht gelÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¶scht werden"
+    "deleteSuccess": "Fähigkeit erfolgreich gelöscht",
+    "deleteError": "Fähigkeit konnte nicht gelöscht werden"
   },
   "mySkillsSettings": {
-    "title": "Meine FÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¤higkeiten",
-    "description": "Waehle die Faehigkeiten aus, die du in dieses Projekt einbringst.",
+    "title": "Meine Fähigkeiten",
+    "description": "Wähle die Fähigkeiten aus, die du in dieses Projekt einbringst.",
     "edit": "Bearbeiten",
-    "selectLabel": "Ausgewaehlte Faehigkeiten",
-    "placeholder": "Faehigkeiten auswaehlen",
-    "searchPlaceholder": "Faehigkeiten suchen",
-    "selectedLabel": "{{selected}} von {{total}} ausgewaehlt",
-    "emptySkills": "Fuer dieses Projekt sind noch keine Faehigkeiten verfuegbar.",
-    "empty": "Noch keine Faehigkeiten ausgewaehlt",
+    "selectLabel": "Ausgewählte Fähigkeiten",
+    "placeholder": "Fähigkeiten auswählen",
+    "searchPlaceholder": "Fähigkeiten suchen",
+    "selectedLabel": "{{selected}} von {{total}} ausgewählt",
+    "emptySkills": "Für dieses Projekt sind noch keine Fähigkeiten verfügbar.",
+    "empty": "Noch keine Fähigkeiten ausgewählt",
     "cancel": "Abbrechen",
-    "save": "Aenderungen speichern",
-    "saveSuccess": "Deine Projektfaehigkeiten wurden aktualisiert",
-    "saveError": "Projektfaehigkeiten konnten nicht aktualisiert werden"
+    "save": "Änderungen speichern",
+    "saveSuccess": "Deine Projektfähigkeiten wurden aktualisiert",
+    "saveError": "Projektfähigkeiten konnten nicht aktualisiert werden"
   },
   "settingsSidebar": {
     "title": "Projekteinstellungen",
     "tabs": {
       "general": "Allgemein",
       "members": "Team",
-      "skills": "FÃ¤higkeiten",
-      "mySkills": "Meine FÃ¤higkeiten"
+      "skills": "Fähigkeiten",
+      "mySkills": "Meine Fähigkeiten"
     }
   }
 }
