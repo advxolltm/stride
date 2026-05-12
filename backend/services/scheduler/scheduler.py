@@ -1,6 +1,6 @@
 import datetime
 from dataclasses import dataclass
-from typing import List
+from typing import List, Tuple
 from ortools.sat.python import cp_model
 
 # --- Models ---
@@ -38,10 +38,10 @@ def full_working_weeks_until_date(planning_start: datetime.datetime, target_date
 
 
 # --- The Main Scheduler ---
-def schedule_tasks_to_members(users: List[User], tasks: List[Task]):
+def schedule_tasks_to_members(users: List[User], tasks: List[Task]) -> List[Tuple[User, Task]]:
     if not users or not tasks:
         print("Need at least one user and one task.")
-        return
+        return []
 
     model = cp_model.CpModel()
     num_members = len(users)
@@ -80,7 +80,7 @@ def schedule_tasks_to_members(users: List[User], tasks: List[Task]):
                 end_var = model.NewIntVar(min_start, max_end, f"end_{i}_{j}")
                 duration = task.expected_hours
 
-                print(f"start: {min_start}, end: {max_end}, duration: {task.expected_hours}")
+                # print(f"start: {min_start}, end: {max_end}, duration: {task.expected_hours}")
 
                 # Create Optional Interval
                 job = model.NewOptionalIntervalVar(
@@ -119,20 +119,30 @@ def schedule_tasks_to_members(users: List[User], tasks: List[Task]):
     status = solver.Solve(model)
 
     if status in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-        print(f"\nFeasible solution found! Status: {solver.StatusName(status)}")
-        print("-" * 30)
+        res: List[Tuple[User, Task]] = []
+        dbg(f"\nFeasible solution found! Status: {solver.StatusName(status)}")
+        dbg("-" * 30)
         
         for i, user in enumerate(users):
             for j, task in enumerate(tasks):
                 # Check if the solver set this assignment to True (1)
                 if solver.Value(job_assignment_presence[i][j]):
-                    print(f"Assigned Task: '{task.name}' -> Member: '{user.name}'")
+                    # print(f"Assigned Task: '{task.name}' -> Member: '{user.name}'")
+                    res.append((user, task))
                     
-        print("-" * 30)
-        print(f"Total tasks successfully assigned: {int(solver.ObjectiveValue())} out of {num_tasks}\n")
+        dbg("-" * 30)
+        dbg(f"Total tasks successfully assigned: {int(solver.ObjectiveValue())} out of {num_tasks}\n")
+        return res
     else:
-        print("\nNo solution found (INFEASIBLE).\n")
+        dbg("\nNo solution found (INFEASIBLE).\n")
+        return []
 
+
+DEBUG = False
+
+def dbg(msg):
+    if DEBUG:
+        print(msg)
 
 if __name__ == "__main__":
     now = datetime.datetime.now()
@@ -174,3 +184,14 @@ if __name__ == "__main__":
         Task("Setup DB", now - datetime.timedelta(days=2), now + datetime.timedelta(days=7), 15, [db_skill]),
     ]
     schedule_tasks_to_members([alice, bob], tasks_feasible)
+
+    print("=== TEST 5: Task with no required skills === ")
+    t5users = [User(name='0', skills=[], weekly_hours=0), User(name='wario-0', skills=[Skill(name='sM]'), Skill(name='0'), Skill(name='0sM]0')], weekly_hours=71)] 
+
+    t5tasks = [Task(name='0', start_at=datetime.datetime(2026, 1, 1, 0, 0, 0, 2026, fold=1), due_at=datetime.datetime(2026, 1, 2, 0, 0, 0, 2026), expected_hours=0, needed_skills=[]), Task(name='wario-task-0', start_at=datetime.datetime(2026, 1, 1, 0, 1, 0, 2026), due_at=datetime.datetime(2026, 1, 2, 0, 1, 0, 2026), expected_hours=0, needed_skills=[Skill(name='0sM]0')]), Task(name='wario-task-\x16', start_at=datetime.datetime(2026, 8, 15, 19, 0, 23, 189627), due_at=datetime.datetime(2026, 9, 26, 21, 28, 4, 29648), expected_hours=0, needed_skills=[Skill(name='0sM]0')]), Task(name='wario-task-)\r2 8ML=', start_at=datetime.datetime(2026, 12, 18, 3, 45, 48, 972240), due_at=datetime.datetime(2027, 1, 1, 0, 0, fold=1), expected_hours=12, needed_skills=[Skill(name='0sM]0')]), Task(name='wario-task-.X]d\x15', start_at=datetime.datetime(2026, 5, 8, 1, 52, 59, 968696), due_at=datetime.datetime(2027, 1, 1, 0, 0, fold=1), expected_hours=1, needed_skills=[Skill(name='0sM]0')]), Task(name='wario-task-\x00Fx', start_at=datetime.datetime(2026, 4, 1, 8, 33, 23, 256779, fold=1), due_at=datetime.datetime(2026, 8, 22, 8, 59, 34, 294834, fold=1), expected_hours=0, needed_skills=[Skill(name='0sM]0')]), Task(name='wario-task-\x16`', start_at=datetime.datetime(2026, 3, 19, 12, 28, 58, 307065), due_at=datetime.datetime(2026, 4, 10, 10, 54, 34, 116022, fold=1), expected_hours=11, needed_skills=[Skill(name='0sM]0')]), Task(name='wario-task-\x05wt\x01n\x16P_?%+', start_at=datetime.datetime(2026, 7, 18, 11, 40, 30, 659157, fold=1), due_at=datetime.datetime(2026, 9, 17, 1, 25, 11, 891265), expected_hours=12, needed_skills=[Skill(name='0sM]0')]), Task(name='wario-task->', start_at=datetime.datetime(2026, 7, 17, 16, 28, 40, 466783), due_at=datetime.datetime(2026, 8, 27, 9, 49, 26, 805145, fold=1), expected_hours=14, needed_skills=[Skill(name='0sM]0')]), Task(name='wario-task-s+C;', start_at=datetime.datetime(2026, 2, 26, 2, 12, 17, 772252), due_at=datetime.datetime(2026, 5, 8, 6, 54, 1, 179209), expected_hours=2, needed_skills=[Skill(name='0sM]0')]), Task(name='wario-task-\x18ptX\x1c', start_at=datetime.datetime(2026, 12, 26, 10, 13, 19, 521798), due_at=datetime.datetime(2027, 1, 1, 0, 0), expected_hours=5, needed_skills=[Skill(name='0sM]0')]), Task(name='wario-task-\x03[MaDI*Sx;AFY~[%', start_at=datetime.datetime(2026, 2, 25, 3, 51, 53, 32703, fold=1), due_at=datetime.datetime(2027, 1, 1, 0, 0), expected_hours=13, needed_skills=[Skill(name='0sM]0')])]
+
+    # tasks_feasible = [
+    #     Task("Write API", now, now + datetime.timedelta(days=7), 20, []),
+    #     Task("Setup DB", now, now + datetime.timedelta(days=7), 15, []),
+    # ]
+    schedule_tasks_to_members(t5users, t5tasks)
