@@ -18,6 +18,7 @@ import type {
 } from '../features/project/project.types'
 import { WSMessageType } from '../features/projectSocket/projectSocket.types'
 import type { WsListenerApi } from './wsTaskHandlers'
+import { baseApi } from '../api/base.api'
 
 type ProjectMemberRemovePayload = {
     project_member_id?: string
@@ -195,6 +196,15 @@ export function handleProjectWsMessage(
     api: WsListenerApi,
 ) {
     switch (type) {
+		case WSMessageType.ChatMessageCreate:
+		case WSMessageType.ChatMessageUpdate:
+		case WSMessageType.ChatMessageDelete:
+		{
+			console.log(type, payload);
+			api.dispatch(baseApi.util.invalidateTags([{ type: 'Messages' }]))
+
+			return true;
+		}
         case WSMessageType.ProjectMemberAdd: {
             const apiMembers = Array.isArray(payload) ? payload : [payload]
 

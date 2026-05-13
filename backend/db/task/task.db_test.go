@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 )
 
@@ -110,6 +111,9 @@ func TestTaskStore(t *testing.T) {
 
 					randomProjectMember := testutils.Choice(&project.Members)
 					randomTask := testutils.Choice(&tasks)
+
+					// Ensure that the task is not assigned to the member
+					require.NoError(t, sut.UnassignTask(t.Context(), randomTask.ID, randomProjectMember.ID))
 
 					assignee, err := sut.AssignTask(t.Context(), randomTask.ID, randomProjectMember.ID)
 					testutils.TAssertNoError(t, err)

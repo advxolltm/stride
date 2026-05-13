@@ -46,7 +46,7 @@ CREATE TABLE user_skills (
 
 CREATE TABLE messages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    sender_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    sender_id UUID REFERENCES project_members(id) ON DELETE SET NULL,
     project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
     content TEXT NOT NULL,
     is_edited BOOLEAN DEFAULT FALSE,

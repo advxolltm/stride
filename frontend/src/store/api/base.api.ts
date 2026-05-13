@@ -52,6 +52,7 @@ export const baseApi = createApi({
         'Whiteboard',
         'WhiteboardElement',
         'Notification',
+		'Messages',
     ],
     baseQuery: fetchBaseQuery({
         baseUrl: apiBasePath,
