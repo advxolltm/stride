@@ -35,7 +35,8 @@
     "objectTypes": {
       "notification": "Benachrichtigung",
       "project": "Projekt",
-      "task": "Aufgabe"
+      "task": "Aufgabe",
+	  "chat": "Chat"
     }
   },
   "primary": "Primaer",

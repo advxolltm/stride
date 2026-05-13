@@ -108,29 +108,27 @@ export function useKeyboardGridNavigation<T extends HTMLElement>({
             setActiveIndex(index)
         },
         onKeyDown: (event) => {
-            let nextIndex = index
-
             switch (event.key) {
                 case 'ArrowRight':
-                    nextIndex = Math.min(index + 1, itemCount - 1)
+                    index = Math.min(index + 1, itemCount - 1)
                     break
                 case 'ArrowLeft':
-                    nextIndex = Math.max(index - 1, 0)
+                    index = Math.max(index - 1, 0)
                     break
                 case 'ArrowDown':
-                    nextIndex = Math.min(
+                    index = Math.min(
                         index + getColumnCount(),
                         itemCount - 1,
                     )
                     break
                 case 'ArrowUp':
-                    nextIndex = Math.max(index - getColumnCount(), 0)
+                    index = Math.max(index - getColumnCount(), 0)
                     break
                 case 'Home':
-                    nextIndex = 0
+                    index = 0
                     break
                 case 'End':
-                    nextIndex = itemCount - 1
+                    index = itemCount - 1
                     break
                 case 'Enter':
                     return
@@ -139,7 +137,7 @@ export function useKeyboardGridNavigation<T extends HTMLElement>({
             }
 
             event.preventDefault()
-            focusItem(nextIndex)
+            focusItem(index)
         },
     })
 

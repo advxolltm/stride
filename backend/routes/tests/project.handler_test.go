@@ -1,12 +1,14 @@
 package routes_test
 
 import (
+	notificationStore "backend/db/notification"
 	"backend/db/project"
 	userStore "backend/db/user"
 	"backend/models"
 	"backend/routes"
 	projectsHandler "backend/routes/projects"
 	authService "backend/services/auth"
+	notificationService "backend/services/notification"
 	projectService "backend/services/project"
 	userService "backend/services/user"
 	"backend/testutils"
@@ -49,7 +51,9 @@ func runTest(t *testing.T, name string, f func(t *testing.T, tx *gorm.DB, as aut
 			uStore := userStore.NewUserStore(tx)
 			uServ := userService.NewUserService(uStore)
 			aServ := authService.NewAuthenticationService(uServ)
-			handler := projectsHandler.NewProjectsGroup(pServ, nil, aServ, rdb)
+			nStore := notificationStore.NewNotificationStreamStore(rdb)
+			nServ := notificationService.NewNotificationService(nStore)
+			handler := projectsHandler.NewProjectsGroup(pServ, nil, nil, nServ, aServ, rdb)
 
 			e := echo.New()
 			handler.AddRoutes(e.Group("/api"))
@@ -368,7 +372,8 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 	runTest(t, "Returns 204 on successful member removal", func(t *testing.T, tx *gorm.DB, as authService.AuthService, ps projectService.ProjectService, us userService.UserService, e *echo.Echo, cookie *http.Cookie, loginUser models.User) {
 		proj, _ := ps.CreateProject(ctx, &loginUser.ID, "Team Project", "team-slug", nil, "active")
 		otherUser, _ := us.CreateUser(ctx, "other", "other@test.com", "Password123!")
-		_, _ = ps.AddUsersToProject(ctx, []projectService.AddMemberRequest{{UserId: otherUser.ID, Role: "developer"}}, proj.ID)
+		_, err := ps.AddUsersToProject(ctx, []projectService.AddMemberRequest{{UserId: otherUser.ID, Role: "developer"}}, proj.ID)
+		require.NoError(t, err)
 
 		req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/projects/%s/members/%s", proj.ID, otherUser.ID), nil)
 		req.AddCookie(cookie)
