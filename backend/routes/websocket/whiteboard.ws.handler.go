@@ -45,6 +45,15 @@ type whiteboardCursorPresenceResponse struct { //nolint:unused
 	Cursor whiteboardCursorPositionResponse `json:"cursor"`
 }
 
+type whiteboardWSUpdateResponse struct { //nolint:unused
+	Type    int `json:"type" example:"15"`
+	Payload any `json:"payload"`
+}
+
+type whiteboardWSMessageEnvelope struct {
+	Type routes.WSMessageType `json:"type"`
+}
+
 func newWhiteboardWSRouteHandler(
 	authService auth.AuthService,
 	projectService project.ProjectService,
@@ -67,8 +76,100 @@ func (h whiteboardWSRouteHandler) addRoutes(ws *echo.Group) {
 	g.GET("/cursor", h.cursorConnectGET)
 }
 
+// GET /ws/project/:projectId/whiteboard
+//
+//	@Summary	Connect to whiteboard element updates websocket
+//	@Description	Upgrades HTTP connection to WebSocket. After successful handshake, server forwards only whiteboard element update envelopes from the shared project websocket stream.
+//	@Tags		whiteboard
+//	@Param		projectId	path		string	true	"Project ID"
+//	@Success	101		{object}	whiteboardWSUpdateResponse	"Switching Protocols. Subsequent WebSocket text frames contain whiteboard element update envelopes."
+//	@Failure	400		{object}	routes.ErrorResponse		"invalid project id"
+//	@Failure	401		{object}	routes.ErrorResponse		"unauthorized"
+//	@Failure	500		{object}	routes.ErrorResponse		"internal server error"
+//	@Security	Auth
+//	@Router		/ws/project/{projectId}/whiteboard [get]
 func (h whiteboardWSRouteHandler) connectGET(c *echo.Context) error {
-	return c.NoContent(http.StatusNotImplemented)
+	ctx := c.Request().Context()
+	session, err := authorizeProjectWSSession(c, h.authService, h.projectService)
+	if err != nil || session == nil {
+		return err
+	}
+
+	if h.rdb == nil {
+		slog.Error("whiteboard websocket missing redis client", "projectID", session.ProjectID, "userID", session.UserID)
+		return c.JSON(http.StatusInternalServerError, routes.ErrorResponse{Error: "internal server error"})
+	}
+
+	sub := h.rdb.Subscribe(ctx, session.ProjectID.String())
+	if _, err := sub.Receive(ctx); err != nil {
+		slog.Error("failed to subscribe whiteboard websocket to redis", "error", err, "projectID", session.ProjectID, "userID", session.UserID)
+		return c.JSON(http.StatusInternalServerError, routes.ErrorResponse{Error: "internal server error"})
+	}
+	defer func() {
+		err := sub.Close()
+		if err != nil {
+			slog.Error("failed to close whiteboard redis sub", "error", err)
+		}
+	}()
+
+	ws, err := h.upgrader.Upgrade(c.Response(), c.Request(), nil)
+	if err != nil {
+		slog.Error("failed to upgrade whiteboard ws", "error", err)
+		return c.JSON(http.StatusInternalServerError, routes.ErrorResponse{Error: err.Error()})
+	}
+	defer func() {
+		err := ws.Close()
+		if err != nil {
+			slog.Error("failed to close whiteboard websocket connection", "error", err)
+		}
+	}()
+
+	ch := sub.Channel()
+	disconnectCh := make(chan error, 1)
+	go consumeProjectWSDisconnect(ws, disconnectCh)
+
+	for {
+		select {
+		case err := <-disconnectCh:
+			if err != nil && !websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+				slog.Debug("whiteboard ws closed", "error", err, "user-id", session.UserID)
+			}
+			return nil
+		case msg, ok := <-ch:
+			if !ok {
+				return nil
+			}
+
+			if isWSSessionExpired(session.Expiry) {
+				slog.Debug("Client session expired, closing whiteboard ws connection", "user-id", session.UserID)
+				return nil
+			}
+
+			var envelope whiteboardWSMessageEnvelope
+			if err := json.Unmarshal([]byte(msg.Payload), &envelope); err != nil {
+				slog.Debug("ignored invalid whiteboard ws payload", "error", err)
+				continue
+			}
+
+			if !isWhiteboardWSEventType(envelope.Type) {
+				continue
+			}
+
+			if err := ws.WriteMessage(websocket.TextMessage, []byte(msg.Payload)); err != nil {
+				slog.Debug("whiteboard ws write failed, closing connection", "error", err, "user-id", session.UserID)
+				return nil
+			}
+		}
+	}
+}
+
+func isWhiteboardWSEventType(t routes.WSMessageType) bool {
+	switch t {
+	case routes.WhiteboardElementCreate, routes.WhiteboardElementUpdate, routes.WhiteboardElementDelete:
+		return true
+	default:
+		return false
+	}
 }
 
 // GET /ws/project/:projectId/whiteboard/cursor
@@ -86,8 +187,13 @@ func (h whiteboardWSRouteHandler) connectGET(c *echo.Context) error {
 func (h whiteboardWSRouteHandler) cursorConnectGET(c *echo.Context) error {
 	requestCtx := c.Request().Context()
 	session, err := authorizeProjectWSSession(c, h.authService, h.projectService)
-	if err != nil {
+	if err != nil || session == nil {
 		return err
+	}
+
+	if h.rdb == nil || h.presenceStore == nil {
+		slog.Error("whiteboard cursor websocket missing redis client", "projectID", session.ProjectID, "userID", session.UserID)
+		return c.JSON(http.StatusInternalServerError, routes.ErrorResponse{Error: "internal server error"})
 	}
 
 	if isWSSessionExpired(session.Expiry) {
