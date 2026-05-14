@@ -1,7 +1,7 @@
 import { Button, Tabs } from '@heroui/react'
 import { ArrowLeft, Shield, User, Wrench } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate, useParams } from 'react-router-dom'
 
 import {
     ProfileSection,
@@ -14,13 +14,23 @@ import { selectUserId } from '../store/userSlice'
 import { AccountPageSkeleton } from './AccountPageSkeleton'
 import { skipToken } from '@reduxjs/toolkit/query'
 
+const accountTabs = ['profile', 'security', 'skills'] as const
+type AccountTab = (typeof accountTabs)[number]
+
+const isAccountTab = (tab: string | undefined): tab is AccountTab =>
+    accountTabs.includes(tab as AccountTab)
+
 export function AccountPage() {
     const { t } = useTranslation('setting')
     const navigate = useNavigate()
+    const { tab } = useParams()
     const userId = useAppSelector(selectUserId)
     const { isLoading } = useGetUserByIdQuery(userId ?? skipToken)
 
     if (isLoading) return <AccountPageSkeleton />
+    if (!isAccountTab(tab)) {
+        return <Navigate to="/settings/profile" replace />
+    }
 
     return (
         <div className="mx-auto w-full max-w-4xl px-4 py-6">
@@ -46,7 +56,10 @@ export function AccountPage() {
             <Tabs
                 variant="secondary"
                 className="w-full"
-                defaultSelectedKey="profile"
+                selectedKey={tab}
+                onSelectionChange={(key) => {
+                    navigate(`/settings/${String(key)}`, { replace: true })
+                }}
             >
                 <Tabs.ListContainer className="overflow-x-auto">
                     <Tabs.List
