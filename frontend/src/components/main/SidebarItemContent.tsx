@@ -14,7 +14,7 @@ export function SidebarItemContent({
     if (collapsed) {
         return (
             <div className="flex h-full w-full items-center justify-center">
-                <span className="flex h-4 w-4 items-center justify-center">
+                <span className="flex h-6 w-6 items-center justify-center">
                     {icon}
                 </span>
             </div>
@@ -23,7 +23,7 @@ export function SidebarItemContent({
 
     return (
         <div className="flex w-full min-w-0 items-center gap-2.5">
-            <span className="flex h-4 w-4 shrink-0 items-center justify-center">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center">
                 {icon}
             </span>
             <span className="min-w-0 truncate">{label}</span>
