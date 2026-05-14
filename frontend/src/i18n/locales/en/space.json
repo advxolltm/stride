@@ -7,6 +7,7 @@
     },
     "actions": {
       "filter": "Filter",
+      "searchTasks": "Search tasks...",
       "assign": "Auto assign",
       "add": "Add Task",
       "menuAria": "Task actions",

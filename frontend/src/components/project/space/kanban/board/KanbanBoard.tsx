@@ -6,19 +6,43 @@ import {
     useSensor,
     useSensors,
 } from '@dnd-kit/core'
-import { Button, Chip, Tabs } from '@heroui/react'
+import { Button, Chip, SearchField, Tabs } from '@heroui/react'
 import { Archive, LayoutGrid, UserPlus } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ConfirmDialog } from '../../../../../shared/components'
+import type { Task } from '../../../../../store/features/tasks/task.types'
 import { useTaskBoard } from '../context/useTaskBoard'
 import { TaskEditDrawer } from '../task/drawer/TaskEditDrawer'
 import { KanbanCard } from './KanbanCard'
 import { KanbanColumn } from './KanbanColumn'
 import { useKanbanState } from './useKanbanState'
 
+function taskMatchesSearch(task: Task, query: string) {
+    const searchableText = [
+        task.title,
+        task.description,
+        ...((task.assignees ?? []).flatMap((assignee) => [
+            assignee.user.fullName,
+            assignee.user.username,
+            assignee.user.email,
+        ])),
+        ...((task.skills ?? []).flatMap((skill) => [
+            skill.name,
+            skill.description,
+        ])),
+    ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+
+    return searchableText.includes(query)
+}
+
 export function KanbanBoard() {
     const { t } = useTranslation('space')
     const { isLoading, isArchived } = useTaskBoard()
+    const [taskSearch, setTaskSearch] = useState('')
     const {
         localColumns,
         activeTask,
@@ -41,6 +65,17 @@ export function KanbanBoard() {
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     )
+    const normalizedTaskSearch = taskSearch.trim().toLowerCase()
+    const visibleColumns = useMemo(() => {
+        if (!normalizedTaskSearch) return localColumns
+
+        return localColumns.map((column) => ({
+            ...column,
+            tasks: column.tasks.filter((task) =>
+                taskMatchesSearch(task, normalizedTaskSearch),
+            ),
+        }))
+    }, [localColumns, normalizedTaskSearch])
 
     if (isLoading) {
         return (
@@ -83,7 +118,23 @@ export function KanbanBoard() {
                         </Tabs.List>
                     </Tabs.ListContainer>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                        <SearchField
+                            name="task-search"
+                            value={taskSearch}
+                            onChange={setTaskSearch}
+                            aria-label={t('tasks.actions.searchTasks')}
+                            className="w-80"
+                        >
+                            <SearchField.Group>
+                                <SearchField.SearchIcon />
+                                <SearchField.Input
+                                    placeholder={t('tasks.actions.searchTasks')}
+                                />
+                                <SearchField.ClearButton />
+                            </SearchField.Group>
+                        </SearchField>
+
                         {isArchived && (
                             <Chip size="sm" variant="soft" className="flex flex-row gap-2 items-center shrink-0">
                                 <Archive size={14} />
@@ -92,7 +143,7 @@ export function KanbanBoard() {
                         )}
                         <Button
                             size="sm"
-                            variant="secondary"
+                            variant="primary"
                             isDisabled={isArchived}
                         >
                             <UserPlus size={16} />
@@ -111,7 +162,7 @@ export function KanbanBoard() {
                     >
                         <div className="h-[calc(100vh-320px)] min-h-[420px] overflow-x-auto">
                             <div className="flex h-full min-h-0 gap-6">
-                                {localColumns.map((col) => (
+                                {visibleColumns.map((col) => (
                                     <KanbanColumn
                                         key={col.id}
                                         column={col}
