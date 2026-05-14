@@ -1,11 +1,13 @@
-import { Avatar, Button, Dropdown, Label, Separator } from '@heroui/react'
+import { Button, Dropdown, Label, Separator } from '@heroui/react'
 import { ChevronDown, User } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { LogoutButton } from '../../shared/components/LogoutButton'
-import { LogoutConfirmDialog } from '../../shared/components/LogoutConfirmDialog'
+import {
+    LogoutButton,
+    LogoutConfirmDialog,
+    UserAvatar,
+} from '../../shared/components'
 import { useAppSelector } from '../../shared/hooks/redux'
-import getInitials from '../../shared/utils/getInitials'
 import { useGetSessionQuery } from '../../store/features/auth/auth.api'
 import { useGetUserByIdQuery } from '../../store/features/user/user.api'
 import { selectUserId } from '../../store/userSlice'
@@ -31,17 +33,10 @@ export function UserMenu() {
                     variant="ghost"
                     className="rounded-lg"
                 >
-                    <Avatar size="sm">
-                        {avatarSrc && (
-                            <Avatar.Image
-                                src={avatarSrc}
-                                alt={displayName || 'User'}
-                            />
-                        )}
-                        <Avatar.Fallback className="bg-accent text-white">
-                            {getInitials(displayName || 'User')}
-                        </Avatar.Fallback>
-                    </Avatar>
+                    <UserAvatar
+                        name={displayName || 'User'}
+                        src={avatarSrc}
+                    />
 
                     <span className="text-sm font-medium">{displayName}</span>
 

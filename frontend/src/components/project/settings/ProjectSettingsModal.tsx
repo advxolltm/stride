@@ -2,11 +2,12 @@ import { Modal } from '@heroui/react'
 import { useState } from 'react'
 import type { Project } from '../../../store/features/project/project.types'
 import { ProjectGeneralSettings } from './ProjectGeneralSettings'
+import { MyProjectSkillsSettings } from './mySkills/MyProjectSkillsSettings'
 import { ProjectMembersSettings } from './projectMembers/ProjectMembersSettings'
 import { ProjectSettingsSidebar } from './ProjectSettingsSidebar'
 import { ProjectSkillsSettings } from './projectSkills/ProjectSkillsSettings'
 
-type Tab = 'general' | 'members' | 'skills'
+type Tab = 'general' | 'members' | 'skills' | 'my-skills'
 
 interface ProjectSettingsModalProps {
     isOpen: boolean
@@ -61,6 +62,9 @@ export function ProjectSettingsModal({
                                         isOwner={isOwner}
                                         project={project}
                                     />
+                                )}
+                                {activeTab === 'my-skills' && (
+                                    <MyProjectSkillsSettings project={project} />
                                 )}
                             </div>
                         </div>

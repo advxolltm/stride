@@ -46,7 +46,7 @@ type whiteboardCursorPresenceResponse struct { //nolint:unused
 }
 
 type whiteboardWSUpdateResponse struct { //nolint:unused
-	Type    int `json:"type" example:"13"`
+	Type    int `json:"type" example:"15"`
 	Payload any `json:"payload"`
 }
 

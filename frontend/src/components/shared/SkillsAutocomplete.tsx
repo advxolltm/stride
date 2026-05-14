@@ -10,13 +10,16 @@ import {
     TagGroup,
     useFilter,
 } from '@heroui/react'
-import { type Key, useEffect, useRef, useState } from 'react'
+import { type Key, useRef } from 'react'
+
+type SkillOption = string | { id: string; label: string }
 
 interface SkillsAutocompleteProps {
     label: string
     placeholder: string
     searchPlaceholder?: string
-    options: string[]
+    emptyStateMessage?: string
+    options: SkillOption[]
     selectedSkills: string[]
     onChange: (skills: string[]) => void
     className?: string
@@ -26,37 +29,18 @@ export function SkillsAutocomplete({
     label,
     placeholder,
     searchPlaceholder,
+    emptyStateMessage,
     options,
     selectedSkills,
     onChange,
     className,
 }: Readonly<SkillsAutocompleteProps>) {
     const { contains } = useFilter({ sensitivity: 'base' })
+    const normalizedOptions = options.map((option) =>
+        typeof option === 'string' ? { id: option, label: option } : option,
+    )
 
     const wrapperRef = useRef<HTMLDivElement>(null)
-    const [popoverWidth, setPopoverWidth] = useState<number>(0)
-
-    useEffect(() => {
-        const updateWidth = () => {
-            if (wrapperRef.current) {
-                setPopoverWidth(wrapperRef.current.offsetWidth)
-            }
-        }
-
-        updateWidth()
-
-        const resizeObserver = new ResizeObserver(updateWidth)
-        if (wrapperRef.current) {
-            resizeObserver.observe(wrapperRef.current)
-        }
-
-        window.addEventListener('resize', updateWidth)
-
-        return () => {
-            resizeObserver.disconnect()
-            window.removeEventListener('resize', updateWidth)
-        }
-    }, [])
 
     const handleSelectionChange = (keys: Key[]) => {
         onChange(keys as string[])
@@ -75,6 +59,7 @@ export function SkillsAutocomplete({
                 fullWidth
                 className="w-full"
                 placeholder={placeholder}
+                allowsEmptyCollection
                 selectionMode="multiple"
                 value={selectedSkills}
                 onChange={handleSelectionChange}
@@ -93,13 +78,17 @@ export function SkillsAutocomplete({
                             }
 
                             return (
-                                <TagGroup size="sm" onRemove={handleRemoveTags}>
+                                <TagGroup
+                                    aria-label="Selected skills"
+                                    size="sm"
+                                    onRemove={handleRemoveTags}
+                                >
                                     <TagGroup.List className="gap-1.5 bg-transparent">
                                         {state.selectedItems.map((item) => (
                                             <Tag
                                                 key={item.key}
                                                 id={item.key}
-                                                className="border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[var(--surface-foreground)] shadow-none"
+                                                className="border-border bg-surface text-surface-foreground border px-2 py-1 shadow-none"
                                             >
                                                 {item.textValue}
                                             </Tag>
@@ -113,16 +102,13 @@ export function SkillsAutocomplete({
                     <Autocomplete.Indicator />
                 </Autocomplete.Trigger>
 
-                <Autocomplete.Popover
-                    placement="bottom"
-                    shouldFlip={false}
-                    style={{ width: popoverWidth }}
-                >
+                <Autocomplete.Popover>
                     <Autocomplete.Filter filter={contains}>
                         <SearchField
                             autoFocus
                             name="search"
                             variant="secondary"
+                            aria-label="Search skills"
                         >
                             <SearchField.Group>
                                 <SearchField.SearchIcon />
@@ -138,16 +124,18 @@ export function SkillsAutocomplete({
                         <ListBox
                             selectionMode="multiple"
                             renderEmptyState={() => (
-                                <EmptyState>No results found</EmptyState>
+                                <EmptyState>
+                                    {emptyStateMessage ?? 'No results found'}
+                                </EmptyState>
                             )}
                         >
-                            {options.map((skill) => (
+                            {normalizedOptions.map((skill) => (
                                 <ListBox.Item
-                                    key={skill}
-                                    id={skill}
-                                    textValue={skill}
+                                    key={skill.id}
+                                    id={skill.id}
+                                    textValue={skill.label}
                                 >
-                                    {skill}
+                                    {skill.label}
                                     <ListBox.ItemIndicator />
                                 </ListBox.Item>
                             ))}

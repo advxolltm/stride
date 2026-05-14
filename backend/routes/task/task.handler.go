@@ -484,7 +484,7 @@ func (h taskRouteHandler) taskMovePOST(c *echo.Context) error {
 		slog.Error("taskMovePOST: Failed to get project members for notification", "error", err)
 	} else if err := h.notificationService.SendBulkNotification(
 		ctx,
-		projectMemberUserIDs(projectMembers),
+		routes.ProjectMemberUserIDs(projectMembers),
 		"task",
 		taskID,
 		taskMovedNotificationMessage(*updatedTask),
@@ -497,17 +497,6 @@ func (h taskRouteHandler) taskMovePOST(c *echo.Context) error {
 
 func taskMovedNotificationMessage(task models.Task) string {
 	return fmt.Sprintf("Task moved to position %d: %s", task.Position, task.Title)
-}
-
-func projectMemberUserIDs(projectMembers []models.ProjectMember) uuid.UUIDs {
-	userIDs := make(uuid.UUIDs, 0, len(projectMembers))
-	for _, projectMember := range projectMembers {
-		if projectMember.UserID == uuid.Nil {
-			continue
-		}
-		userIDs = append(userIDs, projectMember.UserID)
-	}
-	return userIDs
 }
 
 type addSkillToTaskRequest struct {

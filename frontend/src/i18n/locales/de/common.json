@@ -23,6 +23,13 @@
     "confirm": "Abmelden",
     "pending": "Abmeldung laeuft..."
   },
+  "passwordInput": {
+    "label": "Passwort",
+    "placeholder": "Passwort eingeben",
+    "createPlaceholder": "Passwort erstellen",
+    "show": "Passwort anzeigen",
+    "hide": "Passwort ausblenden"
+  },
   "notification": {
     "ariaLabel": "Benachrichtigungen",
     "title": "Benachrichtigungen",
@@ -35,7 +42,8 @@
     "objectTypes": {
       "notification": "Benachrichtigung",
       "project": "Projekt",
-      "task": "Aufgabe"
+      "task": "Aufgabe",
+	  "chat": "Chat"
     }
   },
   "primary": "Primaer",

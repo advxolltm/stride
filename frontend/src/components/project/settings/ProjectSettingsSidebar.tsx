@@ -1,9 +1,9 @@
 import { Button } from '@heroui/react'
-import { Settings, Target, Users } from 'lucide-react'
+import { Settings, Target, UserRound, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import i18n from '../../../i18n'
 
-type Tab = 'general' | 'members' | 'skills'
+type Tab = 'general' | 'members' | 'skills' | 'my-skills'
 
 const tabs: { id: Tab; label: string; icon: typeof Settings }[] = [
     {
@@ -20,6 +20,11 @@ const tabs: { id: Tab; label: string; icon: typeof Settings }[] = [
         id: 'skills',
         label: i18n.t('settingsSidebar.tabs.skills', { ns: 'project' }),
         icon: Target,
+    },
+    {
+        id: 'my-skills',
+        label: i18n.t('settingsSidebar.tabs.mySkills', { ns: 'project' }),
+        icon: UserRound,
     },
 ]
 

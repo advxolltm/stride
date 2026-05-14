@@ -50,6 +50,17 @@ func UniqueChoice[V any](src *[]V) V {
 	return c
 }
 
+func OptionalChoiceNilWeighted[V any](src *[]V, nilWeight float32) *V {
+	n := int(1 / nilWeight)
+	takeChoice := rng.Intn(n)
+	if takeChoice == 0 {
+		return nil
+	} else {
+		c := Choice(src)
+		return &c
+	}
+}
+
 func OptionalChoice[V any](src *[]V) *V {
 	takeChoice := rng.Intn(2)
 	if takeChoice == 1 {
@@ -147,6 +158,48 @@ func fakeProjectWithUsers(users []models.User) func(int) models.Project {
 	}
 }
 
+func fakeMessageWithProjects(projects []models.Project) func(int) models.Message {
+	return func(idx int) models.Message {
+		proj := Choice(&projects)
+		sender := OptionalChoiceNilWeighted(&proj.Members, 0.05)
+		var senderId *uuid.UUID
+		if sender != nil {
+			senderId = &sender.ID
+		}
+
+		createdAt := f.Date()
+		updatedYear := 2025
+		createdAt = time.Date(updatedYear, createdAt.Month(), createdAt.Day(), createdAt.Hour(), createdAt.Minute(), createdAt.Second(), createdAt.Nanosecond(), createdAt.Location())
+
+		isEdited := f.Bool()
+		var editedAt *time.Time
+		if isEdited {
+			editedAt = new(createdAt.AddDate(0, 0, f.Day()))
+		}
+
+		isDeleted := f.Bool()
+		var deletedAt *time.Time
+		if isDeleted {
+			if isEdited {
+				deletedAt = new(editedAt.AddDate(0, 0, f.Day()))
+			} else {
+				deletedAt = new(createdAt.AddDate(0, 0, f.Day()))
+			}
+		}
+
+		return models.Message{
+			SenderID:  senderId,
+			ProjectID: proj.ID,
+			Content:   f.Paragraph(),
+			IsEdited:  isEdited,
+			IsDeleted: isDeleted,
+			CreatedAt: createdAt,
+			EditedAt:  editedAt,
+			DeletedAt: deletedAt,
+		}
+	}
+}
+
 func fakeTaskWithProjects(projects []models.Project) func(int) models.Task {
 	return func(idx int) models.Task {
 		desc := f.ProductDescription()
@@ -204,6 +257,10 @@ func GenerateRandomTask(projects []models.Project) models.Task {
 
 func GenerateRandomTasks(count int, projects []models.Project) []models.Task {
 	return generateNOfType(count, fakeTaskWithProjects(projects))
+}
+
+func GenerateRandomMessages(count int, projects []models.Project) []models.Message {
+	return generateNOfType(count, fakeMessageWithProjects(projects))
 }
 
 func generateProjectSkills(maxSkills int, projects []models.Project) {
@@ -329,6 +386,7 @@ func fillDBWithRandomData(db *gorm.DB) {
 	updateProjects(db, projects)
 
 	generateTasksForProject(30, projects)
+	generateMessagesForProject(100, projects)
 
 	updateProjects(db, projects)
 
@@ -399,5 +457,16 @@ func generateTasksForProject(maxTasksPerProject int, projects []models.Project) 
 		}
 		tasks := GenerateRandomTasks(taskCount, p)
 		projects[pidx].Tasks = tasks
+	}
+}
+
+func generateMessagesForProject(maxMessagesPerProject int, projects []models.Project) {
+	for pidx := range projects {
+		messageCount := rng.Intn(maxMessagesPerProject)
+		p := []models.Project{
+			projects[pidx],
+		}
+		messages := GenerateRandomMessages(messageCount, p)
+		projects[pidx].Messages = messages
 	}
 }

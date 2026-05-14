@@ -1,10 +1,10 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Avatar, Button, Card, Dropdown, Label, Tooltip } from '@heroui/react'
+import { Button, Card, Dropdown, Label, Tooltip } from '@heroui/react'
 import { Calendar, MoreHorizontal } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { Task } from '../../../../../store/features/tasks/task.types'
-import getInitials from '../../../../../shared/utils/getInitials'
+import { UserAvatar } from '../../../../../shared/components'
 import { TaskSkillChips } from './TaskSkillChips'
 
 interface KanbanCardProps {
@@ -163,11 +163,14 @@ export function KanbanCard({
                             {assignee && (
                                 <Tooltip delay={0}>
                                     <Tooltip.Trigger>
-                                        <Avatar className="h-7 w-7 text-sm">
-                                            <Avatar.Fallback className="bg-accent text-white">
-                                                {getInitials(assigneeName)}
-                                            </Avatar.Fallback>
-                                        </Avatar>
+                                        <UserAvatar
+                                            className="h-7 w-7 text-sm"
+                                            name={assigneeName}
+                                            src={
+                                                assignee.user.avatarSmallUrl ??
+                                                assignee.user.avatarUrl
+                                            }
+                                        />
                                     </Tooltip.Trigger>
                                     <Tooltip.Content
                                         showArrow

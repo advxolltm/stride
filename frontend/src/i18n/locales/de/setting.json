@@ -26,11 +26,25 @@
     "confirmPassword": "Neues Passwort bestätigen",
     "confirmPasswordPlaceholder": "Neues Passwort bestätigen",
     "update": "Passwort aktualisieren",
-    "reset": "Zurücksetzen"
+    "reset": "Zurücksetzen",
+    "passwordMismatch": "Die neuen Passwörter stimmen nicht überein.",
+    "passwordTooShort": "Das Passwort muss mindestens {{count}} Zeichen lang sein.",
+    "passwordMissingSpecial": "Das Passwort muss mindestens ein Sonderzeichen enthalten.",
+    "updateSuccess": "Passwort erfolgreich aktualisiert",
+    "updateError": "Passwort konnte nicht aktualisiert werden. Bitte versuchen Sie es erneut."
   },
   "skills": {
     "title": "Ihre Fähigkeiten pro Projekt",
     "description": "Wählen Sie die Fähigkeiten aus, die Sie zu jedem Projekt beitragen",
-    "placeholder": "Fähigkeiten auswählen"
+    "selectLabel": "Fähigkeiten auswählen",
+    "placeholder": "Fähigkeiten auswählen",
+    "searchPlaceholder": "Fähigkeiten suchen",
+    "selectedCount": "{{selected}} / {{total}} ausgewählt",
+    "save": "Änderungen speichern",
+    "reset": "Änderungen verwerfen",
+    "updateSuccess": "Fähigkeiten erfolgreich aktualisiert",
+    "updateError": "Fähigkeiten konnten nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
+    "emptySkills": "Für dieses Projekt sind noch keine Fähigkeiten verfügbar.",
+    "emptyProjects": "Sie sind noch kein Mitglied eines Projekts."
   }
 }

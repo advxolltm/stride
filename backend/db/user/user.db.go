@@ -32,6 +32,8 @@ type (
 		UpdateUser(ctx context.Context, id uuid.UUID, fields UpdateUserFields) (*models.User, error)
 		DeleteUser(ctx context.Context, id uuid.UUID) error
 		GetByEmailAndPassword(ctx context.Context, email, passwordHash string) (uuid.UUID, error)
+		GetUserSkills(ctx context.Context, userID uuid.UUID) ([]models.UserSkill, error)
+		UpdateUserProjectSkills(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, skillIDs []uuid.UUID) ([]models.UserSkill, error)
 	}
 
 	userStore struct {
@@ -146,4 +148,91 @@ func (s *userStore) GetByEmailAndPassword(ctx context.Context, email, password s
 	}
 
 	return user.ID, nil
+}
+
+func (s *userStore) GetUserSkills(ctx context.Context, userID uuid.UUID) ([]models.UserSkill, error) {
+	var userSkills []models.UserSkill
+	result := s.db.WithContext(ctx).
+		Preload("ProjectSkill").
+		Joins("JOIN project_skills ON project_skills.id = user_skills.project_skill_id").
+		Where("user_skills.user_id = ?", userID).
+		Order("project_skills.project_id ASC, project_skills.name ASC").
+		Find(&userSkills)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return userSkills, nil
+}
+
+func (s *userStore) UpdateUserProjectSkills(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, skillIDs []uuid.UUID) ([]models.UserSkill, error) {
+	uniqueSkillIDs := make([]uuid.UUID, 0, len(skillIDs))
+	seenSkillIDs := map[uuid.UUID]struct{}{}
+	for _, skillID := range skillIDs {
+		if _, exists := seenSkillIDs[skillID]; exists {
+			continue
+		}
+		seenSkillIDs[skillID] = struct{}{}
+		uniqueSkillIDs = append(uniqueSkillIDs, skillID)
+	}
+
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var memberCount int64
+		if err := tx.Model(&models.ProjectMember{}).
+			Where("user_id = ? AND project_id = ?", userID, projectID).
+			Count(&memberCount).Error; err != nil {
+			return err
+		}
+		if memberCount == 0 {
+			var projectCount int64
+			if err := tx.Model(&models.Project{}).
+				Where("id = ?", projectID).
+				Count(&projectCount).Error; err != nil {
+				return err
+			}
+			if projectCount == 0 {
+				return ErrProjectNotFound
+			}
+			return ErrUserNotProjectMember
+		}
+
+		if len(uniqueSkillIDs) > 0 {
+			var matchingSkillCount int64
+			if err := tx.Model(&models.ProjectSkill{}).
+				Where("project_id = ? AND id IN ?", projectID, uniqueSkillIDs).
+				Count(&matchingSkillCount).Error; err != nil {
+				return err
+			}
+			if matchingSkillCount != int64(len(uniqueSkillIDs)) {
+				return ErrProjectSkillNotFound
+			}
+		}
+
+		if err := tx.
+			Where("user_id = ? AND project_skill_id IN (?)",
+				userID,
+				tx.Model(&models.ProjectSkill{}).Select("id").Where("project_id = ?", projectID),
+			).
+			Delete(&models.UserSkill{}).Error; err != nil {
+			return err
+		}
+
+		if len(uniqueSkillIDs) == 0 {
+			return nil
+		}
+
+		userSkills := make([]models.UserSkill, len(uniqueSkillIDs))
+		for i, skillID := range uniqueSkillIDs {
+			userSkills[i] = models.UserSkill{
+				UserID:         userID,
+				ProjectSkillID: skillID,
+			}
+		}
+
+		return tx.Create(&userSkills).Error
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return s.GetUserSkills(ctx, userID)
 }

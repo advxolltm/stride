@@ -23,6 +23,13 @@
     "confirm": "Log Out",
     "pending": "Logging out..."
   },
+  "passwordInput": {
+    "label": "Password",
+    "placeholder": "Enter your password",
+    "createPlaceholder": "Create a password",
+    "show": "Show password",
+    "hide": "Hide password"
+  },
   "notification": {
     "ariaLabel": "Notifications",
     "title": "Notifications",
@@ -35,7 +42,8 @@
     "objectTypes": {
       "notification": "Notification",
       "project": "Project",
-      "task": "Task"
+      "task": "Task",
+	  "chat": "Chat"
     }
   },
   "primary": "Primary",

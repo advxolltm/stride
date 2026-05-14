@@ -15,7 +15,8 @@ export const transformApiUser = (user: ApiProjectUser): ProjectUser => ({
     username: user.username,
     email: user.email,
     fullName: user.full_name,
-    avatarUrl: user.avatar_url,
+    avatarUrl: user.avatar_url?.original ?? null,
+    avatarSmallUrl: user.avatar_url?.[300] ?? user.avatar_url?.original ?? null,
 })
 
 export const transformProjectSkill = (

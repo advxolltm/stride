@@ -23,12 +23,9 @@ const taskSlice = createSlice({
     initialState: [] as Task[],
     reducers: {
         taskCreate: (state, action: PayloadAction<Task>) => {
-			console.log("task create stuff!", action);
 			state.push(action.payload);
-			console.log({state});
         },
         taskAssigned: (state, action: PayloadAction<Task>) => {
-			console.log("task assign stuff!", action);
             state.push(action.payload);
         },
     },

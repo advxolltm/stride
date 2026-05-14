@@ -120,8 +120,8 @@ func TestWhiteboardWSEndpoint(t *testing.T) {
 			require.NoError(t, conn.Close())
 		}()
 
-		taskMessage := `{"type":1,"payload":{"id":"` + uuid.NewString() + `"}}`
-		whiteboardMessage := `{"type":13,"payload":{"id":"` + uuid.NewString() + `"}}`
+		taskMessage := fmt.Sprintf(`{"type":%d,"payload":{"id":"%s"}}`, routes.TaskCreate, uuid.NewString())
+		whiteboardMessage := fmt.Sprintf(`{"type":%d,"payload":{"id":"%s"}}`, routes.WhiteboardElementCreate, uuid.NewString())
 
 		err = rdb.Publish(ctx, project.ID.String(), taskMessage).Err()
 		require.NoError(t, err)

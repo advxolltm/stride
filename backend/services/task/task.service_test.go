@@ -119,6 +119,9 @@ func TestTaskService(t *testing.T) {
 					randomProjectMember := testutils.Choice(&project.Members)
 					randomTask := testutils.Choice(&tasks)
 
+					// Ensure that the task is not assigned to the member
+					require.NoError(t, sut.UnassignTask(t.Context(), randomTask.ID, randomProjectMember.ID))
+
 					assignee, err := sut.AssignTask(t.Context(), randomTask.ID, randomProjectMember.ID)
 					testutils.TAssertNoError(t, err)
 
@@ -265,7 +268,7 @@ func TestTaskService(t *testing.T) {
 		})
 	})
 
-	runTest(t, db, "Adding a task to a skill", func(t *testing.T, db *gorm.DB, sut taskService.TaskService) {
+	runTest(t, db, "Adding a skill to a task", func(t *testing.T, db *gorm.DB, sut taskService.TaskService) {
 		runTest(t, db, "fails if either does not exist", func(t *testing.T, db *gorm.DB, sut taskService.TaskService) {
 			project := testutils.SelectRandomProject(t, db)
 
@@ -323,6 +326,13 @@ func TestTaskService(t *testing.T) {
 
 			// ensure that the skill is not assigned to the task first
 			err := sut.RemoveSkill(t.Context(), task.ID, skill.ID)
+			require.NoError(t, err)
+
+			// update in case the skill was actually assigned beforehand
+			pTask, err := sut.GetTask(t.Context(), task.ID)
+			require.NoError(t, err)
+			task = *pTask
+
 			require.NoError(t, err)
 
 			taskSkill, err := sut.AddSkill(t.Context(), task.ID, skill.ID)
