@@ -18,6 +18,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/disintegration/imaging"
 	"github.com/google/uuid"
@@ -47,8 +48,11 @@ type (
 		GetUser(ctx context.Context, id uuid.UUID) (*models.User, error)
 		CreateUser(ctx context.Context, username string, email string, password string) (*models.User, error)
 		UpdateUser(ctx context.Context, id uuid.UUID, input UpdateUserInput) (*models.User, error)
+		ChangePassword(ctx context.Context, id uuid.UUID, currentPassword string, newPassword string) error
 		DeleteUser(ctx context.Context, id uuid.UUID) error
 		GetByEmailAndPassword(ctx context.Context, email, password string) (uuid.UUID, error)
+		GetUserSkills(ctx context.Context, userID uuid.UUID) ([]models.UserSkill, error)
+		UpdateUserProjectSkills(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, skillIDs []uuid.UUID) ([]models.UserSkill, error)
 	}
 	userService struct {
 		userStore user.UserStore
@@ -58,6 +62,8 @@ type (
 )
 
 const maxAvatarSize = 2 << 20 // 2MB
+const avatarDirMode os.FileMode = 0o755
+const avatarFileMode os.FileMode = 0o644
 
 var allowedAvatarTypes = map[string]bool{
 	".jpg": true, ".jpeg": true, ".png": true, ".gif": true, ".webp": true,
@@ -241,6 +247,24 @@ func (s userService) UpdateUser(ctx context.Context, id uuid.UUID, input UpdateU
 	return u, nil
 }
 
+func (s userService) ChangePassword(ctx context.Context, id uuid.UUID, currentPassword string, newPassword string) error {
+	u, err := s.GetUser(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if err := s.CheckPassword(u.PasswordHash, currentPassword); err != nil {
+		return err
+	}
+
+	if err := s.CheckPassword(u.PasswordHash, newPassword); err == nil {
+		return ErrPasswordUnchanged
+	}
+
+	_, err = s.UpdateUser(ctx, id, UpdateUserInput{Password: &newPassword})
+	return err
+}
+
 func (s userService) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	err := s.userStore.DeleteUser(ctx, id)
 	if err != nil {
@@ -263,6 +287,31 @@ func (s userService) GetByEmailAndPassword(ctx context.Context, email, password 
 	}
 
 	return userId, nil
+}
+
+func (s userService) GetUserSkills(ctx context.Context, userID uuid.UUID) ([]models.UserSkill, error) {
+	userSkills, err := s.userStore.GetUserSkills(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrUserStoreFailed, err)
+	}
+	return userSkills, nil
+}
+
+func (s userService) UpdateUserProjectSkills(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, skillIDs []uuid.UUID) ([]models.UserSkill, error) {
+	userSkills, err := s.userStore.UpdateUserProjectSkills(ctx, userID, projectID, skillIDs)
+	if err != nil {
+		switch {
+		case errors.Is(err, user.ErrProjectNotFound):
+			return nil, ErrProjectNotFound
+		case errors.Is(err, user.ErrProjectSkillNotFound):
+			return nil, ErrProjectSkillNotFound
+		case errors.Is(err, user.ErrUserNotProjectMember):
+			return nil, ErrUserNotProjectMember
+		default:
+			return nil, fmt.Errorf("%w: %w", ErrUserStoreFailed, err)
+		}
+	}
+	return userSkills, nil
 }
 
 func validateAvatarFile(filename string, size int64) error {
@@ -313,21 +362,22 @@ func (s userService) processAndSaveAvatar(userID uuid.UUID, avatar *AvatarInput)
 	}
 
 	userDir := filepath.Join(s.mediaDir, "avatars", userID.String())
-	if err := os.MkdirAll(userDir, 0o750); err != nil {
+	if err := os.MkdirAll(userDir, avatarDirMode); err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrAvatarSaveFailed, err)
 	}
 
 	ext := strings.ToLower(filepath.Ext(avatar.Filename))
 	basePath := fmt.Sprintf("/media/avatars/%s", userID.String())
+	cacheVersion := fmt.Sprintf("v=%d", time.Now().UnixNano())
 
 	originalName := "original" + ext
 	originalPath := filepath.Join(userDir, originalName)
-	if err := os.WriteFile(originalPath, data, 0o600); err != nil {
+	if err := os.WriteFile(originalPath, data, avatarFileMode); err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrAvatarSaveFailed, err)
 	}
 
 	result := &models.AvatarURLMap{
-		Original: basePath + "/" + originalName,
+		Original: basePath + "/" + originalName + "?" + cacheVersion,
 	}
 
 	for _, size := range thumbnailSizes {
@@ -339,12 +389,15 @@ func (s userService) processAndSaveAvatar(userID uuid.UUID, avatar *AvatarInput)
 		if err := imaging.Save(thumb, thumbPath); err != nil {
 			return nil, fmt.Errorf("%w: %w", ErrAvatarProcessingFailed, err)
 		}
+		if err := os.Chmod(thumbPath, avatarFileMode); err != nil {
+			return nil, fmt.Errorf("%w: %w", ErrAvatarSaveFailed, err)
+		}
 
 		switch size {
 		case 300:
-			result.Small = basePath + "/" + thumbName
+			result.Small = basePath + "/" + thumbName + "?" + cacheVersion
 		case 600:
-			result.Medium = basePath + "/" + thumbName
+			result.Medium = basePath + "/" + thumbName + "?" + cacheVersion
 		}
 	}
 

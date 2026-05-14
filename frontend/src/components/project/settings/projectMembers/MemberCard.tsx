@@ -1,11 +1,12 @@
-import { Avatar, Button, Chip } from '@heroui/react'
+import { Button, Chip } from '@heroui/react'
 import { Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import getInitials from '../../../../shared/utils/getInitials'
+import { UserAvatar } from '../../../../shared/components'
 
 interface MemberCardProps {
     name: string
     email: string
+    avatarUrl?: string | null
     role: 'owner' | 'member'
     isOwner: boolean
     onDelete: () => void
@@ -14,23 +15,19 @@ interface MemberCardProps {
 export function MemberCard({
     name,
     email,
+    avatarUrl,
     role,
     isOwner,
     onDelete,
 }: Readonly<MemberCardProps>) {
     const { t } = useTranslation('project')
-
     return (
         <div
             className="group flex items-center justify-between rounded-lg border px-4 py-3 transition-colors"
             style={{ borderColor: 'var(--border)' }}
         >
             <div className="flex items-center gap-3">
-                <Avatar>
-                    <Avatar.Fallback className="bg-accent text-white">
-                        {getInitials(name)}
-                    </Avatar.Fallback>
-                </Avatar>
+                <UserAvatar name={name} src={avatarUrl} />
                 <div>
                     <p
                         className="text-sm font-medium"

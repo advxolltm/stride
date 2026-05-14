@@ -143,6 +143,10 @@ export function AddMembersDialog({
                                         displayName={
                                             user.fullName ?? user.username
                                         }
+                                        avatarUrl={
+                                            user.avatarSmallUrl ??
+                                            user.avatarUrl
+                                        }
                                         onRemove={handleRemoveChip}
                                     />
                                 ))}
@@ -162,6 +166,11 @@ export function AddMembersDialog({
                                         id={user.id}
                                         name={user.fullName ?? user.username}
                                         email={user.email}
+                                        avatarUrl={
+                                            user.avatarSmallUrl ??
+                                            user.avatarUrl ??
+                                            undefined
+                                        }
                                     />
                                 ))}
 

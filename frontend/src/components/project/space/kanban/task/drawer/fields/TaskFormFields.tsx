@@ -1,6 +1,5 @@
 import {
     Autocomplete,
-    Avatar,
     Chip,
     Input,
     Label,
@@ -13,12 +12,14 @@ import {
 import { useMemo } from 'react'
 import type { TaskStatus } from '../../../../../../../store/features/tasks/task.types'
 import { useTranslation } from 'react-i18next'
+import { UserAvatar } from '../../../../../../../shared/components'
 
 export interface AssigneeOption {
     id: string
     name: string
     initials: string
     color?: string
+    avatarUrl?: string | null
 }
 
 export interface StatusOption {
@@ -202,18 +203,16 @@ export function TaskFormFields({
                         {(item) => (
                             <ListBox.Item id={item.id} textValue={item.name}>
                                 <div className="flex items-center gap-2">
-                                    <Avatar className="h-7 w-7 text-xs">
-                                        <Avatar.Fallback
-                                            className="text-white"
-                                            style={{
-                                                backgroundColor:
-                                                    item.color ??
-                                                    'var(--color-accent)',
-                                            }}
-                                        >
-                                            {item.initials}
-                                        </Avatar.Fallback>
-                                    </Avatar>
+                                    <UserAvatar
+                                        className="h-7 w-7 text-xs"
+                                        name={item.name}
+                                        src={item.avatarUrl}
+                                        fallbackStyle={{
+                                            backgroundColor:
+                                                item.color ??
+                                                'var(--color-accent)',
+                                        }}
+                                    />
                                     <span className="text-sm">{item.name}</span>
                                 </div>
                                 <ListBox.ItemIndicator />

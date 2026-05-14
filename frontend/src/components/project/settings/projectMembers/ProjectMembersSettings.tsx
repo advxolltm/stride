@@ -75,6 +75,7 @@ export function ProjectMembersSettings({
                         onDelete={() => setMemberToRemove(member)}
                         name={member.user.fullName ?? member.user.username}
                         email={member.user.email}
+                        avatarUrl={member.user.avatarSmallUrl ?? member.user.avatarUrl}
                     />
                 ))}
             </div>

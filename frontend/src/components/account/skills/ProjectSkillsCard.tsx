@@ -1,37 +1,41 @@
-import { SkillsAutocomplete } from '../../shared/SkillsAutocomplete'
+import { ProjectSkillSelectionCard } from '../../shared/ProjectSkillSelectionCard'
+import type { ProjectSkill } from '../../../store/features/project/project.types'
 
 interface ProjectSkillsCardProps {
     project: {
         id: string
         name: string
-        skills: string[]
+        skills: ProjectSkill[]
         selected: string[]
     }
     onChange: (values: string[]) => void
+    label: string
+    placeholder: string
+    searchPlaceholder: string
+    selectedLabel: string
+    emptyStateMessage?: string
 }
 
 export function ProjectSkillsCard({
     project,
     onChange,
+    label,
+    placeholder,
+    searchPlaceholder,
+    selectedLabel,
+    emptyStateMessage,
 }: ProjectSkillsCardProps) {
     return (
-        <div className="border-border bg-surface rounded-xl border p-4">
-            <div className="mb-3 flex items-center justify-between">
-                <h3 className="font-medium">{project.name}</h3>
-
-                <span className="text-muted-foreground text-xs">
-                    {project.selected.length} / {project.skills.length} selected
-                </span>
-            </div>
-
-            <SkillsAutocomplete
-                label="Select skills"
-                placeholder="Select skills"
-                searchPlaceholder="Search skills"
-                options={project.skills}
-                selectedSkills={project.selected}
-                onChange={onChange}
-            />
-        </div>
+        <ProjectSkillSelectionCard
+            title={project.name}
+            skills={project.skills}
+            selectedSkillIds={project.selected}
+            onChange={onChange}
+            label={label}
+            placeholder={placeholder}
+            searchPlaceholder={searchPlaceholder}
+            selectedLabel={selectedLabel}
+            emptyStateMessage={emptyStateMessage}
+        />
     )
 }

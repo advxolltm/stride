@@ -15,7 +15,7 @@ import {
     useGetProjectWhiteboardQuery,
     useUpdateProjectWhiteboardElementMutation,
 } from '../store/features/whiteboard/whiteboard.api'
-import getInitials from '../shared/utils/getInitials'
+import { UserAvatar } from '../shared/components'
 
 const serializeElementSnapshot = (
     element: ExcalidrawElement,
@@ -350,13 +350,14 @@ export function WhiteboardPage() {
                             member.user.fullName ?? member.user.username
 
                         return (
-                            <span
+                            <UserAvatar
                                 key={member.id}
-                                className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-[var(--surface)] bg-[var(--accent)] text-[10px] font-semibold text-[var(--accent-foreground)]"
+                                name={displayName}
+                                src={member.user.avatarUrl}
+                                className="h-7 w-7 border-2 border-[var(--surface)] text-[10px] font-semibold"
+                                fallbackClassName="text-[var(--accent-foreground)]"
                                 title={displayName}
-                            >
-                                {getInitials(displayName)}
-                            </span>
+                            />
                         )
                     })}
                     {hiddenCollaborators > 0 && (

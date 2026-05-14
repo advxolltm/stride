@@ -129,6 +129,13 @@ type (
 		Description *string   `json:"description"`
 	} // @name ProjectSkill
 
+	UserSkill struct {
+		ID             uuid.UUID    `json:"id"`
+		UserID         uuid.UUID    `json:"user_id"`
+		ProjectSkillID uuid.UUID    `json:"project_skill_id"`
+		ProjectSkill   ProjectSkill `json:"project_skill"`
+	} // @name UserSkill
+
 	TaskAssignee struct {
 		ID              uuid.UUID     `json:"id"`
 		TaskID          uuid.UUID     `json:"task_id"`
@@ -208,6 +215,15 @@ func MapProjectSkill(projectSkill models.ProjectSkill) ProjectSkill {
 		ProjectID:   projectSkill.ProjectID,
 		Name:        projectSkill.Name,
 		Description: projectSkill.Description,
+	}
+}
+
+func MapUserSkill(userSkill models.UserSkill) UserSkill {
+	return UserSkill{
+		ID:             userSkill.ID,
+		UserID:         userSkill.UserID,
+		ProjectSkillID: userSkill.ProjectSkillID,
+		ProjectSkill:   MapProjectSkill(userSkill.ProjectSkill),
 	}
 }
 
