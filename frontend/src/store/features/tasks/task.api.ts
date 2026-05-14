@@ -479,6 +479,7 @@ export const taskApi = baseApi.injectEndpoints({
 export const {
     useGetTasksForProjectQuery,
     useGetTaskQuery,
+    useLazyGetTaskQuery,
     useCreateTaskMutation,
     useUpdateTaskMutation,
     useDeleteTaskMutation,
