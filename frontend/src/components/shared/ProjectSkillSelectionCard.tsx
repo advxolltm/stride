@@ -26,10 +26,10 @@ export function ProjectSkillSelectionCard({
 }: Readonly<ProjectSkillSelectionCardProps>) {
     return (
         <div className="border-border bg-surface rounded-xl border p-4">
-            <div className="mb-3 flex items-center justify-between">
-                <h3 className="font-medium">{title}</h3>
+            <div className="mb-3 flex items-center justify-between gap-2">
+                <h3 className="font-medium wrap-break-word truncate">{title}</h3>
 
-                <span className="text-muted-foreground text-xs">
+                <span className="min-w-0 shrink-0 text-muted-foreground text-xs">
                     {selectedLabel}
                 </span>
             </div>
