@@ -49,11 +49,10 @@ func (h *whiteboardRouteHandler) registerRoutes(g *echo.Group) {
 
 // whiteboardResponse represents a whiteboard in API responses.
 type whiteboardResponse struct { //nolint:unused
-	ID          string `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
-	ProjectID   string `json:"projectId" example:"550e8400-e29b-41d4-a716-446655440000"`
-	CanvasState any    `json:"canvasState"`
-	CreatedAt   string `json:"createdAt" example:"2026-01-01T00:00:00Z"`
-	UpdatedAt   string `json:"updatedAt" example:"2026-01-01T00:00:00Z"`
+	ID        string `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
+	ProjectID string `json:"projectId" example:"550e8400-e29b-41d4-a716-446655440000"`
+	CreatedAt string `json:"createdAt" example:"2026-01-01T00:00:00Z"`
+	UpdatedAt string `json:"updatedAt" example:"2026-01-01T00:00:00Z"`
 }
 
 // whiteboardElementResponse represents a whiteboard element in API responses.
@@ -87,10 +86,6 @@ type createElementRequest struct {
 	ElementType string         `json:"elementType"`
 	Props       datatypes.JSON `json:"props" swaggertype:"object"`
 	ZIndex      int            `json:"zIndex"`
-}
-
-type createWhiteboardRequest struct {
-	CanvasState datatypes.JSON `json:"canvasState" swaggertype:"object"`
 }
 
 type updateElementRequest struct {
@@ -165,12 +160,11 @@ func (h *whiteboardRouteHandler) whiteboardGETHandle(c *echo.Context) error {
 
 // POST /projects/:id/whiteboard
 //
-//	@Summary	Create or update whiteboard canvas state for a project
+//	@Summary	Get or create whiteboard for a project
 //	@Tags		whiteboard
-//	@Param		id		path		string				true	"Project ID"
-//	@Param		body	body		createWhiteboardRequest	true	"Whiteboard data"
+//	@Param		id	path	string	true	"Project ID"
 //	@Success	200		{object}	whiteboardResponse
-//	@Failure	400		{object}	routes.ErrorResponse	"invalid request body"
+//	@Failure	400		{object}	routes.ErrorResponse	"invalid project id"
 //	@Failure	401		{object}	routes.ErrorResponse	"unauthorized"
 //	@Failure	403		{object}	routes.ErrorResponse	"forbidden"
 //	@Failure	404		{object}	routes.ErrorResponse	"whiteboard not found"
@@ -188,12 +182,7 @@ func (h *whiteboardRouteHandler) whiteboardPOSTHandle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid project id"})
 	}
 
-	var req createWhiteboardRequest
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid request body"})
-	}
-
-	wb, err := h.whiteboardService.UpdateCanvasState(c.Request().Context(), userID, projectID, req.CanvasState)
+	wb, err := h.whiteboardService.GetOrCreateWhiteboardByProjectID(c.Request().Context(), userID, projectID)
 	if err != nil {
 		status, msg := mapServiceErrorWB(err)
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
