@@ -1,12 +1,16 @@
 package projects
 
 import (
+	"backend/models"
+	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 
 	"backend/routes"
 	authService "backend/services/auth"
+	notificationService "backend/services/notification"
 	projectService "backend/services/project"
 
 	"github.com/google/uuid"
@@ -15,13 +19,14 @@ import (
 )
 
 type projectRouteHandler struct {
-	projectService projectService.ProjectService
-	authService    authService.AuthService
-	rdb            *redis.Client
+	projectService      projectService.ProjectService
+	notificationService notificationService.NotificationService
+	authService         authService.AuthService
+	rdb                 *redis.Client
 }
 
-func newProjectRouteHandler(ps projectService.ProjectService, as authService.AuthService, rdb *redis.Client) *projectRouteHandler {
-	return &projectRouteHandler{projectService: ps, authService: as, rdb: rdb}
+func newProjectRouteHandler(ps projectService.ProjectService, ns notificationService.NotificationService, as authService.AuthService, rdb *redis.Client) *projectRouteHandler {
+	return &projectRouteHandler{projectService: ps, notificationService: ns, authService: as, rdb: rdb}
 }
 
 func (h *projectRouteHandler) registerRoutes(g *echo.Group) {
@@ -255,6 +260,8 @@ func (h *projectRouteHandler) memberPOSTHandle(c *echo.Context) error {
 		slog.Error("memberPOSTHandle: Failed to send ws update", "error", err)
 	}
 
+	h.notifyAddedProjectMembers(c.Request().Context(), id, u)
+
 	return c.JSON(http.StatusCreated, mappedMembers)
 }
 
@@ -368,6 +375,12 @@ func (h *projectRouteHandler) memberDELETEHandle(c *echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, routes.ErrorResponse{Error: "only the owner can remove members from this project"})
 	}
 
+	p, err := h.projectService.GetProject(c.Request().Context(), projid)
+	if err != nil {
+		status, msg := mapServiceErrorProj(err)
+		return c.JSON(status, routes.ErrorResponse{Error: msg})
+	}
+
 	if err := h.projectService.RemoveUserFromProject(c.Request().Context(), userid, projid); err != nil {
 		status, msg := mapServiceErrorProj(err)
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
@@ -383,5 +396,58 @@ func (h *projectRouteHandler) memberDELETEHandle(c *echo.Context) error {
 		slog.Error("memberDELETEHandle: Failed to send ws update", "error", err)
 	}
 
+	h.notifyRemovedProjectMember(c.Request().Context(), userid, *p)
+
 	return c.NoContent(http.StatusNoContent)
+}
+
+func (h *projectRouteHandler) notifyAddedProjectMembers(ctx context.Context, projectID uuid.UUID, addedMembers []models.ProjectMember) {
+	if h.notificationService == nil || len(addedMembers) == 0 {
+		return
+	}
+
+	p, err := h.projectService.GetProject(ctx, projectID)
+	if err != nil {
+		slog.Error("memberPOSTHandle: Failed to get project for notification", "error", err)
+		return
+	}
+
+	userIDs := routes.ProjectMemberUserIDs(addedMembers)
+	if len(userIDs) == 0 {
+		return
+	}
+
+	if err := h.notificationService.SendBulkNotification(
+		ctx,
+		userIDs,
+		"project",
+		projectID,
+		projectMemberAddedNotificationMessage(*p),
+	); err != nil {
+		slog.Error("memberPOSTHandle: Failed to send notification", "error", err)
+	}
+}
+
+func (h *projectRouteHandler) notifyRemovedProjectMember(ctx context.Context, userID uuid.UUID, project models.Project) {
+	if h.notificationService == nil || userID == uuid.Nil {
+		return
+	}
+
+	if err := h.notificationService.SendNotification(
+		ctx,
+		userID,
+		"project",
+		project.ID,
+		projectMemberRemovedNotificationMessage(project),
+	); err != nil {
+		slog.Error("memberDELETEHandle: Failed to send notification", "error", err)
+	}
+}
+
+func projectMemberAddedNotificationMessage(project models.Project) string {
+	return fmt.Sprintf("You were added to project: %s", project.Name)
+}
+
+func projectMemberRemovedNotificationMessage(project models.Project) string {
+	return fmt.Sprintf("You were removed from project: %s", project.Name)
 }

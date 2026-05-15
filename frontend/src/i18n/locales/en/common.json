@@ -38,6 +38,7 @@
     "emptyDescription": "New updates will appear here.",
     "deleteAriaLabel": "Delete notification",
     "markAsReadError": "Unable to mark notification as read.",
+    "openError": "Unable to open notification target.",
     "deleteError": "Unable to delete notification.",
     "objectTypes": {
       "notification": "Notification",
