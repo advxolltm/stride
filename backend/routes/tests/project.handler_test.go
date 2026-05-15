@@ -68,6 +68,31 @@ func runTest(t *testing.T, name string, f func(t *testing.T, tx *gorm.DB, as aut
 	})
 }
 
+func countProjectNotifications(
+	t *testing.T,
+	svc notificationService.NotificationService,
+	userID uuid.UUID,
+	objectType string,
+	objectID uuid.UUID,
+	message string,
+) int {
+	t.Helper()
+
+	notifications, err := svc.GetNotifications(t.Context(), userID)
+	require.NoError(t, err)
+
+	count := 0
+	for _, notification := range notifications {
+		if notification.ObjectType == objectType &&
+			notification.ObjectID == objectID &&
+			notification.Message == message {
+			count++
+		}
+	}
+
+	return count
+}
+
 func TestProjectRouteHandler_Integration(t *testing.T) {
 	ctx := context.Background()
 
@@ -221,6 +246,14 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 		members, err := ps.GetProjectMembers(ctx, memberProj.ID)
 		require.NoError(t, err)
 		assert.Len(t, members, 2)
+
+		nServ := notificationService.NewNotificationService(notificationStore.NewNotificationStreamStore(rdb))
+		expectedNotificationMessage := fmt.Sprintf("You were added to project: %s", memberProj.Name)
+		require.Equal(
+			t,
+			1,
+			countProjectNotifications(t, nServ, newUser2.ID, "project", memberProj.ID, expectedNotificationMessage),
+		)
 	})
 
 	runTest(t, "Returns 400 on invalid project UUID for members POST", func(t *testing.T, tx *gorm.DB, as authService.AuthService, ps projectService.ProjectService, us userService.UserService, e *echo.Echo, cookie *http.Cookie, loginUser models.User) {
@@ -388,6 +421,14 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 		for _, m := range members {
 			assert.NotEqual(t, otherUser.ID, m.UserID)
 		}
+
+		nServ := notificationService.NewNotificationService(notificationStore.NewNotificationStreamStore(rdb))
+		expectedNotificationMessage := fmt.Sprintf("You were removed from project: %s", proj.Name)
+		require.Equal(
+			t,
+			1,
+			countProjectNotifications(t, nServ, otherUser.ID, "project", proj.ID, expectedNotificationMessage),
+		)
 	})
 
 	runTest(t, "Returns 404 when removing non-existent member", func(t *testing.T, tx *gorm.DB, as authService.AuthService, ps projectService.ProjectService, us userService.UserService, e *echo.Echo, cookie *http.Cookie, loginUser models.User) {
