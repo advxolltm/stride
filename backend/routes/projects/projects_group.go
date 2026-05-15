@@ -31,7 +31,7 @@ func NewProjectsGroup(
 	rdb *redis.Client,
 ) *ProjectsGroup {
 	return &ProjectsGroup{
-		projectHandler:    newProjectRouteHandler(ps, as, rdb),
+		projectHandler:    newProjectRouteHandler(ps, ns, as, rdb),
 		skillsHandler:     newSkillsRouteHandler(ps, as, rdb),
 		whiteboardHandler: newWhiteboardRouteHandler(ws, as),
 		chatHandler:       newChatRouteHandler(cs, as, ps, ns, rdb),
