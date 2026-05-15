@@ -5,11 +5,19 @@ import (
 	"backend/services/auth"
 	"backend/services/project"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v5"
+)
+
+const (
+	wsWriteWait      = 10 * time.Second
+	wsPongWait       = 60 * time.Second
+	wsPingPeriod     = (wsPongWait * 9) / 10
+	wsMaxMessageSize = 1 << 20
 )
 
 type projectWSSession struct {
@@ -52,4 +60,14 @@ func authorizeProjectWSSession(
 
 func isWSSessionExpired(expiry time.Time) bool {
 	return !expiry.IsZero() && expiry.Before(time.Now())
+}
+
+func writeWSMessage(conn *websocket.Conn, writeMu *sync.Mutex, messageType int, payload []byte) error {
+	writeMu.Lock()
+	defer writeMu.Unlock()
+
+	if err := conn.SetWriteDeadline(time.Now().Add(wsWriteWait)); err != nil {
+		return err
+	}
+	return conn.WriteMessage(messageType, payload)
 }
