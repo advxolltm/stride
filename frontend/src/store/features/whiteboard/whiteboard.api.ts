@@ -9,7 +9,15 @@ import type {
     WhiteboardCursorClientMessage,
     WhiteboardCursorPresence,
     WhiteboardCursorSocketState,
+    WhiteboardEventsSocketState,
 } from './whiteboard.types'
+import {
+    applyWhiteboardEventToElementsCache,
+    createWhiteboardMutationHeaders,
+    isSelfOriginatedWhiteboardEvent,
+    logWhiteboardEventMessage,
+    parseWhiteboardEventMessage,
+} from './whiteboard.ws'
 
 const transformWhiteboard = (whiteboard: ApiWhiteboard): Whiteboard => ({
     id: whiteboard.id,
@@ -39,10 +47,22 @@ type WhiteboardCursorSocketLifecycleApi = {
     ) => void
 }
 
+type WhiteboardEventsSocketLifecycleApi = {
+    cacheDataLoaded: Promise<unknown>
+    cacheEntryRemoved: Promise<void>
+    dispatch: (action: unknown) => unknown
+    updateCachedData: (
+        recipe: (draft: WhiteboardEventsSocketState) => void,
+    ) => void
+}
+
 const activeWhiteboardCursorSockets = new Map<string, WebSocket>()
 
 const createWhiteboardCursorSocketUrl = (projectId: string) =>
     buildApiWebSocketUrl(`/ws/project/${projectId}/whiteboard/cursor`)
+
+const createWhiteboardEventsSocketUrl = (projectId: string) =>
+    buildApiWebSocketUrl(`/ws/project/${projectId}/whiteboard`)
 
 const createWhiteboardCursorSocketState = (
     projectId: string,
@@ -52,6 +72,17 @@ const createWhiteboardCursorSocketState = (
     status: 'connecting',
     presence: [],
     lastSnapshotAt: null,
+    lastError: null,
+})
+
+const createWhiteboardEventsSocketState = (
+    projectId: string,
+): WhiteboardEventsSocketState => ({
+    projectId,
+    url: createWhiteboardEventsSocketUrl(projectId),
+    status: 'connecting',
+    lastMessage: null,
+    lastMessageAt: null,
     lastError: null,
 })
 
@@ -190,6 +221,132 @@ const watchWhiteboardCursorSocket = async (
     }
 }
 
+const patchWhiteboardElementsCacheFromEvent = (
+    projectId: string,
+    message: WhiteboardEventsSocketState['lastMessage'],
+    lifecycleApi: WhiteboardEventsSocketLifecycleApi,
+) => {
+    if (!message) {
+        return
+    }
+
+    lifecycleApi.dispatch(
+        whiteboardApi.util.updateQueryData(
+            'getProjectWhiteboardElements',
+            projectId,
+            (draft) =>
+                applyWhiteboardEventToElementsCache(
+                    draft,
+                    message,
+                    transformWhiteboardElement,
+                ),
+        ),
+    )
+}
+
+const watchWhiteboardEventsSocket = async (
+    projectId: string,
+    lifecycleApi: WhiteboardEventsSocketLifecycleApi,
+) => {
+    if (typeof WebSocket === 'undefined') {
+        return
+    }
+
+    let socket: WebSocket | null = null
+    let handleOpen: (() => void) | null = null
+    let handleMessage: ((event: MessageEvent) => void) | null = null
+    let handleError: (() => void) | null = null
+    let handleClose: (() => void) | null = null
+
+    try {
+        await lifecycleApi.cacheDataLoaded
+
+        socket = new WebSocket(createWhiteboardEventsSocketUrl(projectId))
+
+        handleOpen = () => {
+            lifecycleApi.updateCachedData((draft) => {
+                draft.status = 'connected'
+                draft.lastError = null
+            })
+        }
+
+        handleMessage = (event: MessageEvent) => {
+            if (typeof event.data !== 'string') {
+                return
+            }
+
+            const message = parseWhiteboardEventMessage(event.data)
+            if (!message) {
+                lifecycleApi.updateCachedData((draft) => {
+                    draft.lastError =
+                        'Failed to parse whiteboard events websocket message'
+                })
+                return
+            }
+
+            logWhiteboardEventMessage(message)
+            if (!isSelfOriginatedWhiteboardEvent(message)) {
+                patchWhiteboardElementsCacheFromEvent(
+                    projectId,
+                    message,
+                    lifecycleApi,
+                )
+            }
+
+            lifecycleApi.updateCachedData((draft) => {
+                draft.lastMessage = message
+                draft.lastMessageAt = new Date().toISOString()
+            })
+        }
+
+        handleError = () => {
+            lifecycleApi.updateCachedData((draft) => {
+                draft.status = 'error'
+                draft.lastError =
+                    'Failed to establish whiteboard websocket connection'
+            })
+        }
+
+        handleClose = () => {
+            lifecycleApi.updateCachedData((draft) => {
+                if (draft.status !== 'error') {
+                    draft.status = 'disconnected'
+                }
+            })
+        }
+
+        socket.addEventListener('open', handleOpen)
+        socket.addEventListener('message', handleMessage)
+        socket.addEventListener('error', handleError)
+        socket.addEventListener('close', handleClose)
+
+        await lifecycleApi.cacheEntryRemoved
+    } catch {
+        return
+    } finally {
+        if (
+            socket &&
+            handleOpen &&
+            handleMessage &&
+            handleError &&
+            handleClose
+        ) {
+            socket.removeEventListener('open', handleOpen)
+            socket.removeEventListener('message', handleMessage)
+            socket.removeEventListener('error', handleError)
+            socket.removeEventListener('close', handleClose)
+        }
+
+        if (
+            socket &&
+            (socket.readyState === WebSocket.OPEN ||
+                socket.readyState === WebSocket.CONNECTING)
+        ) {
+            socket.close()
+        }
+    }
+}
+
 export const sendWhiteboardCursor = (
     projectId: string,
     message: WhiteboardCursorClientMessage,
@@ -234,6 +391,7 @@ export const whiteboardApi = baseApi.injectEndpoints({
                 url: `/projects/${projectId}/whiteboard/elements`,
                 method: 'POST',
                 body,
+                headers: createWhiteboardMutationHeaders(),
             }),
             transformResponse: (response: ApiWhiteboardElement) =>
                 transformWhiteboardElement(response),
@@ -251,6 +409,7 @@ export const whiteboardApi = baseApi.injectEndpoints({
                 url: `/projects/${projectId}/whiteboard/elements/${elementId}`,
                 method: 'PATCH',
                 body,
+                headers: createWhiteboardMutationHeaders(),
             }),
             transformResponse: (response: ApiWhiteboardElement) =>
                 transformWhiteboardElement(response),
@@ -263,6 +422,7 @@ export const whiteboardApi = baseApi.injectEndpoints({
             query: ({ projectId, elementId }) => ({
                 url: `/projects/${projectId}/whiteboard/elements/${elementId}`,
                 method: 'DELETE',
+                headers: createWhiteboardMutationHeaders(),
             }),
         }),
 
@@ -277,6 +437,17 @@ export const whiteboardApi = baseApi.injectEndpoints({
                 await watchWhiteboardCursorSocket(projectId, lifecycleApi)
             },
         }),
+        watchWhiteboardEvents: builder.query<
+            WhiteboardEventsSocketState,
+            string
+        >({
+            queryFn: (projectId) => ({
+                data: createWhiteboardEventsSocketState(projectId),
+            }),
+            async onCacheEntryAdded(projectId, lifecycleApi) {
+                await watchWhiteboardEventsSocket(projectId, lifecycleApi)
+            },
+        }),
     }),
 })
 
@@ -287,4 +458,5 @@ export const {
     useUpdateProjectWhiteboardElementMutation,
     useDeleteProjectWhiteboardElementMutation,
     useWatchWhiteboardCursorQuery,
+    useWatchWhiteboardEventsQuery,
 } = whiteboardApi
