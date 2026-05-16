@@ -227,6 +227,13 @@ func (s *PendingElementStore) ClearFlushCycle(
     ).Err()
 }
 
+func (s *PendingElementStore) RemoveProjectFromIndex(
+    ctx context.Context,
+    projectID uuid.UUID,
+) error {
+    return s.rdb.SRem(ctx, pendingProjectsSetKey, projectID.String()).Err()
+}
+
 func (s *PendingElementStore) ListPendingProjects(
     ctx context.Context,
 ) ([]uuid.UUID, error) {
