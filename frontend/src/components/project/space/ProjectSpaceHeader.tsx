@@ -15,8 +15,8 @@ export function ProjectSpaceHeader({
     iconColor,
 }: ProjectSpaceHeaderProps) {
     return (
-        <div className="border-default-200 flex flex-col gap-4 border-b">
-            <div className="mb-6 flex flex-row items-center gap-3">
+        <div className="border-default-200 flex flex-col gap-4 border-b px-6 py-3">
+            <div className="flex flex-row items-center gap-3">
                 <div className="h-9 w-9">
                     <IconBadge icon={icon} color={iconColor} />
                 </div>

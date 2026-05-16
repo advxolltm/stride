@@ -2,13 +2,35 @@
 	"chat": {
 		"loadingMessages": "Nachrichten werden geladen...",
 		"message": {
-			"lastEdited": "bearbeitet",
+			"lastEdited": "Bearbeitet",
 			"userDeleted": "Benutzer gelöscht",
+			"you": "Du",
+			"menu": "Nachrichtenaktionen",
 			"edit": "Bearbeiten",
-			"delete": "Löschen"
+			"delete": "Löschen",
+			"copy": "Nachricht kopieren"
+		},
+		"copy": {
+			"success": "Nachricht kopiert",
+			"error": "Nachricht konnte nicht kopiert werden"
+		},
+		"groups": {
+			"today": "Heute",
+			"yesterday": "Gestern"
 		},
 		"input": {
-			"placeholder": "Nachricht..."
+			"placeholder": "Nachricht schreiben..."
+		},
+		"empty": {
+			"title": "Noch keine Nachrichten",
+			"description": "Starte die Unterhaltung mit der ersten Nachricht an dein Team."
+		},
+		"deleteDialog": {
+			"title": "Nachricht löschen",
+			"message": "Möchtest du diese Nachricht wirklich löschen?",
+			"confirm": "Löschen",
+			"pending": "Wird gelöscht...",
+			"cancel": "Abbrechen"
 		}
 	}
 }
