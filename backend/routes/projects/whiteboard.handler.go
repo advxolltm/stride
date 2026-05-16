@@ -378,8 +378,7 @@ func (h *whiteboardRouteHandler) elementPATCHHandle(c *echo.Context) error {
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
 	}
 
-	// Update folded onto a pending delete is a no-op; nothing to publish.
-	if buffered.Op == nil {
+	if buffered.Op == nil || buffered.Op.Operation == whiteboardDB.PendingElementDelete {
 		return c.NoContent(http.StatusAccepted)
 	}
 	updated := whiteboardSvc.ElementFromPendingOp(*buffered.Op)

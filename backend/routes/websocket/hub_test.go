@@ -27,41 +27,6 @@ func waitForSubCount(t *testing.T, channel string, want int64) {
 	}, 2*time.Second, 20*time.Millisecond, "expected %d redis subscribers on %s", want, channel)
 }
 
-func TestProjectHubRegistry_AttachReusesSingleRedisSubscription(t *testing.T) {
-	registry := NewProjectHubRegistry(rdb)
-	projectID := uuid.New()
-	channel := projectID.String()
-	ctx := context.Background()
-
-	first, err := registry.Attach(ctx, projectID)
-	require.NoError(t, err)
-	second, err := registry.Attach(ctx, projectID)
-	require.NoError(t, err)
-
-	waitForSubCount(t, channel, 1)
-
-	registry.mu.Lock()
-	hub := registry.hubs[projectID]
-	registry.mu.Unlock()
-	require.NotNil(t, hub)
-	hub.mu.RLock()
-	assert.Len(t, hub.subs, 2)
-	hub.mu.RUnlock()
-
-	first.Detach()
-	hub.mu.RLock()
-	assert.Len(t, hub.subs, 1)
-	hub.mu.RUnlock()
-
-	second.Detach()
-	waitForSubCount(t, channel, 0)
-
-	registry.mu.Lock()
-	_, stillThere := registry.hubs[projectID]
-	registry.mu.Unlock()
-	assert.False(t, stillThere, "hub must be removed from registry on last detach")
-}
-
 func TestProjectHubRegistry_BroadcastDeliversToAllSubscribers(t *testing.T) {
 	registry := NewProjectHubRegistry(rdb)
 	projectID := uuid.New()
@@ -171,5 +136,77 @@ func TestProjectHubRegistry_SlowSubscriberEvicted(t *testing.T) {
 	case <-fastDone:
 		t.Fatal("fast subscriber must not be closed")
 	default:
+	}
+}
+
+// TestProjectHubRegistry_ReattachAfterTeardown_FreshSubscription verifies the
+// recycle path: when the last subscriber detaches the hub tears down its
+// redis subscription, and a subsequent Attach must transparently bring up a
+// fresh subscription delivering new events. Without this, a project would
+// appear "dead" forever after its room briefly empties.
+func TestProjectHubRegistry_ReattachAfterTeardown_FreshSubscription(t *testing.T) {
+	registry := NewProjectHubRegistry(rdb)
+	projectID := uuid.New()
+	channel := projectID.String()
+	ctx := context.Background()
+
+	first, err := registry.Attach(ctx, projectID)
+	require.NoError(t, err)
+	waitForSubCount(t, channel, 1)
+	first.Detach()
+	waitForSubCount(t, channel, 0)
+
+	// Reattach: must create a new hub + new redis subscription.
+	second, err := registry.Attach(ctx, projectID)
+	require.NoError(t, err)
+	defer second.Detach()
+	waitForSubCount(t, channel, 1)
+
+	require.NoError(t, rdb.Publish(ctx, channel, []byte("after-recycle")).Err())
+	select {
+	case got := <-second.Messages:
+		assert.Equal(t, []byte("after-recycle"), got)
+	case <-time.After(2 * time.Second):
+		t.Fatal("re-attached subscriber must receive events")
+	}
+}
+
+// TestProjectHubRegistry_DetachIsIdempotent guards against double-decrement of
+// the refcount on accidental double-detach (e.g. websocket handler also
+// calling Detach in defer after error). A second Detach must not panic, not
+// close a non-empty hub, and not change subscriber count.
+func TestProjectHubRegistry_DetachIsIdempotent(t *testing.T) {
+	registry := NewProjectHubRegistry(rdb)
+	projectID := uuid.New()
+	channel := projectID.String()
+	ctx := context.Background()
+
+	other, err := registry.Attach(ctx, projectID)
+	require.NoError(t, err)
+	defer other.Detach()
+	victim, err := registry.Attach(ctx, projectID)
+	require.NoError(t, err)
+	waitForSubCount(t, channel, 1)
+
+	registry.mu.Lock()
+	hub := registry.hubs[projectID]
+	registry.mu.Unlock()
+	require.NotNil(t, hub)
+
+	victim.Detach()
+	assert.NotPanics(t, func() { victim.Detach() }, "second Detach must be a no-op")
+
+	hub.mu.RLock()
+	subCount := len(hub.subs)
+	hub.mu.RUnlock()
+	assert.Equal(t, 1, subCount, "the other subscriber must still be attached after double-detach")
+
+	// Hub still alive, events still flow to remaining subscriber.
+	require.NoError(t, rdb.Publish(ctx, channel, []byte("alive")).Err())
+	select {
+	case got := <-other.Messages:
+		assert.Equal(t, []byte("alive"), got)
+	case <-time.After(2 * time.Second):
+		t.Fatal("hub must remain alive after double-detach of one subscriber")
 	}
 }

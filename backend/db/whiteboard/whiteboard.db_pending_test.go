@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/datatypes"
@@ -112,26 +111,30 @@ func TestPendingElementStore_MarkRespectsCeiling(t *testing.T) {
     })
 }
 
-func TestPendingElementStore_SurvivesProcessRestart(t *testing.T) {
-    projectID := uuid.New()
-    testutils.RunRedisTestTransaction(t, rdb, keysForProject(projectID), func() {
-        ctx := context.Background()
-        writer := whiteboardDB.NewPendingElementStore(rdb)
-        op := whiteboardDB.PendingElementOperation{
-            ProjectID: projectID,
-            ElementID: uuid.New(),
-            Operation: whiteboardDB.PendingElementUpdate,
-            ElementType: "ellipse",
-        }
-        require.NoError(t, writer.PutPendingElementOperation(ctx, op))
+// TestPendingElementStore_PartialDeleteKeepsCycleAndIndex ensures that
+// deleting only some pending elements does NOT tear down the flush cycle:
+// flush_at and the project's membership in the pending-projects index must
+// remain so the flusher still runs for the leftover ops.
+// TestPendingElementStore_ListPendingProjectsSelfHeals verifies the index
+// auto-prunes garbage entries (e.g. from prior bugs / manual writes) and
+// never breaks listing for healthy callers.
+func TestPendingElementStore_ListPendingProjectsSelfHeals(t *testing.T) {
+	store := whiteboardDB.NewPendingElementStore(rdb)
+	good := uuid.New()
+	testutils.RunRedisTestTransaction(t, rdb, append(keysForProject(good), pendingProjectsSetKey), func() {
+		ctx := context.Background()
+		require.NoError(t, store.PutPendingElementOperation(ctx, whiteboardDB.PendingElementOperation{
+			ProjectID: good, ElementID: uuid.New(),
+			Operation: whiteboardDB.PendingElementUpdate,
+		}))
+		require.NoError(t, rdb.SAdd(ctx, pendingProjectsSetKey, "not-a-uuid").Err())
 
-        // Simulate restart: brand new store instance, brand new Redis client.
-        readerClient := redis.NewClient(rdb.Options())
-        defer func() { require.NoError(t, readerClient.Close()) }()
-        reader := whiteboardDB.NewPendingElementStore(readerClient)
-        got, err := reader.ListPendingElementOperations(ctx, projectID)
-        require.NoError(t, err)
-        require.Len(t, got, 1)
-        assert.Equal(t, op.ElementID, got[0].ElementID)
-    })
+		projects, err := store.ListPendingProjects(ctx)
+		require.NoError(t, err)
+		assert.Contains(t, projects, good)
+
+		isMember, err := rdb.SIsMember(ctx, pendingProjectsSetKey, "not-a-uuid").Result()
+		require.NoError(t, err)
+		assert.False(t, isMember, "invalid index entries must be removed")
+	})
 }

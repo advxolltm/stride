@@ -280,6 +280,72 @@ func TestWhiteboardHandlerPublishesWSEvents(t *testing.T) {
 		cleanupPendingKeys(t, rdb, project.ID)
 	})
 
+	runTest(t, "update after pending delete is a true no-op", func(t *testing.T, tx *gorm.DB, deps whiteboardTestDeps) {
+		ctx := t.Context()
+		user, err := deps.userService.CreateUser(ctx, "wb-update-after-delete", "wb-update-after-delete@test.com", "Password123!")
+		require.NoError(t, err)
+		project, err := deps.projectService.CreateProject(ctx, &user.ID, "WB Update After Delete", "wb-update-after-delete-"+uuid.NewString(), nil, "active")
+		require.NoError(t, err)
+		wb, err := deps.whiteboardSerivce.GetOrCreateWhiteboardByProjectID(ctx, user.ID, project.ID)
+		require.NoError(t, err)
+
+		element := &models.WhiteboardElement{
+			WhiteboardID: wb.ID,
+			CreatedBy:    &user.ID,
+			ElementType:  "rectangle",
+			Props:        datatypes.JSON([]byte(`{"id":"shape-noop","type":"rectangle"}`)),
+			ZIndex:       6,
+		}
+		created, err := deps.whiteboardSerivce.CreateElement(ctx, user.ID, project.ID, element)
+		require.NoError(t, err)
+
+		pendingStore := whiteboardStore.NewPendingElementStore(rdb)
+		require.NoError(t, pendingStore.PutPendingElementOperation(ctx, whiteboardStore.PendingElementOperation{
+			ProjectID:    project.ID,
+			ElementID:    created.ID,
+			WhiteboardID: wb.ID,
+			Operation:    whiteboardStore.PendingElementDelete,
+			UpdatedAt:    time.Now().UTC(),
+		}))
+		require.NoError(t, pendingStore.MarkProjectPendingFlush(ctx, project.ID, time.Now().UTC()))
+		t.Cleanup(func() { cleanupPendingKeys(t, rdb, project.ID) })
+
+		sub, ch := subscribeProjectChannel(t, rdb, project.ID)
+		defer func() {
+			require.NoError(t, sub.Close())
+		}()
+
+		body := `{"elementType":"diamond","props":{"id":"shape-noop","type":"diamond"},"zIndex":9}`
+		req := httptest.NewRequest(http.MethodPatch, "/projects/:id/whiteboard/elements/:elementId", strings.NewReader(body))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
+		e := echo.New()
+		c := e.NewContext(req, rec)
+		c.SetPathValues(echo.PathValues{
+			{Name: "id", Value: project.ID.String()},
+			{Name: "elementId", Value: created.ID.String()},
+		})
+		loginUser(t, deps.authService, c, *user)
+
+		err = deps.authService.AuthenticatedMiddleware()(deps.handler.elementPATCHHandle)(c)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusAccepted, rec.Code)
+		assert.Empty(t, rec.Body.String(), "no-op update should not return payload")
+
+		select {
+		case msg := <-ch:
+			t.Fatalf("expected no ws message for update folded onto delete, got %s", msg.Payload)
+		case <-time.After(500 * time.Millisecond):
+		}
+
+		raw, err := rdb.HGet(ctx, fmt.Sprintf("whiteboard:pending:%s:elements", project.ID), created.ID.String()).Result()
+		require.NoError(t, err)
+		var op whiteboardStore.PendingElementOperation
+		require.NoError(t, json.Unmarshal([]byte(raw), &op))
+		assert.Equal(t, whiteboardStore.PendingElementDelete, op.Operation)
+		assert.Equal(t, wb.ID, op.WhiteboardID)
+	})
+
 	runTest(t, "create then delete collapses without publishing delete", func(t *testing.T, tx *gorm.DB, deps whiteboardTestDeps) {
 		ctx := t.Context()
 		user, err := deps.userService.CreateUser(ctx, "wb-collapse", "wb-collapse@test.com", "Password123!")

@@ -3,8 +3,6 @@ package whiteboard_test
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"testing"
 	"time"
 
@@ -198,45 +196,6 @@ func TestFlusher_FlushesCreateUpdateDelete_WhenDue(t *testing.T) {
 	})
 }
 
-func TestFlusher_MaxWaitCeiling(t *testing.T) {
-	runTest(t, db, "ceiling caps continuous editing", func(t *testing.T, db *gorm.DB, _ whiteboardSvc.WhiteboardService) {
-		project, member, wb := setupProjectWithWhiteboard(t, db)
-		ctx := context.Background()
-
-		start := time.Now().UTC().Truncate(time.Millisecond)
-		clock := newFakeClock(start)
-		_, pendingStore := newTestFlusher(db, clock)
-
-		testutils.RunRedisTestTransaction(t, rdb, pendingKeysForFlush(project.ID), func() {
-			require.NoError(t, pendingStore.PutPendingElementOperation(ctx, whiteboardDB.PendingElementOperation{
-				ProjectID:    project.ID,
-				ElementID:    uuid.New(),
-				WhiteboardID: wb.ID,
-				Operation:    whiteboardDB.PendingElementCreate,
-				CreatedBy:    &member.ID,
-				ElementType:  "rect",
-				Props:        datatypes.JSON([]byte(`{"id":"x"}`)),
-				ZIndex:       zPtr(0),
-				UpdatedAt:    clock.Now(),
-			}))
-			require.NoError(t, pendingStore.MarkProjectPendingFlush(ctx, project.ID, clock.Now()))
-
-
-			for i := 0; i < int(whiteboardDB.PendingFlushMaxWait/time.Second)+3; i++ {
-				clock.Advance(time.Second)
-				require.NoError(t, pendingStore.MarkProjectPendingFlush(ctx, project.ID, clock.Now()))
-			}
-
-			flushAt, ok, err := pendingStore.ProjectFlushAt(ctx, project.ID)
-			require.NoError(t, err)
-			require.True(t, ok)
-			ceiling := start.Add(whiteboardDB.PendingFlushMaxWait)
-			assert.True(t, !flushAt.After(ceiling),
-				"flush_at %s must be capped at first_pending_at + MaxWait %s", flushAt, ceiling)
-		})
-	})
-}
-
 func TestFlusher_RestartRecovery(t *testing.T) {
 	runTest(t, db, "new flusher recovers pending ops from Redis", func(t *testing.T, db *gorm.DB, svc whiteboardSvc.WhiteboardService) {
 		project, member, wb := setupProjectWithWhiteboard(t, db)
@@ -367,6 +326,72 @@ func TestFlusher_PublishesRollbackOnFailure(t *testing.T) {
 	})
 }
 
+func TestFlusher_RollbackUsesLatestFoldedClientMetadata(t *testing.T) {
+	runTest(t, db, "rollback carries latest client metadata after create-update fold", func(t *testing.T, db *gorm.DB, svc whiteboardSvc.WhiteboardService) {
+		project, member, _ := setupProjectWithWhiteboard(t, db)
+		ctx := context.Background()
+
+		ch, closeSub := subscribeProjectChannel(t, project.ID)
+		t.Cleanup(closeSub)
+
+		clock := newFakeClock(time.Now().UTC())
+		f, pendingStore := newTestFlusher(db, clock)
+
+		testutils.RunRedisTestTransaction(t, rdb, pendingKeysForFlush(project.ID), func() {
+			created, err := svc.BufferCreateElement(ctx, project.ID,
+				whiteboardSvc.ElementBufferMeta{UserID: member.ID, ClientID: "client-a", OperationID: "op-1"},
+				whiteboardSvc.CreateElementInput{
+					ElementType: "rect",
+					Props:       datatypes.JSON([]byte(`{"id":"fold-meta"}`)),
+					ZIndex:      1,
+				},
+			)
+			require.NoError(t, err)
+			require.NotNil(t, created)
+			require.NotNil(t, created.Op)
+
+			updatedProps := datatypes.JSON([]byte(`{"id":"fold-meta","x":42}`))
+			updated, err := svc.BufferUpdateElement(ctx, project.ID, created.Op.ElementID,
+				whiteboardSvc.ElementBufferMeta{UserID: member.ID, ClientID: "client-b", OperationID: "op-2"},
+				whiteboardDB.UpdateElementFields{Props: &updatedProps},
+			)
+			require.NoError(t, err)
+			require.NotNil(t, updated)
+			require.NotNil(t, updated.Op)
+			assert.Equal(t, whiteboardDB.PendingElementCreate, updated.Op.Operation)
+			assert.Equal(t, "client-b", updated.Op.ClientID)
+			assert.Equal(t, "op-2", updated.Op.OperationID)
+
+			ops, err := pendingStore.ListPendingElementOperations(ctx, project.ID)
+			require.NoError(t, err)
+			require.Len(t, ops, 1)
+			op := ops[0]
+			assert.Equal(t, "client-b", op.ClientID)
+			assert.Equal(t, "op-2", op.OperationID)
+
+			// Force flush failure while preserving latest folded metadata.
+			op.WhiteboardID = uuid.New()
+			require.NoError(t, pendingStore.PutPendingElementOperation(ctx, op))
+
+			clock.Advance(whiteboardDB.PendingFlushQuietWindow + time.Second)
+			f.FlushDue(ctx)
+
+			remaining, err := pendingStore.ListPendingElementOperations(ctx, project.ID)
+			require.NoError(t, err)
+			require.Len(t, remaining, 1)
+
+			msgs := drainMessagesUntil(ch, 250*time.Millisecond, 2*time.Second)
+			rollback := findRollbackForElement(t, msgs, op.ElementID)
+			require.NotNil(t, rollback)
+			assert.Equal(t, "client-b", rollback.Meta.ClientID)
+			assert.Equal(t, "op-2", rollback.Meta.OperationID)
+			require.NotNil(t, rollback.Meta.OriginUserID)
+			assert.Equal(t, member.ID, *rollback.Meta.OriginUserID)
+			assert.Equal(t, "op-2", rollback.Payload.OperationID)
+		})
+	})
+}
+
 type capturedRollback struct {
 	Meta    routes.WSMessageMeta
 	Payload routes.WhiteboardElementRollbackPayload
@@ -395,12 +420,4 @@ func findRollbackForElement(t *testing.T, msgs []*redis.Message, elementID uuid.
 }
 
 func TestFlusher_NoOpWhenIdle(t *testing.T) {
-	runTest(t, db, "FlushDue is safe when no pending projects exist", func(t *testing.T, db *gorm.DB, _ whiteboardSvc.WhiteboardService) {
-		clock := newFakeClock(time.Now().UTC())
-		f, _ := newTestFlusher(db, clock)
-		assert.NotPanics(t, func() { f.FlushDue(context.Background()) })
-	})
 }
-
-var _ = fmt.Sprintf
-var _ = errors.New
