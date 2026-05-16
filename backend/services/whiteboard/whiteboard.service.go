@@ -24,6 +24,10 @@ type (
 		CreateElement(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, element *models.WhiteboardElement) (*models.WhiteboardElement, error)
 		UpdateElement(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, id uuid.UUID, fields whiteboard.UpdateElementFields) (*models.WhiteboardElement, error)
 		DeleteElement(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, id uuid.UUID) error
+
+		BufferCreateElement(ctx context.Context, projectID uuid.UUID, meta ElementBufferMeta, req CreateElementInput) (*BufferedElement, error)
+		BufferUpdateElement(ctx context.Context, projectID uuid.UUID, elementID uuid.UUID, meta ElementBufferMeta, fields whiteboard.UpdateElementFields) (*BufferedElement, error)
+		BufferDeleteElement(ctx context.Context, projectID uuid.UUID, elementID uuid.UUID, meta ElementBufferMeta) (*BufferedElement, error)
 	}
 
 	whiteboardService struct {

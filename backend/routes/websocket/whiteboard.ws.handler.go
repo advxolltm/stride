@@ -179,7 +179,7 @@ func (h whiteboardWSRouteHandler) forwardWhiteboardHubMessages(
 
 func isWhiteboardWSEventType(t routes.WSMessageType) bool {
 	switch t {
-	case routes.WhiteboardElementCreate, routes.WhiteboardElementUpdate, routes.WhiteboardElementDelete:
+	case routes.WhiteboardElementCreate, routes.WhiteboardElementUpdate, routes.WhiteboardElementDelete, routes.WhiteboardElementRollback:
 		return true
 	default:
 		return false

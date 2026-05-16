@@ -281,8 +281,6 @@ func (h *whiteboardRouteHandler) elementPOSTHandle(c *echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, routes.ErrorResponse{Error: authSvc.ErrUnauthorized.Error()})
 	}
 	clientID, operationID := readWhiteboardRequestMetadata(c)
-	_ = clientID
-	_ = operationID
 
 	projectID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -294,18 +292,19 @@ func (h *whiteboardRouteHandler) elementPOSTHandle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid request body"})
 	}
 
-	element := &models.WhiteboardElement{
-		CreatedBy:   &userID,
-		ElementType: req.ElementType,
-		Props:       req.Props,
-		ZIndex:      req.ZIndex,
-	}
-
-	created, err := h.whiteboardService.CreateElement(c.Request().Context(), userID, projectID, element)
+	buffered, err := h.whiteboardService.BufferCreateElement(
+		c.Request().Context(),
+		projectID,
+		whiteboardSvc.ElementBufferMeta{UserID: userID, ClientID: clientID, OperationID: operationID},
+		whiteboardSvc.CreateElementInput{ElementType: req.ElementType, Props: req.Props, ZIndex: req.ZIndex},
+	)
 	if err != nil {
 		status, msg := mapServiceErrorWB(err)
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
 	}
+
+	// Create can never collapse without a paired delete; Op is always non-nil.
+	created := whiteboardSvc.ElementFromPendingOp(*buffered.Op)
 
 	meta := &routes.WSMessageMeta{
 		OriginUserID: &userID,
@@ -318,12 +317,12 @@ func (h *whiteboardRouteHandler) elementPOSTHandle(c *echo.Context) error {
 		projectID,
 		routes.WhiteboardElementCreate,
 		meta,
-		mapWhiteboardElementWSUpdate(created),
+		mapWhiteboardElementWSUpdate(&created),
 	); err != nil {
 		slog.Error("elementPOSTHandle: Failed to send ws update", "error", err)
 	}
 
-	return c.JSON(http.StatusCreated, created)
+	return c.JSON(http.StatusAccepted, &created)
 }
 
 // PATCH /projects/:id/whiteboard/elements/:elementId
@@ -347,8 +346,6 @@ func (h *whiteboardRouteHandler) elementPATCHHandle(c *echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, routes.ErrorResponse{Error: authSvc.ErrUnauthorized.Error()})
 	}
 	clientID, operationID := readWhiteboardRequestMetadata(c)
-	_ = clientID
-	_ = operationID
 
 	projectID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -365,15 +362,27 @@ func (h *whiteboardRouteHandler) elementPATCHHandle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid request body"})
 	}
 
-	updated, err := h.whiteboardService.UpdateElement(c.Request().Context(), userID, projectID, elementID, whiteboardDB.UpdateElementFields{
-		ElementType: req.ElementType,
-		Props:       req.Props,
-		ZIndex:      req.ZIndex,
-	})
+	buffered, err := h.whiteboardService.BufferUpdateElement(
+		c.Request().Context(),
+		projectID,
+		elementID,
+		whiteboardSvc.ElementBufferMeta{UserID: userID, ClientID: clientID, OperationID: operationID},
+		whiteboardDB.UpdateElementFields{
+			ElementType: req.ElementType,
+			Props:       req.Props,
+			ZIndex:      req.ZIndex,
+		},
+	)
 	if err != nil {
 		status, msg := mapServiceErrorWB(err)
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
 	}
+
+	// Update folded onto a pending delete is a no-op; nothing to publish.
+	if buffered.Op == nil {
+		return c.NoContent(http.StatusAccepted)
+	}
+	updated := whiteboardSvc.ElementFromPendingOp(*buffered.Op)
 
 	meta := &routes.WSMessageMeta{
 		OriginUserID: &userID,
@@ -386,12 +395,12 @@ func (h *whiteboardRouteHandler) elementPATCHHandle(c *echo.Context) error {
 		projectID,
 		routes.WhiteboardElementUpdate,
 		meta,
-		mapWhiteboardElementWSUpdate(updated),
+		mapWhiteboardElementWSUpdate(&updated),
 	); err != nil {
 		slog.Error("elementPATCHHandle: Failed to send ws update", "error", err)
 	}
 
-	return c.JSON(http.StatusOK, updated)
+	return c.JSON(http.StatusAccepted, &updated)
 }
 
 // DELETE /projects/:id/whiteboard/elements/:elementId
@@ -414,8 +423,6 @@ func (h *whiteboardRouteHandler) elementDELETEHandle(c *echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, routes.ErrorResponse{Error: authSvc.ErrUnauthorized.Error()})
 	}
 	clientID, operationID := readWhiteboardRequestMetadata(c)
-	_ = clientID
-	_ = operationID
 
 	projectID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -427,9 +434,20 @@ func (h *whiteboardRouteHandler) elementDELETEHandle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid element id"})
 	}
 
-	if err := h.whiteboardService.DeleteElement(c.Request().Context(), userID, projectID, elementID); err != nil {
+	buffered, err := h.whiteboardService.BufferDeleteElement(
+		c.Request().Context(),
+		projectID,
+		elementID,
+		whiteboardSvc.ElementBufferMeta{UserID: userID, ClientID: clientID, OperationID: operationID},
+	)
+	if err != nil {
 		status, msg := mapServiceErrorWB(err)
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
+	}
+
+	// create+delete collapsed -> nothing was ever published, nothing to do.
+	if buffered.Collapsed {
+		return c.NoContent(http.StatusAccepted)
 	}
 
 	meta := &routes.WSMessageMeta{
@@ -450,5 +468,5 @@ func (h *whiteboardRouteHandler) elementDELETEHandle(c *echo.Context) error {
 		slog.Error("elementDELETEHandle: Failed to send ws update", "error", err)
 	}
 
-	return c.NoContent(http.StatusNoContent)
+	return c.NoContent(http.StatusAccepted)
 }

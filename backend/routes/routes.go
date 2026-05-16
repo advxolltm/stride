@@ -460,6 +460,7 @@ const (
 	WhiteboardElementCreate
 	WhiteboardElementUpdate
 	WhiteboardElementDelete
+	WhiteboardElementRollback
 )
 
 type WSMessageMeta struct {
