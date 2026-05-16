@@ -27,6 +27,7 @@ type whiteboardWSRouteHandler struct {
 	userService    user.UserService
 	upgrader       websocket.Upgrader
 	rdb            *redis.Client
+	hubs           *ProjectHubRegistry
 	presenceStore  *whiteboardSvc.CursorPresenceStore
 }
 
@@ -60,12 +61,14 @@ func newWhiteboardWSRouteHandler(
 	projectService project.ProjectService,
 	userService user.UserService,
 	rdb *redis.Client,
+	hubs *ProjectHubRegistry,
 ) whiteboardWSRouteHandler {
 	return whiteboardWSRouteHandler{
 		authService:    authService,
 		projectService: projectService,
 		userService:    userService,
 		rdb:            rdb,
+		hubs:           hubs,
 		presenceStore:  whiteboardSvc.NewCursorPresenceStore(rdb),
 		upgrader:       newWSUpgrader(),
 	}
@@ -96,22 +99,17 @@ func (h whiteboardWSRouteHandler) connectGET(c *echo.Context) error {
 		return err
 	}
 
-	if h.rdb == nil {
-		slog.Error("whiteboard websocket missing redis client", "projectID", session.ProjectID, "userID", session.UserID)
+	if h.hubs == nil {
+		slog.Error("whiteboard websocket missing project hub registry", "projectID", session.ProjectID, "userID", session.UserID)
 		return c.JSON(http.StatusInternalServerError, routes.ErrorResponse{Error: "internal server error"})
 	}
 
-	sub := h.rdb.Subscribe(ctx, session.ProjectID.String())
-	if _, err := sub.Receive(ctx); err != nil {
-		slog.Error("failed to subscribe whiteboard websocket to redis", "error", err, "projectID", session.ProjectID, "userID", session.UserID)
+	sub, err := h.hubs.Attach(ctx, session.ProjectID)
+	if err != nil {
+		slog.Error("failed to attach whiteboard websocket to project hub", "error", err, "projectID", session.ProjectID, "userID", session.UserID)
 		return c.JSON(http.StatusInternalServerError, routes.ErrorResponse{Error: "internal server error"})
 	}
-	defer func() {
-		err := sub.Close()
-		if err != nil {
-			slog.Error("failed to close whiteboard redis sub", "error", err)
-		}
-	}()
+	defer sub.Detach()
 
 	ws, err := h.upgrader.Upgrade(c.Response(), c.Request(), nil)
 	if err != nil {
@@ -119,49 +117,64 @@ func (h whiteboardWSRouteHandler) connectGET(c *echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, routes.ErrorResponse{Error: err.Error()})
 	}
 	defer func() {
-		err := ws.Close()
-		if err != nil {
+		if err := ws.Close(); err != nil {
 			slog.Error("failed to close whiteboard websocket connection", "error", err)
 		}
 	}()
 
-	ch := sub.Channel()
-	disconnectCh := make(chan error, 1)
-	go consumeProjectWSDisconnect(ws, disconnectCh)
+	ws.SetReadLimit(wsMaxMessageSize)
+	if err := ws.SetReadDeadline(time.Now().Add(wsPongWait)); err != nil {
+		slog.Error("failed to set whiteboard read deadline", "error", err)
+		return nil
+	}
+	ws.SetPongHandler(func(string) error {
+		return ws.SetReadDeadline(time.Now().Add(wsPongWait))
+	})
 
-	for {
-		select {
-		case err := <-disconnectCh:
-			if err != nil && !websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
-				slog.Debug("whiteboard ws closed", "error", err, "user-id", session.UserID)
-			}
-			return nil
-		case msg, ok := <-ch:
-			if !ok {
-				return nil
-			}
+	var writeMu sync.Mutex
+	pingCtx, pingCancel := context.WithCancel(context.Background())
+	defer pingCancel()
+	errCh := make(chan error, 3)
 
-			if isWSSessionExpired(session.Expiry) {
-				slog.Debug("Client session expired, closing whiteboard ws connection", "user-id", session.UserID)
-				return nil
-			}
+	go consumeProjectWSDisconnect(ws, errCh)
+	go pingWSConn(pingCtx, ws, &writeMu, errCh)
+	go h.forwardWhiteboardHubMessages(sub.Messages, ws, &writeMu, session.Expiry, errCh)
 
-			var envelope whiteboardWSMessageEnvelope
-			if err := json.Unmarshal([]byte(msg.Payload), &envelope); err != nil {
-				slog.Debug("ignored invalid whiteboard ws payload", "error", err)
-				continue
-			}
+	runErr := <-errCh
+	if runErr != nil && !websocket.IsCloseError(runErr, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+		slog.Debug("whiteboard ws closed", "error", runErr, "user-id", session.UserID)
+	}
+	return nil
+}
 
-			if !isWhiteboardWSEventType(envelope.Type) {
-				continue
-			}
+func (h whiteboardWSRouteHandler) forwardWhiteboardHubMessages(
+	messages <-chan []byte,
+	conn *websocket.Conn,
+	writeMu *sync.Mutex,
+	expiry time.Time,
+	errCh chan<- error,
+) {
+	for payload := range messages {
+		if isWSSessionExpired(expiry) {
+			errCh <- nil
+			return
+		}
 
-			if err := ws.WriteMessage(websocket.TextMessage, []byte(msg.Payload)); err != nil {
-				slog.Debug("whiteboard ws write failed, closing connection", "error", err, "user-id", session.UserID)
-				return nil
-			}
+		var envelope whiteboardWSMessageEnvelope
+		if err := json.Unmarshal(payload, &envelope); err != nil {
+			slog.Debug("ignored invalid whiteboard ws payload", "error", err)
+			continue
+		}
+		if !isWhiteboardWSEventType(envelope.Type) {
+			continue
+		}
+
+		if err := writeWSMessage(conn, writeMu, websocket.TextMessage, payload); err != nil {
+			errCh <- err
+			return
 		}
 	}
+	errCh <- nil
 }
 
 func isWhiteboardWSEventType(t routes.WSMessageType) bool {
@@ -272,7 +285,7 @@ func (h whiteboardWSRouteHandler) cursorConnectGET(c *echo.Context) error {
 
 	go h.forwardWhiteboardCursorSnapshots(channel, conn, &writeMu, session.Expiry, errCh)
 	go h.consumeWhiteboardCursorUpdates(redisCtx, conn, session.ProjectID, presenceRecord, session.Expiry, errCh)
-	go pingWhiteboardCursor(redisCtx, conn, &writeMu, errCh)
+	go pingWSConn(redisCtx, conn, &writeMu, errCh)
 
 	runErrs := []error{<-errCh}
 	cancel()
@@ -373,29 +386,6 @@ func (h whiteboardWSRouteHandler) consumeWhiteboardCursorUpdates(
 		if err := h.presenceStore.PublishSnapshot(ctx, projectID); err != nil {
 			errCh <- err
 			return
-		}
-	}
-}
-
-func pingWhiteboardCursor(
-	ctx context.Context,
-	conn *websocket.Conn,
-	writeMu *sync.Mutex,
-	errCh chan<- error,
-) {
-	ticker := time.NewTicker(wsPingPeriod)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			errCh <- nil
-			return
-		case <-ticker.C:
-			if err := writeWSMessage(conn, writeMu, websocket.PingMessage, nil); err != nil {
-				errCh <- err
-				return
-			}
 		}
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"backend/routes"
 	"backend/services/auth"
 	"backend/services/project"
+	"context"
 	"net/http"
 	"sync"
 	"time"
@@ -70,4 +71,27 @@ func writeWSMessage(conn *websocket.Conn, writeMu *sync.Mutex, messageType int, 
 		return err
 	}
 	return conn.WriteMessage(messageType, payload)
+}
+
+func pingWSConn(
+	ctx context.Context,
+	conn *websocket.Conn,
+	writeMu *sync.Mutex,
+	errCh chan<- error,
+) {
+	ticker := time.NewTicker(wsPingPeriod)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			errCh <- nil
+			return
+		case <-ticker.C:
+			if err := writeWSMessage(conn, writeMu, websocket.PingMessage, nil); err != nil {
+				errCh <- err
+				return
+			}
+		}
+	}
 }

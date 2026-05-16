@@ -58,7 +58,7 @@ func newWSTestDeps(db *gorm.DB, rdb *redis.Client) wsTestDeps {
 		authService:    aServ,
 		projectService: pServ,
 		userService:    uServ,
-		handler:        newWhiteboardWSRouteHandler(aServ, pServ, uServ, rdb),
+		handler:        newWhiteboardWSRouteHandler(aServ, pServ, uServ, rdb, NewProjectHubRegistry(rdb)),
 	}
 }
 
