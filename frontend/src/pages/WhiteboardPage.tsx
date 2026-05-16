@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { Button, toast } from '@heroui/react'
 import { isInvisiblySmallElement, restoreElements } from '@excalidraw/excalidraw'
+import { skipToken } from '@reduxjs/toolkit/query'
 import { useTranslation } from 'react-i18next'
 import { ChevronRight, Home, Share2, Zap } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
@@ -14,6 +15,7 @@ import {
     useGetProjectWhiteboardElementsQuery,
     useGetProjectWhiteboardQuery,
     useUpdateProjectWhiteboardElementMutation,
+    useWatchWhiteboardEventsQuery,
 } from '../store/features/whiteboard/whiteboard.api'
 import { UserAvatar } from '../shared/components'
 
@@ -26,6 +28,20 @@ const serializeElementSnapshot = (
         props: element,
         zIndex,
     })
+
+const filterElementIDSet = (
+    elementIDs: Set<string>,
+    predicate: (elementID: string) => boolean,
+) => new Set([...elementIDs].filter(predicate))
+
+const toWhiteboardElementPayload = (
+    element: ExcalidrawElement,
+    zIndex: number,
+) => ({
+    elementType: element.type,
+    props: element,
+    zIndex,
+})
 
 export function WhiteboardPage() {
     const { projectId } = useParams()
@@ -42,6 +58,7 @@ export function WhiteboardPage() {
         useDeleteProjectWhiteboardElementMutation()
     const [updateProjectWhiteboardElement] =
         useUpdateProjectWhiteboardElementMutation()
+    useWatchWhiteboardEventsQuery(projectId ?? skipToken)
     const {
         data: project,
         isLoading: isProjectLoading,
@@ -75,6 +92,10 @@ export function WhiteboardPage() {
     }, [projectId])
 
     useEffect(() => {
+        const persistedElementIDs = new Set(
+            whiteboardElements.map((backendElement) => backendElement.props.id),
+        )
+
         excalidrawToBackendElementIdRef.current = new Map(
             whiteboardElements.map((backendElement) => [
                 backendElement.props.id,
@@ -89,6 +110,18 @@ export function WhiteboardPage() {
                     backendElement.zIndex,
                 ),
             ]),
+        )
+        pendingCreateElementIdsRef.current = filterElementIDSet(
+            pendingCreateElementIdsRef.current,
+            (elementID) => !persistedElementIDs.has(elementID),
+        )
+        pendingDeleteElementIdsRef.current = filterElementIDSet(
+            pendingDeleteElementIdsRef.current,
+            (elementID) => persistedElementIDs.has(elementID),
+        )
+        pendingUpdateElementIdsRef.current = filterElementIDSet(
+            pendingUpdateElementIdsRef.current,
+            (elementID) => persistedElementIDs.has(elementID),
         )
         isElementIdMappingReadyRef.current = true
     }, [whiteboardElements])
@@ -176,11 +209,7 @@ export function WhiteboardPage() {
 
                 void createProjectWhiteboardElement({
                     projectId,
-                    body: {
-                        elementType: element.type,
-                        props: element,
-                        zIndex: index,
-                    },
+                    body: toWhiteboardElementPayload(element, index),
                 })
                     .unwrap()
                     .then((createdElement) => {
@@ -212,11 +241,7 @@ export function WhiteboardPage() {
             void updateProjectWhiteboardElement({
                 projectId,
                 elementId: backendElementId,
-                body: {
-                    elementType: element.type,
-                    props: element,
-                    zIndex: index,
-                },
+                body: toWhiteboardElementPayload(element, index),
             })
                 .unwrap()
                 .then(() => {
@@ -386,6 +411,9 @@ export function WhiteboardPage() {
             <WhiteboardCanvas
                 key={projectId}
                 elements={excalidrawElements}
+                viewportStorageKey={
+                    projectId ? `whiteboard:${projectId}:viewport` : undefined
+                }
                 onChange={handleCanvasChange}
                 onPointerUp={handleCanvasPointerUp}
             />

@@ -38,6 +38,7 @@
     "emptyDescription": "Neue Updates werden hier angezeigt.",
     "deleteAriaLabel": "Benachrichtigung loeschen",
     "markAsReadError": "Benachrichtigung konnte nicht als gelesen markiert werden.",
+    "openError": "Ziel der Benachrichtigung konnte nicht geoeffnet werden.",
     "deleteError": "Benachrichtigung konnte nicht geloescht werden.",
     "objectTypes": {
       "notification": "Benachrichtigung",

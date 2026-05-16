@@ -29,6 +29,7 @@ type (
 		GetProject(ctx context.Context, id uuid.UUID) (*models.Project, error)
 		GetProjectMember(ctx context.Context, projectId uuid.UUID, userID uuid.UUID) (*models.ProjectMember, error)
 		GetProjectMembers(ctx context.Context, id uuid.UUID) ([]models.ProjectMember, error)
+		GetProjectMemberUserIDsExcept(ctx context.Context, projectID uuid.UUID, excludedUserID uuid.UUID) (uuid.UUIDs, error)
 		GetProjectSkills(ctx context.Context, id uuid.UUID) ([]models.ProjectSkill, error)
 		IsProjectOwner(ctx context.Context, userId uuid.UUID, projectId uuid.UUID) (bool, error)
 		IsProjectMember(ctx context.Context, userID uuid.UUID, projectID uuid.UUID) (bool, error)
@@ -114,6 +115,18 @@ func (s projectService) GetProjectMembers(ctx context.Context, id uuid.UUID) ([]
 		return nil, fmt.Errorf("%w: %w", ErrProjectStoreFailed, err)
 	}
 	return members, nil
+}
+
+func (s projectService) GetProjectMemberUserIDsExcept(ctx context.Context, projectID uuid.UUID, excludedUserID uuid.UUID) (uuid.UUIDs, error) {
+	userIDs, err := s.projectStore.GetProjectMemberUserIDsExcept(ctx, projectID, excludedUserID)
+	if err != nil {
+		if errors.Is(err, project.ErrProjectNotFound) {
+			return nil, ErrProjectNotFound
+		}
+		return nil, fmt.Errorf("%w: %w", ErrProjectStoreFailed, err)
+	}
+
+	return userIDs, nil
 }
 
 func (s projectService) GetProjectSkills(ctx context.Context, id uuid.UUID) ([]models.ProjectSkill, error) {

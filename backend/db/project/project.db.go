@@ -28,6 +28,7 @@ type (
 		GetAllProjects(ctx context.Context, userid uuid.UUID) ([]models.Project, error)
 		GetProject(ctx context.Context, id uuid.UUID) (*models.Project, error)
 		GetProjectMembers(ctx context.Context, id uuid.UUID) ([]models.ProjectMember, error)
+		GetProjectMemberUserIDsExcept(ctx context.Context, projectID uuid.UUID, excludedUserID uuid.UUID) (uuid.UUIDs, error)
 		GetProjectSkills(ctx context.Context, id uuid.UUID) ([]models.ProjectSkill, error)
 		IsProjectMember(ctx context.Context, userID uuid.UUID, projectID uuid.UUID) (bool, error)
 		CreateProject(ctx context.Context, project *models.Project) error
@@ -91,6 +92,31 @@ func (s *projectStore) GetProjectMembers(ctx context.Context, id uuid.UUID) ([]m
 		return nil, result.Error
 	}
 	return project.Members, nil
+}
+
+func (s *projectStore) GetProjectMemberUserIDsExcept(ctx context.Context, projectID uuid.UUID, excludedUserID uuid.UUID) (uuid.UUIDs, error) {
+	var project models.Project
+	if err := s.db.WithContext(ctx).Select("id").First(&project, projectID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrProjectNotFound
+		}
+		return nil, err
+	}
+
+	query := s.db.WithContext(ctx).
+		Model(&models.ProjectMember{}).
+		Where("project_id = ?", projectID)
+
+	if excludedUserID != uuid.Nil {
+		query = query.Where("user_id <> ?", excludedUserID)
+	}
+
+	var userIDs uuid.UUIDs
+	if err := query.Pluck("user_id", &userIDs).Error; err != nil {
+		return nil, err
+	}
+
+	return userIDs, nil
 }
 
 func (s *projectStore) IsProjectMember(ctx context.Context, userID uuid.UUID, projectID uuid.UUID) (bool, error) {
