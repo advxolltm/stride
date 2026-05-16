@@ -53,7 +53,7 @@ func newTestWhiteboardHandler(db *gorm.DB, rdb *redis.Client) whiteboardTestDeps
 	uServ := userService.NewUserService(uStore)
 	pServ := projectService.NewProjectService(pStore)
 	aServ := authService.NewAuthenticationService(uServ)
-	wServ := whiteboardService.NewWhiteboardService(wStore, pServ)
+	wServ := whiteboardService.NewWhiteboardService(wStore, pServ, whiteboardStore.NewPendingElementStore(rdb))
 
 	return whiteboardTestDeps{
 		handler:           newWhiteboardRouteHandler(wServ, aServ, rdb),

@@ -17,4 +17,5 @@ var (
 	ErrDecodeCursorPresence		= errors.New("decode cursor presence")
 	ErrMarshalCursorSnapshot	= errors.New("marshal cursor snapshot")
 	ErrPublishCursorSnapshot	= errors.New("publish cursor snapshot")
+	ErrListPendingOperations	= errors.New("list pending whiteboard operations")
 )

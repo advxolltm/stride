@@ -29,11 +29,21 @@ type (
 	whiteboardService struct {
 		store          whiteboard.WhiteboardStore
 		projectService project.ProjectService
+		pendingStore   *whiteboard.PendingElementStore
 	}
 )
 
-func NewWhiteboardService(store whiteboard.WhiteboardStore, projectService project.ProjectService) WhiteboardService {
-	return &whiteboardService{store: store, projectService: projectService}
+
+func NewWhiteboardService(
+	store whiteboard.WhiteboardStore,
+	projectService project.ProjectService,
+	pendingStore *whiteboard.PendingElementStore,
+) WhiteboardService {
+	return &whiteboardService{
+		store:          store,
+		projectService: projectService,
+		pendingStore:   pendingStore,
+	}
 }
 
 func ValidateUserAccessToProject(ctx context.Context, projectService project.ProjectService, userID uuid.UUID, projectID uuid.UUID) error {
@@ -78,7 +88,21 @@ func (s *whiteboardService) GetElements(ctx context.Context, userID uuid.UUID, p
 	if err := ValidateUserAccessToProject(ctx, s.projectService, userID, projectID); err != nil {
 		return nil, err
 	}
-	return s.store.GetElements(ctx, projectID)
+	elements, err := s.store.GetElements(ctx, projectID)
+	if err != nil {
+		return nil, err
+	}
+	if s.pendingStore == nil {
+		return elements, nil
+	}
+	ops, err := s.pendingStore.ListPendingElementOperations(ctx, projectID)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrListPendingOperations, err)
+	}
+	if len(ops) == 0 {
+		return elements, nil
+	}
+	return MergePendingOperations(elements, ops), nil
 }
 
 func (s *whiteboardService) GetElement(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, id uuid.UUID) (*models.WhiteboardElement, error) {
