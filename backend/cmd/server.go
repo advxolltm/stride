@@ -1,9 +1,12 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/labstack/echo/v5"
@@ -147,10 +150,16 @@ func main() {
 	userService := userService.NewUserService(userStore)
 	projectService := projectService.NewProjectService(projectStore)
 	authService := authService.NewAuthenticationService(userService)
-	whiteboardService := whiteboardService.NewWhiteboardService(whiteboardStore, projectService)
+	whiteboardPendingStore := whiteboardDB.NewPendingElementStore(rdb)
+	whiteboardFlusher := whiteboardService.NewFlusher(whiteboardPendingStore, mainDB, rdb)
+	whiteboardService := whiteboardService.NewWhiteboardService(whiteboardStore, projectService, whiteboardPendingStore)
 	taskService := taskService.NewTaskService(taskStore, projectService)
 	notificationService := notificationService.NewNotificationService(notificationStore)
 	chatService := chatService.NewChatService(chatStore)
+
+	workerCtx, stopWorkers := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stopWorkers()
+	go whiteboardFlusher.Run(workerCtx)
 
 	// Routes
 	// Register route handler by adding them to the array

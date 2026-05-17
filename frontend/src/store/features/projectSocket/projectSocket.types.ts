@@ -17,6 +17,7 @@ export const WSMessageType = {
     WhiteboardElementCreate: 15,
     WhiteboardElementUpdate: 16,
     WhiteboardElementDelete: 17,
+    WhiteboardElementRollback: 18,
 } as const
 
 export type WSMessageType = (typeof WSMessageType)[keyof typeof WSMessageType]
