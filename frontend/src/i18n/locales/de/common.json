@@ -14,7 +14,8 @@
     "archivedProjects": "Archivierte Projekte",
     "noActiveProjects": "Keine aktiven Projekte",
     "noArchivedProjects": "Keine archivierten Projekte",
-    "expandSidebar": "Seitenleiste erweitern"
+    "expandSidebar": "Seitenleiste erweitern",
+    "collapseSidebar": "Seitenleiste einklappen"
   },
   "logout": {
     "label": "Abmelden",

@@ -59,7 +59,7 @@ export function ProjectGeneralSettings({
             key: 'name',
             label: t('generalSettings.projectName'),
             value: name,
-            valueClassName: 'text-sm',
+            valueClassName: 'text-sm wrap-break-word truncate',
         },
         {
             key: 'description',

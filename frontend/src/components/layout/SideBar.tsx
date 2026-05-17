@@ -1,17 +1,13 @@
 import { Button } from '@heroui/react'
 import { useState } from 'react'
-import {
-    Archive,
-    FolderKanban,
-    PanelLeftClose,
-    PanelLeftOpen,
-} from 'lucide-react'
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { SidebarItems, type SidebarProject } from '../main/SidebarItems'
 import { SidebarTooltip } from '../main/SidebarTooltip'
 import { LogoutButton } from '../../shared/components/LogoutButton'
 import { LogoutConfirmDialog } from '../../shared/components/LogoutConfirmDialog'
 import { useGetProjectsQuery } from '../../store/features/project/project.api'
+import getInitials from '../../shared/utils/getInitials'
 import clsx from 'clsx'
 
 interface SidebarProps {
@@ -37,12 +33,11 @@ export function Sidebar({
             id: project.id,
             label: project.name,
             status,
-            icon:
-                status === 'archived' ? (
-                    <Archive size={14} />
-                ) : (
-                    <FolderKanban size={14} />
-                ),
+            icon: (
+                <span className="flex w-full h-full text-xs items-center justify-center rounded-md bg-(--accent) text-white">
+                    {getInitials(project.name)}
+                </span>
+            ),
         }
     })
 
@@ -52,6 +47,11 @@ export function Sidebar({
             size="sm"
             variant="ghost"
             onPress={onToggle}
+            aria-label={
+                collapsed
+                    ? t('navigation.expandSidebar')
+                    : t('navigation.collapseSidebar')
+            }
             className="text-muted border-none hover:text-(--foreground)"
         >
             {collapsed ? (
@@ -81,7 +81,9 @@ export function Sidebar({
                         {toggleButton}
                     </SidebarTooltip>
                 ) : (
-                    toggleButton
+                    <SidebarTooltip label={t('navigation.collapseSidebar')}>
+                        {toggleButton}
+                    </SidebarTooltip>
                 )}
             </div>
 
