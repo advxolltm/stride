@@ -8,7 +8,7 @@ export function TasksPage() {
     const { t } = useTranslation('project')
 
     return (
-        <div className="flex flex-col gap-6 p-6">
+        <div className="flex flex-col gap-6">
             <ProjectSpaceHeader
                 title={t('spaces.tasks')}
                 description={t('spaces.tasksDescription')}
