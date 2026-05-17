@@ -1,18 +1,11 @@
-import sys
-from timeit import default_timer as timer
-import time
-from functools import reduce
 from dateutil.relativedelta import relativedelta
 from datetime import datetime
 import scheduler
-from hypothesis import given, settings, assume, Phase
+from hypothesis import given, settings
 from hypothesis import strategies as st
 from hypothesis.strategies import DrawFn, DataObject
-import tracemalloc
+import uuid
 
-
-def unique_by_name(s):
-    return s.name
 
 @st.composite
 def weekday_datetime(draw: DrawFn, min_date: datetime, max_date: datetime) -> datetime:
@@ -28,26 +21,26 @@ def asciitext(draw: DrawFn) -> str:
 
 
 @st.composite
-def skill(draw: DrawFn) -> scheduler.Skill:
+def skill_gen(draw: DrawFn) -> scheduler.Skill:
     skill_name = draw(asciitext())
-    return scheduler.Skill(skill_name)
+    return scheduler.Skill(uuid.uuid4(), skill_name)
 
 
 @st.composite
-def user(draw: DrawFn, skills: list[scheduler.Skill]) -> scheduler.User:
+def user_gen(draw: DrawFn, skills: list[scheduler.Skill]) -> scheduler.User:
     name = draw(asciitext())
     if len(skills) == 0:
         subset_skills = []
     else:
         subset_skills = draw(
-            st.lists(st.sampled_from(skills), unique_by=unique_by_name)
+            st.lists(st.sampled_from(skills))
         )
-    weekly_hours = draw(st.integers(0, 144))
-    return scheduler.User(name=name, skills=subset_skills, weekly_hours=weekly_hours)
+    weekly_hours = draw(st.integers(1, 40))
+    return scheduler.User(uuid.uuid4(), name=name, skills=subset_skills, weekly_hours=weekly_hours)
 
 
 @st.composite
-def task(
+def task_gen(
     draw: DrawFn,
     skills: list[scheduler.Skill],
     min_date: datetime,
@@ -55,14 +48,17 @@ def task(
     min_skills=0,
 ) -> scheduler.Task:
     name = draw(asciitext())
-    start_at = draw(weekday_datetime(min_date, max_date - relativedelta(days=1)))
-    due_at = draw(weekday_datetime(start_at + relativedelta(days=1), max_date))
-    max_hours = (due_at - start_at).seconds // 3600
-    expected_hours = draw(st.integers(min_value=0, max_value=max_hours))
+    start_at = draw(st.datetimes(min_date, max_date - relativedelta(days=7)))
+    due_at = draw(st.datetimes(start_at + relativedelta(days=1), max_date))
+    assert start_at < due_at
+    max_hours = int((due_at - start_at).total_seconds()) // 3600
+    assert max_hours > 0, f"{start_at}, {due_at}, {(due_at - start_at).seconds}, {(due_at - start_at).total_seconds()}"
+    expected_hours = draw(st.integers(min_value=1, max_value=min(max_hours, 100)))
     needed_skills = draw(
-        st.lists(st.sampled_from(skills), unique_by=unique_by_name, min_size=min_skills)
+        st.lists(st.sampled_from(skills), min_size=min_skills)
     )
     return scheduler.Task(
+        uuid.uuid4(),
         name=name,
         start_at=start_at,
         due_at=due_at,
@@ -72,29 +68,21 @@ def task(
 
 
 @st.composite
-def new_skill(draw: DrawFn, skills: list[scheduler.Skill]) -> scheduler.Skill:
-    unique_skill_name: str = reduce(
-        lambda acc, s: acc + s, map(lambda s: s.name, skills)
-    )
-    return scheduler.Skill(draw(asciitext()) + unique_skill_name)
-
-
-@st.composite
 def luigi(
-    draw: DrawFn, skills: list[scheduler.Skill], min_date: datetime, max_date: datetime
+    draw: DrawFn, skills: list[scheduler.Skill], min_date: datetime, max_date: datetime,
 ) -> tuple[scheduler.User, scheduler.Task]:
     # we first define a new skill, that is not assigned to any user at all
-    skill = draw(new_skill(skills))
+    skill = draw(skill_gen())
     skill.name = "luigi-skill-" + skill.name
 
     # loser luigi is then the only one who gets this skill
-    luigi = draw(user(skills))
+    luigi = draw(user_gen(skills))
     luigi.name = "luigi-" + luigi.name
     luigi.skills.append(skill)
 
     # we then define a task that requires this skill
     # since luigi is the only one who has that skill, he is the only one who could be assigned to the task
-    luigi_task = draw(task(skills, min_date, max_date))
+    luigi_task = draw(task_gen(skills, min_date, max_date))
     luigi_task.needed_skills.append(skill)
     luigi_task.name = "luigi-task-" + luigi_task.name
 
@@ -119,21 +107,21 @@ def wario(
     num_new_skills = draw(st.integers(min_value=1, max_value=10))
     wario_skills = []
     for _ in range(num_new_skills):
-        new_s = draw(new_skill(skills))
+        new_s = draw(skill_gen())
         skills.append(new_s)
         wario_skills.append(new_s)
 
     # workaholic wario has all the skills and infinite working hours
-    wario = draw(user([]))
+    wario = draw(user_gen([]))
     wario.name = "wario-" + wario.name
     wario.skills = skills
 
     # some tasks only contain skills that only wario has, they should be assignable too!
-    wario_tasks = draw(st.lists(task(wario_skills, min_date, max_date, 1), min_size=1))
+    wario_tasks = draw(st.lists(task_gen(wario_skills, min_date, max_date, 1), min_size=1))
     for wt in wario_tasks:
         wt.name = "wario-task-" + wt.name
 
-    # however, luigi does provide enough working time to actually complete the task
+    # however, wario does provide enough working time to actually complete the task
 
     tmp_tasks = tasks + wario_tasks
     wario.weekly_hours = sum(map(lambda t: t.expected_hours, tmp_tasks)) + 1
@@ -151,13 +139,12 @@ max_date = min_date + relativedelta(years=1)
 @settings(deadline=60 * 1000)
 @given(
     st.data(),
-    st.lists(skill(), unique_by=unique_by_name, min_size=min_size, max_size=max_size),
+    st.lists(skill_gen(), min_size=min_size, max_size=max_size),
 )
 def test_loser_luigi_scheduling(data: DataObject, skills: list[scheduler.Skill]):
     users = data.draw(
         st.lists(
-            user(list(skills)),
-            unique_by=unique_by_name,
+            user_gen(list(skills)),
             min_size=min_size,
             max_size=max_size,
         )
@@ -165,8 +152,7 @@ def test_loser_luigi_scheduling(data: DataObject, skills: list[scheduler.Skill])
 
     tasks = data.draw(
         st.lists(
-            task(list(skills), min_date, max_date),
-            unique_by=unique_by_name,
+            task_gen(list(skills), min_date, max_date),
             min_size=min_size,
             max_size=max_size,
         )
@@ -189,13 +175,12 @@ def test_loser_luigi_scheduling(data: DataObject, skills: list[scheduler.Skill])
 @settings(deadline=60 * 1000)
 @given(
     st.data(),
-    st.lists(skill(), unique_by=unique_by_name, min_size=min_size, max_size=max_size),
+    st.lists(skill_gen(), min_size=min_size, max_size=max_size),
 )
 def test_workaholic_wario_scheduling(data: DataObject, skills: list[scheduler.Skill]):
     users = data.draw(
         st.lists(
-            user(list(skills)),
-            unique_by=unique_by_name,
+            user_gen(list(skills)),
             min_size=min_size,
             max_size=max_size,
         )
@@ -203,8 +188,7 @@ def test_workaholic_wario_scheduling(data: DataObject, skills: list[scheduler.Sk
 
     tasks = data.draw(
         st.lists(
-            task(list(skills), min_date, max_date),
-            unique_by=unique_by_name,
+            task_gen(list(skills), min_date, max_date),
             min_size=min_size,
             max_size=max_size,
         )
@@ -226,21 +210,3 @@ def test_workaholic_wario_scheduling(data: DataObject, skills: list[scheduler.Sk
         if (random_wario, wt) not in result:
             print(f"({random_wario}, {wt}) not in {result}")
         assert (random_wario, wt) in result
-
-    # all tasks should be assigned
-    # assigned_tasks = list(map(lambda x: x[1], result))
-    # print(
-    #     "tasks: ",
-    #     len(tasks),
-    #     tasks,
-    #     "assigned tasks: ",
-    #     len(assigned_tasks),
-    #     assigned_tasks,
-    #     "users: ",
-    #     len(users),
-    #     users,
-    #     "result: ",
-    #     result,
-    # )
-    # for t in tasks:
-    #     assert t in assigned_tasks

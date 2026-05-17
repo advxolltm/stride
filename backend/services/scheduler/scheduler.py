@@ -1,33 +1,48 @@
 import datetime
-from dataclasses import dataclass
-from typing import List, Tuple
+import msgspec
+from typing import List
 from ortools.sat.python import cp_model
+import logging
+import uuid
+import http.server
+import socketserver
 
-# --- Models ---
-@dataclass
-class Skill:
+LOGGER = logging.getLogger("SimpleLogger")
+LOGGER.setLevel(logging.DEBUG)
+
+PORT = 7270
+class Skill(msgspec.Struct):
+    identifier: uuid.UUID
     name: str
 
-@dataclass
-class User:
+class User(msgspec.Struct):
+    identifier: uuid.UUID
     name: str
     skills: List[Skill]
     weekly_hours: int
 
-@dataclass
-class Task:
+class Task(msgspec.Struct):
+    identifier: uuid.UUID
     name: str
     start_at: datetime.datetime
     due_at: datetime.datetime
     expected_hours: int
     needed_skills: List[Skill]
 
-# --- Helper Functions ---
+class Assignment(msgspec.Struct):
+    user_id: uuid.UUID
+    task_id: uuid.UUID
+
+class InputPayload(msgspec.Struct):
+    users: List[User]
+    tasks: List[Task]
+
+
 def user_has_skills(user: User, task: Task) -> bool:
     """Checks if a user has all the skills required for a task."""
-    user_skill_names = {skill.name for skill in user.skills}
+    user_skill_names = {skill.identifier for skill in user.skills}
     for required_skill in task.needed_skills:
-        if required_skill.name not in user_skill_names:
+        if required_skill.identifier not in user_skill_names:
             return False
     return True
 
@@ -37,21 +52,25 @@ def full_working_weeks_until_date(planning_start: datetime.datetime, target_date
     return diff.days // 7
 
 
-# --- The Main Scheduler ---
-def schedule_tasks_to_members(users: List[User], tasks: List[Task]) -> List[Tuple[User, Task]]:
+def schedule_tasks_to_members(users: List[User], tasks: List[Task]):
+    SCALING_FACTOR = 1000
     if not users or not tasks:
-        print("Need at least one user and one task.")
-        return []
+        LOGGER.info("Need at least one user and one task.")
+        return
 
     model = cp_model.CpModel()
     num_members = len(users)
     num_tasks = len(tasks)
 
-    # 
-    timeframe_start = min(tasks, key=lambda t: t.start_at).start_at
+    last_max_end = 0.0
 
-    # 2D list to store the presence variables [User][Task]
+    timeframe_start = min(tasks, key=lambda t: t.start_at).start_at
+    timeframe_start = timeframe_start - datetime.timedelta(days=timeframe_start.weekday())
+    timeframe_start = timeframe_start.replace(hour=0, minute=0, second=0, microsecond=0)
+
     job_assignment_presence = []
+    user_interval_vars = []
+    task_ending_times = []
 
     for i, user in enumerate(users):
         member_jobs = []
@@ -64,15 +83,16 @@ def schedule_tasks_to_members(users: List[User], tasks: List[Task]) -> List[Tupl
                 weeks_before_end = full_working_weeks_until_date(timeframe_start, task.due_at)
 
                 time_left_in_week = (5 - min(task.start_at.weekday(), 5)) * 8
+
                 # min start measures how much of their work time has passed at minimum when they can start the task
                 min_start = (weeks_before_task * user.weekly_hours) + max(0, user.weekly_hours - time_left_in_week)
-                
-                # Python's weekday(): Mon=0, Sun=6 (Matches your Go logic exactly)
+
                 day_idx = min(task.due_at.weekday()+1, 5)
                 max_end = (weeks_before_end * user.weekly_hours) + min(8 * day_idx, user.weekly_hours)
-                
-                # Safeguard: Ensure max_end isn't smaller than min_start (prevents OR-Tools domain crash)
-                max_end = max(min_start, max_end)
+
+                # Find the value on the largest max_end normalized by working hours
+                if float(max_end)/float(user.weekly_hours) > last_max_end:
+                    last_max_end = float(max_end)/float(user.weekly_hours)
 
                 # Create variables
                 presence_var = model.NewBoolVar(f"present_job_{i}_{j}")
@@ -80,7 +100,16 @@ def schedule_tasks_to_members(users: List[User], tasks: List[Task]) -> List[Tupl
                 end_var = model.NewIntVar(min_start, max_end, f"end_{i}_{j}")
                 duration = task.expected_hours
 
-                # print(f"start: {min_start}, end: {max_end}, duration: {task.expected_hours}")
+                # Find the last end time for MAKESPAN calculation
+                scaled_end = model.NewIntVar(0, max_end * SCALING_FACTOR, f"scaled_end_{i}_{j}")
+                model.Add(scaled_end == end_var * SCALING_FACTOR)
+
+                normalized_scaled_end = model.NewIntVar(0, max_end * SCALING_FACTOR, f"norm_end_scaled_{i}_{j}")
+                model.AddDivisionEquality(normalized_scaled_end, scaled_end, user.weekly_hours)
+
+                task_ending_times.append(normalized_scaled_end)
+
+                LOGGER.info(f"start: {min_start}, end: {max_end}, duration: {task.expected_hours}")
 
                 # Create Optional Interval
                 job = model.NewOptionalIntervalVar(
@@ -99,99 +128,117 @@ def schedule_tasks_to_members(users: List[User], tasks: List[Task]) -> List[Tupl
         # Constraint: User cannot do two things at exactly the same time
         if member_jobs:
             model.AddNoOverlap(member_jobs)
+        
+        user_interval_vars.append(member_jobs)
 
         job_assignment_presence.append(member_job_presences)
 
-    # Constraint: Each task is assigned to AT MOST one member
+    # Constraint: max one member per task
     for j in range(num_tasks):
         task_presences = [job_assignment_presence[i][j] for i in range(num_members)]
         model.AddAtMostOne(task_presences)
 
-    # Objective: Maximize assigned tasks
+    # Objective: assign the most tasks possible
     all_assignments = [
         job_assignment_presence[i][j] 
         for i in range(num_members) for j in range(num_tasks)
     ]
-    model.Maximize(sum(all_assignments))
 
-    # --- SOLVE ---
+    max_ending_time = model.NewIntVar(0, int(last_max_end * SCALING_FACTOR+1), "max_ending_time")
+    model.AddMaxEquality(max_ending_time, task_ending_times)
+
+    # The max makes span is at (most last_max_end * SCALING_FACTOR+1) meaning each extra task assigned needs to add more than that to the Objective function to ensure that more tasks is always preferred
+    model.Maximize(sum(all_assignments)*int(last_max_end * SCALING_FACTOR+2) - max_ending_time)
+
     solver = cp_model.CpSolver()
+    solver.parameters.max_time_in_seconds = 5.0
     status = solver.Solve(model)
 
     if status in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-        res: List[Tuple[User, Task]] = []
-        dbg(f"\nFeasible solution found! Status: {solver.StatusName(status)}")
-        dbg("-" * 30)
-        
+        schedule_result = []
         for i, user in enumerate(users):
             for j, task in enumerate(tasks):
                 # Check if the solver set this assignment to True (1)
                 if solver.Value(job_assignment_presence[i][j]):
-                    # print(f"Assigned Task: '{task.name}' -> Member: '{user.name}'")
-                    res.append((user, task))
-                    
-        dbg("-" * 30)
-        dbg(f"Total tasks successfully assigned: {int(solver.ObjectiveValue())} out of {num_tasks}\n")
-        return res
+                    schedule_result.append(Assignment(user.identifier, task.identifier))
+        return schedule_result
     else:
-        dbg("\nNo solution found (INFEASIBLE).\n")
         return []
 
-
-DEBUG = False
-
-def dbg(msg):
-    if DEBUG:
-        print(msg)
-
-if __name__ == "__main__":
+def testing():
     now = datetime.datetime.now()
 
     # Skills
-    go_skill = Skill(name="Go")
-    db_skill = Skill(name="Database")
-    react_skill = Skill(name="React")
+    go_skill = Skill(identifier=uuid.uuid4(), name="Go")
+    db_skill = Skill(identifier=uuid.uuid4(), name="Database")
+    react_skill = Skill(identifier=uuid.uuid4(), name="React")
 
     # Users
-    alice = User(name="Alice", skills=[go_skill], weekly_hours=40)
-    bob = User(name="Bob", skills=[go_skill, db_skill], weekly_hours=40)
+    alice = User(identifier=uuid.uuid4(), name="Alice", skills=[go_skill], weekly_hours=40)
+    bob = User(identifier=uuid.uuid4(), name="Bob", skills=[go_skill, db_skill], weekly_hours=40)
 
-    print("=== TEST 1: Feasible Schedule ===")
+    LOGGER.info("=== TEST 1: Feasible Schedule ===")
     tasks_feasible = [
-        Task("Write API", now, now + datetime.timedelta(days=7), 20, [go_skill]),
-        Task("Setup DB", now, now + datetime.timedelta(days=7), 15, [db_skill]),
+        Task(uuid.uuid4(), "Write API", now, now + datetime.timedelta(days=7), 20, [go_skill]),
+        Task(uuid.uuid4(), "Setup DB", now, now + datetime.timedelta(days=7), 15, [db_skill]),
     ]
     schedule_tasks_to_members([alice, bob], tasks_feasible)
 
 
-    print("=== TEST 2: Infeasible (Missing Skills) ===")
+    LOGGER.info("=== TEST 2: Infeasible (Missing Skills) ===")
     tasks_missing_skills = [
-        Task("Build Frontend", now, now + datetime.timedelta(days=7), 20, [react_skill]),
+        Task(uuid.uuid4(), "Build Frontend", now, now + datetime.timedelta(days=7), 20, [react_skill]),
     ]
     schedule_tasks_to_members([alice, bob], tasks_missing_skills)
 
 
-    print("=== TEST 3: Infeasible (Too much work for one person) ===")
-    # Bob is the only one with DB skills, but 100 hours doesn't fit in his 40 hour week constraint logic
+    LOGGER.info("=== TEST 3: Infeasible (Too much work for one person) ===")
+    # Bob is the only one with DB skills, but 1000 hours doesn't fit in his 40 hour week constraint logic
     tasks_too_much = [
-        Task("Massive DB Migration", now, now + datetime.timedelta(days=7), 1000, [db_skill]),
+        Task(uuid.uuid4(), "Massive DB Migration", now, now + datetime.timedelta(days=7), 1000, [db_skill]),
     ]
     schedule_tasks_to_members([alice, bob], tasks_too_much)
 
-    print("=== TEST 4: Task starts earlier in week ===")
+    LOGGER.info("=== TEST 4: Task starts earlier in week ===")
     tasks_feasible = [
-        Task("Write API", now - datetime.timedelta(days=5), now + datetime.timedelta(days=7), 20, [go_skill]),
-        Task("Setup DB", now - datetime.timedelta(days=2), now + datetime.timedelta(days=7), 15, [db_skill]),
+        Task(uuid.uuid4(), "Write API", now - datetime.timedelta(days=5), now + datetime.timedelta(days=7), 20, [go_skill]),
+        Task(uuid.uuid4(), "Setup DB", now - datetime.timedelta(days=2), now + datetime.timedelta(days=7), 15, [db_skill]),
     ]
     schedule_tasks_to_members([alice, bob], tasks_feasible)
 
-    print("=== TEST 5: Task with no required skills === ")
-    t5users = [User(name='0', skills=[], weekly_hours=0), User(name='wario-0', skills=[Skill(name='sM]'), Skill(name='0'), Skill(name='0sM]0')], weekly_hours=71)] 
+class CustomHandler(http.server.SimpleHTTPRequestHandler):
+    def do_POST(self):
+        content_length = int(self.headers['Content-Length'])
+        
+        post_data = self.rfile.read(content_length)
+        
+        LOGGER.info(f"Received POST data: {post_data.decode('utf-8')}")
 
-    t5tasks = [Task(name='0', start_at=datetime.datetime(2026, 1, 1, 0, 0, 0, 2026, fold=1), due_at=datetime.datetime(2026, 1, 2, 0, 0, 0, 2026), expected_hours=0, needed_skills=[]), Task(name='wario-task-0', start_at=datetime.datetime(2026, 1, 1, 0, 1, 0, 2026), due_at=datetime.datetime(2026, 1, 2, 0, 1, 0, 2026), expected_hours=0, needed_skills=[Skill(name='0sM]0')]), Task(name='wario-task-\x16', start_at=datetime.datetime(2026, 8, 15, 19, 0, 23, 189627), due_at=datetime.datetime(2026, 9, 26, 21, 28, 4, 29648), expected_hours=0, needed_skills=[Skill(name='0sM]0')]), Task(name='wario-task-)\r2 8ML=', start_at=datetime.datetime(2026, 12, 18, 3, 45, 48, 972240), due_at=datetime.datetime(2027, 1, 1, 0, 0, fold=1), expected_hours=12, needed_skills=[Skill(name='0sM]0')]), Task(name='wario-task-.X]d\x15', start_at=datetime.datetime(2026, 5, 8, 1, 52, 59, 968696), due_at=datetime.datetime(2027, 1, 1, 0, 0, fold=1), expected_hours=1, needed_skills=[Skill(name='0sM]0')]), Task(name='wario-task-\x00Fx', start_at=datetime.datetime(2026, 4, 1, 8, 33, 23, 256779, fold=1), due_at=datetime.datetime(2026, 8, 22, 8, 59, 34, 294834, fold=1), expected_hours=0, needed_skills=[Skill(name='0sM]0')]), Task(name='wario-task-\x16`', start_at=datetime.datetime(2026, 3, 19, 12, 28, 58, 307065), due_at=datetime.datetime(2026, 4, 10, 10, 54, 34, 116022, fold=1), expected_hours=11, needed_skills=[Skill(name='0sM]0')]), Task(name='wario-task-\x05wt\x01n\x16P_?%+', start_at=datetime.datetime(2026, 7, 18, 11, 40, 30, 659157, fold=1), due_at=datetime.datetime(2026, 9, 17, 1, 25, 11, 891265), expected_hours=12, needed_skills=[Skill(name='0sM]0')]), Task(name='wario-task->', start_at=datetime.datetime(2026, 7, 17, 16, 28, 40, 466783), due_at=datetime.datetime(2026, 8, 27, 9, 49, 26, 805145, fold=1), expected_hours=14, needed_skills=[Skill(name='0sM]0')]), Task(name='wario-task-s+C;', start_at=datetime.datetime(2026, 2, 26, 2, 12, 17, 772252), due_at=datetime.datetime(2026, 5, 8, 6, 54, 1, 179209), expected_hours=2, needed_skills=[Skill(name='0sM]0')]), Task(name='wario-task-\x18ptX\x1c', start_at=datetime.datetime(2026, 12, 26, 10, 13, 19, 521798), due_at=datetime.datetime(2027, 1, 1, 0, 0), expected_hours=5, needed_skills=[Skill(name='0sM]0')]), Task(name='wario-task-\x03[MaDI*Sx;AFY~[%', start_at=datetime.datetime(2026, 2, 25, 3, 51, 53, 32703, fold=1), due_at=datetime.datetime(2027, 1, 1, 0, 0), expected_hours=13, needed_skills=[Skill(name='0sM]0')])]
+        try:
+            payload = msgspec.json.decode(post_data, type=InputPayload)
 
-    # tasks_feasible = [
-    #     Task("Write API", now, now + datetime.timedelta(days=7), 20, []),
-    #     Task("Setup DB", now, now + datetime.timedelta(days=7), 15, []),
-    # ]
-    schedule_tasks_to_members(t5users, t5tasks)
+
+            LOGGER.info(f"Payload: {payload}")
+            
+            schedule = schedule_tasks_to_members(payload.users, payload.tasks) # returns List[Assignment]
+            resp = msgspec.json.encode(schedule)
+
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+            
+            self.wfile.write(resp)
+
+        except msgspec.ValidationError as e:
+            LOGGER.info(f"Error: {e}")
+            self.send_response(400)
+            self.end_headers()
+            self.wfile.write(f"Validation Error: {e}".encode())
+
+if __name__ == "__main__":
+    Handler = http.server.SimpleHTTPRequestHandler
+
+    with socketserver.TCPServer(("", PORT), CustomHandler) as httpd:
+        LOGGER.info(f"Serving at port {PORT}")
+        httpd.serve_forever()
+    
