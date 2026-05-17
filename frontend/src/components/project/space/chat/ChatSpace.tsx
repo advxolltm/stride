@@ -1,9 +1,10 @@
-import type { Key } from '@heroui/react'
+import { toast, type Key } from '@heroui/react'
 import { skipToken } from '@reduxjs/toolkit/query'
 import { MessageCircle } from 'lucide-react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
+import { getApiErrorMessage } from '../../../../shared/utils/api/errors'
 import { useGetSessionQuery } from '../../../../store/features/auth/auth.api'
 import {
     useDeleteMessageMutation,
@@ -20,7 +21,7 @@ import { ChatSpaceSkeleton } from './ChatSpaceSkeleton'
 
 interface ChatSpaceProps {
     projectId?: string
-    variant?: 'page' | 'embedded'
+    variant?: 'page' | 'embedded' | 'drawer'
 }
 
 export function ChatSpace({
@@ -62,22 +63,8 @@ export function ChatSpace({
     )
 
     const [sendMessage] = useSendMessageMutation()
-    const [sendMessageError, setSendMessageError] = useState<string | null>(
-        null,
-    )
-    console.log(sendMessageError)
-
     const [editMessage] = useEditMessageMutation()
-    const [editMessageError, setEditMessageError] = useState<string | null>(
-        null,
-    )
-    console.log(editMessageError)
-
     const [deleteMessage] = useDeleteMessageMutation()
-    const [deleteMessageError, setDeleteMessageError] = useState<string | null>(
-        null,
-    )
-    console.log(deleteMessageError)
 
     const [messageContent, setMessageContent] = useState('')
 
@@ -196,6 +183,7 @@ export function ChatSpace({
     }
 
     const isEmbedded = variant === 'embedded'
+    const isDrawer = variant === 'drawer'
     const containerClassName = 'bg-background'
     const dateChipClassName = isEmbedded
         ? 'border-border bg-surface text-default-500'
@@ -208,8 +196,6 @@ export function ChatSpace({
             return
         }
 
-        setSendMessageError(null)
-
         try {
             await sendMessage({
                 projectId: projectId!,
@@ -220,7 +206,9 @@ export function ChatSpace({
             messageSelfCreatedRef.current = true
             setMessageContent('')
         } catch (error) {
-            setSendMessageError(`something went wrong: ${error}`)
+            toast.danger(
+                getApiErrorMessage(error, t('chat.errors.sendMessage')),
+            )
         }
     }
 
@@ -229,8 +217,6 @@ export function ChatSpace({
         if (!nextContent) {
             return
         }
-
-        setEditMessageError(null)
 
         try {
             await editMessage({
@@ -241,7 +227,9 @@ export function ChatSpace({
                 },
             }).unwrap()
         } catch (error) {
-            setEditMessageError(`something went wrong: ${error}`)
+            toast.danger(
+                getApiErrorMessage(error, t('chat.errors.editMessage')),
+            )
             throw error
         }
     }
@@ -308,15 +296,15 @@ export function ChatSpace({
     }
 
     async function handleDeleteMessage(message: Message) {
-        setDeleteMessageError(null)
-
         try {
             await deleteMessage({
                 projectId: projectId!,
                 messageId: message.id,
             }).unwrap()
         } catch (error) {
-            setSendMessageError(`something went wrong: ${error}`)
+            toast.danger(
+                getApiErrorMessage(error, t('chat.errors.deleteMessage')),
+            )
         }
     }
 
@@ -337,10 +325,11 @@ export function ChatSpace({
         >
             <div
                 className={[
-                    'min-h-0 flex-1 px-5 py-4',
+                    'min-h-0 flex-1 py-4',
                     uniqueMessages.length === 0
                         ? 'overflow-hidden'
                         : 'overflow-y-auto',
+                    isDrawer ? 'px-4 pb-5' : 'px-5',
                 ].join(' ')}
                 ref={scrollRef}
             >

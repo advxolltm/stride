@@ -44,7 +44,25 @@
     "shareSuccess": "Share link copied",
     "shareError": "Could not copy share link",
     "overviewAriaLabel": "Overview",
-    "shareAriaLabel": "Share whiteboard"
+    "shareAriaLabel": "Share whiteboard",
+    "panel": {
+      "title": "Board Hub",
+      "open": "Open Board Hub",
+      "openAriaLabel": "Open Board Hub",
+      "close": "Close panel",
+      "pin": "Pin panel",
+      "unpin": "Unpin panel",
+      "tabsAriaLabel": "Whiteboard panel tabs",
+      "tabs": {
+        "chat": "Chats",
+        "templates": "Templates"
+      },
+      "templatesTitle": "Templates",
+      "templatesComingSoon": "Coming soon",
+      "useTemplate": "Use template"
+    },
+    "templateImportSuccess": "Template added to the whiteboard",
+    "templateImportError": "Could not add template to the whiteboard"
   },
   "spaces": {
     "title": "Spaces",

@@ -1,7 +1,7 @@
 import { Skeleton } from '@heroui/react'
 
 interface ChatSpaceSkeletonProps {
-    variant?: 'page' | 'embedded'
+    variant?: 'page' | 'embedded' | 'drawer'
 }
 
 export function ChatSpaceSkeleton({

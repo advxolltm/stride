@@ -44,7 +44,22 @@
     "shareSuccess": "Freigabelink kopiert",
     "shareError": "Freigabelink konnte nicht kopiert werden",
     "overviewAriaLabel": "Übersicht",
-    "shareAriaLabel": "Whiteboard teilen"
+    "shareAriaLabel": "Whiteboard teilen",
+    "panel": {
+      "title": "Board Hub",
+      "open": "Panel Ã¶ffnen",
+      "openAriaLabel": "Whiteboard-Panel Ã¶ffnen",
+      "close": "Panel schlieÃŸen",
+      "pin": "Panel anheften",
+      "unpin": "Panel lÃ¶sen",
+      "tabsAriaLabel": "Whiteboard-Panel-Tabs",
+      "tabs": {
+        "chat": "Chats",
+        "templates": "Vorlagen"
+      },
+      "templatesTitle": "Vorlagen",
+      "templatesComingSoon": "DemnÃ¤chst verfÃ¼gbar"
+    }
   },
   "spaces": {
     "title": "Bereiche",

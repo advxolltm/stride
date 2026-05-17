@@ -34,6 +34,11 @@
 			"title": "Noch keine Nachrichten",
 			"description": "Starte die Unterhaltung mit der ersten Nachricht an dein Team."
 		},
+		"errors": {
+			"sendMessage": "Nachricht konnte nicht gesendet werden",
+			"editMessage": "Nachricht konnte nicht aktualisiert werden",
+			"deleteMessage": "Nachricht konnte nicht geloescht werden"
+		},
 		"deleteDialog": {
 			"title": "Nachricht löschen",
 			"message": "Möchtest du diese Nachricht wirklich löschen?",

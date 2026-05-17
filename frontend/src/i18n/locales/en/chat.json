@@ -34,6 +34,11 @@
 			"title": "No messages yet",
 			"description": "Start the conversation by sending the first message to your team."
 		},
+		"errors": {
+			"sendMessage": "Could not send message",
+			"editMessage": "Could not update message",
+			"deleteMessage": "Could not delete message"
+		},
 		"deleteDialog": {
 			"title": "Delete message",
 			"message": "Are you sure you want to delete this message?",
