@@ -37,11 +37,9 @@ func TestWhiteboardStore_CreateAndGet(t *testing.T) {
 
 	runTest(t, db, "Create whiteboard and get by project ID", func(t *testing.T, db *gorm.DB, store whiteboard.WhiteboardStore) {
 		project := testutils.SelectRandomProject(t, db)
-		canvasState := datatypes.JSON([]byte(`{"appState":{"viewBackgroundColor":"#ffffff"}}`))
 
 		wb := &models.Whiteboard{
-			ProjectID:   project.ID,
-			CanvasState: canvasState,
+			ProjectID: project.ID,
 		}
 		err := store.CreateWhiteboard(ctx, wb)
 		require.NoError(t, err)
@@ -51,20 +49,6 @@ func TestWhiteboardStore_CreateAndGet(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, wb.ID, fetched.ID)
 		assert.Equal(t, project.ID, fetched.ProjectID)
-		assert.JSONEq(t, string(canvasState), string(fetched.CanvasState))
-	})
-
-	runTest(t, db, "Update whiteboard canvas state", func(t *testing.T, db *gorm.DB, store whiteboard.WhiteboardStore) {
-		project := testutils.SelectRandomProject(t, db)
-
-		wb := &models.Whiteboard{ProjectID: project.ID}
-		err := store.CreateWhiteboard(ctx, wb)
-		require.NoError(t, err)
-
-		updatedState := datatypes.JSON([]byte(`{"files":{"asset-1":{"id":"asset-1"}}}`))
-		updated, err := store.UpdateCanvasState(ctx, project.ID, updatedState)
-		require.NoError(t, err)
-		assert.JSONEq(t, string(updatedState), string(updated.CanvasState))
 	})
 
 	runTest(t, db, "Get non-existent whiteboard returns error", func(t *testing.T, db *gorm.DB, store whiteboard.WhiteboardStore) {
