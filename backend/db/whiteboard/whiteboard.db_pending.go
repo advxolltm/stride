@@ -173,7 +173,7 @@ func (s *PendingElementStore) MarkProjectPendingFlush(
     nowMs := now.UnixMilli()
 
     // Anchor the ceiling on the first pending op of the cycle.
-    if err := s.rdb.SetNX(ctx, firstAtKey, nowMs, 0).Err(); err != nil {
+    if err := s.rdb.SetArgs(ctx, firstAtKey, nowMs, redis.SetArgs{Mode: "NX"}).Err(); err != nil && !errors.Is(err, redis.Nil) {
         return err
     }
     firstAtStr, err := s.rdb.Get(ctx, firstAtKey).Result()
