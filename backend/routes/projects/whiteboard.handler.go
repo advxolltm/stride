@@ -52,10 +52,6 @@ type whiteboardResponse struct { //nolint:unused
 	ProjectID string `json:"projectId" example:"550e8400-e29b-41d4-a716-446655440000"`
 	CreatedAt string `json:"createdAt" example:"2026-01-01T00:00:00Z"`
 	UpdatedAt string `json:"updatedAt" example:"2026-01-01T00:00:00Z"`
-	ID        string `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
-	ProjectID string `json:"projectId" example:"550e8400-e29b-41d4-a716-446655440000"`
-	CreatedAt string `json:"createdAt" example:"2026-01-01T00:00:00Z"`
-	UpdatedAt string `json:"updatedAt" example:"2026-01-01T00:00:00Z"`
 }
 
 // whiteboardElementResponse represents a whiteboard element in API responses.
