@@ -10,18 +10,22 @@ import type {
 
 // Backend assignees are nested and snake_case; the UI works with this flatter shape.
 export const mapApiTaskAssigneeToAssignee = (
-    a: ApiTaskAssignee,
+    assignee: ApiTaskAssignee,
 ): TaskAssignee => ({
-    id: a.id,
-    taskId: a.task_id,
-    projectMemberId: a.project_member_id,
-    assignedAt: a.assigned_at,
+    id: assignee.id,
+    taskId: assignee.task_id,
+    projectMemberId: assignee.project_member_id,
+    assignedAt: assignee.assigned_at,
     user: {
-        id: a.project_member.user.id,
-        username: a.project_member.user.username,
-        email: a.project_member.user.email,
-        fullName: a.project_member.user.full_name,
-        avatarUrl: a.project_member.user.avatar_url?.original ?? null,
+        id: assignee.project_member.user.id,
+        username: assignee.project_member.user.username,
+        email: assignee.project_member.user.email,
+        fullName: assignee.project_member.user.full_name,
+        avatarUrl: assignee.project_member.user.avatar_url?.original ?? null,
+        avatarSmallUrl:
+            assignee.project_member.user.avatar_url?.['300'] ??
+            assignee.project_member.user.avatar_url?.original ??
+            null,
     },
 })
 

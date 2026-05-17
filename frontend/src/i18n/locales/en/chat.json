@@ -1,0 +1,14 @@
+{
+	"chat": {
+		"loadingMessages": "Loading messages...",
+		"message": {
+			"lastEdited": "edited",
+			"userDeleted": "user deleted",
+			"edit": "Edit",
+			"delete": "Delete"
+		},
+		"input": {
+			"placeholder": "Message..."
+		}
+	}
+}

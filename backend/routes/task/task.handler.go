@@ -7,10 +7,12 @@ import (
 	notificationService "backend/services/notification"
 	projectService "backend/services/project"
 	taskService "backend/services/task"
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
@@ -248,6 +250,28 @@ func (h taskRouteHandler) taskPATCH(c *echo.Context) error {
 		slog.Error("taskPATCH: Failed to send ws update", "error", err)
 	}
 
+	if task.Status != updatedTask.Status {
+		h.notifyProjectMembersExcept(
+			ctx,
+			task.ProjectID,
+			userID,
+			"task",
+			taskID,
+			taskMovedNotificationMessage(*updatedTask),
+			"taskPATCH",
+		)
+	} else {
+		h.notifyTaskAssignees(
+			ctx,
+			*task,
+			userID,
+			"task",
+			taskID,
+			taskUpdatedNotificationMessage(*updatedTask),
+			"taskPATCH",
+		)
+	}
+
 	return c.JSON(http.StatusOK, mappedTask)
 }
 
@@ -298,6 +322,16 @@ func (h taskRouteHandler) taskDELETE(c *echo.Context) error {
 	}); err != nil {
 		slog.Error("taskDELETE: Failed to send ws update", "error", err)
 	}
+
+	h.notifyTaskAssignees(
+		ctx,
+		*task,
+		userID,
+		"project",
+		task.ProjectID,
+		taskDeletedNotificationMessage(*task),
+		"taskDELETE",
+	)
 
 	return c.NoContent(http.StatusOK)
 }
@@ -355,6 +389,16 @@ func (h taskRouteHandler) taskAssignPOST(c *echo.Context) error {
 		slog.Error("taskAssignPOST: Failed to send ws update", "error", err)
 	}
 
+	h.notifyProjectMember(
+		ctx,
+		task.ProjectID,
+		req.ProjectMemberID,
+		"task",
+		taskID,
+		taskAssignedNotificationMessage(*task),
+		"taskAssignPOST",
+	)
+
 	return c.JSON(http.StatusCreated, mappedTaskAssignee)
 }
 
@@ -400,6 +444,8 @@ func (h taskRouteHandler) taskUnassignPOST(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, routes.BadRequestErrResponse(err))
 	}
 
+	wasAssigned := taskHasProjectMemberAssignee(*task, req.ProjectMemberID)
+
 	err = h.taskService.UnassignTask(ctx, taskID, req.ProjectMemberID)
 	if err != nil {
 		status, msg := h.mapServiceError(err)
@@ -416,6 +462,18 @@ func (h taskRouteHandler) taskUnassignPOST(c *echo.Context) error {
 		ProjectMemberID: req.ProjectMemberID,
 	}); err != nil {
 		slog.Error("taskUnassignPOST: Failed to send ws update", "error", err)
+	}
+
+	if wasAssigned {
+		h.notifyProjectMember(
+			ctx,
+			task.ProjectID,
+			req.ProjectMemberID,
+			"task",
+			taskID,
+			taskUnassignedNotificationMessage(*task),
+			"taskUnassignPOST",
+		)
 	}
 
 	return c.NoContent(http.StatusOK)
@@ -479,35 +537,202 @@ func (h taskRouteHandler) taskMovePOST(c *echo.Context) error {
 		slog.Error("taskMovePOST: Failed to send ws update", "error", err)
 	}
 
-	projectMembers, err := h.projectService.GetProjectMembers(ctx, task.ProjectID)
-	if err != nil {
-		slog.Error("taskMovePOST: Failed to get project members for notification", "error", err)
-	} else if err := h.notificationService.SendBulkNotification(
-		ctx,
-		projectMemberUserIDs(projectMembers),
-		"task",
-		taskID,
-		taskMovedNotificationMessage(*updatedTask),
-	); err != nil {
-		slog.Error("taskMovePOST: Failed to send notification", "error", err)
-	}
-
 	return c.JSON(http.StatusOK, mappedTask)
 }
 
-func taskMovedNotificationMessage(task models.Task) string {
-	return fmt.Sprintf("Task moved to position %d: %s", task.Position, task.Title)
+func (h taskRouteHandler) notifyProjectMembersExcept(
+	ctx context.Context,
+	projectID uuid.UUID,
+	excludedUserID uuid.UUID,
+	objectType string,
+	objectID uuid.UUID,
+	message string,
+	logContext string,
+) {
+	if h.notificationService == nil {
+		return
+	}
+
+	userIDs, err := h.projectService.GetProjectMemberUserIDsExcept(ctx, projectID, excludedUserID)
+	if err != nil {
+		slog.Error(logContext+": Failed to get project member user ids for notification", "error", err)
+		return
+	}
+
+	if len(userIDs) == 0 {
+		return
+	}
+
+	if err := h.notificationService.SendBulkNotification(
+		ctx,
+		userIDs,
+		objectType,
+		objectID,
+		message,
+	); err != nil {
+		slog.Error(logContext+": Failed to send notification", "error", err)
+	}
 }
 
-func projectMemberUserIDs(projectMembers []models.ProjectMember) uuid.UUIDs {
-	userIDs := make(uuid.UUIDs, 0, len(projectMembers))
+func (h taskRouteHandler) notifyProjectMember(
+	ctx context.Context,
+	projectID uuid.UUID,
+	projectMemberID uuid.UUID,
+	objectType string,
+	objectID uuid.UUID,
+	message string,
+	logContext string,
+) {
+	if h.notificationService == nil {
+		return
+	}
+
+	projectMembers, err := h.projectService.GetProjectMembers(ctx, projectID)
+	if err != nil {
+		slog.Error(logContext+": Failed to get project members for notification", "error", err)
+		return
+	}
+
 	for _, projectMember := range projectMembers {
-		if projectMember.UserID == uuid.Nil {
+		if projectMember.ID != projectMemberID {
 			continue
 		}
-		userIDs = append(userIDs, projectMember.UserID)
+
+		if projectMember.UserID == uuid.Nil {
+			return
+		}
+
+		if err := h.notificationService.SendNotification(
+			ctx,
+			projectMember.UserID,
+			objectType,
+			objectID,
+			message,
+		); err != nil {
+			slog.Error(logContext+": Failed to send notification", "error", err)
+		}
+		return
 	}
+
+	slog.Warn(logContext+": Project member for notification not found", "projectMemberID", projectMemberID)
+}
+
+func (h taskRouteHandler) notifyTaskAssignees(
+	ctx context.Context,
+	task models.Task,
+	excludedUserID uuid.UUID,
+	objectType string,
+	objectID uuid.UUID,
+	message string,
+	logContext string,
+) {
+	if h.notificationService == nil {
+		return
+	}
+
+	userIDs := taskAssigneeUserIDs(task, excludedUserID)
+	if len(userIDs) == 0 {
+		return
+	}
+
+	if err := h.notificationService.SendBulkNotification(
+		ctx,
+		userIDs,
+		objectType,
+		objectID,
+		message,
+	); err != nil {
+		slog.Error(logContext+": Failed to send notification", "error", err)
+	}
+}
+
+func taskMovedNotificationMessage(task models.Task) string {
+	return fmt.Sprintf("Task moved to %s: %s", formatTaskStatus(task.Status), task.Title)
+}
+
+func taskAssignedNotificationMessage(task models.Task) string {
+	return fmt.Sprintf("You were assigned to task: %s", task.Title)
+}
+
+func taskUnassignedNotificationMessage(task models.Task) string {
+	return fmt.Sprintf("You were unassigned from task: %s", task.Title)
+}
+
+func taskUpdatedNotificationMessage(task models.Task) string {
+	return fmt.Sprintf("Task updated: %s", task.Title)
+}
+
+func taskDeletedNotificationMessage(task models.Task) string {
+	return fmt.Sprintf("Task deleted: %s", task.Title)
+}
+
+func taskSkillAddedNotificationMessage(task models.Task, skillName string) string {
+	return fmt.Sprintf("Skill added to task %q: %s", task.Title, skillName)
+}
+
+func taskSkillRemovedNotificationMessage(task models.Task, skillName string) string {
+	return fmt.Sprintf("Skill removed from task %q: %s", task.Title, skillName)
+}
+
+func formatTaskStatus(status string) string {
+	switch status {
+	case "todo":
+		return "To Do"
+	case "in_progress":
+		return "In Progress"
+	case "done":
+		return "Done"
+	default:
+		return strings.TrimSpace(strings.ReplaceAll(status, "_", " "))
+	}
+}
+
+func taskAssigneeUserIDs(task models.Task, excludedUserID uuid.UUID) uuid.UUIDs {
+	userIDs := make(uuid.UUIDs, 0, len(task.Assignees))
+	seenUserIDs := make(map[uuid.UUID]struct{}, len(task.Assignees))
+
+	for _, assignee := range task.Assignees {
+		userID := assignee.ProjectMember.UserID
+		if userID == uuid.Nil || userID == excludedUserID {
+			continue
+		}
+
+		if _, exists := seenUserIDs[userID]; exists {
+			continue
+		}
+
+		seenUserIDs[userID] = struct{}{}
+		userIDs = append(userIDs, userID)
+	}
+
 	return userIDs
+}
+
+func taskHasProjectMemberAssignee(task models.Task, projectMemberID uuid.UUID) bool {
+	for _, assignee := range task.Assignees {
+		if assignee.ProjectMemberID == projectMemberID {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (h taskRouteHandler) projectSkillName(ctx context.Context, projectID uuid.UUID, skillID uuid.UUID, logContext string) string {
+	projectSkills, err := h.projectService.GetProjectSkills(ctx, projectID)
+	if err != nil {
+		slog.Error(logContext+": Failed to get project skills for notification", "error", err)
+		return skillID.String()
+	}
+
+	for _, projectSkill := range projectSkills {
+		if projectSkill.ID == skillID {
+			return projectSkill.Name
+		}
+	}
+
+	slog.Warn(logContext+": Project skill for notification not found", "skillID", skillID)
+	return skillID.String()
 }
 
 type addSkillToTaskRequest struct {
@@ -578,6 +803,22 @@ func (h taskRouteHandler) taskAddSkill(c *echo.Context) error {
 
 	if err := routes.SendWSUpdate(ctx, h.rdb, projIDOfTask, routes.TaskSkillAdded, routes.MapTaskSkill(*taskSkill)); err != nil {
 		slog.Error("taskAddSkillPOST: Failed to send ws update", "error", err)
+	}
+
+	skillName := h.projectSkillName(ctx, projIDOfTask, req.SkillID, "taskAddSkillPOST")
+	updatedTask, err := h.taskService.GetTask(ctx, taskID)
+	if err != nil {
+		slog.Error("taskAddSkillPOST: Failed to get task for notification", "error", err)
+	} else {
+		h.notifyTaskAssignees(
+			ctx,
+			*updatedTask,
+			userID,
+			"task",
+			taskID,
+			taskSkillAddedNotificationMessage(*updatedTask, skillName),
+			"taskAddSkillPOST",
+		)
 	}
 
 	return c.NoContent(http.StatusOK)
@@ -654,6 +895,22 @@ func (h taskRouteHandler) taskRemoveSkill(c *echo.Context) error {
 	}
 	if err := routes.SendWSUpdate(ctx, h.rdb, projIDOfTask, routes.TaskSkillRemoved, taskSkill); err != nil {
 		slog.Error("taskRemoveSkillPOST: Failed to send ws update", "error", err)
+	}
+
+	skillName := h.projectSkillName(ctx, projIDOfTask, req.SkillID, "taskRemoveSkillPOST")
+	updatedTask, err := h.taskService.GetTask(ctx, taskID)
+	if err != nil {
+		slog.Error("taskRemoveSkillPOST: Failed to get task for notification", "error", err)
+	} else {
+		h.notifyTaskAssignees(
+			ctx,
+			*updatedTask,
+			userID,
+			"task",
+			taskID,
+			taskSkillRemovedNotificationMessage(*updatedTask, skillName),
+			"taskRemoveSkillPOST",
+		)
 	}
 
 	return c.NoContent(http.StatusOK)

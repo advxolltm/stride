@@ -16,4 +16,5 @@ type ProjectMember struct {
 	User          User           `gorm:"foreignKey:UserID"`
 	Project       Project        `gorm:"foreignKey:ProjectID"`
 	TaskAssignees []TaskAssignee `gorm:"foreignKey:ProjectMemberID"`
+	Messages           []Message `gorm:"foreignKey:SenderID"`
 }

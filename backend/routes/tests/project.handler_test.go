@@ -1,12 +1,14 @@
 package routes_test
 
 import (
+	notificationStore "backend/db/notification"
 	"backend/db/project"
 	userStore "backend/db/user"
 	"backend/models"
 	"backend/routes"
 	projectsHandler "backend/routes/projects"
 	authService "backend/services/auth"
+	notificationService "backend/services/notification"
 	projectService "backend/services/project"
 	userService "backend/services/user"
 	"backend/testutils"
@@ -49,7 +51,9 @@ func runTest(t *testing.T, name string, f func(t *testing.T, tx *gorm.DB, as aut
 			uStore := userStore.NewUserStore(tx)
 			uServ := userService.NewUserService(uStore)
 			aServ := authService.NewAuthenticationService(uServ)
-			handler := projectsHandler.NewProjectsGroup(pServ, nil, aServ, rdb)
+			nStore := notificationStore.NewNotificationStreamStore(rdb)
+			nServ := notificationService.NewNotificationService(nStore)
+			handler := projectsHandler.NewProjectsGroup(pServ, nil, nil, nServ, aServ, rdb)
 
 			e := echo.New()
 			handler.AddRoutes(e.Group("/api"))
@@ -62,6 +66,31 @@ func runTest(t *testing.T, name string, f func(t *testing.T, tx *gorm.DB, as aut
 			return fmt.Errorf("rollback %s", t.Name())
 		})
 	})
+}
+
+func countProjectNotifications(
+	t *testing.T,
+	svc notificationService.NotificationService,
+	userID uuid.UUID,
+	objectType string,
+	objectID uuid.UUID,
+	message string,
+) int {
+	t.Helper()
+
+	notifications, err := svc.GetNotifications(t.Context(), userID)
+	require.NoError(t, err)
+
+	count := 0
+	for _, notification := range notifications {
+		if notification.ObjectType == objectType &&
+			notification.ObjectID == objectID &&
+			notification.Message == message {
+			count++
+		}
+	}
+
+	return count
 }
 
 func TestProjectRouteHandler_Integration(t *testing.T) {
@@ -217,6 +246,14 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 		members, err := ps.GetProjectMembers(ctx, memberProj.ID)
 		require.NoError(t, err)
 		assert.Len(t, members, 2)
+
+		nServ := notificationService.NewNotificationService(notificationStore.NewNotificationStreamStore(rdb))
+		expectedNotificationMessage := fmt.Sprintf("You were added to project: %s", memberProj.Name)
+		require.Equal(
+			t,
+			1,
+			countProjectNotifications(t, nServ, newUser2.ID, "project", memberProj.ID, expectedNotificationMessage),
+		)
 	})
 
 	runTest(t, "Returns 400 on invalid project UUID for members POST", func(t *testing.T, tx *gorm.DB, as authService.AuthService, ps projectService.ProjectService, us userService.UserService, e *echo.Echo, cookie *http.Cookie, loginUser models.User) {
@@ -368,7 +405,8 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 	runTest(t, "Returns 204 on successful member removal", func(t *testing.T, tx *gorm.DB, as authService.AuthService, ps projectService.ProjectService, us userService.UserService, e *echo.Echo, cookie *http.Cookie, loginUser models.User) {
 		proj, _ := ps.CreateProject(ctx, &loginUser.ID, "Team Project", "team-slug", nil, "active")
 		otherUser, _ := us.CreateUser(ctx, "other", "other@test.com", "Password123!")
-		_, _ = ps.AddUsersToProject(ctx, []projectService.AddMemberRequest{{UserId: otherUser.ID, Role: "developer"}}, proj.ID)
+		_, err := ps.AddUsersToProject(ctx, []projectService.AddMemberRequest{{UserId: otherUser.ID, Role: "developer"}}, proj.ID)
+		require.NoError(t, err)
 
 		req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/projects/%s/members/%s", proj.ID, otherUser.ID), nil)
 		req.AddCookie(cookie)
@@ -383,6 +421,14 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 		for _, m := range members {
 			assert.NotEqual(t, otherUser.ID, m.UserID)
 		}
+
+		nServ := notificationService.NewNotificationService(notificationStore.NewNotificationStreamStore(rdb))
+		expectedNotificationMessage := fmt.Sprintf("You were removed from project: %s", proj.Name)
+		require.Equal(
+			t,
+			1,
+			countProjectNotifications(t, nServ, otherUser.ID, "project", proj.ID, expectedNotificationMessage),
+		)
 	})
 
 	runTest(t, "Returns 404 when removing non-existent member", func(t *testing.T, tx *gorm.DB, as authService.AuthService, ps projectService.ProjectService, us userService.UserService, e *echo.Echo, cookie *http.Cookie, loginUser models.User) {

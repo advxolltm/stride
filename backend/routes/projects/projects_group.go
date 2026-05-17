@@ -4,6 +4,8 @@ import (
 	"backend/routes"
 
 	authService "backend/services/auth"
+	chatService "backend/services/chat"
+	notificationService "backend/services/notification"
 	projectService "backend/services/project"
 	whiteboardSvc "backend/services/whiteboard"
 
@@ -16,19 +18,23 @@ type ProjectsGroup struct {
 	projectHandler    *projectRouteHandler
 	skillsHandler     *skillsRouteHandler
 	whiteboardHandler *whiteboardRouteHandler
+	chatHandler       *chatRouteHandler
 	authService       authService.AuthService
 }
 
 func NewProjectsGroup(
 	ps projectService.ProjectService,
 	ws whiteboardSvc.WhiteboardService,
+	cs chatService.ChatService,
+	ns notificationService.NotificationService,
 	as authService.AuthService,
 	rdb *redis.Client,
 ) *ProjectsGroup {
 	return &ProjectsGroup{
-		projectHandler:    newProjectRouteHandler(ps, as, rdb),
+		projectHandler:    newProjectRouteHandler(ps, ns, as, rdb),
 		skillsHandler:     newSkillsRouteHandler(ps, as, rdb),
 		whiteboardHandler: newWhiteboardRouteHandler(ws, as, rdb),
+		chatHandler:       newChatRouteHandler(cs, as, ps, ns, rdb),
 		authService:       as,
 	}
 }
@@ -41,6 +47,7 @@ func (pg *ProjectsGroup) AddRoutes(api *echo.Group) {
 	pg.projectHandler.registerRoutes(g)
 	pg.skillsHandler.registerRoutes(g)
 	pg.whiteboardHandler.registerRoutes(g)
+	pg.chatHandler.registerRoutes(g)
 }
 
 // compile-time check

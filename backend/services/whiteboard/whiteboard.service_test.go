@@ -30,10 +30,8 @@ func newTestService(db *gorm.DB) whiteboardSvc.WhiteboardService {
 	wbStore := whiteboardDB.NewWhiteboardStore(db)
 	pStore := projectDB.NewProjectStore(db)
 	pService := projectSvc.NewProjectService(pStore)
-	return whiteboardSvc.NewWhiteboardService(wbStore, pService)
+	return whiteboardSvc.NewWhiteboardService(wbStore, pService, whiteboardDB.NewPendingElementStore(rdb))
 }
-
-
 
 func selectProjectMember(t *testing.T, db *gorm.DB) (models.Project, models.User) {
 	t.Helper()
@@ -250,5 +248,108 @@ func TestWhiteboardService_DeleteElement_RemovesElement(t *testing.T) {
 
 		_, err = svc.GetElement(ctx, member.ID, project.ID, created.ID)
 		assert.Error(t, err)
+	})
+}
+
+func pendingKeysFor(projectID uuid.UUID) []string {
+	return []string{
+		fmt.Sprintf("whiteboard:pending:%s:elements", projectID),
+		fmt.Sprintf("whiteboard:pending:%s:flush_at", projectID),
+		fmt.Sprintf("whiteboard:pending:%s:first_pending_at", projectID),
+		"whiteboard:pending:projects",
+	}
+}
+
+func zIdxPtr(v int) *int { return new(v) }
+
+func TestWhiteboardService_GetElements_MergesPendingCreateUpdateDelete(t *testing.T) {
+	runTest(t, db, "merge overlays pending ops on PostgreSQL elements", func(t *testing.T, db *gorm.DB, svc whiteboardSvc.WhiteboardService) {
+		project, member := selectProjectMember(t, db)
+		ctx := context.Background()
+
+		wb, err := svc.GetOrCreateWhiteboardByProjectID(ctx, member.ID, project.ID)
+		require.NoError(t, err)
+
+		// Two persisted elements.
+		persisted, err := svc.CreateElement(ctx, member.ID, project.ID, &models.WhiteboardElement{
+			ElementType: "rect",
+			Props:       datatypes.JSON([]byte(`{"id":"keep","x":1}`)),
+			ZIndex:      0,
+		})
+		require.NoError(t, err)
+		doomed, err := svc.CreateElement(ctx, member.ID, project.ID, &models.WhiteboardElement{
+			ElementType: "rect",
+			Props:       datatypes.JSON([]byte(`{"id":"doomed"}`)),
+			ZIndex:      1,
+		})
+		require.NoError(t, err)
+
+		pendingStore := whiteboardDB.NewPendingElementStore(rdb)
+		testutils.RunRedisTestTransaction(t, rdb, pendingKeysFor(project.ID), func() {
+			// Pending update to `persisted`, pending delete of `doomed`,
+			// pending create of a new element `fresh`.
+			freshID := uuid.New()
+			ops := []whiteboardDB.PendingElementOperation{
+				{
+					ProjectID:    project.ID,
+					ElementID:    persisted.ID,
+					WhiteboardID: wb.ID,
+					Operation:    whiteboardDB.PendingElementUpdate,
+					Props:        datatypes.JSON([]byte(`{"id":"keep","x":42}`)),
+					ZIndex:       zIdxPtr(5),
+				},
+				{
+					ProjectID:    project.ID,
+					ElementID:    doomed.ID,
+					WhiteboardID: wb.ID,
+					Operation:    whiteboardDB.PendingElementDelete,
+				},
+				{
+					ProjectID:    project.ID,
+					ElementID:    freshID,
+					WhiteboardID: wb.ID,
+					Operation:    whiteboardDB.PendingElementCreate,
+					ElementType:  "ellipse",
+					Props:        datatypes.JSON([]byte(`{"id":"fresh"}`)),
+					ZIndex:       zIdxPtr(2),
+				},
+			}
+			for _, op := range ops {
+				require.NoError(t, pendingStore.PutPendingElementOperation(ctx, op))
+			}
+
+			merged, err := svc.GetElements(ctx, member.ID, project.ID)
+			require.NoError(t, err)
+			require.Len(t, merged, 2, "doomed deleted, fresh added, persisted updated")
+
+			// Order: fresh (z=2) before persisted (z=5).
+			assert.Equal(t, freshID, merged[0].ID)
+			assert.Equal(t, "ellipse", merged[0].ElementType)
+			assert.Equal(t, persisted.ID, merged[1].ID)
+			assert.Equal(t, 5, merged[1].ZIndex, "ZIndex must reflect pending update")
+			assert.JSONEq(t, `{"id":"keep","x":42}`, string(merged[1].Props))
+		})
+	})
+}
+
+func TestWhiteboardService_GetElements_NoPending_ReturnsDBOnly(t *testing.T) {
+	runTest(t, db, "no pending ops -> raw DB result", func(t *testing.T, db *gorm.DB, svc whiteboardSvc.WhiteboardService) {
+		project, member := selectProjectMember(t, db)
+		ctx := context.Background()
+
+		_, err := svc.GetOrCreateWhiteboardByProjectID(ctx, member.ID, project.ID)
+		require.NoError(t, err)
+		created, err := svc.CreateElement(ctx, member.ID, project.ID, &models.WhiteboardElement{
+			ElementType: "rect",
+			Props:       datatypes.JSON([]byte(`{"id":"only"}`)),
+		})
+		require.NoError(t, err)
+
+		testutils.RunRedisTestTransaction(t, rdb, pendingKeysFor(project.ID), func() {
+			got, err := svc.GetElements(ctx, member.ID, project.ID)
+			require.NoError(t, err)
+			require.Len(t, got, 1)
+			assert.Equal(t, created.ID, got[0].ID)
+		})
 	})
 }

@@ -1,7 +1,6 @@
 import type { Key } from '@heroui/react'
 import {
     Autocomplete,
-    Avatar,
     EmptyState,
     Label,
     ListBox,
@@ -11,7 +10,7 @@ import {
     useFilter,
 } from '@heroui/react'
 import { useTranslation } from 'react-i18next'
-import getInitials from '../../../../../../../shared/utils/getInitials'
+import { UserAvatar } from '../../../../../../../shared/components'
 import {
     useAssignTaskMutation,
     useUnassignTaskMutation,
@@ -36,6 +35,7 @@ export function TaskAssigneeField({ task }: { task: Task }) {
     const items = members.map((m) => ({
         id: m.id,
         label: m.user.fullName ?? m.user.username,
+        avatarUrl: m.user.avatarUrl,
     }))
     const currentMember = currentAssignee
         ? members.find(
@@ -52,11 +52,11 @@ export function TaskAssigneeField({ task }: { task: Task }) {
                 <Label>{t('tasks.form.assignee')}</Label>
                 <div className="border-border bg-surface-secondary text-foreground flex min-h-9 w-full items-center gap-2 rounded-lg border px-3 py-2 text-sm">
                     {currentMember && (
-                        <Avatar className="h-6 w-6 text-xs">
-                            <Avatar.Fallback className="bg-accent text-white">
-                                {getInitials(currentAssigneeName)}
-                            </Avatar.Fallback>
-                        </Avatar>
+                        <UserAvatar
+                            className="h-6 w-6 text-xs"
+                            name={currentAssigneeName}
+                            src={currentMember.user.avatarUrl}
+                        />
                     )}
                     <span className={currentMember ? '' : 'text-muted'}>
                         {currentAssigneeName}
@@ -130,14 +130,14 @@ export function TaskAssigneeField({ task }: { task: Task }) {
 
                             return (
                                 <div className="flex items-center gap-2">
-                                    <Avatar className="h-6 w-6 text-xs">
-                                        <Avatar.Fallback className="bg-accent text-white">
-                                            {getInitials(
-                                                member.user.fullName ??
-                                                    member.user.username,
-                                            )}
-                                        </Avatar.Fallback>
-                                    </Avatar>
+                                    <UserAvatar
+                                        className="h-6 w-6 text-xs"
+                                        name={
+                                            member.user.fullName ??
+                                            member.user.username
+                                        }
+                                        src={member.user.avatarUrl}
+                                    />
                                     <span>
                                         {member.user.fullName ??
                                             member.user.username}
@@ -181,11 +181,11 @@ export function TaskAssigneeField({ task }: { task: Task }) {
                                     textValue={item.label}
                                 >
                                     <div className="flex items-center gap-2">
-                                        <Avatar className="h-6 w-6 text-xs">
-                                            <Avatar.Fallback className="bg-accent text-white">
-                                                {getInitials(item.label)}
-                                            </Avatar.Fallback>
-                                        </Avatar>
+                                        <UserAvatar
+                                            className="h-6 w-6 text-xs"
+                                            name={item.label}
+                                            src={item.avatarUrl}
+                                        />
                                         <span className="text-sm">
                                             {item.label}
                                         </span>

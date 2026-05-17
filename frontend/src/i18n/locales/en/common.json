@@ -23,6 +23,13 @@
     "confirm": "Log Out",
     "pending": "Logging out..."
   },
+  "passwordInput": {
+    "label": "Password",
+    "placeholder": "Enter your password",
+    "createPlaceholder": "Create a password",
+    "show": "Show password",
+    "hide": "Hide password"
+  },
   "notification": {
     "ariaLabel": "Notifications",
     "title": "Notifications",
@@ -31,11 +38,13 @@
     "emptyDescription": "New updates will appear here.",
     "deleteAriaLabel": "Delete notification",
     "markAsReadError": "Unable to mark notification as read.",
+    "openError": "Unable to open notification target.",
     "deleteError": "Unable to delete notification.",
     "objectTypes": {
       "notification": "Notification",
       "project": "Project",
-      "task": "Task"
+      "task": "Task",
+	  "chat": "Chat"
     }
   },
   "primary": "Primary",

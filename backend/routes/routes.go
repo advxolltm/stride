@@ -1,12 +1,14 @@
 package routes
 
 import (
+	dbtypes "backend/db"
 	"backend/models"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 	"time"
 
@@ -36,6 +38,19 @@ func BadRequestErrResponse(err error) ErrorResponse {
 			Error: fmt.Sprintf("bad request: %s", err.Error()),
 		}
 	}
+}
+
+type Paginated[T any] struct {
+	Items          []T `json:"items"`
+	Page           int `json:"page"`
+	PageSize       int `json:"pageSize"`
+	PageCount      int `json:"pageCount"`
+	TotalItemCount int `json:"totalItemCount"`
+}
+
+type PaginationRequest struct {
+	Page int `query:"page"`
+	PageSize int `query:"pageSize"`
 }
 
 type DateOnly struct {
@@ -114,6 +129,13 @@ type (
 		Description *string   `json:"description"`
 	} // @name ProjectSkill
 
+	UserSkill struct {
+		ID             uuid.UUID    `json:"id"`
+		UserID         uuid.UUID    `json:"user_id"`
+		ProjectSkillID uuid.UUID    `json:"project_skill_id"`
+		ProjectSkill   ProjectSkill `json:"project_skill"`
+	} // @name UserSkill
+
 	TaskAssignee struct {
 		ID              uuid.UUID     `json:"id"`
 		TaskID          uuid.UUID     `json:"task_id"`
@@ -135,7 +157,37 @@ type (
 		TaskAssignee
 		Task Task `json:"task"`
 	} // @name TaskAssigneeWithTask
+
+	Message struct {
+		ID        uuid.UUID  `json:"id"`
+		SenderID  *uuid.UUID `json:"senderId"`
+		ProjectID uuid.UUID  `json:"projectId"`
+		Content   string     `json:"content" example:"You should play Ultrakill"`
+		IsEdited  bool       `json:"isEdited"`
+		IsDeleted bool       `json:"isDeleted"`
+		CreatedAt time.Time  `json:"createdAt"`
+		EditedAt  *time.Time `json:"editedAt"`
+		DeletedAt *time.Time `json:"deletedAt"`
+	} // @name Message
+
+	MessageCount struct {
+		Count int `json:"count" example:"42"`
+	} // @name MessageCount
 )
+
+func MapMessage(msg models.Message) Message {
+	return Message{
+		ID:        msg.ID,
+		SenderID:  msg.SenderID,
+		ProjectID: msg.ProjectID,
+		Content:   msg.Content,
+		IsEdited:  msg.IsEdited,
+		IsDeleted: msg.IsDeleted,
+		CreatedAt: msg.CreatedAt,
+		EditedAt:  msg.EditedAt,
+		DeletedAt: msg.DeletedAt,
+	}
+}
 
 func MapTask(task models.Task) Task {
 	return Task{
@@ -163,6 +215,15 @@ func MapProjectSkill(projectSkill models.ProjectSkill) ProjectSkill {
 		ProjectID:   projectSkill.ProjectID,
 		Name:        projectSkill.Name,
 		Description: projectSkill.Description,
+	}
+}
+
+func MapUserSkill(userSkill models.UserSkill) UserSkill {
+	return UserSkill{
+		ID:             userSkill.ID,
+		UserID:         userSkill.UserID,
+		ProjectSkillID: userSkill.ProjectSkillID,
+		ProjectSkill:   MapProjectSkill(userSkill.ProjectSkill),
 	}
 }
 
@@ -219,6 +280,7 @@ type (
 		AvatarURL *AvatarURL `json:"avatar_url"`
 	}
 )
+
 
 func mapAvatarURL(a *models.AvatarURLMap) *AvatarURL {
 	if a == nil {
@@ -318,6 +380,17 @@ func Map[T any, V any](input []T, f func(T) V) []V {
 	return result
 }
 
+func MapPaginated[TDB, TRoute any](p dbtypes.Paginated[TDB], f func(TDB) TRoute) Paginated[TRoute] {
+	troute := Map(p.Items, f)
+	return Paginated[TRoute]{
+		Items:          troute,
+		Page:           p.Page,
+		PageSize:       p.PageSize,
+		PageCount:      p.PageCount,
+		TotalItemCount: p.TotalItemCount,
+	}
+}
+
 type ReturnUser struct {
 	ID        uuid.UUID  `json:"id"`
 	Username  string     `json:"username"`
@@ -364,6 +437,8 @@ type WSMessageType int
 const (
 	// Chat message types
 	ChatMessageCreate WSMessageType = iota
+	ChatMessageUpdate
+	ChatMessageDelete
 
 	// Task message types
 	TaskCreate
@@ -387,7 +462,15 @@ const (
 	WhiteboardElementDelete
 	WhiteboardElementLiveUpdate
 	WhiteboardElementLiveClear
+	WhiteboardElementRollback
 )
+
+type WhiteboardElementRollbackPayload struct {
+	ProjectID   uuid.UUID `json:"projectId"`
+	ElementID   uuid.UUID `json:"elementId"`
+	OperationID string    `json:"operationId,omitempty"`
+	Reason      string    `json:"reason,omitempty"`
+}
 
 type WSMessageMeta struct {
 	ProjectID    uuid.UUID  `json:"projectId"`
@@ -482,4 +565,21 @@ func SendWSUpdateWithMeta[T any](
 	}
 
 	return nil
+}
+
+func ProjectMemberUserIDs(projectMembers []models.ProjectMember) uuid.UUIDs {
+	userIDs := make(uuid.UUIDs, 0, len(projectMembers))
+	for _, projectMember := range projectMembers {
+		if projectMember.UserID == uuid.Nil {
+			continue
+		}
+		userIDs = append(userIDs, projectMember.UserID)
+	}
+	return userIDs
+}
+
+func ExcludeUserID(userIDs uuid.UUIDs, toExclude uuid.UUID) uuid.UUIDs {
+	return slices.DeleteFunc(userIDs, func(uid uuid.UUID) bool {
+		return uid == toExclude
+	})
 }

@@ -6,8 +6,11 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"image"
+	"image/png"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/google/uuid"
@@ -18,12 +21,14 @@ import (
 )
 
 type stubUserStore struct {
-	getAllUsersFn           func(ctx context.Context) ([]models.User, error)
-	getUserFn               func(ctx context.Context, id uuid.UUID) (*models.User, error)
-	createUserFn            func(ctx context.Context, user *models.User) error
-	updateUserFn            func(ctx context.Context, id uuid.UUID, fields userStore.UpdateUserFields) (*models.User, error)
-	deleteUserFn            func(ctx context.Context, id uuid.UUID) error
-	getByEmailAndPasswordFn func(ctx context.Context, email, password string) (uuid.UUID, error)
+	getAllUsersFn              func(ctx context.Context) ([]models.User, error)
+	getUserFn                  func(ctx context.Context, id uuid.UUID) (*models.User, error)
+	createUserFn               func(ctx context.Context, user *models.User) error
+	updateUserFn               func(ctx context.Context, id uuid.UUID, fields userStore.UpdateUserFields) (*models.User, error)
+	deleteUserFn               func(ctx context.Context, id uuid.UUID) error
+	getByEmailAndPasswordFn    func(ctx context.Context, email, password string) (uuid.UUID, error)
+	getUserSkillsFn           func(ctx context.Context, userID uuid.UUID) ([]models.UserSkill, error)
+	updateUserProjectSkillsFn func(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, skillIDs []uuid.UUID) ([]models.UserSkill, error)
 }
 
 func (s *stubUserStore) GetAllUsers(ctx context.Context) ([]models.User, error) {
@@ -66,6 +71,20 @@ func (s *stubUserStore) GetByEmailAndPassword(ctx context.Context, email, passwo
 		panic("unexpected GetByEmailAndPassword call")
 	}
 	return s.getByEmailAndPasswordFn(ctx, email, password)
+}
+
+func (s *stubUserStore) GetUserSkills(ctx context.Context, userID uuid.UUID) ([]models.UserSkill, error) {
+	if s.getUserSkillsFn == nil {
+		panic("unexpected GetUserSkills call")
+	}
+	return s.getUserSkillsFn(ctx, userID)
+}
+
+func (s *stubUserStore) UpdateUserProjectSkills(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, skillIDs []uuid.UUID) ([]models.UserSkill, error) {
+	if s.updateUserProjectSkillsFn == nil {
+		panic("unexpected UpdateUserProjectSkills call")
+	}
+	return s.updateUserProjectSkillsFn(ctx, userID, projectID, skillIDs)
 }
 
 func newTestService(t *testing.T, store *stubUserStore) userService {
@@ -296,6 +315,50 @@ func TestUserService_UpdateUser(t *testing.T) {
 		assert.ErrorContains(t, err, "read failed")
 	})
 
+	runServiceTest(t, "saves avatar files with permissions readable by nginx", func(t *testing.T, service userService, store *stubUserStore) {
+		ctx := context.Background()
+		userID := uuid.New()
+
+		var avatar bytes.Buffer
+		require.NoError(t, png.Encode(&avatar, image.NewNRGBA(image.Rect(0, 0, 1, 1))))
+
+		store.updateUserFn = func(_ context.Context, id uuid.UUID, fields userStore.UpdateUserFields) (*models.User, error) {
+			require.Equal(t, userID, id)
+			require.True(t, fields.SetAvatarURL)
+			require.NotNil(t, fields.AvatarURL)
+			return &models.User{ID: id, AvatarURL: fields.AvatarURL}, nil
+		}
+
+		updated, err := service.UpdateUser(ctx, userID, UpdateUserInput{
+			Avatar: &AvatarInput{
+				Filename: "avatar.png",
+				File:     bytes.NewReader(avatar.Bytes()),
+				Size:     int64(avatar.Len()),
+			},
+		})
+
+		require.NoError(t, err)
+		require.NotNil(t, updated)
+
+		avatarDir := filepath.Join(service.mediaDir, "avatars", userID.String())
+		dirInfo, err := os.Stat(avatarDir)
+		require.NoError(t, err)
+
+		originalInfo, err := os.Stat(filepath.Join(avatarDir, "original.png"))
+		require.NoError(t, err)
+		smallInfo, err := os.Stat(filepath.Join(avatarDir, "300.png"))
+		require.NoError(t, err)
+		mediumInfo, err := os.Stat(filepath.Join(avatarDir, "600.png"))
+		require.NoError(t, err)
+
+		if runtime.GOOS != "windows" {
+			assert.Equal(t, avatarDirMode, dirInfo.Mode().Perm())
+			assert.Equal(t, avatarFileMode, originalInfo.Mode().Perm())
+			assert.Equal(t, avatarFileMode, smallInfo.Mode().Perm())
+			assert.Equal(t, avatarFileMode, mediumInfo.Mode().Perm())
+		}
+	})
+
 	runServiceTest(t, "clears avatar_url and deletes avatar files when RemoveAvatar is requested", func(t *testing.T, service userService, store *stubUserStore) {
 		ctx := context.Background()
 		userID := uuid.New()
@@ -393,6 +456,86 @@ func TestUserService_DeleteAvatar(t *testing.T) {
 		err := service.deleteAvatar(uuid.New())
 
 		assert.ErrorIs(t, err, ErrAvatarDeleteFailed)
+	})
+}
+
+func TestUserService_ChangePassword(t *testing.T) {
+	runServiceTest(t, "updates password hash when current password is correct", func(t *testing.T, service userService, store *stubUserStore) {
+		ctx := context.Background()
+		userID := uuid.New()
+		currentPassword := "Current!123"
+		newPassword := "NewValid!123"
+
+		store.getUserFn = func(_ context.Context, id uuid.UUID) (*models.User, error) {
+			require.Equal(t, userID, id)
+			return &models.User{ID: id, PasswordHash: mustHashPassword(t, currentPassword)}, nil
+		}
+		store.updateUserFn = func(_ context.Context, id uuid.UUID, fields userStore.UpdateUserFields) (*models.User, error) {
+			require.Equal(t, userID, id)
+			require.NotNil(t, fields.PasswordHash)
+			assert.NotEqual(t, newPassword, *fields.PasswordHash)
+			assert.NoError(t, bcrypt.CompareHashAndPassword([]byte(*fields.PasswordHash), []byte(newPassword)))
+			return &models.User{ID: id, PasswordHash: *fields.PasswordHash}, nil
+		}
+
+		err := service.ChangePassword(ctx, userID, currentPassword, newPassword)
+
+		assert.NoError(t, err)
+	})
+
+	runServiceTest(t, "returns ErrInvalidPassword and does not update when current password is wrong", func(t *testing.T, service userService, store *stubUserStore) {
+		store.getUserFn = func(_ context.Context, id uuid.UUID) (*models.User, error) {
+			return &models.User{ID: id, PasswordHash: mustHashPassword(t, "Current!123")}, nil
+		}
+
+		err := service.ChangePassword(context.Background(), uuid.New(), "Wrong!123", "NewValid!123")
+
+		assert.ErrorIs(t, err, ErrInvalidPassword)
+	})
+
+	runServiceTest(t, "returns password validation error before updating", func(t *testing.T, service userService, store *stubUserStore) {
+		store.getUserFn = func(_ context.Context, id uuid.UUID) (*models.User, error) {
+			return &models.User{ID: id, PasswordHash: mustHashPassword(t, "Current!123")}, nil
+		}
+
+		err := service.ChangePassword(context.Background(), uuid.New(), "Current!123", "weak")
+
+		assert.ErrorIs(t, err, ErrPasswordTooShort)
+	})
+
+	runServiceTest(t, "returns ErrPasswordUnchanged and does not update when new password matches current password", func(t *testing.T, service userService, store *stubUserStore) {
+		currentPassword := "Current!123"
+		store.getUserFn = func(_ context.Context, id uuid.UUID) (*models.User, error) {
+			return &models.User{ID: id, PasswordHash: mustHashPassword(t, currentPassword)}, nil
+		}
+
+		err := service.ChangePassword(context.Background(), uuid.New(), currentPassword, currentPassword)
+
+		assert.ErrorIs(t, err, ErrPasswordUnchanged)
+	})
+
+	runServiceTest(t, "maps missing user from lookup", func(t *testing.T, service userService, store *stubUserStore) {
+		store.getUserFn = func(_ context.Context, _ uuid.UUID) (*models.User, error) {
+			return nil, gorm.ErrRecordNotFound
+		}
+
+		err := service.ChangePassword(context.Background(), uuid.New(), "Current!123", "NewValid!123")
+
+		assert.ErrorIs(t, err, ErrUserNotFound)
+	})
+
+	runServiceTest(t, "wraps unexpected update errors", func(t *testing.T, service userService, store *stubUserStore) {
+		store.getUserFn = func(_ context.Context, id uuid.UUID) (*models.User, error) {
+			return &models.User{ID: id, PasswordHash: mustHashPassword(t, "Current!123")}, nil
+		}
+		store.updateUserFn = func(_ context.Context, _ uuid.UUID, _ userStore.UpdateUserFields) (*models.User, error) {
+			return nil, errors.New("update failed")
+		}
+
+		err := service.ChangePassword(context.Background(), uuid.New(), "Current!123", "NewValid!123")
+
+		assert.ErrorIs(t, err, ErrUserStoreFailed)
+		assert.ErrorContains(t, err, "update failed")
 	})
 }
 

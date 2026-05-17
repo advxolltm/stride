@@ -36,9 +36,12 @@ func NewWhiteboardStore(db *gorm.DB) WhiteboardStore {
 
 func (s *whiteboardStore) GetWhiteboardByProjectID(ctx context.Context, projectUUID uuid.UUID) (*models.Whiteboard, error) {
 	var whiteboard models.Whiteboard
-	result := s.db.WithContext(ctx).First(&whiteboard, "project_id = ?", projectUUID)
+	result := s.db.WithContext(ctx).Find(&whiteboard, "project_id = ?", projectUUID)
 	if result.Error != nil {
 		return nil, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return nil, gorm.ErrRecordNotFound
 	}
 	return &whiteboard, nil
 }
