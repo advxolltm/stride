@@ -115,7 +115,7 @@ func (s *whiteboardService) CreateElement(ctx context.Context, userID uuid.UUID,
 	if err := ValidateUserAccessToProject(ctx, s.projectService, userID, projectID); err != nil {
 		return nil, err
 	}
-	wb, err := s.store.GetWhiteboardByProjectID(ctx, projectID)
+	wb, err := s.GetOrCreateWhiteboardByProjectID(ctx, userID, projectID)
 	if err != nil {
 		return nil, err
 	}
