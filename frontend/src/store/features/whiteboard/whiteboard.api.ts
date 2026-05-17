@@ -1,5 +1,4 @@
-import { baseApi, buildApiWebSocketUrl } from '../../api/base.api'
-import { WSMessageType } from '../projectSocket/projectSocket.types'
+import { baseApi } from '../../api/base.api'
 import type {
     ApiWhiteboard,
     ApiWhiteboardElement,
@@ -7,24 +6,29 @@ import type {
     UpdateWhiteboardElementRequest,
     Whiteboard,
     WhiteboardElement,
-    WhiteboardCursorClientMessage,
-    WhiteboardCursorPresence,
+} from './whiteboard.api.types'
+import type {
     WhiteboardCursorSocketState,
-    WhiteboardEventMessage,
     WhiteboardEventsSocketState,
-    WhiteboardLiveClientMessage,
-    WhiteboardLiveUpdateEventPayload,
-    WhiteboardSocketEventMessage,
-} from './whiteboard.types'
+} from './whiteboard.ui.types'
+import { createWhiteboardMutationHeaders } from './whiteboard.client'
 import {
-    applyWhiteboardEventToElementsCache,
-    applyWhiteboardLiveEventToOverlay,
-    createWhiteboardLiveClientMessageMeta,
-    createWhiteboardMutationHeaders,
-    isSelfOriginatedWhiteboardEvent,
-    parseWhiteboardEventMessage,
-    serializeWhiteboardLiveClientMessage,
-} from './whiteboard.ws'
+    applyPersistedElementToCache,
+    patchWhiteboardElementsCacheFromEvent,
+    patchWhiteboardLiveOverlayFromEvent,
+    removePersistedElementFromCache,
+} from './whiteboard.cache'
+import {
+    createWhiteboardCursorSocketState,
+    sendWhiteboardCursor,
+    watchWhiteboardCursorSocket,
+} from './whiteboard.cursorSocket'
+import {
+    createWhiteboardEventsSocketState,
+    sendWhiteboardLiveClear,
+    sendWhiteboardLiveUpdate,
+    watchWhiteboardEventsSocket,
+} from './whiteboard.eventsSocket'
 
 const transformWhiteboard = (whiteboard: ApiWhiteboard): Whiteboard => ({
     id: whiteboard.id,
@@ -45,430 +49,6 @@ const transformWhiteboardElement = (
     createdAt: element.createdAt,
     updatedAt: element.updatedAt,
 })
-
-type WhiteboardCursorSocketLifecycleApi = {
-    cacheDataLoaded: Promise<unknown>
-    cacheEntryRemoved: Promise<void>
-    updateCachedData: (
-        recipe: (draft: WhiteboardCursorSocketState) => void,
-    ) => void
-}
-
-type WhiteboardEventsSocketLifecycleApi = {
-    cacheDataLoaded: Promise<unknown>
-    cacheEntryRemoved: Promise<void>
-    dispatch: (action: unknown) => unknown
-    getState: () => unknown
-    updateCachedData: (
-        recipe: (draft: WhiteboardEventsSocketState) => void,
-    ) => void
-}
-
-const activeWhiteboardCursorSockets = new Map<string, WebSocket>()
-const activeWhiteboardEventSockets = new Map<string, WebSocket>()
-
-const createWhiteboardCursorSocketUrl = (projectId: string) =>
-    buildApiWebSocketUrl(`/ws/project/${projectId}/whiteboard/cursor`)
-
-const createWhiteboardEventsSocketUrl = (projectId: string) =>
-    buildApiWebSocketUrl(`/ws/project/${projectId}/whiteboard`)
-
-const createWhiteboardCursorSocketState = (
-    projectId: string,
-): WhiteboardCursorSocketState => ({
-    projectId,
-    url: createWhiteboardCursorSocketUrl(projectId),
-    status: 'connecting',
-    presence: [],
-    lastSnapshotAt: null,
-    lastError: null,
-})
-
-const createWhiteboardEventsSocketState = (
-    projectId: string,
-): WhiteboardEventsSocketState => ({
-    projectId,
-    url: createWhiteboardEventsSocketUrl(projectId),
-    status: 'connecting',
-    liveElementsById: {},
-    lastMessage: null,
-    lastMessageAt: null,
-    lastError: null,
-})
-
-const isWhiteboardCursorPresence = (
-    value: unknown,
-): value is WhiteboardCursorPresence => {
-    if (!value || typeof value !== 'object') {
-        return false
-    }
-
-    const record = value as Partial<WhiteboardCursorPresence>
-    const user = record.user
-    const cursor = record.cursor
-
-    return (
-        !!user &&
-        typeof user === 'object' &&
-        typeof user.id === 'string' &&
-        typeof user.name === 'string' &&
-        typeof user.avatarSmall === 'string' &&
-        !!cursor &&
-        typeof cursor === 'object' &&
-        (cursor.x === null || typeof cursor.x === 'number') &&
-        (cursor.y === null || typeof cursor.y === 'number')
-    )
-}
-
-const parseWhiteboardCursorSnapshot = (rawMessage: string) => {
-    try {
-        const parsed = JSON.parse(rawMessage) as unknown
-        if (!Array.isArray(parsed)) {
-            return null
-        }
-
-        return parsed.every(isWhiteboardCursorPresence) ? parsed : null
-    } catch {
-        return null
-    }
-}
-
-const watchWhiteboardCursorSocket = async (
-    projectId: string,
-    lifecycleApi: WhiteboardCursorSocketLifecycleApi,
-) => {
-    if (typeof WebSocket === 'undefined') {
-        return
-    }
-
-    let socket: WebSocket | null = null
-    let handleOpen: (() => void) | null = null
-    let handleMessage: ((event: MessageEvent) => void) | null = null
-    let handleError: (() => void) | null = null
-    let handleClose: (() => void) | null = null
-
-    try {
-        await lifecycleApi.cacheDataLoaded
-
-        socket = new WebSocket(createWhiteboardCursorSocketUrl(projectId))
-
-        handleOpen = () => {
-            activeWhiteboardCursorSockets.set(projectId, socket!)
-            lifecycleApi.updateCachedData((draft) => {
-                draft.status = 'connected'
-                draft.lastError = null
-            })
-        }
-
-        handleMessage = (event: MessageEvent) => {
-            if (typeof event.data !== 'string') {
-                return
-            }
-
-            const snapshot = parseWhiteboardCursorSnapshot(event.data)
-            if (!snapshot) {
-                lifecycleApi.updateCachedData((draft) => {
-                    draft.lastError =
-                        'Failed to parse whiteboard cursor snapshot'
-                })
-                return
-            }
-
-            lifecycleApi.updateCachedData((draft) => {
-                draft.presence = snapshot
-                draft.lastSnapshotAt = new Date().toISOString()
-            })
-        }
-
-        handleError = () => {
-            lifecycleApi.updateCachedData((draft) => {
-                draft.status = 'error'
-                draft.lastError =
-                    'Failed to establish whiteboard cursor websocket connection'
-            })
-        }
-
-        handleClose = () => {
-            activeWhiteboardCursorSockets.delete(projectId)
-            lifecycleApi.updateCachedData((draft) => {
-                if (draft.status !== 'error') {
-                    draft.status = 'disconnected'
-                }
-            })
-        }
-
-        socket.addEventListener('open', handleOpen)
-        socket.addEventListener('message', handleMessage)
-        socket.addEventListener('error', handleError)
-        socket.addEventListener('close', handleClose)
-
-        await lifecycleApi.cacheEntryRemoved
-    } catch {
-        return
-    } finally {
-        activeWhiteboardCursorSockets.delete(projectId)
-
-        if (
-            socket &&
-            handleOpen &&
-            handleMessage &&
-            handleError &&
-            handleClose
-        ) {
-            socket.removeEventListener('open', handleOpen)
-            socket.removeEventListener('message', handleMessage)
-            socket.removeEventListener('error', handleError)
-            socket.removeEventListener('close', handleClose)
-        }
-
-        if (
-            socket &&
-            (socket.readyState === WebSocket.OPEN ||
-                socket.readyState === WebSocket.CONNECTING)
-        ) {
-            socket.close()
-        }
-    }
-}
-
-const patchWhiteboardElementsCacheFromEvent = (
-    projectId: string,
-    message: WhiteboardEventMessage,
-    lifecycleApi: WhiteboardEventsSocketLifecycleApi,
-) => {
-    lifecycleApi.dispatch(
-        whiteboardApi.util.updateQueryData(
-            'getProjectWhiteboardElements',
-            projectId,
-            (draft) =>
-                applyWhiteboardEventToElementsCache(
-                    draft,
-                    message,
-                    transformWhiteboardElement,
-                ),
-        ),
-    )
-}
-
-const isPersistedWhiteboardEventMessage = (
-    message: WhiteboardSocketEventMessage,
-): message is WhiteboardEventMessage =>
-    message.type !== WSMessageType.WhiteboardElementLiveUpdate &&
-    message.type !== WSMessageType.WhiteboardElementLiveClear
-
-const resolveLiveElementIDToClear = (
-    projectId: string,
-    message: WhiteboardEventMessage,
-    lifecycleApi: WhiteboardEventsSocketLifecycleApi,
-) => {
-    switch (message.type) {
-        case WSMessageType.WhiteboardElementCreate:
-        case WSMessageType.WhiteboardElementUpdate:
-            return message.payload.props.id
-        case WSMessageType.WhiteboardElementDelete: {
-            const state = lifecycleApi.getState()
-            const elementsResult =
-                whiteboardApi.endpoints.getProjectWhiteboardElements.select(
-                    projectId,
-                )(state as never)
-            const persistedElement = elementsResult.data?.find(
-                (element) => element.id === message.payload.elementId,
-            )
-            return persistedElement?.props.id ?? null
-        }
-        default:
-            return null
-    }
-}
-
-const patchWhiteboardLiveOverlayFromEvent = (
-    projectId: string,
-    message: WhiteboardSocketEventMessage,
-    lifecycleApi: WhiteboardEventsSocketLifecycleApi,
-) => {
-    lifecycleApi.updateCachedData((draft) => {
-        if (isPersistedWhiteboardEventMessage(message)) {
-            const liveElementID = resolveLiveElementIDToClear(
-                projectId,
-                message,
-                lifecycleApi,
-            )
-            if (liveElementID) {
-                delete draft.liveElementsById[liveElementID]
-            }
-            return
-        }
-
-        applyWhiteboardLiveEventToOverlay(draft.liveElementsById, message)
-    })
-}
-
-const watchWhiteboardEventsSocket = async (
-    projectId: string,
-    lifecycleApi: WhiteboardEventsSocketLifecycleApi,
-) => {
-    if (typeof WebSocket === 'undefined') {
-        return
-    }
-
-    let socket: WebSocket | null = null
-    let handleOpen: (() => void) | null = null
-    let handleMessage: ((event: MessageEvent) => void) | null = null
-    let handleError: (() => void) | null = null
-    let handleClose: (() => void) | null = null
-
-    try {
-        await lifecycleApi.cacheDataLoaded
-
-        socket = new WebSocket(createWhiteboardEventsSocketUrl(projectId))
-
-        handleOpen = () => {
-            activeWhiteboardEventSockets.set(projectId, socket!)
-            lifecycleApi.updateCachedData((draft) => {
-                draft.status = 'connected'
-                draft.lastError = null
-            })
-        }
-
-        handleMessage = (event: MessageEvent) => {
-            if (typeof event.data !== 'string') {
-                return
-            }
-
-            const message = parseWhiteboardEventMessage(event.data)
-            if (!message) {
-                lifecycleApi.updateCachedData((draft) => {
-                    draft.lastError =
-                        'Failed to parse whiteboard events websocket message'
-                })
-                return
-            }
-
-            const isPersistedEvent = isPersistedWhiteboardEventMessage(message)
-            const isSelfOriginated = isSelfOriginatedWhiteboardEvent(message)
-
-            if (isSelfOriginated && !isPersistedEvent) {
-                return
-            }
-
-            if (!isSelfOriginated && isPersistedEvent) {
-                patchWhiteboardElementsCacheFromEvent(
-                    projectId,
-                    message,
-                    lifecycleApi,
-                )
-            }
-
-            if (!isSelfOriginated) {
-                patchWhiteboardLiveOverlayFromEvent(
-                    projectId,
-                    message,
-                    lifecycleApi,
-                )
-            }
-
-            lifecycleApi.updateCachedData((draft) => {
-                draft.lastMessage = message
-                draft.lastMessageAt = new Date().toISOString()
-            })
-        }
-
-        handleError = () => {
-            lifecycleApi.updateCachedData((draft) => {
-                draft.status = 'error'
-                draft.lastError =
-                    'Failed to establish whiteboard websocket connection'
-            })
-        }
-
-        handleClose = () => {
-            activeWhiteboardEventSockets.delete(projectId)
-            lifecycleApi.updateCachedData((draft) => {
-                if (draft.status !== 'error') {
-                    draft.status = 'disconnected'
-                }
-            })
-        }
-
-        socket.addEventListener('open', handleOpen)
-        socket.addEventListener('message', handleMessage)
-        socket.addEventListener('error', handleError)
-        socket.addEventListener('close', handleClose)
-
-        await lifecycleApi.cacheEntryRemoved
-    } catch {
-        return
-    } finally {
-        activeWhiteboardEventSockets.delete(projectId)
-
-        if (
-            socket &&
-            handleOpen &&
-            handleMessage &&
-            handleError &&
-            handleClose
-        ) {
-            socket.removeEventListener('open', handleOpen)
-            socket.removeEventListener('message', handleMessage)
-            socket.removeEventListener('error', handleError)
-            socket.removeEventListener('close', handleClose)
-        }
-
-        if (
-            socket &&
-            (socket.readyState === WebSocket.OPEN ||
-                socket.readyState === WebSocket.CONNECTING)
-        ) {
-            socket.close()
-        }
-    }
-}
-
-export const sendWhiteboardCursor = (
-    projectId: string,
-    message: WhiteboardCursorClientMessage,
-) => {
-    const socket = activeWhiteboardCursorSockets.get(projectId)
-    if (!socket || socket.readyState !== WebSocket.OPEN) {
-        return false
-    }
-
-    socket.send(JSON.stringify(message))
-    return true
-}
-
-export const sendWhiteboardLiveMessage = (
-    projectId: string,
-    message: WhiteboardLiveClientMessage,
-) => {
-    const socket = activeWhiteboardEventSockets.get(projectId)
-    if (!socket || socket.readyState !== WebSocket.OPEN) {
-        return false
-    }
-
-    socket.send(serializeWhiteboardLiveClientMessage(message))
-    return true
-}
-
-export const sendWhiteboardLiveUpdate = (
-    projectId: string,
-    payload: WhiteboardLiveUpdateEventPayload,
-) =>
-    sendWhiteboardLiveMessage(projectId, {
-        type: WSMessageType.WhiteboardElementLiveUpdate,
-        meta: createWhiteboardLiveClientMessageMeta(),
-        payload,
-    })
-
-export const sendWhiteboardLiveClear = (
-    projectId: string,
-    elementId: string,
-) =>
-    sendWhiteboardLiveMessage(projectId, {
-        type: WSMessageType.WhiteboardElementLiveClear,
-        meta: createWhiteboardLiveClientMessageMeta(),
-        payload: { elementId },
-    })
 
 export const whiteboardApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
@@ -515,19 +95,11 @@ export const whiteboardApi = baseApi.injectEndpoints({
                         whiteboardApi.util.updateQueryData(
                             'getProjectWhiteboardElements',
                             projectId,
-                            (draft) => {
-                                const existingIndex = draft.findIndex(
-                                    (element) =>
-                                        element.id === createdElement.id,
-                                )
-
-                                if (existingIndex === -1) {
-                                    draft.push(createdElement as never)
-                                    return
-                                }
-
-                                draft[existingIndex] = createdElement as never
-                            },
+                            (draft) =>
+                                applyPersistedElementToCache(
+                                    draft,
+                                    createdElement,
+                                ),
                         ),
                     )
                 } catch {
@@ -562,19 +134,11 @@ export const whiteboardApi = baseApi.injectEndpoints({
                         whiteboardApi.util.updateQueryData(
                             'getProjectWhiteboardElements',
                             projectId,
-                            (draft) => {
-                                const existingIndex = draft.findIndex(
-                                    (element) =>
-                                        element.id === updatedElement.id,
-                                )
-
-                                if (existingIndex === -1) {
-                                    draft.push(updatedElement as never)
-                                    return
-                                }
-
-                                draft[existingIndex] = updatedElement as never
-                            },
+                            (draft) =>
+                                applyPersistedElementToCache(
+                                    draft,
+                                    updatedElement,
+                                ),
                         ),
                     )
                 } catch {
@@ -603,7 +167,10 @@ export const whiteboardApi = baseApi.injectEndpoints({
                             'getProjectWhiteboardElements',
                             projectId,
                             (draft) =>
-                                draft.filter((element) => element.id !== elementId),
+                                removePersistedElementFromCache(
+                                    draft,
+                                    elementId,
+                                ),
                         ),
                     )
                 } catch {
@@ -631,11 +198,43 @@ export const whiteboardApi = baseApi.injectEndpoints({
                 data: createWhiteboardEventsSocketState(projectId),
             }),
             async onCacheEntryAdded(projectId, lifecycleApi) {
-                await watchWhiteboardEventsSocket(projectId, lifecycleApi)
+                await watchWhiteboardEventsSocket(projectId, lifecycleApi, {
+                    patchElementsCacheFromEvent: (message) => {
+                        lifecycleApi.dispatch(
+                            whiteboardApi.util.updateQueryData(
+                                'getProjectWhiteboardElements',
+                                projectId,
+                                (draft) =>
+                                    patchWhiteboardElementsCacheFromEvent(
+                                        draft,
+                                        message,
+                                        transformWhiteboardElement,
+                                    ),
+                            ),
+                        )
+                    },
+                    patchLiveOverlayFromEvent: (message) => {
+                        lifecycleApi.updateCachedData((draft) => {
+                            const state = lifecycleApi.getState()
+                            const elementsResult =
+                                whiteboardApi.endpoints.getProjectWhiteboardElements.select(
+                                    projectId,
+                                )(state as never)
+
+                            patchWhiteboardLiveOverlayFromEvent(
+                                draft.liveElementsById,
+                                message,
+                                elementsResult.data,
+                            )
+                        })
+                    },
+                })
             },
         }),
     }),
 })
+
+export { sendWhiteboardCursor, sendWhiteboardLiveClear, sendWhiteboardLiveUpdate }
 
 export const {
     useGetProjectWhiteboardQuery,

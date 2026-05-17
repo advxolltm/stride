@@ -1,18 +1,23 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import {
     CaptureUpdateAction,
     Excalidraw,
     reconcileElements,
 } from '@excalidraw/excalidraw'
 import type {
-    ExcalidrawImperativeAPI,
-    AppState,
-} from '@excalidraw/excalidraw/types'
+    ExcalidrawElement,
+    OrderedExcalidrawElement,
+} from '@excalidraw/excalidraw/element/types'
+import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
 import '@excalidraw/excalidraw/index.css'
 import './WhiteboardCanvas.css'
 
-import type { WhiteboardCanvasProps } from './types'
-import getInitials from '../../../../shared/utils/getInitials'
+import type { WhiteboardCanvasProps } from './whiteboardCanvas.types'
+import {
+    toViewportCoordinates,
+    useWhiteboardViewport,
+} from './useWhiteboardViewport'
+import getInitials from '../../../../../shared/utils/getInitials'
 
 const formatCursorLabel = (name: string) => {
     const words = name.trim().split(/\s+/).filter(Boolean)
@@ -28,69 +33,6 @@ const formatCursorLabel = (name: string) => {
     const [firstName, lastName] = words
     return `${firstName} ${lastName[0]}.`
 }
-
-interface PersistedViewport {
-    scrollX: number
-    scrollY: number
-    zoom: number
-}
-
-const defaultViewport: PersistedViewport = {
-    scrollX: 0,
-    scrollY: 0,
-    zoom: 1,
-}
-
-const readPersistedViewport = (
-    storageKey?: string,
-): PersistedViewport | undefined => {
-    if (!storageKey || typeof window === 'undefined') {
-        return undefined
-    }
-
-    try {
-        const rawViewport = window.localStorage.getItem(storageKey)
-        if (!rawViewport) {
-            return undefined
-        }
-
-        const parsedViewport = JSON.parse(rawViewport) as Partial<PersistedViewport>
-        if (
-            typeof parsedViewport.scrollX !== 'number' ||
-            typeof parsedViewport.scrollY !== 'number' ||
-            typeof parsedViewport.zoom !== 'number'
-        ) {
-            return undefined
-        }
-
-        return parsedViewport as PersistedViewport
-    } catch {
-        return undefined
-    }
-}
-
-const persistViewport = (
-    storageKey: string | undefined,
-    viewport: PersistedViewport,
-) => {
-    if (!storageKey || typeof window === 'undefined') {
-        return
-    }
-
-    window.localStorage.setItem(storageKey, JSON.stringify(viewport))
-}
-
-const toZoomValue = (zoom: number): AppState['zoom']['value'] =>
-    zoom as AppState['zoom']['value']
-
-const toViewportCoordinates = (
-    sceneX: number,
-    sceneY: number,
-    viewport: PersistedViewport,
-) => ({
-    x: (sceneX + viewport.scrollX) * viewport.zoom,
-    y: (sceneY + viewport.scrollY) * viewport.zoom,
-})
 
 const getSceneSignature = (elements: readonly ExcalidrawElement[]) =>
     elements
@@ -114,29 +56,20 @@ export function WhiteboardCanvas({
     onCursorLeave,
 }: WhiteboardCanvasProps) {
     const excalidrawApiRef = useRef<ExcalidrawImperativeAPI | null>(null)
-    const latestExternalSceneRef = useRef<readonly ExcalidrawElement[]>(elements)
+    const latestExternalSceneRef =
+        useRef<readonly OrderedExcalidrawElement[]>(elements)
     const isLocallyInteractingRef = useRef(false)
     const externalSceneSignatureRef = useRef<string | null>(null)
     const sceneElements = useMemo(
         () => elements.map((element) => ({ ...element })),
         [elements],
     )
-    const initialViewport = useMemo(
-        () => readPersistedViewport(viewportStorageKey),
-        [viewportStorageKey],
-    )
-    const initialAppState = initialViewport
-        ? {
-              scrollX: initialViewport.scrollX,
-              scrollY: initialViewport.scrollY,
-              zoom: { value: toZoomValue(initialViewport.zoom) },
-          }
-        : undefined
-    const [viewport, setViewport] = useState<PersistedViewport>(
-        initialViewport ?? defaultViewport,
-    )
+    const { initialAppState, updateViewport, viewport } =
+        useWhiteboardViewport(viewportStorageKey)
 
-    const applyExternalScene = (nextSceneElements: readonly ExcalidrawElement[]) => {
+    const applyExternalScene = (
+        nextSceneElements: readonly OrderedExcalidrawElement[],
+    ) => {
         const excalidrawApi = excalidrawApiRef.current
         if (!excalidrawApi) {
             return
@@ -144,7 +77,7 @@ export function WhiteboardCanvas({
 
         const reconciledElements = reconcileElements(
             excalidrawApi.getSceneElementsIncludingDeleted(),
-            nextSceneElements,
+            nextSceneElements as Parameters<typeof reconcileElements>[1],
             excalidrawApi.getAppState(),
         )
 
@@ -201,19 +134,12 @@ export function WhiteboardCanvas({
                         },
                     })
                 }}
-                onScrollChange={(scrollX, scrollY, zoom) => {
-                    const nextViewport = {
-                        scrollX,
-                        scrollY,
-                        zoom: zoom.value,
-                    }
-
-                    setViewport(nextViewport)
-                    persistViewport(viewportStorageKey, nextViewport)
-                }}
+                onScrollChange={updateViewport}
                 onPointerUp={() => {
                     isLocallyInteractingRef.current = false
-                    applyExternalScene(latestExternalSceneRef.current)
+                    applyExternalScene(
+                        latestExternalSceneRef.current,
+                    )
                     onPointerUp?.(
                         excalidrawApiRef.current?.getSceneElementsIncludingDeleted() ??
                             [],

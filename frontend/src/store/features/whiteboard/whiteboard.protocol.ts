@@ -1,19 +1,12 @@
 import { WSMessageType } from '../projectSocket/projectSocket.types'
+import type { ApiWhiteboardElement } from './whiteboard.api.types'
 import type {
-    ApiWhiteboardElement,
     WhiteboardDeleteEventPayload,
-    WhiteboardElement,
-    WhiteboardEventMessage,
     WhiteboardLiveClientMessage,
     WhiteboardLiveClearEventPayload,
-    WhiteboardLiveEventMessage,
     WhiteboardLiveUpdateEventPayload,
     WhiteboardSocketEventMessage,
-} from './whiteboard.types'
-
-const WHITEBOARD_CLIENT_ID_STORAGE_KEY = 'whiteboard-client-id'
-
-let serverSideWhiteboardClientID: string | null = null
+} from './whiteboard.socket.types'
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
     typeof value === 'object' && value !== null
@@ -53,48 +46,6 @@ const isWhiteboardEventType = (value: unknown): value is number =>
     value === WSMessageType.WhiteboardElementDelete ||
     value === WSMessageType.WhiteboardElementLiveUpdate ||
     value === WSMessageType.WhiteboardElementLiveClear
-
-export const generateWhiteboardRequestID = () => {
-    if (
-        typeof crypto !== 'undefined' &&
-        typeof crypto.randomUUID === 'function'
-    ) {
-        return crypto.randomUUID()
-    }
-
-    return `${Date.now()}-${Math.random().toString(36).slice(2)}`
-}
-
-export const getWhiteboardClientID = () => {
-    if (typeof window === 'undefined') {
-        serverSideWhiteboardClientID ??= generateWhiteboardRequestID()
-        return serverSideWhiteboardClientID
-    }
-
-    const storedClientID = window.sessionStorage.getItem(
-        WHITEBOARD_CLIENT_ID_STORAGE_KEY,
-    )
-    if (storedClientID) {
-        return storedClientID
-    }
-
-    const nextClientID = generateWhiteboardRequestID()
-    window.sessionStorage.setItem(
-        WHITEBOARD_CLIENT_ID_STORAGE_KEY,
-        nextClientID,
-    )
-    return nextClientID
-}
-
-export const createWhiteboardMutationHeaders = () => ({
-    'X-Client-Id': getWhiteboardClientID(),
-    'X-Operation-Id': generateWhiteboardRequestID(),
-})
-
-export const createWhiteboardLiveClientMessageMeta = () => ({
-    clientId: getWhiteboardClientID(),
-    operationId: generateWhiteboardRequestID(),
-})
 
 export const serializeWhiteboardLiveClientMessage = (
     message: WhiteboardLiveClientMessage,
@@ -146,62 +97,5 @@ export const parseWhiteboardEventMessage = (
         return parsed as WhiteboardSocketEventMessage
     } catch {
         return null
-    }
-}
-
-export const isSelfOriginatedWhiteboardEvent = (
-    message: WhiteboardSocketEventMessage,
-) => {
-    const originClientID = message.meta?.clientId
-    if (!originClientID) {
-        return false
-    }
-
-    return originClientID === getWhiteboardClientID()
-}
-
-export const applyWhiteboardEventToElementsCache = (
-    draft: WhiteboardElement[],
-    message: WhiteboardEventMessage,
-    transformWhiteboardElement: (
-        element: ApiWhiteboardElement,
-    ) => WhiteboardElement,
-) => {
-    switch (message.type) {
-        case WSMessageType.WhiteboardElementCreate:
-        case WSMessageType.WhiteboardElementUpdate: {
-            const element = transformWhiteboardElement(message.payload)
-            const existingIndex = draft.findIndex(
-                (item) => item.id === element.id,
-            )
-
-            if (existingIndex === -1) {
-                draft.push(element as never)
-                return
-            }
-
-            Object.assign(draft[existingIndex], element)
-            return
-        }
-        case WSMessageType.WhiteboardElementDelete:
-            return draft.filter((item) => item.id !== message.payload.elementId)
-        default:
-            return
-    }
-}
-
-export const applyWhiteboardLiveEventToOverlay = (
-    liveElementsById: Record<string, WhiteboardLiveUpdateEventPayload>,
-    message: WhiteboardLiveEventMessage,
-) => {
-    switch (message.type) {
-        case WSMessageType.WhiteboardElementLiveUpdate:
-            liveElementsById[message.payload.elementId] = message.payload
-            return
-        case WSMessageType.WhiteboardElementLiveClear:
-            delete liveElementsById[message.payload.elementId]
-            return
-        default:
-            return
     }
 }

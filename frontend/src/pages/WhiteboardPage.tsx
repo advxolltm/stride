@@ -1,128 +1,30 @@
-import { useEffect, useMemo, useRef } from 'react'
 import { Button, toast } from '@heroui/react'
-import { isInvisiblySmallElement, restoreElements } from '@excalidraw/excalidraw'
 import { skipToken } from '@reduxjs/toolkit/query'
 import { useTranslation } from 'react-i18next'
 import { ChevronRight, Home, Share2, Zap } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
-import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types'
-import { WhiteboardCanvas } from '../components/project/space/whiteboard/WhiteboardCanvas'
+import { WhiteboardCanvas } from '../components/project/space/whiteboard/canvas/WhiteboardCanvas'
+import { useWhiteboardSync } from '../components/project/space/whiteboard/sync/useWhiteboardSync'
 import { getApiErrorMessage } from '../shared/utils/api/errors'
 import { useAppSelector } from '../shared/hooks/redux'
 import { useGetProjectByIdQuery } from '../store/features/project/project.api'
 import {
-    sendWhiteboardCursor,
-    sendWhiteboardLiveClear,
-    sendWhiteboardLiveUpdate,
-    useCreateProjectWhiteboardElementMutation,
-    useDeleteProjectWhiteboardElementMutation,
     useGetProjectWhiteboardElementsQuery,
     useGetProjectWhiteboardQuery,
-    useUpdateProjectWhiteboardElementMutation,
     useWatchWhiteboardCursorQuery,
     useWatchWhiteboardEventsQuery,
 } from '../store/features/whiteboard/whiteboard.api'
-import type {
-    WhiteboardCursorClientMessage,
-    WhiteboardElement,
-    WhiteboardLiveUpdateEventPayload,
-} from '../store/features/whiteboard/whiteboard.types'
+import type { WhiteboardLiveUpdateEventPayload } from '../store/features/whiteboard/whiteboard.socket.types'
 import { selectUserId } from '../store/userSlice'
 import getInitials from '../shared/utils/getInitials'
 
-const emptyCursorMessage: WhiteboardCursorClientMessage = {
-    cursor: { x: null, y: null },
-}
 const emptyLiveElementsById: Record<string, WhiteboardLiveUpdateEventPayload> =
     {}
-
-const serializeElementSnapshot = (
-    element: ExcalidrawElement,
-    zIndex: number,
-) =>
-    JSON.stringify({
-        elementType: element.type,
-        props: element,
-        zIndex,
-    })
-
-const filterElementIDSet = (
-    elementIDs: Set<string>,
-    predicate: (elementID: string) => boolean,
-) => new Set([...elementIDs].filter(predicate))
-
-const toWhiteboardElementPayload = (
-    element: ExcalidrawElement,
-    zIndex: number,
-) => ({
-    elementType: element.type,
-    props: element,
-    zIndex,
-})
-
-const mergeRenderedWhiteboardElements = (
-    persistedElements: WhiteboardElement[],
-    liveElementsById: Record<string, WhiteboardLiveUpdateEventPayload>,
-) => {
-    const mergedElements = persistedElements.map((element) => {
-        const liveOverlay = liveElementsById[element.props.id]
-        if (!liveOverlay) {
-            return {
-                props: element.props,
-                zIndex: element.zIndex,
-            }
-        }
-
-        return {
-            props: liveOverlay.props,
-            zIndex: liveOverlay.zIndex,
-        }
-    })
-
-    const persistedElementIDs = new Set(
-        persistedElements.map((element) => element.props.id),
-    )
-
-    Object.values(liveElementsById).forEach((liveOverlay) => {
-        if (persistedElementIDs.has(liveOverlay.elementId)) {
-            return
-        }
-
-        mergedElements.push({
-            props: liveOverlay.props,
-            zIndex: liveOverlay.zIndex,
-        })
-    })
-
-    return mergedElements
-}
 
 export function WhiteboardPage() {
     const { projectId } = useParams()
     const { t } = useTranslation('project')
     const currentUserId = useAppSelector(selectUserId)
-    const excalidrawToBackendElementIdRef = useRef(new Map<string, string>())
-    const pendingCreateElementIdsRef = useRef(new Set<string>())
-    const pendingDeleteElementIdsRef = useRef(new Set<string>())
-    const pendingUpdateElementIdsRef = useRef(new Set<string>())
-    const persistedElementSnapshotsRef = useRef(new Map<string, string>())
-    const localSceneSnapshotsRef = useRef(new Map<string, string>())
-    const isElementIdMappingReadyRef = useRef(false)
-    const cursorFrameRef = useRef<number | null>(null)
-    const pendingCursorMessageRef =
-        useRef<WhiteboardCursorClientMessage | null>(null)
-    const liveFrameRef = useRef<number | null>(null)
-    const pendingLiveElementsRef = useRef(
-        new Map<string, WhiteboardLiveUpdateEventPayload>(),
-    )
-    const touchedLiveElementIdsRef = useRef(new Set<string>())
-    const lastSentLiveSnapshotsRef = useRef(new Map<string, string>())
-    const [createProjectWhiteboardElement] =
-        useCreateProjectWhiteboardElementMutation()
-    const [deleteProjectWhiteboardElement] =
-        useDeleteProjectWhiteboardElementMutation()
-    const [updateProjectWhiteboardElement] =
-        useUpdateProjectWhiteboardElementMutation()
     const whiteboardCursorWS = useWatchWhiteboardCursorQuery(
         projectId ?? skipToken,
     )
@@ -156,203 +58,18 @@ export function WhiteboardPage() {
     } = useGetProjectWhiteboardElementsQuery(projectId ?? '', {
         skip: !projectId || !isWhiteboardReady,
     })
-
-    useEffect(() => {
-        excalidrawToBackendElementIdRef.current = new Map()
-        pendingCreateElementIdsRef.current = new Set()
-        pendingDeleteElementIdsRef.current = new Set()
-        pendingUpdateElementIdsRef.current = new Set()
-        persistedElementSnapshotsRef.current = new Map()
-        localSceneSnapshotsRef.current = new Map()
-        pendingLiveElementsRef.current = new Map()
-        touchedLiveElementIdsRef.current = new Set()
-        lastSentLiveSnapshotsRef.current = new Map()
-        isElementIdMappingReadyRef.current = false
-    }, [projectId])
-
-    const flushPendingCursor = () => {
-        cursorFrameRef.current = null
-        if (!projectId || !pendingCursorMessageRef.current) {
-            return
-        }
-
-        sendWhiteboardCursor(projectId, pendingCursorMessageRef.current)
-        pendingCursorMessageRef.current = null
-    }
-
-    const queueCursorUpdate = (message: WhiteboardCursorClientMessage) => {
-        pendingCursorMessageRef.current = message
-
-        if (cursorFrameRef.current !== null) {
-            return
-        }
-
-        cursorFrameRef.current = window.requestAnimationFrame(
-            flushPendingCursor,
-        )
-    }
-
-    const flushPendingLiveUpdates = () => {
-        liveFrameRef.current = null
-        if (!projectId || pendingLiveElementsRef.current.size === 0) {
-            return
-        }
-
-        pendingLiveElementsRef.current.forEach((payload, elementId) => {
-            if (sendWhiteboardLiveUpdate(projectId, payload)) {
-                lastSentLiveSnapshotsRef.current.set(
-                    elementId,
-                    serializeElementSnapshot(payload.props, payload.zIndex),
-                )
-            }
-        })
-        pendingLiveElementsRef.current.clear()
-    }
-
-    const clearLiveElement = (elementId: string) => {
-        if (!projectId || !touchedLiveElementIdsRef.current.has(elementId)) {
-            return
-        }
-
-        sendWhiteboardLiveClear(projectId, elementId)
-        pendingLiveElementsRef.current.delete(elementId)
-        lastSentLiveSnapshotsRef.current.delete(elementId)
-        touchedLiveElementIdsRef.current.delete(elementId)
-    }
-
-    const queueLiveUpdate = (
-        element: ExcalidrawElement,
-        zIndex: number,
-    ) => {
-        const nextSnapshot = serializeElementSnapshot(element, zIndex)
-        const pendingLiveElement = pendingLiveElementsRef.current.get(element.id)
-        const previousSnapshot = pendingLiveElement
-            ? serializeElementSnapshot(
-                  pendingLiveElement.props,
-                  pendingLiveElement.zIndex,
-              )
-            : lastSentLiveSnapshotsRef.current.get(element.id) ??
-              persistedElementSnapshotsRef.current.get(element.id)
-
-        if (previousSnapshot === nextSnapshot) {
-            return
-        }
-
-        pendingLiveElementsRef.current.set(element.id, {
-            elementId: element.id,
-            elementType: element.type,
-            props: element,
-            zIndex,
-        })
-        touchedLiveElementIdsRef.current.add(element.id)
-
-        if (liveFrameRef.current !== null) {
-            return
-        }
-
-        liveFrameRef.current = window.requestAnimationFrame(
-            flushPendingLiveUpdates,
-        )
-    }
-
-    useEffect(() => {
-        const persistedElementIDs = new Set(
-            whiteboardElements.map((backendElement) => backendElement.props.id),
-        )
-
-        excalidrawToBackendElementIdRef.current = new Map(
-            whiteboardElements.map((backendElement) => [
-                backendElement.props.id,
-                backendElement.id,
-            ]),
-        )
-        persistedElementSnapshotsRef.current = new Map(
-            whiteboardElements.map((backendElement) => [
-                backendElement.props.id,
-                serializeElementSnapshot(
-                    backendElement.props,
-                    backendElement.zIndex,
-                ),
-            ]),
-        )
-        localSceneSnapshotsRef.current = new Map(
-            whiteboardElements.map((backendElement) => [
-                backendElement.props.id,
-                serializeElementSnapshot(
-                    backendElement.props,
-                    backendElement.zIndex,
-                ),
-            ]),
-        )
-        pendingCreateElementIdsRef.current = filterElementIDSet(
-            pendingCreateElementIdsRef.current,
-            (elementID) => !persistedElementIDs.has(elementID),
-        )
-        pendingDeleteElementIdsRef.current = filterElementIDSet(
-            pendingDeleteElementIdsRef.current,
-            (elementID) => persistedElementIDs.has(elementID),
-        )
-        pendingUpdateElementIdsRef.current = filterElementIDSet(
-            pendingUpdateElementIdsRef.current,
-            (elementID) => persistedElementIDs.has(elementID),
-        )
-        isElementIdMappingReadyRef.current = true
-    }, [whiteboardElements])
-
-    useEffect(() => {
-        return () => {
-            if (cursorFrameRef.current !== null) {
-                window.cancelAnimationFrame(cursorFrameRef.current)
-            }
-            if (liveFrameRef.current !== null) {
-                window.cancelAnimationFrame(liveFrameRef.current)
-            }
-
-            if (projectId) {
-                Array.from(touchedLiveElementIdsRef.current).forEach(
-                    (elementId) => {
-                        sendWhiteboardLiveClear(projectId, elementId)
-                        pendingLiveElementsRef.current.delete(elementId)
-                        lastSentLiveSnapshotsRef.current.delete(elementId)
-                        touchedLiveElementIdsRef.current.delete(elementId)
-                    },
-                )
-                sendWhiteboardCursor(projectId, emptyCursorMessage)
-            }
-        }
-    }, [projectId])
-
-    const deletePersistedElement = (projectId: string, elementId: string) => {
-        const backendElementId =
-            excalidrawToBackendElementIdRef.current.get(elementId)
-
-        pendingCreateElementIdsRef.current.delete(elementId)
-        pendingUpdateElementIdsRef.current.delete(elementId)
-
-        if (
-            !backendElementId ||
-            pendingDeleteElementIdsRef.current.has(elementId)
-        ) {
-            persistedElementSnapshotsRef.current.delete(elementId)
-            return
-        }
-
-        pendingDeleteElementIdsRef.current.add(elementId)
-
-        void deleteProjectWhiteboardElement({
-            projectId,
-            elementId: backendElementId,
-        })
-            .unwrap()
-            .then(() => {
-                excalidrawToBackendElementIdRef.current.delete(elementId)
-                persistedElementSnapshotsRef.current.delete(elementId)
-            })
-            .finally(() => {
-                pendingDeleteElementIdsRef.current.delete(elementId)
-                clearLiveElement(elementId)
-            })
-    }
+    const liveElementsById = whiteboardEventsWS.liveElementsById
+    const {
+        excalidrawElements,
+        handleCanvasChange,
+        handleCanvasPointerLeave,
+        handleCanvasPointerUp,
+        queueCursorUpdate,
+    } = useWhiteboardSync({
+        projectId,
+        whiteboardElements,
+        liveElementsById,
+    })
 
     const handleShare = async () => {
         const shareUrl = project?.joinLink ?? window.location.href
@@ -364,137 +81,6 @@ export function WhiteboardPage() {
             toast.danger(t('whiteboardPage.shareError'))
         }
     }
-
-    const handleCanvasChange = (elements: readonly ExcalidrawElement[]) => {
-        if (!projectId || !isElementIdMappingReadyRef.current) {
-            return
-        }
-
-        elements.forEach((element, index) => {
-            const nextSnapshot = serializeElementSnapshot(element, index)
-            const previousSnapshot =
-                localSceneSnapshotsRef.current.get(element.id)
-
-            if (element.isDeleted) {
-                localSceneSnapshotsRef.current.delete(element.id)
-                deletePersistedElement(projectId, element.id)
-                return
-            }
-
-            if (previousSnapshot === nextSnapshot) {
-                return
-            }
-
-            localSceneSnapshotsRef.current.set(element.id, nextSnapshot)
-            queueLiveUpdate(element, index)
-        })
-    }
-
-    const handleCanvasPointerUp = (elements: readonly ExcalidrawElement[]) => {
-        if (!projectId || !isElementIdMappingReadyRef.current) {
-            return
-        }
-
-        if (liveFrameRef.current !== null) {
-            window.cancelAnimationFrame(liveFrameRef.current)
-            flushPendingLiveUpdates()
-        }
-
-        elements.forEach((element, index) => {
-            const nextSnapshot = serializeElementSnapshot(element, index)
-            const backendElementId =
-                excalidrawToBackendElementIdRef.current.get(element.id)
-
-            if (element.isDeleted) {
-                localSceneSnapshotsRef.current.delete(element.id)
-                deletePersistedElement(projectId, element.id)
-                return
-            }
-
-            localSceneSnapshotsRef.current.set(element.id, nextSnapshot)
-
-            if (
-                isInvisiblySmallElement(element) ||
-                pendingCreateElementIdsRef.current.has(element.id)
-            ) {
-                clearLiveElement(element.id)
-                return
-            }
-
-            if (!backendElementId) {
-                pendingCreateElementIdsRef.current.add(element.id)
-
-                void createProjectWhiteboardElement({
-                    projectId,
-                    body: toWhiteboardElementPayload(element, index),
-                })
-                    .unwrap()
-                    .then((createdElement) => {
-                        excalidrawToBackendElementIdRef.current.set(
-                            element.id,
-                            createdElement.id,
-                        )
-                        persistedElementSnapshotsRef.current.set(
-                            element.id,
-                            nextSnapshot,
-                        )
-                    })
-                    .finally(() => {
-                        pendingCreateElementIdsRef.current.delete(element.id)
-                        clearLiveElement(element.id)
-                    })
-                return
-            }
-
-            if (
-                pendingUpdateElementIdsRef.current.has(element.id) ||
-                persistedElementSnapshotsRef.current.get(element.id) ===
-                    nextSnapshot
-            ) {
-                clearLiveElement(element.id)
-                return
-            }
-
-            pendingUpdateElementIdsRef.current.add(element.id)
-
-            void updateProjectWhiteboardElement({
-                projectId,
-                elementId: backendElementId,
-                body: toWhiteboardElementPayload(element, index),
-            })
-                .unwrap()
-                .then(() => {
-                    persistedElementSnapshotsRef.current.set(
-                        element.id,
-                        nextSnapshot,
-                    )
-                })
-                .finally(() => {
-                    pendingUpdateElementIdsRef.current.delete(element.id)
-                    clearLiveElement(element.id)
-                })
-        })
-    }
-
-    const handleCanvasPointerLeave = () => {
-        queueCursorUpdate(emptyCursorMessage)
-    }
-
-    const liveElementsById = whiteboardEventsWS.liveElementsById
-
-    const excalidrawElements = useMemo(
-        () =>
-            restoreElements(
-                mergeRenderedWhiteboardElements(
-                    whiteboardElements,
-                    liveElementsById,
-                )
-                    .sort((left, right) => left.zIndex - right.zIndex)
-                    .map((element) => element.props),
-                null,
-            ),
-        [whiteboardElements, liveElementsById],
-    )
 
     if (!projectId) {
         return null
