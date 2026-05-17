@@ -49,7 +49,7 @@ export function UserMenu() {
                             id="profile"
                             textValue="Profile"
                             onClick={() => {
-                                navigate('/settings')
+                                navigate('/settings/profile')
                             }}
                         >
                             <div className="flex items-center gap-2">

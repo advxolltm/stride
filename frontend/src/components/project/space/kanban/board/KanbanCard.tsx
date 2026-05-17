@@ -98,7 +98,7 @@ export function KanbanCard({
                                     aria-label={t('tasks.actions.menuAria')}
                                     variant="ghost"
                                     size="sm"
-                                    className="h-7 w-7 min-w-0 rounded-md p-0"
+                                    className="h-7 w-7 min-w-0 rounded-md p-0 shrink-0"
                                     onPointerDown={(event) =>
                                         event.stopPropagation()
                                     }
