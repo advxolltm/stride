@@ -157,39 +157,6 @@ func (h *whiteboardRouteHandler) whiteboardGETHandle(c *echo.Context) error {
 	return c.JSON(http.StatusOK, wb)
 }
 
-// POST /projects/:id/whiteboard
-//
-//	@Summary	Get or create whiteboard for a project
-//	@Tags		whiteboard
-//	@Param		id	path	string	true	"Project ID"
-//	@Success	200		{object}	whiteboardResponse
-//	@Failure	400		{object}	routes.ErrorResponse	"invalid project id"
-//	@Failure	401		{object}	routes.ErrorResponse	"unauthorized"
-//	@Failure	403		{object}	routes.ErrorResponse	"forbidden"
-//	@Failure	404		{object}	routes.ErrorResponse	"whiteboard not found"
-//	@Failure	500		{object}	routes.ErrorResponse	"internal server error"
-//	@Security	Auth
-//	@Router		/projects/{id}/whiteboard [post]
-func (h *whiteboardRouteHandler) whiteboardPOSTHandle(c *echo.Context) error {
-	userID := h.authService.GetClaims(c).UserID
-	if userID == uuid.Nil {
-		return c.JSON(http.StatusUnauthorized, routes.ErrorResponse{Error: authSvc.ErrUnauthorized.Error()})
-	}
-
-	projectID, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid project id"})
-	}
-
-	wb, err := h.whiteboardService.GetOrCreateWhiteboardByProjectID(c.Request().Context(), userID, projectID)
-	if err != nil {
-		status, msg := mapServiceErrorWB(err)
-		return c.JSON(status, routes.ErrorResponse{Error: msg})
-	}
-
-	return c.JSON(http.StatusOK, wb)
-}
-
 // GET /projects/:id/whiteboard/elements
 //
 //	@Summary	List all elements of a whiteboard
@@ -432,7 +399,7 @@ func (h *whiteboardRouteHandler) elementDELETEHandle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid element id"})
 	}
 
-	buffered, err := h.whiteboardService.BufferDeleteElement(
+	_, err = h.whiteboardService.BufferDeleteElement(
 		c.Request().Context(),
 		projectID,
 		elementID,
@@ -443,16 +410,13 @@ func (h *whiteboardRouteHandler) elementDELETEHandle(c *echo.Context) error {
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
 	}
 
-	// create+delete collapsed -> nothing was ever published, nothing to do.
-	if buffered.Collapsed {
-		return c.NoContent(http.StatusAccepted)
-	}
-
 	meta := &routes.WSMessageMeta{
 		OriginUserID: &userID,
 		ClientID:     clientID,
 		OperationID:  operationID,
 	}
+	// Even when Redis fold collapses create+delete to no pending state, peers may
+	// already have received the optimistic create event and still need the delete.
 	if err := routes.SendWSUpdateWithMeta(
 		c.Request().Context(),
 		h.rdb,

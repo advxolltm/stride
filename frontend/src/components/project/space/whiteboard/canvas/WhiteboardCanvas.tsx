@@ -18,6 +18,7 @@ import {
     useWhiteboardViewport,
 } from './useWhiteboardViewport'
 import getInitials from '../../../../../shared/utils/getInitials'
+import { mergeExternalSceneDeletes } from './whiteboardCanvas.utils'
 
 const formatCursorLabel = (name: string) => {
     const words = name.trim().split(/\s+/).filter(Boolean)
@@ -58,6 +59,8 @@ export function WhiteboardCanvas({
     const excalidrawApiRef = useRef<ExcalidrawImperativeAPI | null>(null)
     const latestExternalSceneRef =
         useRef<readonly OrderedExcalidrawElement[]>(elements)
+    const lastAppliedExternalSceneRef =
+        useRef<readonly OrderedExcalidrawElement[]>(elements)
     const isLocallyInteractingRef = useRef(false)
     const externalSceneSignatureRef = useRef<string | null>(null)
     const sceneElements = useMemo(
@@ -75,13 +78,22 @@ export function WhiteboardCanvas({
             return
         }
 
+        const currentCanvasScene =
+            excalidrawApi.getSceneElementsIncludingDeleted()
+        const reconciledExternalScene = mergeExternalSceneDeletes(
+            lastAppliedExternalSceneRef.current,
+            nextSceneElements,
+            currentCanvasScene,
+        )
         const reconciledElements = reconcileElements(
-            excalidrawApi.getSceneElementsIncludingDeleted(),
-            nextSceneElements as Parameters<typeof reconcileElements>[1],
+            currentCanvasScene,
+            reconciledExternalScene as Parameters<typeof reconcileElements>[1],
             excalidrawApi.getAppState(),
         )
 
-        externalSceneSignatureRef.current = getSceneSignature(reconciledElements)
+        lastAppliedExternalSceneRef.current = nextSceneElements
+        externalSceneSignatureRef.current =
+            getSceneSignature(reconciledElements)
         excalidrawApi.updateScene({
             elements: reconciledElements,
             captureUpdate: CaptureUpdateAction.NEVER,
@@ -137,9 +149,7 @@ export function WhiteboardCanvas({
                 onScrollChange={updateViewport}
                 onPointerUp={() => {
                     isLocallyInteractingRef.current = false
-                    applyExternalScene(
-                        latestExternalSceneRef.current,
-                    )
+                    applyExternalScene(latestExternalSceneRef.current)
                     onPointerUp?.(
                         excalidrawApiRef.current?.getSceneElementsIncludingDeleted() ??
                             [],

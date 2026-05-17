@@ -346,7 +346,7 @@ func TestWhiteboardHandlerPublishesWSEvents(t *testing.T) {
 		assert.Equal(t, wb.ID, op.WhiteboardID)
 	})
 
-	runTest(t, "create then delete collapses without publishing delete", func(t *testing.T, tx *gorm.DB, deps whiteboardTestDeps) {
+	runTest(t, "create then delete collapses and still publishes delete", func(t *testing.T, tx *gorm.DB, deps whiteboardTestDeps) {
 		ctx := t.Context()
 		user, err := deps.userService.CreateUser(ctx, "wb-collapse", "wb-collapse@test.com", "Password123!")
 		require.NoError(t, err)
@@ -398,12 +398,11 @@ func TestWhiteboardHandlerPublishesWSEvents(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, http.StatusAccepted, delRec.Code)
 
-		// No ws message should be published for the collapsed delete.
-		select {
-		case msg := <-ch:
-			t.Fatalf("expected no ws message after collapse, got %v", msg)
-		case <-time.After(500 * time.Millisecond):
-		}
+		deleteMsg := waitForWSMessage(t, ch)
+		require.Equal(t, routes.WhiteboardElementDelete, deleteMsg.Type)
+		var deletedPayload whiteboardElementDeleteWSUpdate
+		require.NoError(t, json.Unmarshal(deleteMsg.Payload, &deletedPayload))
+		assert.Equal(t, elementID, deletedPayload.ElementID)
 
 		// Pending hash field for this element must be gone.
 		exists, err := rdb.HExists(t.Context(), fmt.Sprintf("whiteboard:pending:%s:elements", project.ID), elementID.String()).Result()
