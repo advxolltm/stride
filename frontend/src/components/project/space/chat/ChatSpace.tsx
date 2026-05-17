@@ -18,9 +18,18 @@ import { ChatMessageInput } from './ChatMessageInput'
 import { ChatMessageItem } from './ChatMessageItem'
 import { ChatSpaceSkeleton } from './ChatSpaceSkeleton'
 
-export function ChatSpace() {
+interface ChatSpaceProps {
+    projectId?: string
+    variant?: 'page' | 'embedded'
+}
+
+export function ChatSpace({
+    projectId: projectIdProp,
+    variant = 'page',
+}: ChatSpaceProps) {
     const { t, i18n } = useTranslation('chat')
-    const { projectId } = useParams()
+    const { projectId: routeProjectId } = useParams()
+    const projectId = projectIdProp ?? routeProjectId
 
     const {
         data,
@@ -183,8 +192,14 @@ export function ChatSpace() {
     }, [isFetchingNextPage, isFetchingPreviousPage, bottomElement, topElement])
 
     if (isMessagesLoading || isProjectLoading || isUserLoading) {
-        return <ChatSpaceSkeleton />
+        return <ChatSpaceSkeleton variant={variant} />
     }
+
+    const isEmbedded = variant === 'embedded'
+    const containerClassName = 'bg-background'
+    const dateChipClassName = isEmbedded
+        ? 'border-border bg-surface text-default-500'
+        : 'border-default-200 bg-background text-default-500'
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault()
@@ -314,10 +329,15 @@ export function ChatSpace() {
     }
 
     return (
-        <div className="bg-background flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div
+            className={[
+                'flex min-h-0 flex-1 flex-col overflow-hidden',
+                containerClassName,
+            ].join(' ')}
+        >
             <div
                 className={[
-                    'min-h-0 flex-1 p-4',
+                    'min-h-0 flex-1 px-5 py-4',
                     uniqueMessages.length === 0
                         ? 'overflow-hidden'
                         : 'overflow-y-auto',
@@ -357,7 +377,12 @@ export function ChatSpace() {
                                 <div key={message.id}>
                                     {shouldRenderDateGroup ? (
                                         <div className="mb-6 flex justify-center">
-                                            <div className="border-default-200 bg-background text-default-500 rounded-full border px-3 py-1 text-xs shadow-sm">
+                                            <div
+                                                className={[
+                                                    'rounded-full border px-3 py-1 text-xs shadow-sm',
+                                                    dateChipClassName,
+                                                ].join(' ')}
+                                            >
                                                 {getRelativeDayLabel(
                                                     message.createdAt,
                                                 )}
@@ -390,6 +415,7 @@ export function ChatSpace() {
                 messageContent={messageContent}
                 onMessageContentChange={setMessageContent}
                 onSubmit={handleSubmit}
+                variant={variant}
             />
         </div>
     )

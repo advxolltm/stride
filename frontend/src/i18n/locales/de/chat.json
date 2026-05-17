@@ -21,6 +21,15 @@
 		"input": {
 			"placeholder": "Nachricht schreiben..."
 		},
+		"panel": {
+			"title": "Projektchat",
+			"subtitle": "Projektchat",
+			"open": "Projektchat öffnen",
+			"pin": "Chat anheften",
+			"unpin": "Chat lösen",
+			"openFull": "Vollen Chat öffnen",
+			"close": "Chat schließen"
+		},
 		"empty": {
 			"title": "Noch keine Nachrichten",
 			"description": "Starte die Unterhaltung mit der ersten Nachricht an dein Team."

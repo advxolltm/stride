@@ -7,14 +7,7 @@ import {
     toast,
     type Key,
 } from '@heroui/react'
-import {
-    Check,
-    Copy,
-    EllipsisVertical,
-    Pencil,
-    Trash2,
-    X,
-} from 'lucide-react'
+import { Check, Copy, EllipsisVertical, Pencil, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ConfirmDialog, UserAvatar } from '../../../../shared/components'
@@ -30,6 +23,9 @@ interface ChatMessageItemProps {
     onEditMessage: (message: Message, content: string) => Promise<void>
     onMessageAction: (key: Key, message: Message) => Promise<void>
 }
+
+const MESSAGE_ROW_MAX_WIDTH = 'max-w-[min(42rem,100%)]'
+const MESSAGE_BUBBLE_MAX_WIDTH = 'max-w-[calc(100%-2rem)]'
 
 function SenderAvatar({ sender }: Readonly<{ sender?: ProjectMember }>) {
     const senderName = sender?.user.fullName || sender?.user.username || 'NA'
@@ -73,20 +69,28 @@ function EditedIndicator({
 function MessageMenu({
     onAction,
     ownMessage = false,
+    buttonClassName,
+    onOpenChange,
 }: Readonly<{
     onAction: (key: Key) => Promise<void>
     ownMessage?: boolean
+    buttonClassName?: string
+    onOpenChange?: (isOpen: boolean) => void
 }>) {
     const { t } = useTranslation('chat')
 
     return (
-        <Dropdown>
+        <Dropdown onOpenChange={onOpenChange}>
             <Button
                 isIconOnly
+                variant="ghost"
                 aria-label={t('chat.message.menu')}
-                className="border-default-200 bg-background text-foreground h-8 w-8 min-w-8 rounded-full border shadow-sm"
+                className={[
+                    'h-5 w-5 min-w-5 rounded-full p-0 shadow-none',
+                    buttonClassName ?? 'text-foreground',
+                ].join(' ')}
             >
-                <EllipsisVertical size={14} />
+                <EllipsisVertical size={12} />
             </Button>
             <Dropdown.Popover>
                 <Dropdown.Menu onAction={onAction}>
@@ -128,6 +132,7 @@ export function ChatMessageItem({
     const [isSaving, setIsSaving] = useState(false)
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
     const [isDeletePending, setIsDeletePending] = useState(false)
+    const [isMenuOpen, setIsMenuOpen] = useState(false)
     const editInputRef = useRef<HTMLTextAreaElement | null>(null)
     const senderName =
         sender?.user.fullName ||
@@ -231,7 +236,7 @@ export function ChatMessageItem({
         return (
             <div key={message.id} id={message.id} className="mb-6 flex gap-3">
                 <SenderAvatar />
-                <div className="min-w-0 max-w-full">
+                <div className="max-w-full min-w-0">
                     <div className="mb-1 flex items-center gap-2 text-xs">
                         <span className="text-foreground font-semibold">
                             {t('chat.message.userDeleted')}
@@ -240,9 +245,7 @@ export function ChatMessageItem({
                         <span className="text-default-500">{timeLabel}</span>
                         {editedLabel ? (
                             <>
-                                <span className="text-default-400">
-                                    &bull;
-                                </span>
+                                <span className="text-default-400">&bull;</span>
                                 <span className="text-default-500">
                                     {t('chat.message.lastEdited')}
                                 </span>
@@ -250,7 +253,7 @@ export function ChatMessageItem({
                         ) : null}
                     </div>
                     <div className="bg-default-100 text-foreground w-fit max-w-full rounded-2xl rounded-tl-md px-4 py-3 text-sm">
-                        <p className="whitespace-pre-wrap break-all">
+                        <p className="break-all whitespace-pre-wrap">
                             {message.content}
                         </p>
                     </div>
@@ -263,8 +266,8 @@ export function ChatMessageItem({
         return (
             <div key={message.id} id={message.id} className="mb-6 flex gap-3">
                 <SenderAvatar sender={sender} />
-                <div className="group min-w-0 max-w-full">
-                    <div className="mb-1 flex items-center gap-2 text-xs">
+                <div className={`group min-w-0 ${MESSAGE_ROW_MAX_WIDTH}`}>
+                    <div className="mb-1 flex min-w-0 flex-wrap items-center gap-2 text-xs">
                         <span className="text-foreground font-semibold">
                             {senderName}
                         </span>
@@ -272,21 +275,36 @@ export function ChatMessageItem({
                         <span className="text-default-500">{timeLabel}</span>
                         {editedLabel ? (
                             <>
-                                <span className="text-default-400">
-                                    &bull;
-                                </span>
+                                <span className="text-default-400">&bull;</span>
                                 <EditedIndicator editedLabel={editedLabel} />
                             </>
                         ) : null}
                     </div>
-                    <div className="flex items-center gap-3">
-                        <div className="bg-default text-foreground w-fit max-w-full rounded-2xl rounded-tl-md px-4 py-3 text-sm">
-                            <p className="whitespace-pre-wrap break-all">
+                    <div className="flex max-w-full items-start gap-2">
+                        <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs">
+                        </div>
+                        <div
+                            className={`bg-default text-foreground min-w-0 rounded-2xl rounded-tl-md px-4 py-3 text-sm ${MESSAGE_BUBBLE_MAX_WIDTH}`}
+                        >
+                            <p className="break-all whitespace-pre-wrap">
                                 {message.content}
                             </p>
                         </div>
-                        <div className="self-center opacity-0 transition-opacity group-hover:opacity-100">
-                            <MessageMenu onAction={handleOtherMessageAction} />
+                        <div className="flex h-full w-8 shrink-0 items-start justify-center pt-2">
+                            <div
+                                className={[
+                                    'pointer-events-none transition-opacity',
+                                    isMenuOpen
+                                        ? 'opacity-100'
+                                        : 'opacity-0 group-hover:opacity-100',
+                                ].join(' ')}
+                            >
+                                <MessageMenu
+                                    onAction={handleOtherMessageAction}
+                                    buttonClassName="pointer-events-auto text-default-500 hover:text-default-700 bg-default-50/90 hover:bg-default-100 border border-default-200/80"
+                                    onOpenChange={setIsMenuOpen}
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -296,96 +314,118 @@ export function ChatMessageItem({
 
     return (
         <>
-            <div key={message.id} id={message.id} className="mb-6 flex justify-end">
-                <div className="ml-auto flex min-w-0 max-w-full flex-col items-end">
-                    <div className="mb-1 flex items-center gap-2 text-xs">
-                        {editedLabel ? <EditedIndicator editedLabel={editedLabel} /> : null}
+            <div
+                key={message.id}
+                id={message.id}
+                className="mb-6 flex justify-end"
+            >
+                <div
+                    className={[
+                        'group ml-auto min-w-0',
+                        MESSAGE_ROW_MAX_WIDTH,
+                        isEditing ? 'w-full' : '',
+                    ].join(' ')}
+                >
+                    <div className="mb-1 flex min-w-0 flex-wrap items-center justify-end gap-2 text-xs">
+                        {editedLabel ? (
+                            <EditedIndicator editedLabel={editedLabel} />
+                        ) : null}
                         <span className="text-default-500">{timeLabel}</span>
                         <span className="text-default-400">&bull;</span>
                         <span className="text-foreground font-semibold">
                             {t('chat.message.you')}
                         </span>
                     </div>
-                    <div className="group relative">
-                        {!isEditing ? (
-                            <div className="absolute top-1/2 -left-10 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100">
-                                <MessageMenu
-                                    ownMessage
-                                    onAction={handleOwnMessageAction}
-                                />
-                            </div>
-                        ) : null}
 
-                        {isEditing ? (
-                            <Form onSubmit={handleInlineEditSubmit}>
-                                <div className="bg-surface border-default-200 flex w-fit max-w-full min-w-[18rem] flex-col gap-3 rounded-2xl rounded-br-md border px-3 py-3 shadow-sm">
-                                    <TextArea
-                                        ref={editInputRef}
-                                        variant="secondary"
-                                        rows={Math.min(
-                                            6,
-                                            Math.max(
-                                                2,
-                                                editValue.split('\n').length,
-                                            ),
-                                        )}
-                                        value={editValue}
-                                        onChange={(event) =>
-                                            setEditValue(event.target.value)
+                    {isEditing ? (
+                        <Form
+                            onSubmit={handleInlineEditSubmit}
+                            className="ml-auto w-full min-w-0 self-stretch"
+                        >
+                            <div className="bg-surface border-default-200 flex w-full min-w-0 max-w-full flex-col gap-3 overflow-hidden rounded-2xl rounded-br-md border px-3 py-3 shadow-sm">
+                                <TextArea
+                                    ref={editInputRef}
+                                    variant="secondary"
+                                    rows={Math.min(
+                                        6,
+                                        Math.max(4, editValue.split('\n').length),
+                                    )}
+                                    value={editValue}
+                                    onChange={(event) =>
+                                        setEditValue(event.target.value)
+                                    }
+                                    onKeyDown={(event) => {
+                                        if (event.key === 'Escape') {
+                                            event.preventDefault()
+                                            handleCancelEdit()
                                         }
-                                        onKeyDown={(event) => {
-                                            if (event.key === 'Escape') {
-                                                event.preventDefault()
-                                                handleCancelEdit()
-                                            }
 
-                                            if (
-                                                event.key === 'Enter' &&
-                                                (event.metaKey ||
-                                                    event.ctrlKey)
-                                            ) {
-                                                event.preventDefault()
-                                                void saveInlineEdit()
-                                            }
-                                        }}
-                                        className="text-foreground w-[min(36rem,75vw)] max-w-full resize-none text-sm"
-                                    />
-                                    <div className="flex items-center justify-end gap-2">
-                                        <Button
-                                            isIconOnly
-                                            type="submit"
-                                            variant="primary"
-                                            className="h-9 w-9 min-w-9 rounded-full"
-                                            isDisabled={
-                                                isSaving ||
-                                                !trimmedEditValue ||
-                                                trimmedEditValue ===
-                                                    message.content.trim()
-                                            }
-                                        >
-                                            <Check size={16} />
-                                        </Button>
-                                        <Button
-                                            isIconOnly
-                                            type="button"
-                                            variant="outline"
-                                            className="h-9 w-9 min-w-9 rounded-full"
-                                            onPress={handleCancelEdit}
-                                            isDisabled={isSaving}
-                                        >
-                                            <X size={16} />
-                                        </Button>
-                                    </div>
+                                        if (
+                                            event.key === 'Enter' &&
+                                            (event.metaKey || event.ctrlKey)
+                                        ) {
+                                            event.preventDefault()
+                                            void saveInlineEdit()
+                                        }
+                                    }}
+                                    className="text-foreground min-w-0 w-full max-w-full resize-none text-sm"
+                                />
+                                <div className="flex items-center justify-end gap-2">
+                                    <Button
+                                        isIconOnly
+                                        type="submit"
+                                        variant="primary"
+                                        className="h-9 w-9 min-w-9 rounded-full"
+                                        isDisabled={
+                                            isSaving ||
+                                            !trimmedEditValue ||
+                                            trimmedEditValue ===
+                                                message.content.trim()
+                                        }
+                                    >
+                                        <Check size={16} />
+                                    </Button>
+                                    <Button
+                                        isIconOnly
+                                        type="button"
+                                        variant="outline"
+                                        className="h-9 w-9 min-w-9 rounded-full"
+                                        onPress={handleCancelEdit}
+                                        isDisabled={isSaving}
+                                    >
+                                        <X size={16} />
+                                    </Button>
                                 </div>
-                            </Form>
-                        ) : (
-                            <div className="bg-accent text-white w-fit max-w-full rounded-2xl rounded-br-md px-4 py-3 text-sm font-medium shadow-sm">
-                                <p className="whitespace-pre-wrap break-all">
+                            </div>
+                        </Form>
+                    ) : (
+                        <div className="ml-auto flex max-w-full items-start gap-2">
+                            <div className="flex h-full w-8 shrink-0 items-start justify-center pt-2">
+                                <div
+                                    className={[
+                                        'pointer-events-none transition-opacity',
+                                        isMenuOpen
+                                            ? 'opacity-100'
+                                            : 'opacity-0 group-hover:opacity-100',
+                                    ].join(' ')}
+                                >
+                                    <MessageMenu
+                                        ownMessage
+                                        onAction={handleOwnMessageAction}
+                                        buttonClassName="pointer-events-auto text-default-500 hover:text-default-700 bg-default-50/90 hover:bg-default-100 border border-default-200/80"
+                                        onOpenChange={setIsMenuOpen}
+                                    />
+                                </div>
+                            </div>
+                            <div
+                                className={`bg-accent min-w-0 rounded-2xl rounded-br-md px-4 py-3 text-sm font-medium text-white shadow-sm ${MESSAGE_BUBBLE_MAX_WIDTH}`}
+                            >
+                                <p className="break-all whitespace-pre-wrap">
                                     {message.content}
                                 </p>
                             </div>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </div>
             </div>
             <ConfirmDialog
