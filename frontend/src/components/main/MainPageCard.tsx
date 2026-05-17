@@ -121,14 +121,14 @@ export function MainPageCard({
                 className="block h-full rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--accent)"
             >
                 <Card className="border-border bg-surface h-full cursor-pointer rounded-xl border text-left transition-all hover:border-(--accent)/30 hover:shadow-md">
-                    <Card.Header className="flex items-start gap-4 pr-12 pb-3">
+                    <Card.Header className="flex items-start gap-4">
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-(--accent) text-xs font-bold text-white">
                             {getInitials(project.name)}
                         </div>
 
                         <div className="w-full min-w-0">
                             <div className="flex min-w-0 items-center gap-2">
-                                <Card.Title className="min-w-0 truncate text-sm font-bold text-(--foreground)">
+                                <Card.Title className="line-clamp-2 min-w-0 text-sm font-bold wrap-break-word text-(--foreground)">
                                     {project.name}
                                 </Card.Title>
                                 {isArchived && (
@@ -141,7 +141,10 @@ export function MainPageCard({
                                     </Chip>
                                 )}
                             </div>
-                            <Card.Description className="text-muted mt-1 line-clamp-4 w-full text-sm leading-relaxed">
+                            <Card.Description
+                                title={project.description}
+                                className="text-muted mt-1 line-clamp-3 w-full text-sm leading-relaxed wrap-break-word"
+                            >
                                 {project.description}
                             </Card.Description>
                         </div>

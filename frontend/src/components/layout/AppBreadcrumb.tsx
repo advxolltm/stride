@@ -47,13 +47,13 @@ export function AppBreadcrumb() {
     const tailIsCurrent = Boolean(tailLabel)
 
     return (
-        <div className="border-default-200 border-b px-6 py-3">
-            <Breadcrumbs className="text-sm">
+        <div className="border-default-200 min-w-0 border-b px-6 py-3">
+            <Breadcrumbs className="min-w-0 text-sm">
                 <Breadcrumbs.Item>
                     <Link
                         to={overviewHref}
                         aria-current={overviewIsCurrent ? 'page' : undefined}
-                        className="flex flex-row items-center gap-1"
+                        className="flex flex-row items-center gap-1 whitespace-nowrap"
                     >
                         <Home size={14} />
                         {t('common:navigation.overview')}
@@ -66,6 +66,8 @@ export function AppBreadcrumb() {
                             aria-current={
                                 projectIsCurrent ? 'page' : undefined
                             }
+                            className="block max-w-[min(55vw,36rem)] truncate"
+                            title={project.name}
                         >
                             {project.name}
                         </Link>

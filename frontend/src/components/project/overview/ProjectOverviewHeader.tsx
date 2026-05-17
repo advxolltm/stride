@@ -28,13 +28,13 @@ export function ProjectOverviewHeader({
     return (
         <>
             <div className="border-b">
-                <div className="mb-6 flex items-center justify-between">
-                    <div className="flex flex-col">
+                <div className="mb-6 flex items-end justify-between gap-4">
+                    <div className="min-w-0 flex-1">
                         <span className="text-muted">
                             {t('header.projects')}
                         </span>
-                        <div className="flex flex-row items-center gap-2">
-                            <h1 className="text-2xl font-bold tracking-tight">
+                        <div className="flex min-w-0 flex-row items-center gap-2">
+                            <h1 className="min-w-0 flex-1 truncate text-2xl font-bold tracking-tight">
                                 {project.name}
                             </h1>
                             {project.status === 'archived' && (
@@ -49,7 +49,7 @@ export function ProjectOverviewHeader({
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
                         {isOwner && (
                             <Button
                                 onPress={() => setIsInviteOpen(true)}

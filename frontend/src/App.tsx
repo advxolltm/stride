@@ -29,7 +29,11 @@ function App() {
                 }
             >
                 <Route path="/" element={<HomePage />} />
-                <Route path="/settings" element={<AccountPage />} />
+                <Route
+                    path="/settings"
+                    element={<Navigate to="/settings/profile" replace />}
+                />
+                <Route path="/settings/:tab" element={<AccountPage />} />
                 <Route path="/project/:projectId" element={<ProjectLayout />}>
                     <Route index element={<ProjectPage />} />
                     <Route path="tasks" element={<TasksPage />} />

@@ -88,7 +88,7 @@ export function KanbanBoard() {
     }
 
     return (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 px-6">
             <Tabs
                 variant="secondary"
                 className="w-full"

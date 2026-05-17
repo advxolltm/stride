@@ -14,7 +14,8 @@
     "archivedProjects": "Archived projects",
     "noActiveProjects": "No active projects",
     "noArchivedProjects": "No archived projects",
-    "expandSidebar": "Expand sidebar"
+    "expandSidebar": "Expand sidebar",
+    "collapseSidebar": "Collapse sidebar"
   },
   "logout": {
     "label": "Log Out",

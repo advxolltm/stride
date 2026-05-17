@@ -11,9 +11,14 @@ const getInitialSidebarCollapsed = () => {
         return false
     }
 
-    return (
-        window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === 'true'
-    )
+    try {
+        return (
+            window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) ===
+            'true'
+        )
+    } catch {
+        return false
+    }
 }
 
 export interface AppLayoutOutletContext {
@@ -35,10 +40,15 @@ export function AppLayout() {
     const handleToggleSidebar = () => {
         setSidebarCollapsed((prev) => {
             const next = !prev
-            window.localStorage.setItem(
-                SIDEBAR_COLLAPSED_STORAGE_KEY,
-                String(next),
-            )
+
+            try {
+                window.localStorage.setItem(
+                    SIDEBAR_COLLAPSED_STORAGE_KEY,
+                    String(next),
+                )
+            } catch {
+                // Keep the in-memory state even when storage is unavailable.
+            }
 
             return next
         })

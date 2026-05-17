@@ -1,5 +1,7 @@
 import type { User } from '../../../shared/types'
 import { baseApi } from '../../api/base.api'
+import type { AppDispatch, RootState } from '../../store'
+import { patchUserIdentityInCaches } from './user.cache'
 import type {
     ApiUser,
     ApiUserSkill,
@@ -76,6 +78,18 @@ export const userApi = baseApi.injectEndpoints({
             }),
             transformResponse: (response: ApiUser) =>
                 mapApiUserToUser(response),
+            async onQueryStarted(_arg, lifecycleApi) {
+                try {
+                    const { data } = await lifecycleApi.queryFulfilled
+                    patchUserIdentityInCaches(data, {
+                        dispatch: lifecycleApi.dispatch as AppDispatch,
+                        state: lifecycleApi.getState() as RootState,
+                        userApiUtil: userApi.util,
+                    })
+                } catch {
+                    // The hook that called this mutation will surface the error.
+                }
+            },
             invalidatesTags: (_result, _error, { id }) => [
                 'User',
                 { type: 'User', id },
