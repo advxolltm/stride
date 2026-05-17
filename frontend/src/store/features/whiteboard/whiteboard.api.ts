@@ -505,6 +505,35 @@ export const whiteboardApi = baseApi.injectEndpoints({
             }),
             transformResponse: (response: ApiWhiteboardElement) =>
                 transformWhiteboardElement(response),
+            async onQueryStarted(
+                { projectId },
+                { dispatch, queryFulfilled },
+            ) {
+                try {
+                    const { data: createdElement } = await queryFulfilled
+                    dispatch(
+                        whiteboardApi.util.updateQueryData(
+                            'getProjectWhiteboardElements',
+                            projectId,
+                            (draft) => {
+                                const existingIndex = draft.findIndex(
+                                    (element) =>
+                                        element.id === createdElement.id,
+                                )
+
+                                if (existingIndex === -1) {
+                                    draft.push(createdElement as never)
+                                    return
+                                }
+
+                                draft[existingIndex] = createdElement as never
+                            },
+                        ),
+                    )
+                } catch {
+                    return
+                }
+            },
         }),
 
         updateProjectWhiteboardElement: builder.mutation<
@@ -523,6 +552,35 @@ export const whiteboardApi = baseApi.injectEndpoints({
             }),
             transformResponse: (response: ApiWhiteboardElement) =>
                 transformWhiteboardElement(response),
+            async onQueryStarted(
+                { projectId },
+                { dispatch, queryFulfilled },
+            ) {
+                try {
+                    const { data: updatedElement } = await queryFulfilled
+                    dispatch(
+                        whiteboardApi.util.updateQueryData(
+                            'getProjectWhiteboardElements',
+                            projectId,
+                            (draft) => {
+                                const existingIndex = draft.findIndex(
+                                    (element) =>
+                                        element.id === updatedElement.id,
+                                )
+
+                                if (existingIndex === -1) {
+                                    draft.push(updatedElement as never)
+                                    return
+                                }
+
+                                draft[existingIndex] = updatedElement as never
+                            },
+                        ),
+                    )
+                } catch {
+                    return
+                }
+            },
         }),
 
         deleteProjectWhiteboardElement: builder.mutation<
@@ -534,6 +592,24 @@ export const whiteboardApi = baseApi.injectEndpoints({
                 method: 'DELETE',
                 headers: createWhiteboardMutationHeaders(),
             }),
+            async onQueryStarted(
+                { projectId, elementId },
+                { dispatch, queryFulfilled },
+            ) {
+                try {
+                    await queryFulfilled
+                    dispatch(
+                        whiteboardApi.util.updateQueryData(
+                            'getProjectWhiteboardElements',
+                            projectId,
+                            (draft) =>
+                                draft.filter((element) => element.id !== elementId),
+                        ),
+                    )
+                } catch {
+                    return
+                }
+            },
         }),
 
         watchWhiteboardCursor: builder.query<
