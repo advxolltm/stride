@@ -10,7 +10,6 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -19,7 +18,6 @@ type (
 		GetOrCreateWhiteboardByProjectID(ctx context.Context, userID uuid.UUID, projectID uuid.UUID) (*models.Whiteboard, error)
 		GetWhiteboardByProjectID(ctx context.Context, projectUUID uuid.UUID) (*models.Whiteboard, error)
 		CreateWhiteboard(ctx context.Context, whiteboard *models.Whiteboard) error
-		UpdateCanvasState(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, canvasState datatypes.JSON) (*models.Whiteboard, error)
 
 		GetElements(ctx context.Context, userID uuid.UUID, projectID uuid.UUID) ([]models.WhiteboardElement, error)
 		GetElement(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, id uuid.UUID) (*models.WhiteboardElement, error)
@@ -36,18 +34,6 @@ type (
 
 func NewWhiteboardService(store whiteboard.WhiteboardStore, projectService project.ProjectService) WhiteboardService {
 	return &whiteboardService{store: store, projectService: projectService}
-}
-
-func defaultCanvasState() datatypes.JSON {
-	return datatypes.JSON([]byte(`{}`))
-}
-
-func normalizeCanvasState(canvasState datatypes.JSON) datatypes.JSON {
-	if len(canvasState) == 0 {
-		return defaultCanvasState()
-	}
-
-	return canvasState
 }
 
 func ValidateUserAccessToProject(ctx context.Context, projectService project.ProjectService, userID uuid.UUID, projectID uuid.UUID) error {
@@ -72,7 +58,7 @@ func (s *whiteboardService) GetOrCreateWhiteboardByProjectID(ctx context.Context
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, err
 		}
-		whiteboard = &models.Whiteboard{ProjectID: projectID, CanvasState: defaultCanvasState()}
+		whiteboard = &models.Whiteboard{ProjectID: projectID}
 		if err = s.CreateWhiteboard(ctx, whiteboard); err != nil {
 			return nil, ErrCreateWhiteboardFailed
 		}
@@ -85,16 +71,7 @@ func (s *whiteboardService) GetWhiteboardByProjectID(ctx context.Context, projec
 }
 
 func (s *whiteboardService) CreateWhiteboard(ctx context.Context, whiteboard *models.Whiteboard) error {
-	whiteboard.CanvasState = normalizeCanvasState(whiteboard.CanvasState)
 	return s.store.CreateWhiteboard(ctx, whiteboard)
-}
-
-func (s *whiteboardService) UpdateCanvasState(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, canvasState datatypes.JSON) (*models.Whiteboard, error) {
-	if _, err := s.GetOrCreateWhiteboardByProjectID(ctx, userID, projectID); err != nil {
-		return nil, err
-	}
-
-	return s.store.UpdateCanvasState(ctx, projectID, normalizeCanvasState(canvasState))
 }
 
 func (s *whiteboardService) GetElements(ctx context.Context, userID uuid.UUID, projectID uuid.UUID) ([]models.WhiteboardElement, error) {
