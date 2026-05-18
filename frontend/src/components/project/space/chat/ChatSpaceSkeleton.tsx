@@ -5,8 +5,10 @@ interface ChatSpaceSkeletonProps {
 }
 
 export function ChatSpaceSkeleton({
-    variant: _variant = 'page',
+    variant = 'page',
 }: ChatSpaceSkeletonProps) {
+    const isDrawer = variant === 'drawer'
+
     return (
         <div
             className={[
@@ -14,7 +16,12 @@ export function ChatSpaceSkeleton({
                 'bg-background',
             ].join(' ')}
         >
-            <div className="min-h-0 flex-1 overflow-hidden px-5 py-4">
+            <div
+                className={[
+                    'min-h-0 flex-1 overflow-hidden py-4',
+                    isDrawer ? 'px-4 pb-5' : 'px-5',
+                ].join(' ')}
+            >
                 <div className="mb-6 flex justify-center">
                     <Skeleton className="h-7 w-20 rounded-full" />
                 </div>
