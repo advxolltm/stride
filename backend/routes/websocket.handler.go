@@ -61,7 +61,7 @@ func (h WSRouteHandler) ConnectGET(c *echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "unauthorized"})
 	}
 
-	ws, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
+	ws, err := h.upgrader.Upgrade(c.Response(), c.Request(), nil)
 	if err != nil {
 		slog.Error("failed to upgrade", "error", err)
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
