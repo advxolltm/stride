@@ -16,7 +16,6 @@ import (
 	// NOTE: if you want to give multiple "layers" (route, service, db) the same package-name to group them together, you can provide a custom name on import to distinguish them like here
 	"backend/db"
 	chatStore "backend/db/chat"
-	exampleDB "backend/db/example"
 	notificationDB "backend/db/notification"
 	projectDB "backend/db/project"
 	taskDB "backend/db/task"
@@ -28,7 +27,6 @@ import (
 	wsRoutes "backend/routes/websocket"
 	authService "backend/services/auth"
 	chatService "backend/services/chat"
-	exampleService "backend/services/example"
 	notificationService "backend/services/notification"
 	projectService "backend/services/project"
 	taskService "backend/services/task"
@@ -115,8 +113,6 @@ func main() {
 
 	// NOTE: No automatic magic dependency injection
 	//		 We define everything we need here once and then just pass it to the handlers as necessary Stores
-	exampleStore := exampleDB.NewExampleStore("some-db-connection-string")
-
 	dsn := db.PostgresDSNFromEnv()
 
 	mainDB, err := initMainDB(dsn)
@@ -146,7 +142,6 @@ func main() {
 	chatStore := chatStore.NewChatStore(mainDB)
 
 	// Services
-	exampleService := exampleService.NewExampleService(exampleStore)
 	userService := userService.NewUserService(userStore)
 	projectService := projectService.NewProjectService(projectStore)
 	authService := authService.NewAuthenticationService(userService)
@@ -169,7 +164,6 @@ func main() {
 	handlers := []routes.RouteHandler{
 		routes.NewHealthRouteHandler(),
 		routes.NewAuthRouteHandler(authService, userService),
-		routes.NewExampleRouteHandler(exampleService, authService, rdb),
 		projects.NewProjectsGroup(projectService, whiteboardService, chatService, notificationService, authService, rdb),
 		taskHandler.NewTaskRouteHandler(authService, taskService, projectService, notificationService, rdb),
 		routes.NewNotificationRouteHandler(notificationService, authService),
