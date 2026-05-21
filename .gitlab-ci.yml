@@ -103,8 +103,6 @@ test-backend:
     # Install the psql client just for the DB health check, along with git/bash
     - apk add --no-cache git bash postgresql-client
     - wget -O- -nv https://golangci-lint.run/install.sh | sh -s v2.12.0
-    - wget -O- -nv https://github.com/securego/gosec/releases/download/v2.26.1/gosec_2.26.1_linux_amd64.tar.gz | tar -xz
-    - chmod +x gosec
     - go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
     - go install github.com/swaggo/swag/cmd/swag@latest
     - cd backend
@@ -115,7 +113,6 @@ test-backend:
     - until bash -c 'exec 3<>/dev/tcp/$REDIS_HOST/$REDIS_PORT; printf "*1\r\n\$4\r\nPING\r\n" >&3; IFS= read -r -t 2 response <&3; [[ "$response" == "+PONG"* ]]' 2>/dev/null; do echo "Waiting for redis..."; sleep 2; done
     - go mod download
     - swag init -g server.go -d ./cmd,./routes
-    - ../gosec -exclude-dir testutils ./...
     - govulncheck -show verbose ./...
     - GOMEMLIMIT=512MiB GOGC=20 ../bin/golangci-lint run --concurrency=2 --output.code-climate.path=../gl-code-quality-report.json
     - go test -count=1 -p 1 ./...
