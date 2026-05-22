@@ -1,9 +1,12 @@
 package websocket
 
 import (
+	"backend/routes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -22,13 +25,21 @@ var (
 	errRegistryNil = errors.New("project hub registry not configured")
 )
 
+// HubMessage carries a single broadcast event with its envelope type already
+// parsed once by the hub, so individual subscribers do not need to re-decode
+// the JSON just to filter on type.
+type HubMessage struct {
+	Type    routes.WSMessageType
+	Payload []byte
+}
+
 type subscriber struct {
-	send chan []byte
+	send chan HubMessage
 }
 
 
 type Subscription struct {
-	Messages <-chan []byte
+	Messages <-chan HubMessage
 	detach   func()
 }
 
@@ -72,7 +83,7 @@ func (r *ProjectHubRegistry) Attach(ctx context.Context, projectID uuid.UUID) (*
 		return nil, errRegistryNil
 	}
 
-	s := &subscriber{send: make(chan []byte, hubSendBufferSize)}
+	s := &subscriber{send: make(chan HubMessage, hubSendBufferSize)}
 
 	for {
 		hub, err := r.getOrCreateHub(ctx, projectID)
@@ -183,7 +194,23 @@ func (h *projectHub) run(ctx context.Context) {
 	}
 }
 
+// hubEnvelope mirrors the minimal shape of routes.WSMessage needed for fan-out
+// routing. Decoding only the `type` field keeps the hot path allocation-light.
+type hubEnvelope struct {
+	Type routes.WSMessageType `json:"type"`
+}
+
 func (h *projectHub) broadcast(payload []byte) {
+	// Decode only the envelope's `type` once here so each subscriber can filter
+	// without re-parsing the same JSON N times. A parse failure is non-fatal:
+	// the message is still delivered with a zero type (subscribers that filter
+	// will skip it, those that don't still see the raw payload).
+	var env hubEnvelope
+	if err := json.Unmarshal(payload, &env); err != nil {
+		slog.Debug("project hub payload missing typed envelope", "error", err, "projectID", h.projectID)
+	}
+	msg := HubMessage{Type: env.Type, Payload: payload}
+
 	h.mu.RLock()
 	if len(h.subs) == 0 {
 		h.mu.RUnlock()
@@ -192,7 +219,7 @@ func (h *projectHub) broadcast(payload []byte) {
 
 	var slow []*subscriber
 	for s := range h.subs {
-		if !deliver(s, payload) {
+		if !deliver(s, msg) {
 			slow = append(slow, s)
 		}
 	}
@@ -203,12 +230,12 @@ func (h *projectHub) broadcast(payload []byte) {
 	}
 }
 
-func deliver(s *subscriber, payload []byte) bool {
+func deliver(s *subscriber, msg HubMessage) bool {
 	if s == nil {
 		return false
 	}
 	select {
-	case s.send <- payload:
+	case s.send <- msg:
 		return true
 	default:
 	}
@@ -216,7 +243,7 @@ func deliver(s *subscriber, payload []byte) bool {
 	timer := time.NewTimer(hubSlowClientGrace)
 	defer timer.Stop()
 	select {
-	case s.send <- payload:
+	case s.send <- msg:
 		return true
 	case <-timer.C:
 		return false

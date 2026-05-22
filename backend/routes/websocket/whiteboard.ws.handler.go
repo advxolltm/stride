@@ -52,10 +52,6 @@ type whiteboardWSUpdateResponse struct { //nolint:unused
 	Payload any `json:"payload"`
 }
 
-type whiteboardWSMessageEnvelope struct {
-	Type routes.WSMessageType `json:"type"`
-}
-
 type whiteboardWSClientMessageMeta struct {
 	ClientID    string `json:"clientId"`
 	OperationID string `json:"operationId"`
@@ -177,28 +173,23 @@ func (h whiteboardWSRouteHandler) connectGET(c *echo.Context) error {
 }
 
 func (h whiteboardWSRouteHandler) forwardWhiteboardHubMessages(
-	messages <-chan []byte,
+	messages <-chan HubMessage,
 	conn *websocket.Conn,
 	writeMu *sync.Mutex,
 	expiry time.Time,
 	errCh chan<- error,
 ) {
-	for payload := range messages {
+	for msg := range messages {
 		if isWSSessionExpired(expiry) {
 			errCh <- nil
 			return
 		}
 
-		var envelope whiteboardWSMessageEnvelope
-		if err := json.Unmarshal(payload, &envelope); err != nil {
-			slog.Debug("ignored invalid whiteboard ws payload", "error", err)
-			continue
-		}
-		if !isWhiteboardWSEventType(envelope.Type) {
+		if !isWhiteboardWSEventType(msg.Type) {
 			continue
 		}
 
-		if err := writeWSMessage(conn, writeMu, websocket.TextMessage, payload); err != nil {
+		if err := writeWSMessage(conn, writeMu, websocket.TextMessage, msg.Payload); err != nil {
 			errCh <- err
 			return
 		}
