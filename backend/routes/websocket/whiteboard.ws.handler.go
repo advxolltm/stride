@@ -74,6 +74,21 @@ type whiteboardElementLiveClearWSUpdate struct {
 	ElementID string `json:"elementId"`
 }
 
+// whiteboardLiveCoalesceInterval bounds how often a single connection may
+// publish a LiveUpdate for the same element to Redis. Multiple frames received
+// within one window for the same elementId are collapsed into the most recent
+// one, keeping publish/broadcast cost bounded regardless of how fast a client
+// streams frames during a drag.
+const whiteboardLiveCoalesceInterval = 33 * time.Millisecond
+
+// whiteboardLiveItem is one parsed inbound live message awaiting publish.
+type whiteboardLiveItem struct {
+	messageType routes.WSMessageType
+	meta        *routes.WSMessageMeta
+	payload     any
+	elementID   string
+}
+
 func newWhiteboardWSRouteHandler(
 	authService auth.AuthService,
 	projectService project.ProjectService,
@@ -150,22 +165,25 @@ func (h whiteboardWSRouteHandler) connectGET(c *echo.Context) error {
 	})
 
 	var writeMu sync.Mutex
-	pingCtx, pingCancel := context.WithCancel(context.Background())
-	defer pingCancel()
-	errCh := make(chan error, 3)
+	connCtx, connCancel := context.WithCancel(context.Background())
+	defer connCancel()
+	errCh := make(chan error, 4)
+	liveItems := make(chan whiteboardLiveItem, 64)
 
-	go pingWSConn(pingCtx, ws, &writeMu, errCh)
+	go pingWSConn(connCtx, ws, &writeMu, errCh)
 	go h.forwardWhiteboardHubMessages(sub.Messages, ws, &writeMu, session.Expiry, errCh)
+	go h.coalesceWhiteboardLiveUpdates(connCtx, session.ProjectID, liveItems, errCh)
 	go h.consumeWhiteboardLiveClientMessages(
-		ctx,
+		connCtx,
 		ws,
-		session.ProjectID,
 		session.UserID,
 		session.Expiry,
+		liveItems,
 		errCh,
 	)
 
 	runErr := <-errCh
+	connCancel()
 	if runErr != nil && !websocket.IsCloseError(runErr, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
 		slog.Debug("whiteboard ws closed", "error", runErr, "user-id", session.UserID)
 	}
@@ -257,11 +275,13 @@ func parseWhiteboardLiveClientMessage(
 func (h whiteboardWSRouteHandler) consumeWhiteboardLiveClientMessages(
 	ctx context.Context,
 	conn *websocket.Conn,
-	projectID uuid.UUID,
 	userID uuid.UUID,
 	expiry time.Time,
+	out chan<- whiteboardLiveItem,
 	errCh chan<- error,
 ) {
+	defer close(out)
+
 	for {
 		if isWSSessionExpired(expiry) {
 			errCh <- websocket.ErrCloseSent
@@ -280,22 +300,110 @@ func (h whiteboardWSRouteHandler) consumeWhiteboardLiveClientMessages(
 			continue
 		}
 
-		meta := &routes.WSMessageMeta{
-			OriginUserID: &userID,
-			ClientID:     clientID,
-			OperationID:  operationID,
+		item := whiteboardLiveItem{
+			messageType: messageType,
+			meta: &routes.WSMessageMeta{
+				OriginUserID: &userID,
+				ClientID:     clientID,
+				OperationID:  operationID,
+			},
+			payload:   parsedPayload,
+			elementID: liveItemElementID(parsedPayload),
 		}
 
-		if err := routes.SendWSUpdateWithMeta(
+		select {
+		case out <- item:
+		case <-ctx.Done():
+			errCh <- nil
+			return
+		}
+	}
+}
+
+func liveItemElementID(payload any) string {
+	switch v := payload.(type) {
+	case whiteboardElementLiveWSUpdate:
+		return v.ElementID
+	case whiteboardElementLiveClearWSUpdate:
+		return v.ElementID
+	default:
+		return ""
+	}
+}
+
+// coalesceWhiteboardLiveUpdates is the single owner of the per-connection
+// inbound publish pipeline. It collapses successive LiveUpdate frames for the
+// same elementId into the latest value and flushes at most once per
+// whiteboardLiveCoalesceInterval. LiveClear frames bypass coalescing and also
+// evict any pending LiveUpdate for the same element so the clear is never
+// re-overwritten by a stale frame.
+func (h whiteboardWSRouteHandler) coalesceWhiteboardLiveUpdates(
+	ctx context.Context,
+	projectID uuid.UUID,
+	in <-chan whiteboardLiveItem,
+	errCh chan<- error,
+) {
+	pending := make(map[string]whiteboardLiveItem)
+	ticker := time.NewTicker(whiteboardLiveCoalesceInterval)
+	defer ticker.Stop()
+
+	publish := func(item whiteboardLiveItem) error {
+		return routes.SendWSUpdateWithMeta(
 			ctx,
 			h.rdb,
 			projectID,
-			messageType,
-			meta,
-			parsedPayload,
-		); err != nil {
-			errCh <- err
+			item.messageType,
+			item.meta,
+			item.payload,
+		)
+	}
+
+	flushPending := func() error {
+		for k, item := range pending {
+			if err := publish(item); err != nil {
+				return err
+			}
+			delete(pending, k)
+		}
+		return nil
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			errCh <- nil
 			return
+		case item, ok := <-in:
+			if !ok {
+				if err := flushPending(); err != nil {
+					errCh <- err
+					return
+				}
+				errCh <- nil
+				return
+			}
+			if item.messageType == routes.WhiteboardElementLiveClear {
+				delete(pending, item.elementID)
+				if err := publish(item); err != nil {
+					errCh <- err
+					return
+				}
+				continue
+			}
+			// LiveUpdate: keep only the most recent frame per element.
+			if item.elementID == "" {
+				if err := publish(item); err != nil {
+					errCh <- err
+					return
+				}
+				continue
+			}
+			pending[item.elementID] = item
+		case <-ticker.C:
+			if err := flushPending(); err != nil {
+				errCh <- err
+				return
+			}
 		}
 	}
 }
