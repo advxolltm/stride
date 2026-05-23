@@ -11,6 +11,8 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+const CursorPresenceMaxAge = 90 * time.Second
+
 type CursorUser struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
@@ -28,10 +30,10 @@ type CursorPresence struct {
 }
 
 type CursorPresenceRecord struct {
-	ConnectionID string                   `json:"connectionId"`
-	User         CursorUser               `json:"user"`
-	Cursor       CursorPosition           `json:"cursor"`
-	UpdatedAt    time.Time                `json:"updatedAt"`
+	ConnectionID string         `json:"connectionId"`
+	User         CursorUser     `json:"user"`
+	Cursor       CursorPosition `json:"cursor"`
+	UpdatedAt    time.Time      `json:"updatedAt"`
 }
 
 type CursorClientMessage struct {
@@ -71,6 +73,16 @@ func (s *CursorPresenceStore) PutConnection(
 	return nil
 }
 
+func (s *CursorPresenceStore) RefreshConnection(
+	ctx context.Context,
+	projectID uuid.UUID,
+	record *CursorPresenceRecord,
+	updatedAt time.Time,
+) error {
+	record.UpdatedAt = updatedAt.UTC()
+	return s.PutConnection(ctx, projectID, *record)
+}
+
 func (s *CursorPresenceStore) RemoveConnection(
 	ctx context.Context,
 	projectID uuid.UUID,
@@ -87,21 +99,36 @@ func (s *CursorPresenceStore) Snapshot(
 	ctx context.Context,
 	projectID uuid.UUID,
 ) ([]CursorPresence, error) {
-	rawRecords, err := s.rdb.HVals(ctx, cursorPresenceKey(projectID)).Result()
+	presenceKey := cursorPresenceKey(projectID)
+	rawRecords, err := s.rdb.HGetAll(ctx, presenceKey).Result()
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrLoadCursorPresence, err)
 	}
 
 	latestByUser := make(map[string]CursorPresenceRecord, len(rawRecords))
-	for _, rawRecord := range rawRecords {
+	staleConnectionIDs := make([]string, 0)
+	staleBefore := time.Now().UTC().Add(-CursorPresenceMaxAge)
+
+	for connectionID, rawRecord := range rawRecords {
 		var record CursorPresenceRecord
 		if err := json.Unmarshal([]byte(rawRecord), &record); err != nil {
 			return nil, fmt.Errorf("%w: %w", ErrDecodeCursorPresence, err)
 		}
 
+		if record.UpdatedAt.Before(staleBefore) {
+			staleConnectionIDs = append(staleConnectionIDs, connectionID)
+			continue
+		}
+
 		existing, ok := latestByUser[record.User.ID]
 		if !ok || record.UpdatedAt.After(existing.UpdatedAt) {
 			latestByUser[record.User.ID] = record
+		}
+	}
+
+	if len(staleConnectionIDs) > 0 {
+		if err := s.rdb.HDel(ctx, presenceKey, staleConnectionIDs...).Err(); err != nil {
+			return nil, fmt.Errorf("%w: %w", ErrDeleteCursorPresence, err)
 		}
 	}
 

@@ -4,8 +4,11 @@ import (
 	"backend/routes"
 	"backend/services/auth"
 	"backend/services/project"
+	"context"
 	"log/slog"
 	"net/http"
+	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v5"
@@ -17,6 +20,7 @@ type projectWSRouteHandler struct {
 	projectService project.ProjectService
 	upgrader       websocket.Upgrader
 	rdb            *redis.Client
+	hubs           *ProjectHubRegistry
 }
 
 type taskWSUpdateResponse struct { //nolint:unused
@@ -24,11 +28,12 @@ type taskWSUpdateResponse struct { //nolint:unused
 	Payload any `json:"payload"`
 }
 
-func newProjectWSRouteHandler(authService auth.AuthService, projectService project.ProjectService, rdb *redis.Client) projectWSRouteHandler {
+func newProjectWSRouteHandler(authService auth.AuthService, projectService project.ProjectService, rdb *redis.Client, hubs *ProjectHubRegistry) projectWSRouteHandler {
 	return projectWSRouteHandler{
 		authService:    authService,
 		projectService: projectService,
 		rdb:            rdb,
+		hubs:           hubs,
 		upgrader:       newWSUpgrader(),
 	}
 }
@@ -68,53 +73,72 @@ func (h projectWSRouteHandler) connectKanbanGET(c *echo.Context) error {
 		return err
 	}
 
+	if h.hubs == nil {
+		slog.Error("kanban websocket missing project hub registry", "projectID", session.ProjectID, "userID", session.UserID)
+		return c.JSON(http.StatusInternalServerError, routes.ErrorResponse{Error: "internal server error"})
+	}
+
+	sub, err := h.hubs.Attach(ctx, session.ProjectID)
+	if err != nil {
+		slog.Error("failed to attach kanban websocket to project hub", "error", err, "projectID", session.ProjectID, "userID", session.UserID)
+		return c.JSON(http.StatusInternalServerError, routes.ErrorResponse{Error: "internal server error"})
+	}
+	defer sub.Detach()
+
 	ws, err := h.upgrader.Upgrade(c.Response(), c.Request(), nil)
 	if err != nil {
 		slog.Error("failed to upgrade", "error", err)
 		return c.JSON(http.StatusInternalServerError, routes.ErrorResponse{Error: err.Error()})
 	}
 	defer func() {
-		err := ws.Close()
-		if err != nil {
+		if err := ws.Close(); err != nil {
 			slog.Error("failed to close websocket connection", "error", err)
 		}
 	}()
 
-	sub := h.rdb.Subscribe(ctx, session.ProjectID.String())
-	defer func() {
-		err := sub.Close()
-		if err != nil {
-			slog.Error("failed to close redis sub", "error", err)
+	ws.SetReadLimit(wsMaxMessageSize)
+	if err := ws.SetReadDeadline(time.Now().Add(wsPongWait)); err != nil {
+		slog.Error("failed to set kanban read deadline", "error", err)
+		return nil
+	}
+	ws.SetPongHandler(func(string) error {
+		return ws.SetReadDeadline(time.Now().Add(wsPongWait))
+	})
+
+	var writeMu sync.Mutex
+	pingCtx, pingCancel := context.WithCancel(context.Background())
+	defer pingCancel()
+	errCh := make(chan error, 3)
+
+	go consumeProjectWSDisconnect(ws, errCh)
+	go pingWSConn(pingCtx, ws, &writeMu, errCh)
+	go forwardKanbanHubMessages(sub.Messages, ws, &writeMu, session.Expiry, errCh)
+
+	runErr := <-errCh
+	if runErr != nil && !websocket.IsCloseError(runErr, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+		slog.Debug("project ws closed", "error", runErr, "user-id", session.UserID)
+	}
+	return nil
+}
+
+func forwardKanbanHubMessages(
+	messages <-chan HubMessage,
+	conn *websocket.Conn,
+	writeMu *sync.Mutex,
+	expiry time.Time,
+	errCh chan<- error,
+) {
+	for msg := range messages {
+		if isWSSessionExpired(expiry) {
+			errCh <- nil
+			return
 		}
-	}()
-	ch := sub.Channel()
-	disconnectCh := make(chan error, 1)
-
-	go consumeProjectWSDisconnect(ws, disconnectCh)
-
-	for {
-		select {
-		case err := <-disconnectCh:
-			if err != nil && !websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
-				slog.Debug("project ws closed", "error", err, "user-id", session.UserID)
-			}
-			return nil
-		case msg, ok := <-ch:
-			if !ok {
-				return nil
-			}
-
-			if isWSSessionExpired(session.Expiry) {
-				slog.Debug("Client session expired, closing ws connection", "user-id", session.UserID)
-				return nil
-			}
-
-			if err := ws.WriteMessage(websocket.TextMessage, []byte(msg.Payload)); err != nil {
-				slog.Debug("project ws write failed, closing connection", "error", err, "user-id", session.UserID)
-				return nil
-			}
+		if err := writeWSMessage(conn, writeMu, websocket.TextMessage, msg.Payload); err != nil {
+			errCh <- err
+			return
 		}
 	}
+	errCh <- nil
 }
 
 func (h projectWSRouteHandler) connectMessagesGET(c *echo.Context) error {

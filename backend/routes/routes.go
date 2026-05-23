@@ -460,7 +460,17 @@ const (
 	WhiteboardElementCreate
 	WhiteboardElementUpdate
 	WhiteboardElementDelete
+	WhiteboardElementLiveUpdate
+	WhiteboardElementLiveClear
+	WhiteboardElementRollback
 )
+
+type WhiteboardElementRollbackPayload struct {
+	ProjectID   uuid.UUID `json:"projectId"`
+	ElementID   uuid.UUID `json:"elementId"`
+	OperationID string    `json:"operationId,omitempty"`
+	Reason      string    `json:"reason,omitempty"`
+}
 
 type WSMessageMeta struct {
 	ProjectID    uuid.UUID  `json:"projectId"`
