@@ -3,6 +3,7 @@ import { LayoutTemplate, MessageSquareText, Pin, PinOff, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { ChatSpace } from '../chat/ChatSpace'
 import { PanelActionButton } from '../shared/PanelActionButton'
+import { WhiteboardTemplateCard } from './WhiteboardTemplateCard'
 import type { WhiteboardTemplateDefinition } from './whiteboardTemplates'
 
 export type WhiteboardPanelTab = 'chat' | 'templates'
@@ -21,6 +22,8 @@ interface WhiteboardWorkspacePanelProps {
     chatVariant?: 'page' | 'embedded' | 'drawer'
     templates?: WhiteboardTemplateDefinition[]
     onInsertTemplate?: (template: WhiteboardTemplateDefinition) => void
+    insertingTemplateId?: string | null
+    isInsertingTemplate?: boolean
 }
 
 export function WhiteboardWorkspacePanel({
@@ -37,6 +40,8 @@ export function WhiteboardWorkspacePanel({
     chatVariant = 'page',
     templates = [],
     onInsertTemplate,
+    insertingTemplateId,
+    isInsertingTemplate = false,
 }: WhiteboardWorkspacePanelProps) {
     const { t } = useTranslation('project')
 
@@ -120,7 +125,7 @@ export function WhiteboardWorkspacePanel({
                 >
                     <div
                         className={[
-                            'flex h-full flex-col gap-4 overflow-y-auto px-4 py-4',
+                            'flex h-full min-h-0 flex-col gap-4 overflow-y-auto px-4 py-4',
                             bodyClassName ?? '',
                         ].join(' ')}
                     >
@@ -138,24 +143,24 @@ export function WhiteboardWorkspacePanel({
                                 </div>
                             </div>
                         ) : (
-                            templates.map((template) => (
-                                <button
-                                    key={template.id}
-                                    type="button"
-                                    className="border-border bg-surface text-left rounded-2xl border p-4 shadow-sm transition hover:border-(--accent)/30 hover:shadow-md"
-                                    onClick={() => onInsertTemplate?.(template)}
-                                >
-                                    <div className="text-foreground text-base font-semibold">
-                                        {template.title}
-                                    </div>
-                                    <div className="text-default-500 mt-2 text-sm">
-                                        {template.description}
-                                    </div>
-                                    <div className="text-accent mt-4 text-sm font-medium">
-                                        {t('whiteboardPage.panel.useTemplate')}
-                                    </div>
-                                </button>
-                            ))
+                            templates.map((template) => {
+                                const isCurrentTemplateInserting =
+                                    insertingTemplateId === template.id
+
+                                return (
+                                    <WhiteboardTemplateCard
+                                        key={template.id}
+                                        template={template}
+                                        isDisabled={isInsertingTemplate}
+                                        isInserting={isCurrentTemplateInserting}
+                                        onPress={onInsertTemplate}
+                                        ctaLabel={t(
+                                            'whiteboardPage.panel.useTemplate',
+                                        )}
+                                        insertingLabel="Inserting..."
+                                    />
+                                )
+                            })
                         )}
                     </div>
                 </Tabs.Panel>

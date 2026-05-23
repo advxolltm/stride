@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { toast } from '@heroui/react'
 import { convertToExcalidrawElements } from '@excalidraw/excalidraw'
 import { parseMermaidToExcalidraw } from '@excalidraw/mermaid-to-excalidraw'
@@ -41,6 +42,9 @@ export const useWhiteboardTemplateInsertion = ({
     refetchWhiteboardElements,
 }: UseWhiteboardTemplateInsertionArgs) => {
     const { t } = useTranslation('project')
+    const [insertingTemplateId, setInsertingTemplateId] = useState<
+        string | null
+    >(null)
     const [createProjectWhiteboardElement] =
         useCreateProjectWhiteboardElementMutation()
 
@@ -49,6 +53,8 @@ export const useWhiteboardTemplateInsertion = ({
             return false
         }
 
+        setInsertingTemplateId(template.id)
+
         const { x, y } = getTemplateInsertOrigin(whiteboardElements)
         const nextZIndex = whiteboardElements.reduce(
             (currentMax, element) => Math.max(currentMax, element.zIndex),
@@ -56,26 +62,34 @@ export const useWhiteboardTemplateInsertion = ({
         )
 
         try {
-            const mermaidResult = await parseMermaidToExcalidraw(
-                template.mermaidDefinition,
-                {
-                    flowchart: { curve: 'linear' },
-                    themeVariables: { fontSize: '18px' },
-                },
-            )
-            const templateElements = convertToExcalidrawElements(
-                mermaidResult.elements,
-                {
-                    regenerateIds: true,
-                },
-            ).map((element) => ({
+            const templateElements =
+                template.kind === 'mermaid'
+                    ? convertToExcalidrawElements(
+                          (
+                              await parseMermaidToExcalidraw(
+                                  template.mermaidDefinition,
+                                  {
+                                      flowchart: { curve: 'linear' },
+                                      themeVariables: { fontSize: '18px' },
+                                  },
+                              )
+                          ).elements,
+                          {
+                              regenerateIds: true,
+                          },
+                      )
+                    : convertToExcalidrawElements(template.elements, {
+                          regenerateIds: true,
+                      })
+
+            const positionedTemplateElements = templateElements.map((element) => ({
                 ...element,
                 x: element.x + x,
                 y: element.y + y,
             }))
 
             await Promise.all(
-                templateElements.map((element, index) =>
+                positionedTemplateElements.map((element, index) =>
                     createProjectWhiteboardElement({
                         projectId,
                         body: {
@@ -98,10 +112,14 @@ export const useWhiteboardTemplateInsertion = ({
                 ),
             )
             return false
+        } finally {
+            setInsertingTemplateId(null)
         }
     }
 
     return {
         insertTemplate,
+        insertingTemplateId,
+        isInsertingTemplate: insertingTemplateId !== null,
     }
 }

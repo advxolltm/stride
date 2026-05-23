@@ -97,11 +97,12 @@ export function WhiteboardPage() {
         whiteboardElements,
         liveElementsById,
     })
-    const { insertTemplate } = useWhiteboardTemplateInsertion({
-        projectId,
-        whiteboardElements,
-        refetchWhiteboardElements,
-    })
+    const { insertTemplate, insertingTemplateId, isInsertingTemplate } =
+        useWhiteboardTemplateInsertion({
+            projectId,
+            whiteboardElements,
+            refetchWhiteboardElements,
+        })
 
     useEffect(() => {
         if (typeof window === 'undefined') {
@@ -159,6 +160,10 @@ export function WhiteboardPage() {
     async function handleInsertTemplate(
         template: (typeof whiteboardTemplates)[number],
     ) {
+        if (isInsertingTemplate) {
+            return
+        }
+
         const didInsert = await insertTemplate(template)
 
         if (didInsert && !isPanelPinned) {
@@ -392,6 +397,8 @@ export function WhiteboardPage() {
                         chatVariant="drawer"
                         templates={whiteboardTemplates}
                         onInsertTemplate={handleInsertTemplate}
+                        insertingTemplateId={insertingTemplateId}
+                        isInsertingTemplate={isInsertingTemplate}
                     />
                 </div>
             </div>
@@ -419,6 +426,8 @@ export function WhiteboardPage() {
                         chatVariant="drawer"
                         templates={whiteboardTemplates}
                         onInsertTemplate={handleInsertTemplate}
+                        insertingTemplateId={insertingTemplateId}
+                        isInsertingTemplate={isInsertingTemplate}
                     />
                 </div>
             </div>
