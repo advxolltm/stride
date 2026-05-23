@@ -3,7 +3,6 @@ import { Settings, UserPlus } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { Link } from 'react-router-dom'
 import { useAppSelector } from '../../../shared/hooks/redux'
 import type { Project } from '../../../store/features/project/project.types'
 import { selectUserId } from '../../../store/userSlice'
@@ -62,9 +61,6 @@ export function ProjectOverviewHeader({
                         )}
 
                         <div className="flex flex-row gap-2">
-                            <Link to="ws-test">
-                                <Button>Go to whiteboard test page</Button>
-                            </Link>
                             <Button
                                 onPress={() => setSettingsOpen(true)}
                                 isIconOnly

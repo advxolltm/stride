@@ -460,6 +460,8 @@ const (
 	WhiteboardElementCreate
 	WhiteboardElementUpdate
 	WhiteboardElementDelete
+	WhiteboardElementLiveUpdate
+	WhiteboardElementLiveClear
 	WhiteboardElementRollback
 )
 

@@ -100,8 +100,8 @@ func TestWhiteboardService_CreateElement_SetsWhiteboardID(t *testing.T) {
 	})
 }
 
-func TestWhiteboardService_CreateElement_FailsWhenNoWhiteboardExists(t *testing.T) {
-	runTest(t, db, "error when project has no whiteboard", func(t *testing.T, db *gorm.DB, svc whiteboardSvc.WhiteboardService) {
+func TestWhiteboardService_CreateElement_CreatesWhiteboardWhenMissing(t *testing.T) {
+	runTest(t, db, "create element auto-creates whiteboard when project has none", func(t *testing.T, db *gorm.DB, svc whiteboardSvc.WhiteboardService) {
 		project, member := selectProjectMember(t, db)
 		ctx := context.Background()
 
@@ -110,9 +110,15 @@ func TestWhiteboardService_CreateElement_FailsWhenNoWhiteboardExists(t *testing.
 			Props:       datatypes.JSON([]byte(`{"text": "hello"}`)),
 		}
 
-		_, err := svc.CreateElement(ctx, member.ID, project.ID, element)
+		created, err := svc.CreateElement(ctx, member.ID, project.ID, element)
 
-		assert.Error(t, err)
+		require.NoError(t, err)
+		require.NotNil(t, created)
+		assert.NotEqual(t, uuid.Nil, created.WhiteboardID)
+
+		wb, err := svc.GetWhiteboardByProjectID(ctx, project.ID)
+		require.NoError(t, err)
+		assert.Equal(t, wb.ID, created.WhiteboardID)
 	})
 }
 

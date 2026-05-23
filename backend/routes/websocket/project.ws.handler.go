@@ -122,18 +122,18 @@ func (h projectWSRouteHandler) connectKanbanGET(c *echo.Context) error {
 }
 
 func forwardKanbanHubMessages(
-	messages <-chan []byte,
+	messages <-chan HubMessage,
 	conn *websocket.Conn,
 	writeMu *sync.Mutex,
 	expiry time.Time,
 	errCh chan<- error,
 ) {
-	for payload := range messages {
+	for msg := range messages {
 		if isWSSessionExpired(expiry) {
 			errCh <- nil
 			return
 		}
-		if err := writeWSMessage(conn, writeMu, websocket.TextMessage, payload); err != nil {
+		if err := writeWSMessage(conn, writeMu, websocket.TextMessage, msg.Payload); err != nil {
 			errCh <- err
 			return
 		}

@@ -23,7 +23,9 @@ describe('WSMessageType', () => {
             WhiteboardElementCreate: 15,
             WhiteboardElementUpdate: 16,
             WhiteboardElementDelete: 17,
-            WhiteboardElementRollback: 18,
+            WhiteboardElementLiveUpdate: 18,
+            WhiteboardElementLiveClear: 19,
+            WhiteboardElementRollback: 20,
         })
 
         const ids = Object.values(WSMessageType)

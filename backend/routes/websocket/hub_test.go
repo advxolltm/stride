@@ -45,11 +45,11 @@ func TestProjectHubRegistry_BroadcastDeliversToAllSubscribers(t *testing.T) {
 	payload := []byte("hello-hub")
 	require.NoError(t, rdb.Publish(ctx, channel, payload).Err())
 
-	for _, m := range []<-chan []byte{subA.Messages, subB.Messages} {
+	for _, m := range []<-chan HubMessage{subA.Messages, subB.Messages} {
 		select {
 		case got, ok := <-m:
 			require.True(t, ok)
-			assert.Equal(t, payload, got)
+			assert.Equal(t, payload, got.Payload)
 		case <-time.After(2 * time.Second):
 			t.Fatal("timeout waiting for hub broadcast")
 		}
@@ -72,7 +72,7 @@ func TestProjectHubRegistry_AttachHandshakeNoMissedEvents(t *testing.T) {
 
 	select {
 	case got := <-sub.Messages:
-		assert.Equal(t, []byte("first"), got)
+		assert.Equal(t, []byte("first"), got.Payload)
 	case <-time.After(2 * time.Second):
 		t.Fatal("missed first event after attach")
 	}
@@ -165,7 +165,7 @@ func TestProjectHubRegistry_ReattachAfterTeardown_FreshSubscription(t *testing.T
 	require.NoError(t, rdb.Publish(ctx, channel, []byte("after-recycle")).Err())
 	select {
 	case got := <-second.Messages:
-		assert.Equal(t, []byte("after-recycle"), got)
+		assert.Equal(t, []byte("after-recycle"), got.Payload)
 	case <-time.After(2 * time.Second):
 		t.Fatal("re-attached subscriber must receive events")
 	}
@@ -205,7 +205,7 @@ func TestProjectHubRegistry_DetachIsIdempotent(t *testing.T) {
 	require.NoError(t, rdb.Publish(ctx, channel, []byte("alive")).Err())
 	select {
 	case got := <-other.Messages:
-		assert.Equal(t, []byte("alive"), got)
+		assert.Equal(t, []byte("alive"), got.Payload)
 	case <-time.After(2 * time.Second):
 		t.Fatal("hub must remain alive after double-detach of one subscriber")
 	}
