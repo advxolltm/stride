@@ -20,7 +20,7 @@ export function ChatPanelFrame({
     onTogglePin,
     onClose,
     surfaceClassName,
-}: ChatPanelFrameProps) {
+}: Readonly<ChatPanelFrameProps>) {
     const { t } = useTranslation('chat')
 
     return (

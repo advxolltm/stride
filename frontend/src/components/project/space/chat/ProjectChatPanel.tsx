@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChatPanelFrame } from './panel/ChatPanelFrame'
 import { FloatingChatLauncher } from './panel/FloatingChatLauncher'
@@ -7,44 +7,14 @@ interface ProjectChatPanelProps {
     projectId: string
 }
 
-const DOCK_MEDIA_QUERY = '(min-width: 1280px)'
-
 export function ProjectChatPanel({ projectId }: ProjectChatPanelProps) {
     const { t } = useTranslation('chat')
 
     const [isOpen, setIsOpen] = useState(false)
     const [isPinned, setIsPinned] = useState(false)
-    const [canDock, setCanDock] = useState(() =>
-        typeof window !== 'undefined'
-            ? window.matchMedia(DOCK_MEDIA_QUERY).matches
-            : false,
-    )
 
-    useEffect(() => {
-        if (typeof window === 'undefined') {
-            return
-        }
-
-        const mediaQuery = window.matchMedia(DOCK_MEDIA_QUERY)
-        const syncDockAvailability = (event?: MediaQueryListEvent) => {
-            const matches = event?.matches ?? mediaQuery.matches
-            setCanDock(matches)
-
-            if (!matches) {
-                setIsPinned(false)
-            }
-        }
-
-        syncDockAvailability()
-        mediaQuery.addEventListener('change', syncDockAvailability)
-
-        return () => {
-            mediaQuery.removeEventListener('change', syncDockAvailability)
-        }
-    }, [])
-
-    const showDockedPanel = isOpen && isPinned && canDock
-    const showFloatingPanel = isOpen && !showDockedPanel
+    const showDockedPanel = isOpen && isPinned
+    const showFloatingPanel = isOpen && !isPinned
 
     function handleOpen() {
         setIsOpen(true)
@@ -57,10 +27,6 @@ export function ProjectChatPanel({ projectId }: ProjectChatPanelProps) {
     }
 
     function handleTogglePin() {
-        if (!canDock) {
-            return
-        }
-
         setIsOpen(true)
         setIsPinned((current) => !current)
     }
@@ -79,7 +45,7 @@ export function ProjectChatPanel({ projectId }: ProjectChatPanelProps) {
                     <ChatPanelFrame
                         projectId={projectId}
                         isPinned={false}
-                        canDock={canDock}
+                        canDock
                         onTogglePin={handleTogglePin}
                         onClose={handleClose}
                         surfaceClassName="bg-surface"
@@ -96,7 +62,7 @@ export function ProjectChatPanel({ projectId }: ProjectChatPanelProps) {
                 <ChatPanelFrame
                     projectId={projectId}
                     isPinned
-                    canDock={canDock}
+                    canDock
                     onTogglePin={handleTogglePin}
                     onClose={handleClose}
                     surfaceClassName="bg-surface"

@@ -12,7 +12,7 @@ export function HeaderActionLink({
     label,
     icon: Icon,
     to,
-}: HeaderActionLinkProps) {
+}: Readonly<HeaderActionLinkProps>) {
     return (
         <Tooltip delay={0}>
             <Tooltip.Trigger className="inline-flex">
@@ -21,7 +21,7 @@ export function HeaderActionLink({
                     aria-label={label}
                     className="hover:bg-default/40 inline-flex h-8 w-8 items-center justify-center rounded-medium transition-colors"
                 >
-                    <Icon size={18} />
+                    <Icon size={16} />
                 </Link>
             </Tooltip.Trigger>
             <Tooltip.Content showArrow placement="top" offset={8}>

@@ -13,7 +13,7 @@ export function FloatingChatLauncher({
     label,
     offsetClassName,
     onOpen,
-}: FloatingChatLauncherProps) {
+}: Readonly<FloatingChatLauncherProps>) {
     return (
         <div
             className={`pointer-events-none fixed right-6 ${offsetClassName} z-40`}
