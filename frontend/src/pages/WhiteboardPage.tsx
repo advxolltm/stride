@@ -1,12 +1,28 @@
-import { Button, toast } from '@heroui/react'
+import { Button, Tooltip, toast } from '@heroui/react'
 import { skipToken } from '@reduxjs/toolkit/query'
+import {
+    ChevronRight,
+    Home,
+    PanelRightOpen,
+    Share2,
+    Zap,
+} from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ChevronRight, Home, Share2, Zap } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { WhiteboardCanvas } from '../components/project/space/whiteboard/canvas/WhiteboardCanvas'
 import { useWhiteboardSync } from '../components/project/space/whiteboard/sync/useWhiteboardSync'
-import { getApiErrorMessage } from '../shared/utils/api/errors'
+import { useWhiteboardTemplateInsertion } from '../components/project/space/whiteboard/sync/useWhiteboardTemplateInsertion'
+import {
+    whiteboardTemplates,
+} from '../components/project/space/whiteboard/whiteboardTemplates'
+import {
+    WhiteboardWorkspacePanel,
+    type WhiteboardPanelTab,
+} from '../components/project/space/whiteboard/WhiteboardWorkspacePanel'
+import { UserAvatar } from '../shared/components'
 import { useAppSelector } from '../shared/hooks/redux'
+import { getApiErrorMessage } from '../shared/utils/api/errors'
 import { useGetProjectByIdQuery } from '../store/features/project/project.api'
 import {
     useGetProjectWhiteboardElementsQuery,
@@ -16,15 +32,25 @@ import {
 } from '../store/features/whiteboard/whiteboard.api'
 import type { WhiteboardLiveUpdateEventPayload } from '../store/features/whiteboard/whiteboard.socket.types'
 import { selectUserId } from '../store/userSlice'
-import { UserAvatar } from '../shared/components'
 
 const emptyLiveElementsById: Record<string, WhiteboardLiveUpdateEventPayload> =
     {}
+
+const DOCK_MEDIA_QUERY = '(min-width: 1280px)'
 
 export function WhiteboardPage() {
     const { projectId } = useParams()
     const { t } = useTranslation('project')
     const currentUserId = useAppSelector(selectUserId)
+    const [isPanelOpen, setIsPanelOpen] = useState(false)
+    const [isPanelPinned, setIsPanelPinned] = useState(false)
+    const [selectedPanelTab, setSelectedPanelTab] =
+        useState<WhiteboardPanelTab>('chat')
+    const [canDockPanel, setCanDockPanel] = useState(() =>
+        typeof window !== 'undefined'
+            ? window.matchMedia(DOCK_MEDIA_QUERY).matches
+            : false,
+    )
     const whiteboardCursorWS = useWatchWhiteboardCursorQuery(
         projectId ?? skipToken,
     )
@@ -55,6 +81,7 @@ export function WhiteboardPage() {
         isLoading: isElementsLoading,
         isSuccess: isElementsReady,
         error: elementsError,
+        refetch: refetchWhiteboardElements,
     } = useGetProjectWhiteboardElementsQuery(projectId ?? '', {
         skip: !projectId || !isWhiteboardReady,
     })
@@ -70,6 +97,35 @@ export function WhiteboardPage() {
         whiteboardElements,
         liveElementsById,
     })
+    const { insertTemplate, insertingTemplateId, isInsertingTemplate } =
+        useWhiteboardTemplateInsertion({
+            projectId,
+            whiteboardElements,
+            refetchWhiteboardElements,
+        })
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return
+        }
+
+        const mediaQuery = window.matchMedia(DOCK_MEDIA_QUERY)
+        const syncDockAvailability = (event?: MediaQueryListEvent) => {
+            const matches = event?.matches ?? mediaQuery.matches
+            setCanDockPanel(matches)
+
+            if (!matches) {
+                setIsPanelPinned(false)
+            }
+        }
+
+        syncDockAvailability()
+        mediaQuery.addEventListener('change', syncDockAvailability)
+
+        return () => {
+            mediaQuery.removeEventListener('change', syncDockAvailability)
+        }
+    }, [])
 
     const handleShare = async () => {
         const shareUrl = project?.joinLink ?? window.location.href
@@ -79,6 +135,39 @@ export function WhiteboardPage() {
             toast.success(t('whiteboardPage.shareSuccess'))
         } catch {
             toast.danger(t('whiteboardPage.shareError'))
+        }
+    }
+
+    function handleOpenPanel() {
+        setIsPanelOpen(true)
+        setSelectedPanelTab('chat')
+    }
+
+    function handleClosePanel() {
+        setIsPanelOpen(false)
+        setIsPanelPinned(false)
+    }
+
+    function handleTogglePanelPin() {
+        if (!canDockPanel) {
+            return
+        }
+
+        setIsPanelOpen(true)
+        setIsPanelPinned((current) => !current)
+    }
+
+    async function handleInsertTemplate(
+        template: (typeof whiteboardTemplates)[number],
+    ) {
+        if (isInsertingTemplate) {
+            return
+        }
+
+        const didInsert = await insertTemplate(template)
+
+        if (didInsert && !isPanelPinned) {
+            setIsPanelOpen(false)
         }
     }
 
@@ -138,10 +227,23 @@ export function WhiteboardPage() {
         : presence
     const visibleCollaborators = collaborators.slice(0, 3)
     const hiddenCollaborators = Math.max(collaborators.length - 3, 0)
+    const showDockedPanel = isPanelOpen && isPanelPinned && canDockPanel
+    const showDrawerPanel = isPanelOpen && !showDockedPanel
+    const controlsRightClass = showDockedPanel
+        ? 'right-[calc(26rem+1.25rem)]'
+        : 'right-3'
+    const navPositionClass = showDockedPanel
+        ? 'left-[calc(50%-13rem)] max-w-[calc(100vw-32rem)]'
+        : 'left-1/2 max-w-[calc(100vw-16rem)]'
 
     return (
         <div className="relative h-screen w-full overflow-hidden bg-[var(--background)]">
-            <nav className="fixed top-3 left-1/2 z-40 flex h-10 -translate-x-1/2 items-center gap-1 rounded-full border border-[var(--border)] bg-[color-mix(in_oklch,var(--surface)_94%,transparent)] px-2 text-sm shadow-lg backdrop-blur-xl">
+            <nav
+                className={[
+                    'fixed top-3 z-40 flex h-10 -translate-x-1/2 items-center gap-1 overflow-hidden rounded-full border border-[var(--border)] bg-[color-mix(in_oklch,var(--surface)_94%,transparent)] px-2 text-sm shadow-lg backdrop-blur-xl',
+                    navPositionClass,
+                ].join(' ')}
+            >
                 <Link
                     to="/"
                     className="flex h-8 shrink-0 items-center gap-2 rounded-full pr-2 font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--surface-secondary)]"
@@ -183,7 +285,12 @@ export function WhiteboardPage() {
                 </span>
             </nav>
 
-            <div className="fixed top-3 right-3 z-40 flex items-center gap-2">
+            <div
+                className={[
+                    'fixed top-3 z-40 flex items-center gap-2 transition-[right] duration-300 ease-out',
+                    controlsRightClass,
+                ].join(' ')}
+            >
                 <Button
                     size="sm"
                     variant="ghost"
@@ -216,6 +323,30 @@ export function WhiteboardPage() {
                         </span>
                     )}
                 </Button>
+                {!isPanelOpen ? (
+                    <Tooltip delay={0}>
+                        <Tooltip.Trigger className="inline-flex">
+                            <Button
+                                isIconOnly
+                                size="sm"
+                                variant="ghost"
+                                className="h-10 w-10 min-w-10 rounded-full border border-[var(--border)] bg-[color-mix(in_oklch,var(--surface)_94%,transparent)] text-[var(--foreground)] shadow-lg backdrop-blur-xl hover:bg-[var(--surface-secondary)]"
+                                onPress={handleOpenPanel}
+                                aria-label={t('whiteboardPage.panel.openAriaLabel')}
+                            >
+                                <PanelRightOpen size={16} />
+                            </Button>
+                        </Tooltip.Trigger>
+                        <Tooltip.Content
+                            showArrow
+                            placement="bottom"
+                            offset={8}
+                        >
+                            <Tooltip.Arrow />
+                            {t('whiteboardPage.panel.open')}
+                        </Tooltip.Content>
+                    </Tooltip>
+                ) : null}
                 <Button
                     isIconOnly
                     size="sm"
@@ -228,18 +359,78 @@ export function WhiteboardPage() {
                 </Button>
             </div>
 
-            <WhiteboardCanvas
-                key={projectId}
-                elements={excalidrawElements}
-                presence={remotePresence}
-                viewportStorageKey={
-                    projectId ? `whiteboard:${projectId}:viewport` : undefined
-                }
-                onChange={handleCanvasChange}
-                onPointerUp={handleCanvasPointerUp}
-                onCursorChange={queueCursorUpdate}
-                onCursorLeave={handleCanvasPointerLeave}
-            />
+            <div className="flex h-full min-h-0">
+                <div className="min-w-0 flex-1">
+                    <WhiteboardCanvas
+                        key={projectId}
+                        elements={excalidrawElements}
+                        presence={remotePresence}
+                        viewportStorageKey={
+                            projectId
+                                ? `whiteboard:${projectId}:viewport`
+                                : undefined
+                        }
+                        onChange={handleCanvasChange}
+                        onPointerUp={handleCanvasPointerUp}
+                        onCursorChange={queueCursorUpdate}
+                        onCursorLeave={handleCanvasPointerLeave}
+                    />
+                </div>
+
+                <div
+                    className={[
+                        'border-border bg-background hidden min-h-0 w-[26rem] shrink-0 border-l-2 xl:flex xl:flex-col',
+                        showDockedPanel ? 'xl:translate-x-0 xl:opacity-100' : 'xl:hidden',
+                    ].join(' ')}
+                >
+                    <WhiteboardWorkspacePanel
+                        projectId={projectId}
+                        isPinned
+                        canDock={canDockPanel}
+                        selectedTab={selectedPanelTab}
+                        onTabChange={setSelectedPanelTab}
+                        onTogglePin={handleTogglePanelPin}
+                        onClose={handleClosePanel}
+                        className="bg-background"
+                        chromeClassName=""
+                        bodyClassName="bg-background"
+                        chatVariant="drawer"
+                        templates={whiteboardTemplates}
+                        onInsertTemplate={handleInsertTemplate}
+                        insertingTemplateId={insertingTemplateId}
+                        isInsertingTemplate={isInsertingTemplate}
+                    />
+                </div>
+            </div>
+
+            <div
+                className={[
+                    'fixed inset-y-0 right-0 z-40 w-[min(100vw,26rem)] transition-all duration-300 ease-out',
+                    showDrawerPanel
+                        ? 'translate-x-0 opacity-100'
+                        : 'pointer-events-none translate-x-4 opacity-0',
+                ].join(' ')}
+            >
+                <div className="border-border bg-background h-full overflow-hidden border-l shadow-[-12px_0_32px_rgba(15,23,42,0.08)]">
+                    <WhiteboardWorkspacePanel
+                        projectId={projectId}
+                        isPinned={false}
+                        canDock={canDockPanel}
+                        selectedTab={selectedPanelTab}
+                        onTabChange={setSelectedPanelTab}
+                        onTogglePin={handleTogglePanelPin}
+                        onClose={handleClosePanel}
+                        className="bg-background"
+                        chromeClassName=""
+                        bodyClassName="bg-background"
+                        chatVariant="drawer"
+                        templates={whiteboardTemplates}
+                        onInsertTemplate={handleInsertTemplate}
+                        insertingTemplateId={insertingTemplateId}
+                        isInsertingTemplate={isInsertingTemplate}
+                    />
+                </div>
+            </div>
         </div>
     )
 }

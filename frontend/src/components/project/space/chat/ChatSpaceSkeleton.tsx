@@ -1,9 +1,27 @@
 import { Skeleton } from '@heroui/react'
 
-export function ChatSpaceSkeleton() {
+interface ChatSpaceSkeletonProps {
+    variant?: 'page' | 'embedded' | 'drawer'
+}
+
+export function ChatSpaceSkeleton({
+    variant = 'page',
+}: ChatSpaceSkeletonProps) {
+    const isDrawer = variant === 'drawer'
+
     return (
-        <div className="bg-background flex min-h-0 flex-1 flex-col overflow-hidden">
-            <div className="min-h-0 flex-1 overflow-hidden p-4">
+        <div
+            className={[
+                'flex min-h-0 flex-1 flex-col overflow-hidden',
+                'bg-background',
+            ].join(' ')}
+        >
+            <div
+                className={[
+                    'min-h-0 flex-1 overflow-hidden py-4',
+                    isDrawer ? 'px-4 pb-5' : 'px-5',
+                ].join(' ')}
+            >
                 <div className="mb-6 flex justify-center">
                     <Skeleton className="h-7 w-20 rounded-full" />
                 </div>
@@ -41,8 +59,8 @@ export function ChatSpaceSkeleton() {
                 </div>
             </div>
 
-            <div className="shrink-0 p-3">
-                <div className="border-default-200 flex h-14 items-center rounded-2xl border px-3 shadow-sm">
+            <div className="shrink-0 border-t-2 border-default-200 p-3 px-6">
+                <div className="border-default-200 bg-surface flex h-14 items-center rounded-2xl border px-3 shadow-sm">
                     <Skeleton className="h-4 w-32 rounded-lg" />
                     <Skeleton className="ml-auto h-10 w-10 rounded-xl" />
                 </div>

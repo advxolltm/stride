@@ -6,17 +6,29 @@ interface ChatMessageInputProps {
     messageContent: string
     onMessageContentChange: (value: string) => void
     onSubmit: (event: React.FormEvent<HTMLFormElement>) => void
+    variant?: 'page' | 'embedded' | 'drawer'
 }
 
 export function ChatMessageInput({
     messageContent,
     onMessageContentChange,
     onSubmit,
+    variant = 'page',
 }: ChatMessageInputProps) {
     const { t } = useTranslation('chat')
+    const isEmbedded = variant === 'embedded'
+    const isDrawer = variant === 'drawer'
 
     return (
-        <div className="shrink-0 border-t-2 border-default-200 p-3 px-6">
+        <div
+            className={[
+                'shrink-0 border-t-2 p-3',
+                isEmbedded
+                    ? 'border-border bg-surface-secondary'
+                    : 'border-default-200 bg-background',
+                isDrawer ? 'px-4 pt-4' : 'px-6',
+            ].join(' ')}
+        >
             <Form className="w-full" onSubmit={onSubmit}>
                 <div className="flex w-full items-center">
                     <InputGroup

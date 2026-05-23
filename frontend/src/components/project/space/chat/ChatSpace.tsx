@@ -1,9 +1,10 @@
-import type { Key } from '@heroui/react'
+import { toast, type Key } from '@heroui/react'
 import { skipToken } from '@reduxjs/toolkit/query'
 import { MessageCircle } from 'lucide-react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
+import { getApiErrorMessage } from '../../../../shared/utils/api/errors'
 import { useGetSessionQuery } from '../../../../store/features/auth/auth.api'
 import {
     useDeleteMessageMutation,
@@ -18,9 +19,18 @@ import { ChatMessageInput } from './ChatMessageInput'
 import { ChatMessageItem } from './ChatMessageItem'
 import { ChatSpaceSkeleton } from './ChatSpaceSkeleton'
 
-export function ChatSpace() {
+interface ChatSpaceProps {
+    projectId?: string
+    variant?: 'page' | 'embedded' | 'drawer'
+}
+
+export function ChatSpace({
+    projectId: projectIdProp,
+    variant = 'page',
+}: ChatSpaceProps) {
     const { t, i18n } = useTranslation('chat')
-    const { projectId } = useParams()
+    const { projectId: routeProjectId } = useParams()
+    const projectId = projectIdProp ?? routeProjectId
 
     const {
         data,
@@ -53,22 +63,8 @@ export function ChatSpace() {
     )
 
     const [sendMessage] = useSendMessageMutation()
-    const [sendMessageError, setSendMessageError] = useState<string | null>(
-        null,
-    )
-    console.log(sendMessageError)
-
     const [editMessage] = useEditMessageMutation()
-    const [editMessageError, setEditMessageError] = useState<string | null>(
-        null,
-    )
-    console.log(editMessageError)
-
     const [deleteMessage] = useDeleteMessageMutation()
-    const [deleteMessageError, setDeleteMessageError] = useState<string | null>(
-        null,
-    )
-    console.log(deleteMessageError)
 
     const [messageContent, setMessageContent] = useState('')
 
@@ -183,8 +179,15 @@ export function ChatSpace() {
     }, [isFetchingNextPage, isFetchingPreviousPage, bottomElement, topElement])
 
     if (isMessagesLoading || isProjectLoading || isUserLoading) {
-        return <ChatSpaceSkeleton />
+        return <ChatSpaceSkeleton variant={variant} />
     }
+
+    const isEmbedded = variant === 'embedded'
+    const isDrawer = variant === 'drawer'
+    const containerClassName = 'bg-background'
+    const dateChipClassName = isEmbedded
+        ? 'border-border bg-surface text-default-500'
+        : 'border-default-200 bg-background text-default-500'
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault()
@@ -192,8 +195,6 @@ export function ChatSpace() {
         if (!messageContent) {
             return
         }
-
-        setSendMessageError(null)
 
         try {
             await sendMessage({
@@ -205,7 +206,9 @@ export function ChatSpace() {
             messageSelfCreatedRef.current = true
             setMessageContent('')
         } catch (error) {
-            setSendMessageError(`something went wrong: ${error}`)
+            toast.danger(
+                getApiErrorMessage(error, t('chat.errors.sendMessage')),
+            )
         }
     }
 
@@ -214,8 +217,6 @@ export function ChatSpace() {
         if (!nextContent) {
             return
         }
-
-        setEditMessageError(null)
 
         try {
             await editMessage({
@@ -226,7 +227,9 @@ export function ChatSpace() {
                 },
             }).unwrap()
         } catch (error) {
-            setEditMessageError(`something went wrong: ${error}`)
+            toast.danger(
+                getApiErrorMessage(error, t('chat.errors.editMessage')),
+            )
             throw error
         }
     }
@@ -293,15 +296,15 @@ export function ChatSpace() {
     }
 
     async function handleDeleteMessage(message: Message) {
-        setDeleteMessageError(null)
-
         try {
             await deleteMessage({
                 projectId: projectId!,
                 messageId: message.id,
             }).unwrap()
         } catch (error) {
-            setSendMessageError(`something went wrong: ${error}`)
+            toast.danger(
+                getApiErrorMessage(error, t('chat.errors.deleteMessage')),
+            )
         }
     }
 
@@ -314,13 +317,19 @@ export function ChatSpace() {
     }
 
     return (
-        <div className="bg-background flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div
+            className={[
+                'flex min-h-0 flex-1 flex-col overflow-hidden',
+                containerClassName,
+            ].join(' ')}
+        >
             <div
                 className={[
-                    'min-h-0 flex-1 p-4',
+                    'min-h-0 flex-1 py-4',
                     uniqueMessages.length === 0
                         ? 'overflow-hidden'
                         : 'overflow-y-auto',
+                    isDrawer ? 'px-4 pb-5' : 'px-5',
                 ].join(' ')}
                 ref={scrollRef}
             >
@@ -357,7 +366,12 @@ export function ChatSpace() {
                                 <div key={message.id}>
                                     {shouldRenderDateGroup ? (
                                         <div className="mb-6 flex justify-center">
-                                            <div className="border-default-200 bg-background text-default-500 rounded-full border px-3 py-1 text-xs shadow-sm">
+                                            <div
+                                                className={[
+                                                    'rounded-full border px-3 py-1 text-xs shadow-sm',
+                                                    dateChipClassName,
+                                                ].join(' ')}
+                                            >
                                                 {getRelativeDayLabel(
                                                     message.createdAt,
                                                 )}
@@ -390,6 +404,7 @@ export function ChatSpace() {
                 messageContent={messageContent}
                 onMessageContentChange={setMessageContent}
                 onSubmit={handleSubmit}
+                variant={variant}
             />
         </div>
     )

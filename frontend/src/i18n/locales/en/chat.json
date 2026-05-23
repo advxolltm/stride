@@ -21,9 +21,23 @@
 		"input": {
 			"placeholder": "Write Message..."
 		},
+		"panel": {
+			"title": "Project chat",
+			"subtitle": "Project chat",
+			"open": "Open project chat",
+			"pin": "Pin chat",
+			"unpin": "Unpin chat",
+			"openFull": "Open full chat",
+			"close": "Close chat"
+		},
 		"empty": {
 			"title": "No messages yet",
 			"description": "Start the conversation by sending the first message to your team."
+		},
+		"errors": {
+			"sendMessage": "Could not send message",
+			"editMessage": "Could not update message",
+			"deleteMessage": "Could not delete message"
 		},
 		"deleteDialog": {
 			"title": "Delete message",
