@@ -12,6 +12,7 @@ interface WhiteboardWorkspacePanelProps {
     projectId: string
     isPinned: boolean
     canDock: boolean
+    isReadOnly?: boolean
     selectedTab: WhiteboardPanelTab
     onTabChange: (tab: WhiteboardPanelTab) => void
     onTogglePin: () => void
@@ -30,6 +31,7 @@ export function WhiteboardWorkspacePanel({
     projectId,
     isPinned,
     canDock,
+    isReadOnly = false,
     selectedTab,
     onTabChange,
     onTogglePin,
@@ -151,7 +153,9 @@ export function WhiteboardWorkspacePanel({
                                     <WhiteboardTemplateCard
                                         key={template.id}
                                         template={template}
-                                        isDisabled={isInsertingTemplate}
+                                        isDisabled={
+                                            isInsertingTemplate || isReadOnly
+                                        }
                                         isInserting={isCurrentTemplateInserting}
                                         onPress={onInsertTemplate}
                                         ctaLabel={t(

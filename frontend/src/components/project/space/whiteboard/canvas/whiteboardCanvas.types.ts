@@ -11,6 +11,7 @@ export interface WhiteboardCanvasProps {
     elements: readonly OrderedExcalidrawElement[]
     presence?: readonly WhiteboardCursorPresence[]
     viewportStorageKey?: string
+    viewModeEnabled?: boolean
     onChange?: (elements: readonly OrderedExcalidrawElement[]) => void
     onPointerUp?: (elements: readonly OrderedExcalidrawElement[]) => void
     onCursorChange?: (message: WhiteboardCursorClientMessage) => void

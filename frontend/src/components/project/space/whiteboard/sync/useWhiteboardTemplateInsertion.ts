@@ -10,6 +10,7 @@ import type { WhiteboardTemplateDefinition } from '../whiteboardTemplates'
 
 type UseWhiteboardTemplateInsertionArgs = {
     projectId?: string
+    isReadOnly?: boolean
     whiteboardElements: WhiteboardElement[]
     refetchWhiteboardElements: () => Promise<unknown> | unknown
 }
@@ -38,6 +39,7 @@ const getTemplateInsertOrigin = (whiteboardElements: WhiteboardElement[]) => {
 
 export const useWhiteboardTemplateInsertion = ({
     projectId,
+    isReadOnly = false,
     whiteboardElements,
     refetchWhiteboardElements,
 }: UseWhiteboardTemplateInsertionArgs) => {
@@ -49,7 +51,7 @@ export const useWhiteboardTemplateInsertion = ({
         useCreateProjectWhiteboardElementMutation()
 
     async function insertTemplate(template: WhiteboardTemplateDefinition) {
-        if (!projectId) {
+        if (!projectId || isReadOnly) {
             return false
         }
 

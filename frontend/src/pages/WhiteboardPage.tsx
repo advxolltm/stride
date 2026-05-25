@@ -1,6 +1,7 @@
-import { Button, Tooltip, toast } from '@heroui/react'
+import { Button, Chip, Tooltip, toast } from '@heroui/react'
 import { skipToken } from '@reduxjs/toolkit/query'
 import {
+    Archive,
     ChevronRight,
     Home,
     PanelRightOpen,
@@ -23,6 +24,7 @@ import {
 import { UserAvatar } from '../shared/components'
 import { useAppSelector } from '../shared/hooks/redux'
 import { getApiErrorMessage } from '../shared/utils/api/errors'
+import { isProjectArchived } from '../shared/utils/projectStatus'
 import { useGetProjectByIdQuery } from '../store/features/project/project.api'
 import {
     useGetProjectWhiteboardElementsQuery,
@@ -86,6 +88,7 @@ export function WhiteboardPage() {
         skip: !projectId || !isWhiteboardReady,
     })
     const liveElementsById = whiteboardEventsWS.liveElementsById
+    const isArchived = isProjectArchived(project)
     const {
         excalidrawElements,
         handleCanvasChange,
@@ -94,12 +97,14 @@ export function WhiteboardPage() {
         queueCursorUpdate,
     } = useWhiteboardSync({
         projectId,
+        isReadOnly: isArchived,
         whiteboardElements,
         liveElementsById,
     })
     const { insertTemplate, insertingTemplateId, isInsertingTemplate } =
         useWhiteboardTemplateInsertion({
             projectId,
+            isReadOnly: isArchived,
             whiteboardElements,
             refetchWhiteboardElements,
         })
@@ -291,6 +296,16 @@ export function WhiteboardPage() {
                     controlsRightClass,
                 ].join(' ')}
             >
+                {isArchived && (
+                    <Chip
+                        size="sm"
+                        variant="soft"
+                        className="flex shrink-0 flex-row items-center gap-2"
+                    >
+                        <Archive size={14} />
+                        {t('whiteboardPage.archivedReadOnly')}
+                    </Chip>
+                )}
                 <Button
                     size="sm"
                     variant="ghost"
@@ -370,6 +385,7 @@ export function WhiteboardPage() {
                                 ? `whiteboard:${projectId}:viewport`
                                 : undefined
                         }
+                        viewModeEnabled={isArchived}
                         onChange={handleCanvasChange}
                         onPointerUp={handleCanvasPointerUp}
                         onCursorChange={queueCursorUpdate}
@@ -387,6 +403,7 @@ export function WhiteboardPage() {
                         projectId={projectId}
                         isPinned
                         canDock={canDockPanel}
+                        isReadOnly={isArchived}
                         selectedTab={selectedPanelTab}
                         onTabChange={setSelectedPanelTab}
                         onTogglePin={handleTogglePanelPin}
@@ -416,6 +433,7 @@ export function WhiteboardPage() {
                         projectId={projectId}
                         isPinned={false}
                         canDock={canDockPanel}
+                        isReadOnly={isArchived}
                         selectedTab={selectedPanelTab}
                         onTabChange={setSelectedPanelTab}
                         onTogglePin={handleTogglePanelPin}
