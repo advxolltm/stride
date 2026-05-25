@@ -51,6 +51,7 @@ export function WhiteboardCanvas({
     elements,
     presence = [],
     viewportStorageKey,
+    viewModeEnabled = false,
     onChange,
     onPointerUp,
     onCursorChange,
@@ -122,6 +123,7 @@ export function WhiteboardCanvas({
                 excalidrawAPI={(api) => {
                     excalidrawApiRef.current = api
                 }}
+                viewModeEnabled={viewModeEnabled}
                 onChange={(nextElements) => {
                     const nextSceneSignature = getSceneSignature(nextElements)
 

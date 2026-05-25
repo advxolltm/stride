@@ -41,6 +41,7 @@
     "loadingDescription": "Die Zeichenfläche für dieses Projekt wird vorbereitet.",
     "errorTitle": "Whiteboard konnte nicht geladen werden",
     "errorFallback": "Bitte versuchen Sie es in einem Moment erneut.",
+    "archivedReadOnly": "Archiviertes Projekt - schreibgeschuetzt",
     "shareSuccess": "Freigabelink kopiert",
     "shareError": "Freigabelink konnte nicht kopiert werden",
     "overviewAriaLabel": "Übersicht",

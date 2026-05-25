@@ -20,6 +20,7 @@ import {
 
 type UseWhiteboardSyncArgs = {
     projectId?: string
+    isReadOnly?: boolean
     whiteboardElements: WhiteboardElement[]
     liveElementsById: Record<string, WhiteboardLiveUpdateEventPayload>
 }
@@ -52,6 +53,7 @@ const createWhiteboardSyncState = (): WhiteboardSyncState => ({
 
 export const useWhiteboardSync = ({
     projectId,
+    isReadOnly = false,
     whiteboardElements,
     liveElementsById,
 }: UseWhiteboardSyncArgs) => {
@@ -238,7 +240,7 @@ export const useWhiteboardSync = ({
 
     const handleCanvasChange = (elements: readonly ExcalidrawElement[]) => {
         const syncState = syncStateRef.current
-        if (!projectId || !syncState.isElementIdMappingReady) {
+        if (!projectId || isReadOnly || !syncState.isElementIdMappingReady) {
             return
         }
 
@@ -263,7 +265,7 @@ export const useWhiteboardSync = ({
 
     const handleCanvasPointerUp = (elements: readonly ExcalidrawElement[]) => {
         const syncState = syncStateRef.current
-        if (!projectId || !syncState.isElementIdMappingReady) {
+        if (!projectId || isReadOnly || !syncState.isElementIdMappingReady) {
             return
         }
 
