@@ -72,6 +72,8 @@ export function ChatSpace({
     const topRef = useRef<HTMLDivElement>(null)
     const bottomRef = useRef<HTMLDivElement>(null)
     const messageSelfCreatedRef = useRef(false)
+    const initialBottomScrollDoneRef = useRef(false)
+    const initialBottomScrollContextRef = useRef('')
 
     const [topElement, setTopElement] = useState<Message | null>(null)
     const [bottomElement, setBottomElement] = useState<Message | null>(null)
@@ -139,6 +141,25 @@ export function ChatSpace({
             return
         }
 
+        const scrollContext = `${projectId ?? ''}:${variant}`
+        if (initialBottomScrollContextRef.current !== scrollContext) {
+            initialBottomScrollContextRef.current = scrollContext
+            initialBottomScrollDoneRef.current = false
+        }
+
+        if (
+            variant === 'page' &&
+            uniqueMessages.length > 0 &&
+            !initialBottomScrollDoneRef.current
+        ) {
+            scrollElement.scrollTo({
+                top: scrollElement.scrollHeight,
+                behavior: 'instant',
+            })
+            initialBottomScrollDoneRef.current = true
+            return
+        }
+
         if (messageSelfCreatedRef.current) {
             scrollElement.scrollTo({
                 top: scrollElement.scrollHeight,
@@ -146,7 +167,7 @@ export function ChatSpace({
             })
             messageSelfCreatedRef.current = false
         }
-    }, [uniqueMessages.length])
+    }, [projectId, uniqueMessages.length, variant])
 
     useLayoutEffect(() => {
         if (isFetchingNextPage || isFetchingPreviousPage) return

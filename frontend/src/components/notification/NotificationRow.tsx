@@ -7,6 +7,7 @@ import type { Notification } from '../../store/features/notification/notificatio
 interface NotificationRowProps {
     notification: Notification
     isDeleting: boolean
+    isNavigable: boolean
     isTargetPending: boolean
     isVisuallyUnread: boolean
     onDelete: (notificationId: string) => void
@@ -23,6 +24,7 @@ export const NotificationRow = forwardRef<
     {
         notification,
         isDeleting,
+        isNavigable,
         isTargetPending,
         isVisuallyUnread,
         onDelete,
@@ -49,8 +51,14 @@ export const NotificationRow = forwardRef<
             <button
                 type="button"
                 aria-busy={isTargetPending}
+                disabled={!isNavigable}
                 onClick={() => onView(notification.id)}
-                className="flex min-w-0 flex-1 items-start gap-3 text-left"
+                className={[
+                    'flex min-w-0 flex-1 items-start gap-3 text-left',
+                    isNavigable
+                        ? 'cursor-pointer'
+                        : 'cursor-default opacity-80',
+                ].join(' ')}
             >
                 <span
                     aria-hidden="true"
