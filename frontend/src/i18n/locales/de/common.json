@@ -54,6 +54,21 @@
     "confirm": "OK",
     "projectFallback": "diesem Projekt"
   },
+  "projectArchived": {
+    "title": "Projekt archiviert",
+    "message": "Projekt {{projectName}} wurde archiviert.",
+    "confirm": "OK"
+  },
+  "projectUnarchived": {
+    "title": "Projekt wiederhergestellt",
+    "message": "Projekt {{projectName}} wurde wieder aktiviert.",
+    "confirm": "OK"
+  },
+  "projectDeleted": {
+    "title": "Projekt geloescht",
+    "message": "Projekt {{projectName}} wurde geloescht.",
+    "confirm": "OK"
+  },
   "primary": "Primaer",
   "danger": "Gefahr",
   "tailwindMessage": "Tailwind + Theme funktioniert"

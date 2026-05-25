@@ -299,6 +299,12 @@ func (h *projectRouteHandler) projectPATCHHandle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid request body"})
 	}
 
+	existingProject, err := h.projectService.GetProject(ctx, id)
+	if err != nil {
+		status, msg := mapServiceErrorProj(err)
+		return c.JSON(status, routes.ErrorResponse{Error: msg})
+	}
+
 	p, err := h.projectService.UpdateProject(ctx, id, projectService.UpdateProjectInput{
 		Name:        req.Name,
 		Slug:        req.Slug,
@@ -310,7 +316,16 @@ func (h *projectRouteHandler) projectPATCHHandle(c *echo.Context) error {
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
 	}
 
-	return c.JSON(http.StatusOK, routes.MapToReturnProj(*p))
+	mappedProject := routes.MapToReturnProj(*p)
+	if err := routes.SendWSUpdate(ctx, h.rdb, id, routes.ProjectUpdate, mappedProject); err != nil {
+		slog.Error("projectPATCHHandle: Failed to send ws update", "error", err)
+	}
+
+	if existingProject.Status != p.Status {
+		h.notifyProjectStatusChange(ctx, *p, userId, existingProject.Status)
+	}
+
+	return c.JSON(http.StatusOK, mappedProject)
 }
 
 // @Summary		Delete project
@@ -324,13 +339,14 @@ func (h *projectRouteHandler) projectPATCHHandle(c *echo.Context) error {
 // @Failure		500	{object}	routes.ErrorResponse	"internal server error"
 // @Router			/projects/{id} [delete]
 func (h *projectRouteHandler) projectDELETEHandle(c *echo.Context) error {
+	ctx := c.Request().Context()
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid project id"})
 	}
 
 	userId := h.authService.GetClaims(c).UserID
-	isOwner, err := h.projectService.IsProjectOwner(c.Request().Context(), userId, id)
+	isOwner, err := h.projectService.IsProjectOwner(ctx, userId, id)
 	if err != nil {
 		return c.JSON(http.StatusNotFound, routes.ErrorResponse{Error: err.Error()})
 	}
@@ -338,10 +354,28 @@ func (h *projectRouteHandler) projectDELETEHandle(c *echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, routes.ErrorResponse{Error: "only the owner can delete this project"})
 	}
 
-	if err := h.projectService.DeleteProject(c.Request().Context(), id); err != nil {
+	project, err := h.projectService.GetProject(ctx, id)
+	if err != nil {
 		status, msg := mapServiceErrorProj(err)
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
 	}
+
+	if err := h.projectService.DeleteProject(ctx, id); err != nil {
+		status, msg := mapServiceErrorProj(err)
+		return c.JSON(status, routes.ErrorResponse{Error: msg})
+	}
+
+	type projectDeleteWSUpdate struct {
+		ProjectID uuid.UUID `json:"project_id"`
+	} // @name ProjectDeleteWSUpdate
+
+	if err := routes.SendWSUpdate(ctx, h.rdb, id, routes.ProjectDelete, projectDeleteWSUpdate{
+		ProjectID: id,
+	}); err != nil {
+		slog.Error("projectDELETEHandle: Failed to send ws update", "error", err)
+	}
+
+	h.notifyProjectDeleted(ctx, *project, userId)
 
 	return c.NoContent(http.StatusNoContent)
 }
@@ -444,10 +478,91 @@ func (h *projectRouteHandler) notifyRemovedProjectMember(ctx context.Context, us
 	}
 }
 
+func (h *projectRouteHandler) notifyProjectStatusChange(
+	ctx context.Context,
+	project models.Project,
+	excludedUserID uuid.UUID,
+	previousStatus string,
+) {
+	if h.notificationService == nil || project.Status == previousStatus {
+		return
+	}
+
+	if project.Status != "archived" && project.Status != "active" {
+		return
+	}
+
+	userIDs := routes.ExcludeUserID(
+		routes.ProjectMemberUserIDs(project.Members),
+		excludedUserID,
+	)
+	if len(userIDs) == 0 {
+		return
+	}
+
+	if err := h.notificationService.SendBulkNotification(
+		ctx,
+		userIDs,
+		"project",
+		project.ID,
+		projectStatusChangedNotificationMessage(project),
+	); err != nil {
+		slog.Error("projectPATCHHandle: Failed to send notification", "error", err)
+	}
+}
+
+func (h *projectRouteHandler) notifyProjectDeleted(
+	ctx context.Context,
+	project models.Project,
+	excludedUserID uuid.UUID,
+) {
+	if h.notificationService == nil {
+		return
+	}
+
+	userIDs := routes.ExcludeUserID(
+		routes.ProjectMemberUserIDs(project.Members),
+		excludedUserID,
+	)
+	if len(userIDs) == 0 {
+		return
+	}
+
+	if err := h.notificationService.SendBulkNotification(
+		ctx,
+		userIDs,
+		"project",
+		project.ID,
+		projectDeletedNotificationMessage(project),
+	); err != nil {
+		slog.Error("projectDELETEHandle: Failed to send notification", "error", err)
+	}
+}
+
 func projectMemberAddedNotificationMessage(project models.Project) string {
 	return fmt.Sprintf("You were added to project: %s", project.Name)
 }
 
 func projectMemberRemovedNotificationMessage(project models.Project) string {
 	return fmt.Sprintf("You were removed from project: %s", project.Name)
+}
+
+func projectArchivedNotificationMessage(project models.Project) string {
+	return fmt.Sprintf("Project archived: %s", project.Name)
+}
+
+func projectUnarchivedNotificationMessage(project models.Project) string {
+	return fmt.Sprintf("Project unarchived: %s", project.Name)
+}
+
+func projectStatusChangedNotificationMessage(project models.Project) string {
+	if project.Status == "active" {
+		return projectUnarchivedNotificationMessage(project)
+	}
+
+	return projectArchivedNotificationMessage(project)
+}
+
+func projectDeletedNotificationMessage(project models.Project) string {
+	return fmt.Sprintf("Project deleted: %s", project.Name)
 }

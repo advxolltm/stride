@@ -20,12 +20,14 @@ describe('WSMessageType', () => {
             ProjectMemberRemove: 12,
             ProjectSkillAdd: 13,
             ProjectSkillRemove: 14,
-            WhiteboardElementCreate: 15,
-            WhiteboardElementUpdate: 16,
-            WhiteboardElementDelete: 17,
-            WhiteboardElementLiveUpdate: 18,
-            WhiteboardElementLiveClear: 19,
-            WhiteboardElementRollback: 20,
+            ProjectUpdate: 15,
+            ProjectDelete: 16,
+            WhiteboardElementCreate: 17,
+            WhiteboardElementUpdate: 18,
+            WhiteboardElementDelete: 19,
+            WhiteboardElementLiveUpdate: 20,
+            WhiteboardElementLiveClear: 21,
+            WhiteboardElementRollback: 22,
         })
 
         const ids = Object.values(WSMessageType)

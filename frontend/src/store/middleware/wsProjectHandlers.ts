@@ -7,9 +7,11 @@ import {
 import { projectApi } from '../features/project/project.api'
 import {
     transformProjectMember,
+    transformProject,
     transformProjectSkill,
 } from '../features/project/project.mappers'
 import type {
+    ApiProject,
     ApiProjectMember,
     ApiProjectSkill,
     Project,
@@ -37,6 +39,12 @@ type ProjectSkillRemovePayload = {
     id?: string
 }
 
+type ProjectDeletePayload = {
+    project_id?: string
+    projectId?: string
+    id?: string
+}
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
     typeof value === 'object' && value !== null
 
@@ -60,6 +68,23 @@ const isApiProjectSkill = (value: unknown): value is ApiProjectSkill =>
     typeof value.id === 'string' &&
     typeof value.project_id === 'string' &&
     typeof value.name === 'string'
+
+const isApiProject = (value: unknown): value is ApiProject =>
+    isRecord(value) &&
+    typeof value.id === 'string' &&
+    (typeof value.created_by === 'string' || value.created_by === null) &&
+    typeof value.name === 'string' &&
+    typeof value.slug === 'string' &&
+    typeof value.description === 'string' &&
+    typeof value.status === 'string' &&
+    typeof value.created_at === 'string' &&
+    typeof value.updated_at === 'string' &&
+    (typeof value.join_link === 'string' || value.join_link === null) &&
+    isApiProjectUser(value.creator) &&
+    Array.isArray(value.members) &&
+    value.members.every(isApiProjectMember) &&
+    Array.isArray(value.skills) &&
+    value.skills.every(isApiProjectSkill)
 
 const patchProjectCaches = (
     api: WsListenerApi,
@@ -156,6 +181,60 @@ const removeProjectSkillFromCaches = (
     patchProjectCaches(api, projectId, (project) => {
         removeProjectSkillById(project, skillId)
     })
+}
+
+const patchProjectSnapshot = (
+    api: WsListenerApi,
+    project: Project,
+) => {
+    api.dispatch(
+        projectApi.util.upsertQueryData('getProjectById', project.id, project),
+    )
+    api.dispatch(
+        projectApi.util.updateQueryData('getProjects', undefined, (draft) => {
+            const existingProjectIndex = draft.findIndex(
+                (item) => item.id === project.id,
+            )
+
+            if (existingProjectIndex === -1) {
+                draft.push(project)
+                return
+            }
+
+            draft[existingProjectIndex] = project
+        }),
+    )
+}
+
+const getDeletedProjectId = (payload: unknown) => {
+    if (isApiProject(payload)) {
+        return payload.id
+    }
+
+    const deletePayload = payload as ProjectDeletePayload
+    return deletePayload.project_id ?? deletePayload.projectId ?? deletePayload.id
+}
+
+const removeProjectFromCaches = (
+    api: WsListenerApi,
+    projectId: string,
+) => {
+    api.dispatch(
+        projectApi.util.updateQueryData('getProjects', undefined, (draft) =>
+            draft.filter((project) => project.id !== projectId),
+        ),
+    )
+    api.dispatch(
+        baseApi.util.invalidateTags([
+            { type: 'Project', id: projectId },
+            { type: 'ProjectMember', id: projectId },
+            { type: 'ProjectSkill', id: projectId },
+            { type: 'Task', id: projectId },
+            { type: 'Messages', id: projectId },
+            { type: 'Whiteboard', id: projectId },
+            { type: 'WhiteboardElement', id: projectId },
+        ]),
+    )
 }
 
 const getRemovedMemberId = (payload: unknown) => {
@@ -263,6 +342,19 @@ export function handleProjectWsMessage(
             }
 
             removeProjectSkillFromCaches(api, projectId, skillId)
+            return true
+        }
+        case WSMessageType.ProjectUpdate: {
+            if (!isApiProject(payload)) {
+                return true
+            }
+
+            patchProjectSnapshot(api, transformProject(payload))
+            return true
+        }
+        case WSMessageType.ProjectDelete: {
+            const deletedProjectId = getDeletedProjectId(payload) ?? projectId
+            removeProjectFromCaches(api, deletedProjectId)
             return true
         }
         default:
