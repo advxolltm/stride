@@ -45,8 +45,14 @@
       "notification": "Notification",
       "project": "Project",
       "task": "Task",
-	  "chat": "Chat"
+      "chat": "Chat"
     }
+  },
+  "projectRemoval": {
+    "title": "Removed From Project",
+    "message": "You have been removed from project {{projectName}}.",
+    "confirm": "OK",
+    "projectFallback": "this project"
   },
   "primary": "Primary",
   "danger": "Danger",

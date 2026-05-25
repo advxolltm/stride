@@ -2,12 +2,14 @@ import { Popover, toast } from '@heroui/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
+import { useAppDispatch } from '../../shared/hooks/redux'
 import {
     useDeleteNotificationMutation,
     useGetNotificationsQuery,
     useMarkNotificationReadMutation,
     useWatchNotificationsQuery,
 } from '../../store/features/notification/notification.api'
+import { projectApi } from '../../store/features/project/project.api'
 import type { Notification } from '../../store/features/notification/notification.types'
 import { useLazyGetTaskQuery } from '../../store/features/tasks/task.api'
 import { NotificationBell } from './NotificationBell'
@@ -18,9 +20,34 @@ const orderNotifications = (notifications: Notification[]) => {
 }
 
 const READ_VISUAL_DELAY_MS = 2000
+const TASK_DRAWER_NOTIFICATION_MESSAGES = [
+    'You were assigned to task:',
+    'You were unassigned from task:',
+]
+const TASK_BOARD_NOTIFICATION_MESSAGES = ['Task deleted:']
+const NON_NAVIGABLE_PROJECT_NOTIFICATION_MESSAGES = [
+    'You were removed from project:',
+]
+
+const shouldOpenTaskDrawer = (notification: Notification) =>
+    notification.objectType === 'task' &&
+    TASK_DRAWER_NOTIFICATION_MESSAGES.some((messagePrefix) =>
+        notification.message.startsWith(messagePrefix),
+    )
+
+const shouldOpenTaskBoard = (notification: Notification) =>
+    TASK_BOARD_NOTIFICATION_MESSAGES.some((messagePrefix) =>
+        notification.message.startsWith(messagePrefix),
+    )
+
+const isNotificationNavigable = (notification: Notification) =>
+    !NON_NAVIGABLE_PROJECT_NOTIFICATION_MESSAGES.some((messagePrefix) =>
+        notification.message.startsWith(messagePrefix),
+    )
 
 export function NotificationsContainer() {
     const { t } = useTranslation('common')
+    const dispatch = useAppDispatch()
     const navigate = useNavigate()
     const [isOpen, setIsOpen] = useState(false)
     const [deletingNotificationId, setDeletingNotificationId] = useState<
@@ -149,10 +176,22 @@ export function NotificationsContainer() {
                         true,
                     ).unwrap()
 
-                    return `/project/${task.projectId}/tasks?taskID=${task.id}`
+                    return {
+                        path: shouldOpenTaskDrawer(notification)
+                            ? `/project/${task.projectId}/tasks?taskID=${task.id}`
+                            : `/project/${task.projectId}/tasks`,
+                    }
                 }
                 case 'project':
-                    return `/project/${notification.objectId}`
+                    return {
+                        path: shouldOpenTaskBoard(notification)
+                            ? `/project/${notification.objectId}/tasks`
+                            : `/project/${notification.objectId}`,
+                    }
+                case 'chat':
+                    return {
+                        path: `/project/${notification.objectId}/chat`,
+                    }
                 default:
                     return null
             }
@@ -170,17 +209,24 @@ export function NotificationsContainer() {
         }
 
         void markNotificationsRead([notificationId])
+
+        if (!isNotificationNavigable(notification)) {
+            setIsOpen(false)
+            return
+        }
+
         setResolvingNotificationId(notificationId)
 
         try {
-            const path = await resolveNotificationPath(notification)
+            const target = await resolveNotificationPath(notification)
 
-            if (!path) {
+            if (!target) {
                 toast.danger(t('notification.openError'))
                 return
             }
 
-            navigate(path)
+            dispatch(projectApi.util.invalidateTags([{ type: 'Project', id: 'LIST' }]))
+            navigate(target.path)
             setIsOpen(false)
         } catch {
             toast.danger(t('notification.openError'))
@@ -221,6 +267,7 @@ export function NotificationsContainer() {
                     visuallyUnreadNotificationIds={
                         visuallyUnreadNotificationIds
                     }
+                    isNotificationNavigable={isNotificationNavigable}
                     onDelete={handleDelete}
                     onView={handleView}
                     onNotificationsVisible={markNotificationsRead}

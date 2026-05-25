@@ -248,7 +248,7 @@ func (h *chatRouteHandler) messagePOST(c *echo.Context) error {
 			ctx,
 			routes.ExcludeUserID(routes.ProjectMemberUserIDs(projectMembers), userId),
 			"chat",
-			message.ID,
+			req.ProjectID,
 			messageCreatedNotification(member.User, message),
 		)
 
@@ -261,11 +261,19 @@ func (h *chatRouteHandler) messagePOST(c *echo.Context) error {
 }
 
 func messageCreatedNotification(sender models.User, message models.Message) string {
-	name := "N/A"
-	if sender.FullName != nil {
-		name = *sender.FullName
+	return fmt.Sprintf("%s: %s", notificationSenderName(sender), message.Content)
+}
+
+func notificationSenderName(sender models.User) string {
+	if sender.FullName != nil && *sender.FullName != "" {
+		return *sender.FullName
 	}
-	return fmt.Sprintf("%s: %s", name, message.Content)
+
+	if sender.Username != "" {
+		return sender.Username
+	}
+
+	return "Unknown user"
 }
 
 type updateMessageRequest struct {
@@ -336,7 +344,7 @@ func (h *chatRouteHandler) messagePATCH(c *echo.Context) error {
 			ctx,
 			routes.ExcludeUserID(routes.ProjectMemberUserIDs(projectMembers), userId),
 			"chat",
-			message.ID,
+			req.ProjectID,
 			messageEditedNotification(member.User, message),
 		)
 
@@ -350,11 +358,7 @@ func (h *chatRouteHandler) messagePATCH(c *echo.Context) error {
 }
 
 func messageEditedNotification(sender models.User, message models.Message) string {
-	name := "N/A"
-	if sender.FullName != nil {
-		name = *sender.FullName
-	}
-	return fmt.Sprintf("%s (edited): %s", name, message.Content)
+	return fmt.Sprintf("%s (edited): %s", notificationSenderName(sender), message.Content)
 }
 
 // @Summary Deletes a specific message

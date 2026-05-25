@@ -8,7 +8,7 @@ interface ConfirmDialogProps {
     message: ReactNode
     confirmLabel: string
     pendingConfirmLabel?: string
-    cancelLabel?: string
+    cancelLabel?: string | null
     confirmVariant?: 'primary' | 'danger'
     isConfirmPending?: boolean
     closeOnConfirm?: boolean
@@ -40,13 +40,15 @@ export function ConfirmDialog({
                             <p className="text-muted text-sm">{message}</p>
                         </Modal.Body>
                         <Modal.Footer>
-                            <Button
-                                variant="ghost"
-                                isDisabled={isConfirmPending}
-                                onPress={() => onOpenChange(false)}
-                            >
-                                {cancelLabel}
-                            </Button>
+                            {cancelLabel ? (
+                                <Button
+                                    variant="ghost"
+                                    isDisabled={isConfirmPending}
+                                    onPress={() => onOpenChange(false)}
+                                >
+                                    {cancelLabel}
+                                </Button>
+                            ) : null}
                             <Button
                                 isPending={isConfirmPending}
                                 variant={

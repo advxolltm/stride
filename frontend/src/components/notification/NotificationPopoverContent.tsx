@@ -14,6 +14,7 @@ interface NotificationPopoverContentProps {
     deletingNotificationId: string | null
     resolvingNotificationId: string | null
     visuallyUnreadNotificationIds: Set<string>
+    isNotificationNavigable: (notification: Notification) => boolean
     onDelete: (notificationId: string) => void
     onView: (notificationId: string) => void
     onNotificationsVisible: (notificationIds: string[]) => void
@@ -27,6 +28,7 @@ export function NotificationPopoverContent({
     deletingNotificationId,
     resolvingNotificationId,
     visuallyUnreadNotificationIds,
+    isNotificationNavigable,
     onDelete,
     onView,
     onNotificationsVisible,
@@ -168,6 +170,7 @@ export function NotificationPopoverContent({
                             isDeleting={
                                 deletingNotificationId === notification.id
                             }
+                            isNavigable={isNotificationNavigable(notification)}
                             isTargetPending={
                                 resolvingNotificationId === notification.id
                             }
