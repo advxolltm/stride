@@ -7,10 +7,11 @@ import {
     TextField,
     toast,
 } from '@heroui/react'
-import { useNavigate } from 'react-router'
+import { Navigate, useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import AuthContainer from '../../components/auth/AuthContainer'
 import PasswordInput from '../../components/auth/PasswordInput'
+import { isOpenNetworkApplicationMode } from '../../config/applicationMode'
 import { getApiErrorMessage } from '../../shared/utils/api/errors'
 import { useCreateUserMutation } from '../../store/features/user/user.api'
 
@@ -18,6 +19,10 @@ export default function RegisterPage() {
     const { t } = useTranslation('common')
     const navigate = useNavigate()
     const [createUser, { isLoading }] = useCreateUserMutation()
+
+    if (isOpenNetworkApplicationMode) {
+        return <Navigate to="/login" replace />
+    }
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()

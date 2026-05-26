@@ -11,6 +11,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import AuthContainer from '../../components/auth/AuthContainer'
 import PasswordInput from '../../components/auth/PasswordInput'
+import { isOpenNetworkApplicationMode } from '../../config/applicationMode'
 import { useLoginMutation } from '../../store/features/auth/auth.api'
 
 export default function LoginPage() {
@@ -67,16 +68,18 @@ export default function LoginPage() {
             heading="Welcome back"
             subheading="Sign in to your account to continue"
             footer={
-                <>
-                    Don&apos;t have an account?{' '}
-                    <button
-                        type="button"
-                        onClick={() => navigate('/register')}
-                        className="font-semibold text-[var(--accent)] transition-opacity hover:opacity-75"
-                    >
-                        Create account
-                    </button>
-                </>
+                isOpenNetworkApplicationMode ? null : (
+                    <>
+                        Don&apos;t have an account?{' '}
+                        <button
+                            type="button"
+                            onClick={() => navigate('/register')}
+                            className="font-semibold text-[var(--accent)] transition-opacity hover:opacity-75"
+                        >
+                            Create account
+                        </button>
+                    </>
+                )
             }
         >
             <Form
