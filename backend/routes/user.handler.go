@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"backend/config"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -13,22 +14,35 @@ import (
 )
 
 type userRouteHandler struct {
-	userService userService.UserService
-	authService authService.AuthService
+	userService     userService.UserService
+	authService     authService.AuthService
+	applicationMode config.ApplicationMode
 }
 
 func NewUserRouteHandler(us userService.UserService, as authService.AuthService) *userRouteHandler {
-	return &userRouteHandler{userService: us, authService: as}
+	return &userRouteHandler{
+		userService:     us,
+		authService:     as,
+		applicationMode: config.ApplicationModeFromEnv(),
+	}
 }
 
 func (h userRouteHandler) AddRoutes(api *echo.Group) {
-	api.POST("/users", h.userPOSTHandle)
+	if h.applicationMode.IsOpenNetwork() {
+		api.POST("/users", h.userPOSTHandle, h.authService.AuthenticatedMiddleware(), h.superuserOnlyMiddleware())
+	} else {
+		api.POST("/users", h.userPOSTHandle)
+	}
+
 	g := api.Group("/users", h.authService.AuthenticatedMiddleware())
 	g.GET("", h.usersGETHandle)
 	g.GET("/:id", h.userGETHandle)
 	g.GET("/:id/skills", h.userSkillsGETHandle)
 	g.PATCH("/:id", h.userPATCHHandle)
 	g.PATCH("/:id/password", h.userPasswordPATCHHandle)
+	if h.applicationMode.IsOpenNetwork() {
+		g.PATCH("/:id/password/reset", h.userPasswordResetPATCHHandle, h.superuserOnlyMiddleware())
+	}
 	g.PUT("/:id/projects/:projectId/skills", h.userProjectSkillsPUTHandle)
 	g.DELETE("/:id", h.userDELETEHandle)
 }
@@ -49,6 +63,10 @@ type changePasswordRequest struct {
 	CurrentPassword string `json:"current_password" form:"current_password"`
 	NewPassword     string `json:"new_password" form:"new_password"`
 } //	@name	ChangePasswordRequest
+
+type resetPasswordRequest struct {
+	NewPassword string `json:"new_password" form:"new_password"`
+} //	@name	ResetPasswordRequest
 
 type updateUserProjectSkillsRequest struct {
 	ProjectSkillIDs []uuid.UUID `json:"project_skill_ids"`
@@ -79,6 +97,31 @@ func (h userRouteHandler) mapServiceError(err error) (int, string) {
 		return http.StatusBadRequest, err.Error()
 	default:
 		return http.StatusInternalServerError, "internal server error"
+	}
+}
+
+func (h userRouteHandler) requestUserIsSuperuser(c *echo.Context) (bool, error) {
+	callerID := h.authService.GetClaims(c).UserID
+	u, err := h.userService.GetUser(c.Request().Context(), callerID)
+	if err != nil {
+		return false, err
+	}
+	return u.IsSuperuser, nil
+}
+
+func (h userRouteHandler) superuserOnlyMiddleware() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c *echo.Context) error {
+			isSuperuser, err := h.requestUserIsSuperuser(c)
+			if err != nil {
+				status, msg := h.mapServiceError(err)
+				return c.JSON(status, ErrorResponse{Error: msg})
+			}
+			if !isSuperuser {
+				return c.JSON(http.StatusForbidden, ErrorResponse{Error: "superuser required"})
+			}
+			return next(c)
+		}
 	}
 }
 
@@ -346,9 +389,46 @@ func (h userRouteHandler) userPasswordPATCHHandle(c *echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// PATCH /users/:id/password/reset
+//
+//	@Summary	Reset user password (superuser only)
+//	@Tags		users
+//	@Accept		json
+//	@Produce	json
+//	@Param		id		path	string					true	"User ID (UUID)"
+//	@Param		data	body	resetPasswordRequest	true	"New password"
+//	@Success	204
+//	@Failure	400	{object}	ErrorResponse	"invalid user id, request body, missing password, or weak new password"
+//	@Failure	401	{object}	ErrorResponse	"unauthorized"
+//	@Failure	403	{object}	ErrorResponse	"superuser required"
+//	@Failure	404	{object}	ErrorResponse	"user not found"
+//	@Router		/users/{id}/password/reset [patch]
+func (h userRouteHandler) userPasswordResetPATCHHandle(c *echo.Context) error {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid user id"})
+	}
+
+	var req resetPasswordRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid request body"})
+	}
+
+	if req.NewPassword == "" {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "missing new_password"})
+	}
+
+	if _, err := h.userService.UpdateUser(c.Request().Context(), id, userService.UpdateUserInput{Password: &req.NewPassword}); err != nil {
+		status, msg := h.mapServiceError(err)
+		return c.JSON(status, ErrorResponse{Error: msg})
+	}
+
+	return c.NoContent(http.StatusNoContent)
+}
+
 // DELETE /users/:id
 //
-//	@Summary	Delete user (self only)
+//	@Summary	Delete user
 //	@Tags		users
 //	@Param		id	path	string	true	"User ID (UUID)"
 //	@Success	204
@@ -363,7 +443,35 @@ func (h userRouteHandler) userDELETEHandle(c *echo.Context) error {
 
 	callerID := h.authService.GetClaims(c).UserID
 	if callerID != id {
+		if !h.applicationMode.IsOpenNetwork() {
+			return c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "unauthorized"})
+		}
+
+		isSuperuser, err := h.requestUserIsSuperuser(c)
+		if err != nil {
+			status, msg := h.mapServiceError(err)
+			return c.JSON(status, ErrorResponse{Error: msg})
+		}
+		if isSuperuser {
+			if err := h.userService.DeleteUser(c.Request().Context(), id); err != nil {
+				status, msg := h.mapServiceError(err)
+				return c.JSON(status, ErrorResponse{Error: msg})
+			}
+
+			return c.NoContent(http.StatusNoContent)
+		}
 		return c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "unauthorized"})
+	}
+
+	if h.applicationMode.IsOpenNetwork() {
+		isSuperuser, err := h.requestUserIsSuperuser(c)
+		if err != nil {
+			status, msg := h.mapServiceError(err)
+			return c.JSON(status, ErrorResponse{Error: msg})
+		}
+		if isSuperuser {
+			return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "superuser cannot delete own account"})
+		}
 	}
 
 	if err := h.userService.DeleteUser(c.Request().Context(), id); err != nil {

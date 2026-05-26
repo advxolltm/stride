@@ -21,12 +21,12 @@ import (
 )
 
 type stubUserStore struct {
-	getAllUsersFn              func(ctx context.Context) ([]models.User, error)
-	getUserFn                  func(ctx context.Context, id uuid.UUID) (*models.User, error)
-	createUserFn               func(ctx context.Context, user *models.User) error
-	updateUserFn               func(ctx context.Context, id uuid.UUID, fields userStore.UpdateUserFields) (*models.User, error)
-	deleteUserFn               func(ctx context.Context, id uuid.UUID) error
-	getByEmailAndPasswordFn    func(ctx context.Context, email, password string) (uuid.UUID, error)
+	getAllUsersFn             func(ctx context.Context) ([]models.User, error)
+	getUserFn                 func(ctx context.Context, id uuid.UUID) (*models.User, error)
+	createUserFn              func(ctx context.Context, user *models.User) error
+	updateUserFn              func(ctx context.Context, id uuid.UUID, fields userStore.UpdateUserFields) (*models.User, error)
+	deleteUserFn              func(ctx context.Context, id uuid.UUID) error
+	getByEmailAndPasswordFn   func(ctx context.Context, email, password string) (uuid.UUID, error)
 	getUserSkillsFn           func(ctx context.Context, userID uuid.UUID) ([]models.UserSkill, error)
 	updateUserProjectSkillsFn func(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, skillIDs []uuid.UUID) ([]models.UserSkill, error)
 }
@@ -176,6 +176,25 @@ func TestUserService_CreateUser(t *testing.T) {
 		assert.Equal(t, "valid@test.com", persisted.Email)
 		assert.NotEqual(t, plainPassword, persisted.PasswordHash)
 		assert.NoError(t, bcrypt.CompareHashAndPassword([]byte(persisted.PasswordHash), []byte(plainPassword)))
+	})
+
+	runServiceTest(t, "persists superuser flag when requested", func(t *testing.T, service userService, store *stubUserStore) {
+		store.createUserFn = func(_ context.Context, user *models.User) error {
+			assert.True(t, user.IsSuperuser)
+			return nil
+		}
+
+		created, err := service.CreateUserWithOptions(
+			context.Background(),
+			"valid-user",
+			"valid@test.com",
+			"Valid!123",
+			CreateUserOptions{IsSuperuser: true},
+		)
+
+		require.NoError(t, err)
+		require.NotNil(t, created)
+		assert.True(t, created.IsSuperuser)
 	})
 
 	runServiceTest(t, "maps duplicate email from store", func(t *testing.T, service userService, store *stubUserStore) {

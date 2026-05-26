@@ -42,11 +42,16 @@ type UpdateUserInput struct {
 	RemoveAvatar bool
 }
 
+type CreateUserOptions struct {
+	IsSuperuser bool
+}
+
 type (
 	UserService interface {
 		GetAllUsers(ctx context.Context) ([]models.User, error)
 		GetUser(ctx context.Context, id uuid.UUID) (*models.User, error)
 		CreateUser(ctx context.Context, username string, email string, password string) (*models.User, error)
+		CreateUserWithOptions(ctx context.Context, username string, email string, password string, options CreateUserOptions) (*models.User, error)
 		UpdateUser(ctx context.Context, id uuid.UUID, input UpdateUserInput) (*models.User, error)
 		ChangePassword(ctx context.Context, id uuid.UUID, currentPassword string, newPassword string) error
 		DeleteUser(ctx context.Context, id uuid.UUID) error
@@ -162,6 +167,10 @@ func (s userService) GetUser(ctx context.Context, id uuid.UUID) (*models.User, e
 }
 
 func (s userService) CreateUser(ctx context.Context, username string, email string, password string) (*models.User, error) {
+	return s.CreateUserWithOptions(ctx, username, email, password, CreateUserOptions{})
+}
+
+func (s userService) CreateUserWithOptions(ctx context.Context, username string, email string, password string, options CreateUserOptions) (*models.User, error) {
 	if err := s.validateUsername(username); err != nil {
 		return nil, err
 	}
@@ -179,6 +188,7 @@ func (s userService) CreateUser(ctx context.Context, username string, email stri
 		Username:     username,
 		Email:        email,
 		PasswordHash: string(hash),
+		IsSuperuser:  options.IsSuperuser,
 	}
 	err := s.userStore.CreateUser(ctx, u)
 	if err != nil {

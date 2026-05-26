@@ -13,8 +13,9 @@ type User struct {
 	PasswordHash string `json:"-"`
 	FullName     *string
 	AvatarURL    *AvatarURLMap `gorm:"type:jsonb"`
-	CreatedAt    time.Time     `gorm:"default:current_timestamp"`
-	UpdatedAt    time.Time     `gorm:"default:current_timestamp"`
+	IsSuperuser  bool
+	CreatedAt    time.Time `gorm:"default:current_timestamp"`
+	UpdatedAt    time.Time `gorm:"default:current_timestamp"`
 
 	Projects           []Project           `gorm:"foreignKey:CreatedBy"`
 	ProjectMemberships []ProjectMember     `gorm:"foreignKey:UserID"`
