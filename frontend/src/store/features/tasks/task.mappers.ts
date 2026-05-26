@@ -26,6 +26,7 @@ export const mapApiTaskAssigneeToAssignee = (
             assignee.project_member.user.avatar_url?.['300'] ??
             assignee.project_member.user.avatar_url?.original ??
             null,
+        isSuperuser: false,
     },
 })
 
@@ -73,6 +74,8 @@ export const mapProjectMemberToTaskAssignee = (
         email: member.user.email,
         fullName: member.user.fullName,
         avatarUrl: member.user.avatarUrl,
+        avatarSmallUrl: member.user.avatarSmallUrl,
+        isSuperuser: false,
     },
 })
 

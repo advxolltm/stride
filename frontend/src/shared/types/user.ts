@@ -5,4 +5,5 @@ export type User = {
     fullName: string | null
     avatarUrl: string | null
     avatarSmallUrl?: string | null
+    isSuperuser: boolean
 }

@@ -9,6 +9,7 @@ export type ApiUser = {
     password_hash?: string
     full_name: string | null
     avatar_url: { 300: string; 600: string; original: string } | null
+    is_superuser: boolean
 }
 
 export type ApiUserSkill = {
@@ -48,6 +49,10 @@ export type UpdateUserRequest = Partial<{
 
 export type ChangePasswordRequest = {
     current_password: string
+    new_password: string
+}
+
+export type ResetPasswordRequest = {
     new_password: string
 }
 
