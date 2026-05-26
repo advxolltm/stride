@@ -1,14 +1,9 @@
-FROM nginx
+FROM nginx:1.27-alpine AS production
 
 RUN rm /etc/nginx/conf.d/* 
 
-# Copy config files
-# *.conf files in "conf.d/" dir get included in main config
-COPY ./production/default.conf /etc/nginx/conf.d/default.conf
 COPY ./nginx.conf /etc/nginx/
 COPY ./mime.types /etc/nginx/
+COPY ./production/render-conf.sh /docker-entrypoint.d/40-render-production-conf.sh
 
-# RUN mkdir /var/www/letsencrypt
-# TODO: Add SSL certificates for production
-# COPY ./production/certs/www..ru.crt /etc/nginx/certs/
-# COPY ./production/certs/www..ru.key /etc/nginx/certs/
+RUN chmod +x /docker-entrypoint.d/40-render-production-conf.sh
