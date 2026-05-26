@@ -1,4 +1,5 @@
-// websocket.ts
+import { buildApiWebSocketUrl } from './api/base.api';
+
 export const WSMessageType = {
 	ChatMessageCreate: 0, 
 	ChatMessageUpdate: 1,
@@ -31,7 +32,7 @@ class WebSocketService {
   connect(projectID: string) {
     if (this.socket) return; // prevent duplicate connections
 
-    this.socket = new WebSocket(`http://localhost:8000/api/v1/ws/connect/${projectID}`);
+    this.socket = new WebSocket(buildApiWebSocketUrl(`/ws/connect/${projectID}`));
 
     this.socket.onmessage = (event) => {
       const data = JSON.parse(event.data) as WSMessage<unknown>;
