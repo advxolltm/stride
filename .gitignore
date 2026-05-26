@@ -35,6 +35,7 @@ nginx/*.log
 nginx/*.pid
 
 redis_data/
+data/
 
 
 postgres_data/
@@ -45,4 +46,3 @@ pgdata/
 
 .cache/
 tmp/
-
