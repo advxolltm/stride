@@ -46,3 +46,27 @@ docker compose -f compose.dev.yml exec -T redis redis-cli ping
 docker compose -f compose.dev.yml down
 docker compose -f compose.dev.yml down -v
 ```
+
+## Production
+
+Production exposes only nginx on ports 80 and 443. PostgreSQL, Redis, backend,
+and frontend stay on the internal Docker network.
+
+```bash
+docker compose -f compose.prod.yml up -d --build
+docker compose -f compose.prod.yml ps
+```
+
+Persistent production data is written under `./data`:
+
+- `./data/db:/var/lib/postgresql/data/`
+- `./data/redis:/data`
+- `./data/media:/app/media` for backend avatar uploads
+
+If `SITE_DOMAIN` is set, nginx redirects HTTP to HTTPS and expects:
+
+- `./nginx/production/certs/fullchain.pem`
+- `./nginx/production/certs/privkey.pem`
+
+If `SITE_DOMAIN` is empty, nginx listens on ports 80 and 443 without domain or
+TLS certificate statements.
