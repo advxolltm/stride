@@ -1,7 +1,6 @@
-import { Button, Chip, Tooltip, toast } from '@heroui/react'
+import { Button, Tooltip, toast } from '@heroui/react'
 import { skipToken } from '@reduxjs/toolkit/query'
 import {
-    Archive,
     ChevronRight,
     Home,
     PanelRightOpen,
@@ -21,6 +20,7 @@ import {
     WhiteboardWorkspacePanel,
     type WhiteboardPanelTab,
 } from '../components/project/space/whiteboard/WhiteboardWorkspacePanel'
+import { ArchivedReadOnlyChip } from '../components/project/space/shared/ArchivedReadOnlyChip'
 import { UserAvatar } from '../shared/components'
 import { useAppSelector } from '../shared/hooks/redux'
 import { getApiErrorMessage } from '../shared/utils/api/errors'
@@ -296,16 +296,7 @@ export function WhiteboardPage() {
                     controlsRightClass,
                 ].join(' ')}
             >
-                {isArchived && (
-                    <Chip
-                        size="sm"
-                        variant="soft"
-                        className="flex shrink-0 flex-row items-center gap-2"
-                    >
-                        <Archive size={14} />
-                        {t('whiteboardPage.archivedReadOnly')}
-                    </Chip>
-                )}
+                {isArchived && <ArchivedReadOnlyChip />}
                 <Button
                     size="sm"
                     variant="ghost"

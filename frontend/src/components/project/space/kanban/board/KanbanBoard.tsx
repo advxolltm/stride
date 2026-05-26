@@ -6,12 +6,13 @@ import {
     useSensor,
     useSensors,
 } from '@dnd-kit/core'
-import { Button, Chip, SearchField, Tabs } from '@heroui/react'
-import { Archive, LayoutGrid, UserPlus } from 'lucide-react'
+import { Button, SearchField, Tabs } from '@heroui/react'
+import { LayoutGrid, UserPlus } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ConfirmDialog } from '../../../../../shared/components'
 import type { Task } from '../../../../../store/features/tasks/task.types'
+import { ArchivedReadOnlyChip } from '../../shared/ArchivedReadOnlyChip'
 import { useTaskBoard } from '../context/useTaskBoard'
 import { TaskEditDrawer } from '../task/drawer/TaskEditDrawer'
 import { KanbanCard } from './KanbanCard'
@@ -135,12 +136,7 @@ export function KanbanBoard() {
                             </SearchField.Group>
                         </SearchField>
 
-                        {isArchived && (
-                            <Chip size="sm" variant="soft" className="flex flex-row gap-2 items-center shrink-0">
-                                <Archive size={14} />
-                                {t('tasks.messages.archivedReadOnly')}
-                            </Chip>
-                        )}
+                        {isArchived && <ArchivedReadOnlyChip />}
                         <Button
                             size="sm"
                             variant="primary"
