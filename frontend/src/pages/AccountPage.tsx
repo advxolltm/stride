@@ -1,5 +1,5 @@
 import { Button, Tabs } from '@heroui/react'
-import { ArrowLeft, Shield, User, Wrench } from 'lucide-react'
+import { ArrowLeft, Shield, User, Users, Wrench } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 
@@ -7,28 +7,37 @@ import {
     ProfileSection,
     SecuritySection,
     SkillsSection,
+    UsersSection,
 } from '../components/account'
+import { isOpenNetworkApplicationMode } from '../config/applicationMode'
 import { useAppSelector } from '../shared/hooks/redux'
 import { useGetUserByIdQuery } from '../store/features/user/user.api'
 import { selectUserId } from '../store/userSlice'
 import { AccountPageSkeleton } from './AccountPageSkeleton'
 import { skipToken } from '@reduxjs/toolkit/query'
 
-const accountTabs = ['profile', 'security', 'skills'] as const
-type AccountTab = (typeof accountTabs)[number]
+const baseAccountTabs = ['profile', 'security', 'skills'] as const
+type AccountTab = (typeof baseAccountTabs)[number] | 'users'
 
-const isAccountTab = (tab: string | undefined): tab is AccountTab =>
-    accountTabs.includes(tab as AccountTab)
+const isAccountTab = (
+    tab: string | undefined,
+    availableTabs: readonly AccountTab[],
+): tab is AccountTab => availableTabs.includes(tab as AccountTab)
 
 export function AccountPage() {
     const { t } = useTranslation('setting')
     const navigate = useNavigate()
     const { tab } = useParams()
     const userId = useAppSelector(selectUserId)
-    const { isLoading } = useGetUserByIdQuery(userId ?? skipToken)
+    const { data: user, isLoading } = useGetUserByIdQuery(userId ?? skipToken)
+    const canManageUsers =
+        isOpenNetworkApplicationMode && Boolean(user?.isSuperuser)
+    const availableTabs: readonly AccountTab[] = canManageUsers
+        ? [...baseAccountTabs, 'users']
+        : baseAccountTabs
 
     if (isLoading) return <AccountPageSkeleton />
-    if (!isAccountTab(tab)) {
+    if (!isAccountTab(tab, availableTabs)) {
         return <Navigate to="/settings/profile" replace />
     }
 
@@ -87,6 +96,15 @@ export function AccountPage() {
                             </div>
                             <Tabs.Indicator />
                         </Tabs.Tab>
+                        {canManageUsers ? (
+                            <Tabs.Tab id="users">
+                                <div className="flex items-center gap-2 whitespace-nowrap">
+                                    <Users size={16} />
+                                    {t('tabs.users')}
+                                </div>
+                                <Tabs.Indicator />
+                            </Tabs.Tab>
+                        ) : null}
                     </Tabs.List>
                 </Tabs.ListContainer>
                 <Tabs.Panel id="profile" className="pt-4 md:pt-6">
@@ -98,6 +116,11 @@ export function AccountPage() {
                 <Tabs.Panel id="skills" className="pt-4 md:pt-6">
                     <SkillsSection />
                 </Tabs.Panel>
+                {canManageUsers ? (
+                    <Tabs.Panel id="users" className="pt-4 md:pt-6">
+                        <UsersSection />
+                    </Tabs.Panel>
+                ) : null}
             </Tabs>
         </div>
     )
