@@ -455,6 +455,8 @@ const (
 	ProjectMemberRemove
 	ProjectSkillAdd
 	ProjectSkillRemove
+	ProjectUpdate
+	ProjectDelete
 
 	// Whiteboard message types
 	WhiteboardElementCreate

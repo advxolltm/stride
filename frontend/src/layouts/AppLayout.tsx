@@ -6,7 +6,11 @@ import { Sidebar } from '../components/layout/SideBar'
 import { CreateProjectDialog } from '../components/project/CreateProjectDialog'
 import { ConfirmDialog } from '../shared/components'
 import { useAppDispatch } from '../shared/hooks/redux'
-import { useGetSessionQuery } from '../store/features/auth/auth.api'
+import {
+    getProjectLifecycleNotificationKind,
+    getProjectLifecycleNotificationProjectName,
+    shouldRedirectHomeAfterLifecycleAcknowledge,
+} from '../shared/utils/notificationBehavior'
 import {
     useGetNotificationsQuery,
     useMarkNotificationReadMutation,
@@ -16,7 +20,6 @@ import type { Notification } from '../store/features/notification/notification.t
 import { projectApi } from '../store/features/project/project.api'
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = 'sidebarCollapsed'
-const PROJECT_REMOVAL_NOTIFICATION_PREFIX = 'You were removed from project:'
 
 const getInitialSidebarCollapsed = () => {
     if (typeof window === 'undefined') {
@@ -37,6 +40,37 @@ export interface AppLayoutOutletContext {
     openCreateProjectDialog: () => void
 }
 
+const patchProjectStatusInCaches = (
+    dispatch: ReturnType<typeof useAppDispatch>,
+    projectId: string,
+    status: 'active' | 'archived',
+) => {
+    dispatch(
+        projectApi.util.updateQueryData('getProjects', undefined, (draft) => {
+            const project = draft.find((item) => item.id === projectId)
+            if (project) {
+                project.status = status
+            }
+        }),
+    )
+    dispatch(
+        projectApi.util.updateQueryData('getProjectById', projectId, (draft) => {
+            draft.status = status
+        }),
+    )
+}
+
+const removeProjectFromProjectListCache = (
+    dispatch: ReturnType<typeof useAppDispatch>,
+    projectId: string,
+) => {
+    dispatch(
+        projectApi.util.updateQueryData('getProjects', undefined, (draft) =>
+            draft.filter((project) => project.id !== projectId),
+        ),
+    )
+}
+
 export function AppLayout() {
     const dispatch = useAppDispatch()
     const location = useLocation()
@@ -45,9 +79,10 @@ export function AppLayout() {
         getInitialSidebarCollapsed,
     )
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
-    const processedRemovalNotificationIdsRef = useRef<Set<string>>(new Set())
+    const processedLifecycleNotificationIdsRef = useRef<Set<string>>(
+        new Set(),
+    )
     const { t } = useTranslation('common')
-    const { data: sessionUser } = useGetSessionQuery()
     const {
         data: notifications = [],
         isSuccess: areNotificationsLoaded,
@@ -56,29 +91,30 @@ export function AppLayout() {
     const [markNotificationRead] = useMarkNotificationReadMutation()
     const isWhiteboardRoute = location.pathname.endsWith('/whiteboard')
 
-    const activeProjectRemovalNotification = useMemo(() => {
+    const activeProjectLifecycleNotification = useMemo(() => {
         return notifications
             .toReversed()
             .find(
                 (notification) =>
                     !notification.read &&
-                    notification.objectType === 'project' &&
-                    notification.message.startsWith(
-                        PROJECT_REMOVAL_NOTIFICATION_PREFIX,
-                    ),
+                    getProjectLifecycleNotificationKind(notification) !== null,
             )
     }, [notifications])
 
-    const isViewingRemovedProject =
-        !!activeProjectRemovalNotification &&
+    const activeProjectLifecycleKind = activeProjectLifecycleNotification
+        ? getProjectLifecycleNotificationKind(activeProjectLifecycleNotification)
+        : null
+
+    const isViewingAffectedProject =
+        !!activeProjectLifecycleNotification &&
         location.pathname.startsWith(
-            `/project/${activeProjectRemovalNotification.objectId}`,
+            `/project/${activeProjectLifecycleNotification.objectId}`,
         )
 
-    const removedProjectName = activeProjectRemovalNotification
-        ? activeProjectRemovalNotification.message
-              .slice(PROJECT_REMOVAL_NOTIFICATION_PREFIX.length)
-              .trim() || t('projectRemoval.projectFallback')
+    const lifecycleProjectName = activeProjectLifecycleNotification
+        ? getProjectLifecycleNotificationProjectName(
+              activeProjectLifecycleNotification,
+          ) || t('projectRemoval.projectFallback')
         : t('projectRemoval.projectFallback')
 
     const handleOpenCreateProjectDialog = () => {
@@ -103,50 +139,42 @@ export function AppLayout() {
     }
 
     useEffect(() => {
-        if (!activeProjectRemovalNotification) {
+        if (!activeProjectLifecycleNotification) {
             return
         }
 
-        const notificationId = activeProjectRemovalNotification.id
+        const notificationId = activeProjectLifecycleNotification.id
+        if (processedLifecycleNotificationIdsRef.current.has(notificationId)) {
+            return
+        }
+
+        processedLifecycleNotificationIdsRef.current.add(notificationId)
+
+        if (!activeProjectLifecycleKind) {
+            return
+        }
+
         if (
-            processedRemovalNotificationIdsRef.current.has(notificationId)
+            activeProjectLifecycleKind === 'archived' ||
+            activeProjectLifecycleKind === 'unarchived'
         ) {
+            patchProjectStatusInCaches(
+                dispatch,
+                activeProjectLifecycleNotification.objectId,
+                activeProjectLifecycleKind === 'archived'
+                    ? 'archived'
+                    : 'active',
+            )
             return
         }
 
-        processedRemovalNotificationIdsRef.current.add(notificationId)
-
-        dispatch(
-            projectApi.util.updateQueryData(
-                'getProjects',
-                undefined,
-                (draft) =>
-                    draft.filter(
-                        (project) =>
-                            project.id !==
-                            activeProjectRemovalNotification.objectId,
-                    ),
-            ),
+        removeProjectFromProjectListCache(
+            dispatch,
+            activeProjectLifecycleNotification.objectId,
         )
-        dispatch(
-            projectApi.util.invalidateTags([
-                {
-                    type: 'Project',
-                    id: activeProjectRemovalNotification.objectId,
-                },
-                {
-                    type: 'ProjectMember',
-                    id: activeProjectRemovalNotification.objectId,
-                },
-                {
-                    type: 'ProjectSkill',
-                    id: activeProjectRemovalNotification.objectId,
-                },
-            ]),
-        )
-    }, [activeProjectRemovalNotification, dispatch])
+    }, [activeProjectLifecycleKind, activeProjectLifecycleNotification, dispatch])
 
-    const handleProjectRemovalAcknowledge = async (
+    const handleProjectLifecycleAcknowledge = async (
         notification: Notification,
     ) => {
         try {
@@ -156,10 +184,40 @@ export function AppLayout() {
             return
         }
 
-        if (isViewingRemovedProject) {
+        const lifecycleKind = getProjectLifecycleNotificationKind(notification)
+        if (
+            lifecycleKind &&
+            isViewingAffectedProject &&
+            shouldRedirectHomeAfterLifecycleAcknowledge(lifecycleKind)
+        ) {
             navigate('/', { replace: true })
         }
     }
+
+    const lifecycleDialogTitleKey =
+        activeProjectLifecycleKind === 'archived'
+            ? 'projectArchived.title'
+            : activeProjectLifecycleKind === 'unarchived'
+              ? 'projectUnarchived.title'
+            : activeProjectLifecycleKind === 'deleted'
+              ? 'projectDeleted.title'
+              : 'projectRemoval.title'
+    const lifecycleDialogMessageKey =
+        activeProjectLifecycleKind === 'archived'
+            ? 'projectArchived.message'
+            : activeProjectLifecycleKind === 'unarchived'
+              ? 'projectUnarchived.message'
+            : activeProjectLifecycleKind === 'deleted'
+              ? 'projectDeleted.message'
+              : 'projectRemoval.message'
+    const lifecycleDialogConfirmKey =
+        activeProjectLifecycleKind === 'archived'
+            ? 'projectArchived.confirm'
+            : activeProjectLifecycleKind === 'unarchived'
+              ? 'projectUnarchived.confirm'
+            : activeProjectLifecycleKind === 'deleted'
+              ? 'projectDeleted.confirm'
+              : 'projectRemoval.confirm'
 
     return (
         <div className="flex min-h-screen flex-col">
@@ -195,21 +253,21 @@ export function AppLayout() {
                 setIsOpen={setIsCreateDialogOpen}
             />
             <ConfirmDialog
-                isOpen={!!activeProjectRemovalNotification}
+                isOpen={!!activeProjectLifecycleNotification}
                 onOpenChange={() => {}}
-                title={t('projectRemoval.title')}
-                message={t('projectRemoval.message', {
-                    projectName: removedProjectName,
+                title={t(lifecycleDialogTitleKey)}
+                message={t(lifecycleDialogMessageKey, {
+                    projectName: lifecycleProjectName,
                 })}
-                confirmLabel={t('projectRemoval.confirm')}
+                confirmLabel={t(lifecycleDialogConfirmKey)}
                 cancelLabel={null}
                 onConfirm={async () => {
-                    if (!activeProjectRemovalNotification || !sessionUser) {
+                    if (!activeProjectLifecycleNotification) {
                         return
                     }
 
-                    await handleProjectRemovalAcknowledge(
-                        activeProjectRemovalNotification,
+                    await handleProjectLifecycleAcknowledge(
+                        activeProjectLifecycleNotification,
                     )
                 }}
             />
