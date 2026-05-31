@@ -52,6 +52,7 @@ const getSceneSignature = (elements: readonly ExcalidrawElement[]) =>
 
 export function WhiteboardCanvas({
     elements,
+    focusTarget,
     presence = [],
     viewportStorageKey,
     viewModeEnabled = false,
@@ -60,6 +61,7 @@ export function WhiteboardCanvas({
     onCursorChange,
     onCursorLeave,
 }: WhiteboardCanvasProps) {
+    const containerRef = useRef<HTMLDivElement | null>(null)
     const excalidrawApiRef = useRef<ExcalidrawImperativeAPI | null>(null)
     const isDarkMode = useAppSelector((state) => state.theme.isDark)
     const latestExternalSceneRef =
@@ -114,8 +116,38 @@ export function WhiteboardCanvas({
         applyExternalScene(sceneElements)
     }, [sceneElements])
 
+    useEffect(() => {
+        if (!focusTarget) {
+            return
+        }
+
+        const excalidrawApi = excalidrawApiRef.current
+        const container = containerRef.current
+
+        if (!excalidrawApi || !container) {
+            return
+        }
+
+        const appState = excalidrawApi.getAppState()
+        const zoom = appState.zoom
+        const nextScrollX =
+            container.clientWidth / (2 * zoom.value) - focusTarget.x
+        const nextScrollY =
+            container.clientHeight / (2 * zoom.value) - focusTarget.y
+
+        excalidrawApi.updateScene({
+            appState: {
+                scrollX: nextScrollX,
+                scrollY: nextScrollY,
+            },
+            captureUpdate: CaptureUpdateAction.NEVER,
+        })
+        updateViewport(nextScrollX, nextScrollY, zoom)
+    }, [focusTarget?.nonce])
+
     return (
         <div
+            ref={containerRef}
             className="whiteboard-excalidraw relative h-full w-full overflow-hidden"
             onPointerLeave={onCursorLeave}
         >
