@@ -1,4 +1,5 @@
 import { Button, Popover } from '@heroui/react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { UserAvatar } from '../../../../shared/components'
 import type { WhiteboardCursorPresence } from '../../../../store/features/whiteboard/whiteboard.socket.types'
@@ -6,13 +7,16 @@ import type { WhiteboardCursorPresence } from '../../../../store/features/whiteb
 interface CollaboratorsButtonProps {
     participants: readonly WhiteboardCursorPresence[]
     currentUserId: string | null
+    onParticipantSelect?: (participant: WhiteboardCursorPresence) => void
 }
 
 export function CollaboratorsButton({
     participants,
     currentUserId,
+    onParticipantSelect,
 }: Readonly<CollaboratorsButtonProps>) {
     const { t } = useTranslation('project')
+    const [isOpen, setIsOpen] = useState(false)
     const currentParticipant = currentUserId
         ? participants.find((participant) => participant.user.id === currentUserId)
         : undefined
@@ -27,8 +31,13 @@ export function CollaboratorsButton({
     const visibleParticipants = orderedParticipants.slice(0, 3)
     const hiddenParticipants = Math.max(participants.length - 3, 0)
 
+    function handleParticipantSelect(participant: WhiteboardCursorPresence) {
+        onParticipantSelect?.(participant)
+        setIsOpen(false)
+    }
+
     return (
-        <Popover>
+        <Popover isOpen={isOpen} onOpenChange={setIsOpen}>
             <Popover.Trigger>
                 <Button
                     size="sm"
@@ -74,12 +83,13 @@ export function CollaboratorsButton({
                     {orderedParticipants.map((participant) => {
                         const isCurrentUser =
                             participant.user.id === currentUserId
+                        const canSelectParticipant =
+                            !isCurrentUser &&
+                            participant.cursor.x !== null &&
+                            participant.cursor.y !== null
 
-                        return (
-                            <div
-                                key={participant.user.id}
-                                className="flex items-center gap-3 px-4 py-2.5"
-                            >
+                        const participantContent = (
+                            <>
                                 <UserAvatar
                                     name={participant.user.name}
                                     src={participant.user.avatarSmall}
@@ -94,6 +104,24 @@ export function CollaboratorsButton({
                                         {t('whiteboardPage.participants.you')}
                                     </span>
                                 )}
+                            </>
+                        )
+
+                        return canSelectParticipant ? (
+                            <button
+                                key={participant.user.id}
+                                type="button"
+                                className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-[var(--surface-secondary)]"
+                                onClick={() => handleParticipantSelect(participant)}
+                            >
+                                {participantContent}
+                            </button>
+                        ) : (
+                            <div
+                                key={participant.user.id}
+                                className="flex items-center gap-3 px-4 py-2.5"
+                            >
+                                {participantContent}
                             </div>
                         )
                     })}
