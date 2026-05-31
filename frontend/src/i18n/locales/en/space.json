@@ -8,7 +8,7 @@
     "actions": {
       "filter": "Filter",
       "searchTasks": "Search tasks...",
-      "assign": "Auto assign",
+      "assign": "Assign Tasks",
       "add": "Add Task",
       "menuAria": "Task actions",
       "edit": "Edit task",
@@ -23,7 +23,6 @@
       "addTask": "Add Task"
     },
     "messages": {
-      "listComingSoon": "List view is coming soon.",
       "loading": "Loading tasks...",
       "taskUpdateSuccess": "Task updated.",
       "taskUpdateError": "Could not update task.",
@@ -34,6 +33,26 @@
       "createSuccess": "Task created.",
       "createError": "Could not create task.",
       "archivedReadOnly": "Archived project - read only"
+    },
+    "list": {
+      "title": "All tasks",
+      "ariaLabel": "Task list",
+      "newTaskMeta": "New tasks are created in To Do.",
+      "columnsButton": "Columns",
+      "emptyTitle": "No tasks yet",
+      "emptyDescription": "Create a task to get started, or adjust your search to see matching tasks.",
+      "visible": "Visible",
+      "hidden": "Hidden",
+      "resizeColumn": "Resize {{column}} column",
+      "columns": {
+        "task": "Task",
+        "description": "Description",
+        "skills": "Skills",
+        "assignee": "Assignee",
+        "status": "Status",
+        "startDate": "Start Date",
+        "dueDate": "Due Date"
+      }
     },
     "drawer": {
       "detailsTitle": "Task Details",

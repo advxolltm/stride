@@ -16,6 +16,7 @@ import {
 
 const TASK_ID_PARAM = 'taskID'
 const LEGACY_TASK_ID_PARAM = 'taskId'
+const VIEW_PARAM = 'view'
 
 function getColumnColor(status: 'todo' | 'in_progress' | 'done') {
     switch (status) {
@@ -69,7 +70,8 @@ export function useKanbanState() {
     const taskIdFromUrl = searchParams.get(TASK_ID_PARAM)
     const legacyTaskIdFromUrl = searchParams.get(LEGACY_TASK_ID_PARAM)
     const requestedTaskId = taskIdFromUrl ?? legacyTaskIdFromUrl
-
+    const requestedView = searchParams.get(VIEW_PARAM)
+    const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
     const syncTaskSearchParam = useCallback(
         (taskId: string | null, replace = false) => {
             setSearchParams(
@@ -83,6 +85,21 @@ export function useKanbanState() {
                     } else {
                         nextParams.delete(TASK_ID_PARAM)
                     }
+
+                    return nextParams
+                },
+                { replace },
+            )
+        },
+        [setSearchParams],
+    )
+    const syncViewSearchParam = useCallback(
+        (view: 'kanban' | 'list', replace = false) => {
+            setSearchParams(
+                (currentParams) => {
+                    const nextParams = new URLSearchParams(currentParams)
+
+                    nextParams.set(VIEW_PARAM, view)
 
                     return nextParams
                 },
@@ -159,16 +176,23 @@ export function useKanbanState() {
         },
         isArchived,
     )
-    const [view, setView] = useState<'kanban' | 'list'>('kanban')
+    const view: 'kanban' | 'list' =
+        requestedView === 'list' ? 'list' : 'kanban'
 
     const selectedTask = useMemo(
-        () => tasks.find((task) => task.id === requestedTaskId) ?? null,
-        [requestedTaskId, tasks],
+        () =>
+            tasks.find((task) => task.id === (selectedTaskId ?? requestedTaskId)) ??
+            null,
+        [requestedTaskId, selectedTaskId, tasks],
     )
     const isDrawerOpen = Boolean(selectedTask)
 
     const del = useTaskDelete((deleted) => {
-        if (requestedTaskId === deleted.id) {
+        if (
+            selectedTaskId === deleted.id ||
+            requestedTaskId === deleted.id
+        ) {
+            setSelectedTaskId(null)
             syncTaskSearchParam(null, true)
         }
     })
@@ -180,6 +204,11 @@ export function useKanbanState() {
     }, [serverColumns, setLocalColumns])
 
     useEffect(() => {
+        if (requestedView !== 'kanban' && requestedView !== 'list') {
+            syncViewSearchParam('kanban', true)
+            return
+        }
+
         if (legacyTaskIdFromUrl && !taskIdFromUrl) {
             syncTaskSearchParam(legacyTaskIdFromUrl, true)
             return
@@ -192,8 +221,10 @@ export function useKanbanState() {
         isLoading,
         legacyTaskIdFromUrl,
         requestedTaskId,
+        requestedView,
         selectedTask,
         syncTaskSearchParam,
+        syncViewSearchParam,
         taskIdFromUrl,
     ])
 
@@ -207,14 +238,17 @@ export function useKanbanState() {
         isLoading,
         statusOptions,
         view,
-        setView,
+        setView: (nextView: 'kanban' | 'list') => {
+            syncViewSearchParam(nextView)
+        },
         selectedTask,
         isDrawerOpen,
         handleTaskClick: (task: Task) => {
-            syncTaskSearchParam(task.id)
+            setSelectedTaskId(task.id)
         },
         handleDrawerOpenChange: (open: boolean) => {
             if (!open) {
+                setSelectedTaskId(null)
                 syncTaskSearchParam(null)
             }
         },

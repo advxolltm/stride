@@ -35,7 +35,7 @@ export function AppBreadcrumb() {
     const projectHref = `/project/${projectId}`
     const overviewHref = '/'
     const tailHref = isTasks
-        ? `${projectHref}/tasks`
+        ? `${projectHref}/tasks?view=kanban`
         : isChat
           ? `${projectHref}/chat`
           : isWhiteboard

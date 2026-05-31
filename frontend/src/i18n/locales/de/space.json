@@ -35,6 +35,26 @@
       "createError": "Aufgabe konnte nicht erstellt werden.",
       "archivedReadOnly": "Archiviertes Projekt - schreibgeschuetzt"
     },
+    "list": {
+      "title": "Alle Aufgaben",
+      "ariaLabel": "Aufgabenliste",
+      "newTaskMeta": "Neue Aufgaben werden in Zu erledigen erstellt.",
+      "columnsButton": "Spalten",
+      "emptyTitle": "Noch keine Aufgaben",
+      "emptyDescription": "Erstellen Sie eine Aufgabe oder passen Sie Ihre Suche an, um passende Aufgaben zu sehen.",
+      "visible": "Sichtbar",
+      "hidden": "Ausgeblendet",
+      "resizeColumn": "Spalte {{column}} groesse aendern",
+      "columns": {
+        "task": "Aufgabe",
+        "description": "Beschreibung",
+        "skills": "Faehigkeiten",
+        "assignee": "Zustaendiger",
+        "status": "Status",
+        "startDate": "Startdatum",
+        "dueDate": "Faelligkeitsdatum"
+      }
+    },
     "drawer": {
       "detailsTitle": "Aufgabendetails",
       "cancel": "Abbrechen",
