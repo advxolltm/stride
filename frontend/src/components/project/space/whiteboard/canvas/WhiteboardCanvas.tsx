@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import {
     CaptureUpdateAction,
     Excalidraw,
+    THEME,
     reconcileElements,
 } from '@excalidraw/excalidraw'
 import type {
@@ -17,6 +18,7 @@ import {
     toViewportCoordinates,
     useWhiteboardViewport,
 } from './useWhiteboardViewport'
+import { useAppSelector } from '../../../../../shared/hooks/redux'
 import getInitials from '../../../../../shared/utils/getInitials'
 import { mergeExternalSceneDeletes } from './whiteboardCanvas.utils'
 
@@ -58,6 +60,7 @@ export function WhiteboardCanvas({
     onCursorLeave,
 }: WhiteboardCanvasProps) {
     const excalidrawApiRef = useRef<ExcalidrawImperativeAPI | null>(null)
+    const isDarkMode = useAppSelector((state) => state.theme.isDark)
     const latestExternalSceneRef =
         useRef<readonly OrderedExcalidrawElement[]>(elements)
     const lastAppliedExternalSceneRef =
@@ -124,6 +127,7 @@ export function WhiteboardCanvas({
                     excalidrawApiRef.current = api
                 }}
                 viewModeEnabled={viewModeEnabled}
+                theme={isDarkMode ? THEME.DARK : THEME.LIGHT}
                 UIOptions={{
                     tools: {
                         image: false,

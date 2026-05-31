@@ -44,6 +44,10 @@
     "shareError": "Could not copy share link",
     "overviewAriaLabel": "Overview",
     "shareAriaLabel": "Share whiteboard",
+    "theme": {
+      "switchToDark": "Switch to dark mode",
+      "switchToLight": "Switch to light mode"
+    },
     "panel": {
       "title": "Board Hub",
       "open": "Open Board Hub",

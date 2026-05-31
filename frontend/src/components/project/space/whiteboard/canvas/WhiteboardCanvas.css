@@ -48,14 +48,26 @@
 }
 
 .whiteboard-excalidraw .excalidraw .main-menu-trigger {
-  color: var(--color-on-surface);
-  border: 1px solid var(--color-gray-30);
+  width: 2.5rem;
+  height: 2.5rem;
+  color: var(--foreground);
+  border: 1px solid var(--border);
   border-radius: 9999px;
-  background-color: var(--island-bg-color);
-  box-shadow: var(--shadow-island), 0 0 0 1px var(--color-surface-lowest);
+  background-color: color-mix(in oklch, var(--surface) 94%, transparent);
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1),
+    0 4px 6px -4px rgb(0 0 0 / 0.1);
+  backdrop-filter: blur(24px);
+  transition:
+    color 150ms ease,
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+
+.whiteboard-excalidraw .excalidraw .main-menu-trigger:hover {
+  background-color: var(--surface-secondary);
 }
 
 .whiteboard-excalidraw .excalidraw .main-menu-trigger svg {
-  color: var(--color-on-surface);
+  color: var(--foreground);
   stroke-width: 2.25;
 }
