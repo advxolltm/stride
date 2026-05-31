@@ -7,6 +7,12 @@ import type {
     WhiteboardCursorPresence,
 } from '../../../../../store/features/whiteboard/whiteboard.socket.types'
 
+export type WhiteboardFocusTarget = {
+    nonce: number
+    x: number
+    y: number
+}
+
 export interface WhiteboardCanvasProps {
     elements: readonly OrderedExcalidrawElement[]
     presence?: readonly WhiteboardCursorPresence[]
