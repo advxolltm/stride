@@ -8,7 +8,7 @@ import {
     Sun,
     Zap,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router-dom'
 import { ArchivedReadOnlyChip } from '../components/project/space/shared/ArchivedReadOnlyChip'
@@ -52,6 +52,7 @@ export function WhiteboardPage() {
     const dispatch = useAppDispatch()
     const currentUserId = useAppSelector(selectUserId)
     const isDarkMode = useAppSelector((state) => state.theme.isDark)
+    const focusNonceRef = useRef(0)
     const [isPanelOpen, setIsPanelOpen] = useState(false)
     const [isPanelPinned, setIsPanelPinned] = useState(false)
     const [selectedPanelTab, setSelectedPanelTab] =
@@ -103,7 +104,6 @@ export function WhiteboardPage() {
     const {
         excalidrawElements,
         handleCanvasChange,
-        handleCanvasPointerLeave,
         handleCanvasPointerUp,
         queueCursorUpdate,
     } = useWhiteboardSync({
@@ -167,8 +167,9 @@ export function WhiteboardPage() {
             return
         }
 
+        focusNonceRef.current += 1
         setFocusTarget({
-            nonce: Date.now(),
+            nonce: focusNonceRef.current,
             x: participant.cursor.x,
             y: participant.cursor.y,
         })
@@ -381,7 +382,6 @@ export function WhiteboardPage() {
                         onChange={handleCanvasChange}
                         onPointerUp={handleCanvasPointerUp}
                         onCursorChange={queueCursorUpdate}
-                        onCursorLeave={handleCanvasPointerLeave}
                     />
                 </div>
 

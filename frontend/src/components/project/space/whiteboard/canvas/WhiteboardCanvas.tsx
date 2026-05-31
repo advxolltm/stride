@@ -59,7 +59,6 @@ export function WhiteboardCanvas({
     onChange,
     onPointerUp,
     onCursorChange,
-    onCursorLeave,
 }: WhiteboardCanvasProps) {
     const containerRef = useRef<HTMLDivElement | null>(null)
     const excalidrawApiRef = useRef<ExcalidrawImperativeAPI | null>(null)
@@ -149,7 +148,6 @@ export function WhiteboardCanvas({
         <div
             ref={containerRef}
             className="whiteboard-excalidraw relative h-full w-full overflow-hidden"
-            onPointerLeave={onCursorLeave}
         >
             <Excalidraw
                 initialData={{

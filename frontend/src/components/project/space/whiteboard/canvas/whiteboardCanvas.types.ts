@@ -1,4 +1,3 @@
-import type { PointerEventHandler } from 'react'
 import type {
     OrderedExcalidrawElement,
 } from '@excalidraw/excalidraw/element/types'
@@ -22,5 +21,4 @@ export interface WhiteboardCanvasProps {
     onChange?: (elements: readonly OrderedExcalidrawElement[]) => void
     onPointerUp?: (elements: readonly OrderedExcalidrawElement[]) => void
     onCursorChange?: (message: WhiteboardCursorClientMessage) => void
-    onCursorLeave?: PointerEventHandler<HTMLDivElement>
 }

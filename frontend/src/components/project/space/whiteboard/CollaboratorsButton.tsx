@@ -87,6 +87,11 @@ export function CollaboratorsButton({
                             !isCurrentUser &&
                             participant.cursor.x !== null &&
                             participant.cursor.y !== null
+                        const focusParticipantLabel = canSelectParticipant
+                            ? t('whiteboardPage.participants.focusParticipant', {
+                                  name: participant.user.name,
+                              })
+                            : undefined
 
                         const participantContent = (
                             <>
@@ -111,14 +116,8 @@ export function CollaboratorsButton({
                             <button
                                 key={participant.user.id}
                                 type="button"
-                                aria-label={t(
-                                    'whiteboardPage.participants.focusParticipant',
-                                    { name: participant.user.name },
-                                )}
-                                title={t(
-                                    'whiteboardPage.participants.focusParticipant',
-                                    { name: participant.user.name },
-                                )}
+                                aria-label={focusParticipantLabel}
+                                title={focusParticipantLabel}
                                 className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-[var(--surface-secondary)]"
                                 onClick={() => handleParticipantSelect(participant)}
                             >
