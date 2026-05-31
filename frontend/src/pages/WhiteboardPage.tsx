@@ -60,14 +60,6 @@ export function WhiteboardPage() {
     const whiteboardCursorWS = useWatchWhiteboardCursorQuery(
         projectId ?? skipToken,
     )
-    const whiteboardEventsWS = useWatchWhiteboardEventsQuery(
-        projectId ?? skipToken,
-        {
-            selectFromResult: ({ data }) => ({
-                liveElementsById: data?.liveElementsById ?? emptyLiveElementsById,
-            }),
-        },
-    )
     const {
         data: project,
         isLoading: isProjectLoading,
@@ -90,7 +82,16 @@ export function WhiteboardPage() {
         refetch: refetchWhiteboardElements,
     } = useGetProjectWhiteboardElementsQuery(projectId ?? '', {
         skip: !projectId || !isWhiteboardReady,
+        refetchOnMountOrArgChange: true,
     })
+    const whiteboardEventsWS = useWatchWhiteboardEventsQuery(
+        projectId && isElementsReady ? projectId : skipToken,
+        {
+            selectFromResult: ({ data }) => ({
+                liveElementsById: data?.liveElementsById ?? emptyLiveElementsById,
+            }),
+        },
+    )
     const liveElementsById = whiteboardEventsWS.liveElementsById
     const isArchived = isProjectArchived(project)
     const {
