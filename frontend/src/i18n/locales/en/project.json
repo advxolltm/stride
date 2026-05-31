@@ -41,7 +41,6 @@
     "loadingDescription": "Preparing the canvas for this project.",
     "errorTitle": "Could not load whiteboard",
     "errorFallback": "Please try again in a moment.",
-    "shareSuccess": "Share link copied",
     "shareError": "Could not copy share link",
     "overviewAriaLabel": "Overview",
     "shareAriaLabel": "Share whiteboard",

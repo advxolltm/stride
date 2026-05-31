@@ -1,15 +1,15 @@
-import { Button, Tooltip, toast } from '@heroui/react'
+import { Button, Tooltip } from '@heroui/react'
 import { skipToken } from '@reduxjs/toolkit/query'
 import {
     ChevronRight,
     Home,
     PanelRightOpen,
-    Share2,
-    Zap,
+    Zap
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router-dom'
+import { ArchivedReadOnlyChip } from '../components/project/space/shared/ArchivedReadOnlyChip'
 import { WhiteboardCanvas } from '../components/project/space/whiteboard/canvas/WhiteboardCanvas'
 import { useWhiteboardSync } from '../components/project/space/whiteboard/sync/useWhiteboardSync'
 import { useWhiteboardTemplateInsertion } from '../components/project/space/whiteboard/sync/useWhiteboardTemplateInsertion'
@@ -20,7 +20,6 @@ import {
     WhiteboardWorkspacePanel,
     type WhiteboardPanelTab,
 } from '../components/project/space/whiteboard/WhiteboardWorkspacePanel'
-import { ArchivedReadOnlyChip } from '../components/project/space/shared/ArchivedReadOnlyChip'
 import { UserAvatar } from '../shared/components'
 import { useAppSelector } from '../shared/hooks/redux'
 import { getApiErrorMessage } from '../shared/utils/api/errors'
@@ -131,17 +130,6 @@ export function WhiteboardPage() {
             mediaQuery.removeEventListener('change', syncDockAvailability)
         }
     }, [])
-
-    const handleShare = async () => {
-        const shareUrl = project?.joinLink ?? window.location.href
-
-        try {
-            await navigator.clipboard.writeText(shareUrl)
-            toast.success(t('whiteboardPage.shareSuccess'))
-        } catch {
-            toast.danger(t('whiteboardPage.shareError'))
-        }
-    }
 
     function handleOpenPanel() {
         setIsPanelOpen(true)
@@ -353,16 +341,6 @@ export function WhiteboardPage() {
                         </Tooltip.Content>
                     </Tooltip>
                 ) : null}
-                <Button
-                    isIconOnly
-                    size="sm"
-                    variant="ghost"
-                    className="h-10 w-10 min-w-10 rounded-full border border-[var(--border)] bg-[color-mix(in_oklch,var(--surface)_94%,transparent)] text-[var(--foreground)] shadow-lg backdrop-blur-xl hover:bg-[var(--surface-secondary)]"
-                    onPress={handleShare}
-                    aria-label={t('whiteboardPage.shareAriaLabel')}
-                >
-                    <Share2 size={16} />
-                </Button>
             </div>
 
             <div className="flex h-full min-h-0">
