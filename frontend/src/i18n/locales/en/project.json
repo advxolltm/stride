@@ -48,6 +48,13 @@
       "switchToDark": "Switch to dark mode",
       "switchToLight": "Switch to light mode"
     },
+    "participants": {
+      "title": "Participants",
+      "ariaLabel_one": "{{count}} person in this board",
+      "ariaLabel_other": "{{count}} people in this board",
+      "focusParticipant": "Go to {{name}} on the board",
+      "you": "You"
+    },
     "panel": {
       "title": "Board Hub",
       "open": "Open Board Hub",
