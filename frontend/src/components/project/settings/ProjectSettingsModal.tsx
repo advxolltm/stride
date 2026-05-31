@@ -6,8 +6,14 @@ import { MyProjectSkillsSettings } from './mySkills/MyProjectSkillsSettings'
 import { ProjectMembersSettings } from './projectMembers/ProjectMembersSettings'
 import { ProjectSettingsSidebar } from './ProjectSettingsSidebar'
 import { ProjectSkillsSettings } from './projectSkills/ProjectSkillsSettings'
+import { MyProjectWorkingHoursSettings } from './workingHours/MyProjectWorkingHoursSettings'
 
-type Tab = 'general' | 'members' | 'skills' | 'my-skills'
+type Tab =
+    | 'general'
+    | 'members'
+    | 'skills'
+    | 'my-skills'
+    | 'my-working-hours'
 
 interface ProjectSettingsModalProps {
     isOpen: boolean
@@ -65,6 +71,11 @@ export function ProjectSettingsModal({
                                 )}
                                 {activeTab === 'my-skills' && (
                                     <MyProjectSkillsSettings project={project} />
+                                )}
+                                {activeTab === 'my-working-hours' && (
+                                    <MyProjectWorkingHoursSettings
+                                        project={project}
+                                    />
                                 )}
                             </div>
                         </div>

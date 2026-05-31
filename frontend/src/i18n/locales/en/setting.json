@@ -4,7 +4,8 @@
   "tabs": {
     "profile": "Profile",
     "security": "Security",
-    "skills": "Skills"
+    "skills": "Skills",
+    "workingHours": "Working Hours"
   },
   "profile": {
     "title": "Personal Information",
@@ -46,5 +47,14 @@
     "updateError": "Failed to update skills. Please try again.",
     "emptySkills": "No skills available for this project yet.",
     "emptyProjects": "You are not a member of any projects yet."
+  },
+  "workingHours": {
+    "title": "Your Weekly Working Hours",
+    "description": "You have 40 hours per week. Distribute them across your projects.",
+    "summary": {
+      "allocated": "Allocated",
+      "remaining": "Remaining"
+    },
+    "projectSubtitle": "{{hours}}h / week · max {{max}}h available"
   }
 }

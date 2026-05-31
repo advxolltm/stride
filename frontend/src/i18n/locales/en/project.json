@@ -215,13 +215,25 @@
     "saveSuccess": "Your project skills were updated",
     "saveError": "Failed to update your project skills"
   },
+  "myWorkingHoursSettings": {
+    "title": "My Working Hours",
+    "description": "Adjust how many hours per week you commit to this project. Your weekly total is capped at 40h across all projects.",
+    "summary": {
+      "allocated": "Allocated total",
+      "remaining": "Remaining elsewhere"
+    },
+    "currentProjectTitle": "Hours on {{project}}",
+    "currentProjectSubtitle": "Max {{max}}h available ({{committed}}h committed to other projects)",
+    "otherProjectsTitle": "Other projects"
+  },
   "settingsSidebar": {
     "title": "Project settings",
     "tabs": {
       "general": "General",
       "members": "Team",
       "skills": "Skills",
-      "mySkills": "My Skills"
+      "mySkills": "My Skills",
+      "myWorkingHours": "My Working Hours"
     }
   }
 }
