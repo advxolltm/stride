@@ -218,7 +218,6 @@ export function WhiteboardPage() {
     }
 
     const projectName = project?.name ?? projectId
-    const collaborators = project?.members ?? []
     const presence = whiteboardCursorWS.data?.presence ?? []
     const remotePresence = currentUserId
         ? presence.filter((item) => item.user.id !== currentUserId)
@@ -289,8 +288,8 @@ export function WhiteboardPage() {
             >
                 {isArchived && <ArchivedReadOnlyChip />}
                 <CollaboratorsButton
-                    collaborators={collaborators}
-                    connectedCount={presence.length}
+                    participants={presence}
+                    currentUserId={currentUserId}
                 />
                 <Tooltip delay={0}>
                     <Tooltip.Trigger className="inline-flex">
