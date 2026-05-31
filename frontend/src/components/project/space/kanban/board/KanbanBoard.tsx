@@ -6,7 +6,7 @@ import {
     useSensor,
     useSensors,
 } from '@dnd-kit/core'
-import { Button, SearchField, Tabs } from '@heroui/react'
+import { Button, SearchField, Tabs, toast } from '@heroui/react'
 import { LayoutGrid, UserPlus } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -14,6 +14,11 @@ import { ConfirmDialog } from '../../../../../shared/components'
 import type { Task } from '../../../../../store/features/tasks/task.types'
 import { ArchivedReadOnlyChip } from '../../shared/ArchivedReadOnlyChip'
 import { useTaskBoard } from '../context/useTaskBoard'
+import { SchedulerFlowModal } from '../scheduler/SchedulerFlowModal'
+import type {
+    SchedulerMemberOption,
+    SchedulerTaskOption,
+} from '../scheduler/types'
 import { TaskEditDrawer } from '../task/drawer/TaskEditDrawer'
 import { KanbanCard } from './KanbanCard'
 import { KanbanColumn } from './KanbanColumn'
@@ -42,8 +47,9 @@ function taskMatchesSearch(task: Task, query: string) {
 
 export function KanbanBoard() {
     const { t } = useTranslation('space')
-    const { isLoading, isArchived } = useTaskBoard()
+    const { isLoading, isArchived, members } = useTaskBoard()
     const [taskSearch, setTaskSearch] = useState('')
+    const [isSchedulerOpen, setSchedulerOpen] = useState(false)
     const {
         localColumns,
         activeTask,
@@ -77,6 +83,44 @@ export function KanbanBoard() {
             ),
         }))
     }, [localColumns, normalizedTaskSearch])
+
+    const schedulerTasks = useMemo<SchedulerTaskOption[]>(
+        () =>
+            localColumns.flatMap((column) =>
+                column.tasks
+                    .filter((task) => task.status !== 'done')
+                    .map((task) => ({
+                        id: task.id,
+                        title: task.title,
+                        status: task.status,
+                        status_label: column.label,
+                    })),
+            ),
+        [localColumns],
+    )
+
+    const schedulerMembers = useMemo<SchedulerMemberOption[]>(
+        () =>
+            members.map((member) => ({
+                id: member.userId,
+                name: member.user.fullName ?? member.user.username,
+                initials: (
+                    member.user.fullName ?? member.user.username
+                )
+                    .split(' ')
+                    .map((part) => part[0])
+                    .join('')
+                    .slice(0, 2)
+                    .toUpperCase(),
+                avatarUrl: member.user.avatarSmallUrl ?? member.user.avatarUrl,
+                working_hours: 40,
+            })),
+        [members],
+    )
+
+    function handleSchedulerConfirm() {
+        toast.info('Scheduler assignments are mocked for now.')
+    }
 
     if (isLoading) {
         return (
@@ -141,6 +185,7 @@ export function KanbanBoard() {
                             size="sm"
                             variant="primary"
                             isDisabled={isArchived}
+                            onPress={() => setSchedulerOpen(true)}
                         >
                             <UserPlus size={16} />
                             {t('tasks.actions.assign')}
@@ -203,6 +248,14 @@ export function KanbanBoard() {
                 confirmLabel="Delete task"
                 confirmVariant="danger"
                 onConfirm={confirmDelete}
+            />
+
+            <SchedulerFlowModal
+                isOpen={isSchedulerOpen}
+                onOpenChange={setSchedulerOpen}
+                tasks={schedulerTasks}
+                members={schedulerMembers}
+                onConfirm={handleSchedulerConfirm}
             />
         </div>
     )
