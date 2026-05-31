@@ -124,6 +124,11 @@ export function WhiteboardCanvas({
                     excalidrawApiRef.current = api
                 }}
                 viewModeEnabled={viewModeEnabled}
+                UIOptions={{
+                    tools: {
+                        image: false,
+                    },
+                }}
                 onChange={(nextElements) => {
                     const nextSceneSignature = getSceneSignature(nextElements)
 
