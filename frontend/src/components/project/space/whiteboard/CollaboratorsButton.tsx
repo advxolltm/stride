@@ -35,7 +35,9 @@ export function CollaboratorsButton({
                     variant="ghost"
                     className="h-10 min-w-10 gap-0 -space-x-2 rounded-full border border-[var(--border)] bg-[color-mix(in_oklch,var(--surface)_94%,transparent)] px-2 text-[var(--foreground)] shadow-lg backdrop-blur-xl hover:bg-[var(--surface-secondary)]"
                     aria-label={t(
-                        'whiteboardPage.participants.ariaLabel',
+                        participants.length === 1
+                            ? 'whiteboardPage.participants.ariaLabel_one'
+                            : 'whiteboardPage.participants.ariaLabel_other',
                         { count: participants.length },
                     )}
                 >
@@ -95,11 +97,6 @@ export function CollaboratorsButton({
                             </div>
                         )
                     })}
-                    {participants.length === 0 && (
-                        <div className="px-4 py-6 text-center text-sm text-[var(--muted)]">
-                            {t('whiteboardPage.participants.empty')}
-                        </div>
-                    )}
                 </div>
             </Popover.Content>
         </Popover>

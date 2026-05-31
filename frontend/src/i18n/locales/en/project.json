@@ -50,9 +50,9 @@
     },
     "participants": {
       "title": "Participants",
-      "ariaLabel": "{{count}} people in this board",
-      "you": "You",
-      "empty": "No one is currently in this board."
+      "ariaLabel_one": "{{count}} person in this board",
+      "ariaLabel_other": "{{count}} people in this board",
+      "you": "You"
     },
     "panel": {
       "title": "Board Hub",
