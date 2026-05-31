@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef } from 'react'
 import {
     CaptureUpdateAction,
     Excalidraw,
+    MainMenu,
+    THEME,
     reconcileElements,
 } from '@excalidraw/excalidraw'
 import type {
@@ -17,6 +19,7 @@ import {
     toViewportCoordinates,
     useWhiteboardViewport,
 } from './useWhiteboardViewport'
+import { useAppSelector } from '../../../../../shared/hooks/redux'
 import getInitials from '../../../../../shared/utils/getInitials'
 import { mergeExternalSceneDeletes } from './whiteboardCanvas.utils'
 
@@ -58,6 +61,7 @@ export function WhiteboardCanvas({
     onCursorLeave,
 }: WhiteboardCanvasProps) {
     const excalidrawApiRef = useRef<ExcalidrawImperativeAPI | null>(null)
+    const isDarkMode = useAppSelector((state) => state.theme.isDark)
     const latestExternalSceneRef =
         useRef<readonly OrderedExcalidrawElement[]>(elements)
     const lastAppliedExternalSceneRef =
@@ -124,6 +128,12 @@ export function WhiteboardCanvas({
                     excalidrawApiRef.current = api
                 }}
                 viewModeEnabled={viewModeEnabled}
+                theme={isDarkMode ? THEME.DARK : THEME.LIGHT}
+                UIOptions={{
+                    tools: {
+                        image: false,
+                    },
+                }}
                 onChange={(nextElements) => {
                     const nextSceneSignature = getSceneSignature(nextElements)
 
@@ -157,7 +167,18 @@ export function WhiteboardCanvas({
                             [],
                     )
                 }}
-            />
+            >
+                <MainMenu>
+                    <MainMenu.DefaultItems.LoadScene />
+                    <MainMenu.DefaultItems.Export />
+                    <MainMenu.DefaultItems.SaveAsImage />
+                    <MainMenu.DefaultItems.SearchMenu />
+                    <MainMenu.DefaultItems.Help />
+                    <MainMenu.DefaultItems.ClearCanvas />
+                    <MainMenu.Separator />
+                    <MainMenu.DefaultItems.ChangeCanvasBackground />
+                </MainMenu>
+            </Excalidraw>
             <div className="pointer-events-none absolute inset-0 z-10">
                 {presence.map((item) => {
                     if (item.cursor.x === null || item.cursor.y === null) {

@@ -1,15 +1,17 @@
-import { Button, Tooltip, toast } from '@heroui/react'
+import { Button, Tooltip } from '@heroui/react'
 import { skipToken } from '@reduxjs/toolkit/query'
 import {
     ChevronRight,
     Home,
+    Moon,
     PanelRightOpen,
-    Share2,
+    Sun,
     Zap,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router-dom'
+import { ArchivedReadOnlyChip } from '../components/project/space/shared/ArchivedReadOnlyChip'
 import { WhiteboardCanvas } from '../components/project/space/whiteboard/canvas/WhiteboardCanvas'
 import { useWhiteboardSync } from '../components/project/space/whiteboard/sync/useWhiteboardSync'
 import { useWhiteboardTemplateInsertion } from '../components/project/space/whiteboard/sync/useWhiteboardTemplateInsertion'
@@ -20,9 +22,8 @@ import {
     WhiteboardWorkspacePanel,
     type WhiteboardPanelTab,
 } from '../components/project/space/whiteboard/WhiteboardWorkspacePanel'
-import { ArchivedReadOnlyChip } from '../components/project/space/shared/ArchivedReadOnlyChip'
 import { UserAvatar } from '../shared/components'
-import { useAppSelector } from '../shared/hooks/redux'
+import { useAppDispatch, useAppSelector } from '../shared/hooks/redux'
 import { getApiErrorMessage } from '../shared/utils/api/errors'
 import { isProjectArchived } from '../shared/utils/projectStatus'
 import { useGetProjectByIdQuery } from '../store/features/project/project.api'
@@ -33,6 +34,7 @@ import {
     useWatchWhiteboardEventsQuery,
 } from '../store/features/whiteboard/whiteboard.api'
 import type { WhiteboardLiveUpdateEventPayload } from '../store/features/whiteboard/whiteboard.socket.types'
+import { toggleTheme } from '../store/themeSlice'
 import { selectUserId } from '../store/userSlice'
 
 const emptyLiveElementsById: Record<string, WhiteboardLiveUpdateEventPayload> =
@@ -43,7 +45,9 @@ const DOCK_MEDIA_QUERY = '(min-width: 1280px)'
 export function WhiteboardPage() {
     const { projectId } = useParams()
     const { t } = useTranslation('project')
+    const dispatch = useAppDispatch()
     const currentUserId = useAppSelector(selectUserId)
+    const isDarkMode = useAppSelector((state) => state.theme.isDark)
     const [isPanelOpen, setIsPanelOpen] = useState(false)
     const [isPanelPinned, setIsPanelPinned] = useState(false)
     const [selectedPanelTab, setSelectedPanelTab] =
@@ -131,17 +135,6 @@ export function WhiteboardPage() {
             mediaQuery.removeEventListener('change', syncDockAvailability)
         }
     }, [])
-
-    const handleShare = async () => {
-        const shareUrl = project?.joinLink ?? window.location.href
-
-        try {
-            await navigator.clipboard.writeText(shareUrl)
-            toast.success(t('whiteboardPage.shareSuccess'))
-        } catch {
-            toast.danger(t('whiteboardPage.shareError'))
-        }
-    }
 
     function handleOpenPanel() {
         setIsPanelOpen(true)
@@ -329,6 +322,34 @@ export function WhiteboardPage() {
                         </span>
                     )}
                 </Button>
+                <Tooltip delay={0}>
+                    <Tooltip.Trigger className="inline-flex">
+                        <Button
+                            isIconOnly
+                            size="sm"
+                            variant="ghost"
+                            className="h-10 w-10 min-w-10 rounded-full border border-[var(--border)] bg-[color-mix(in_oklch,var(--surface)_94%,transparent)] text-[var(--foreground)] shadow-lg backdrop-blur-xl hover:bg-[var(--surface-secondary)]"
+                            onPress={() => dispatch(toggleTheme())}
+                            aria-label={
+                                isDarkMode
+                                    ? t('whiteboardPage.theme.switchToLight')
+                                    : t('whiteboardPage.theme.switchToDark')
+                            }
+                        >
+                            {isDarkMode ? (
+                                <Sun size={16} />
+                            ) : (
+                                <Moon size={16} />
+                            )}
+                        </Button>
+                    </Tooltip.Trigger>
+                    <Tooltip.Content showArrow placement="bottom" offset={8}>
+                        <Tooltip.Arrow />
+                        {isDarkMode
+                            ? t('whiteboardPage.theme.switchToLight')
+                            : t('whiteboardPage.theme.switchToDark')}
+                    </Tooltip.Content>
+                </Tooltip>
                 {!isPanelOpen ? (
                     <Tooltip delay={0}>
                         <Tooltip.Trigger className="inline-flex">
@@ -353,16 +374,6 @@ export function WhiteboardPage() {
                         </Tooltip.Content>
                     </Tooltip>
                 ) : null}
-                <Button
-                    isIconOnly
-                    size="sm"
-                    variant="ghost"
-                    className="h-10 w-10 min-w-10 rounded-full border border-[var(--border)] bg-[color-mix(in_oklch,var(--surface)_94%,transparent)] text-[var(--foreground)] shadow-lg backdrop-blur-xl hover:bg-[var(--surface-secondary)]"
-                    onPress={handleShare}
-                    aria-label={t('whiteboardPage.shareAriaLabel')}
-                >
-                    <Share2 size={16} />
-                </Button>
             </div>
 
             <div className="flex h-full min-h-0">
