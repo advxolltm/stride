@@ -14,6 +14,7 @@ import { Link, useParams } from 'react-router-dom'
 import { ArchivedReadOnlyChip } from '../components/project/space/shared/ArchivedReadOnlyChip'
 import { CollaboratorsButton } from '../components/project/space/whiteboard/CollaboratorsButton'
 import { WhiteboardCanvas } from '../components/project/space/whiteboard/canvas/WhiteboardCanvas'
+import type { WhiteboardFocusTarget } from '../components/project/space/whiteboard/canvas/whiteboardCanvas.types'
 import { useWhiteboardSync } from '../components/project/space/whiteboard/sync/useWhiteboardSync'
 import { useWhiteboardTemplateInsertion } from '../components/project/space/whiteboard/sync/useWhiteboardTemplateInsertion'
 import {
@@ -33,7 +34,10 @@ import {
     useWatchWhiteboardCursorQuery,
     useWatchWhiteboardEventsQuery,
 } from '../store/features/whiteboard/whiteboard.api'
-import type { WhiteboardLiveUpdateEventPayload } from '../store/features/whiteboard/whiteboard.socket.types'
+import type {
+    WhiteboardCursorPresence,
+    WhiteboardLiveUpdateEventPayload,
+} from '../store/features/whiteboard/whiteboard.socket.types'
 import { toggleTheme } from '../store/themeSlice'
 import { selectUserId } from '../store/userSlice'
 
@@ -52,6 +56,8 @@ export function WhiteboardPage() {
     const [isPanelPinned, setIsPanelPinned] = useState(false)
     const [selectedPanelTab, setSelectedPanelTab] =
         useState<WhiteboardPanelTab>('chat')
+    const [focusTarget, setFocusTarget] =
+        useState<WhiteboardFocusTarget | null>(null)
     const [canDockPanel, setCanDockPanel] = useState(() =>
         typeof window !== 'undefined'
             ? window.matchMedia(DOCK_MEDIA_QUERY).matches
@@ -154,6 +160,18 @@ export function WhiteboardPage() {
 
         setIsPanelOpen(true)
         setIsPanelPinned((current) => !current)
+    }
+
+    function handleParticipantSelect(participant: WhiteboardCursorPresence) {
+        if (participant.cursor.x === null || participant.cursor.y === null) {
+            return
+        }
+
+        setFocusTarget({
+            nonce: Date.now(),
+            x: participant.cursor.x,
+            y: participant.cursor.y,
+        })
     }
 
     async function handleInsertTemplate(
@@ -291,6 +309,7 @@ export function WhiteboardPage() {
                 <CollaboratorsButton
                     participants={presence}
                     currentUserId={currentUserId}
+                    onParticipantSelect={handleParticipantSelect}
                 />
                 <Tooltip delay={0}>
                     <Tooltip.Trigger className="inline-flex">
@@ -351,6 +370,7 @@ export function WhiteboardPage() {
                     <WhiteboardCanvas
                         key={projectId}
                         elements={excalidrawElements}
+                        focusTarget={focusTarget}
                         presence={remotePresence}
                         viewportStorageKey={
                             projectId

@@ -15,6 +15,7 @@ export type WhiteboardFocusTarget = {
 
 export interface WhiteboardCanvasProps {
     elements: readonly OrderedExcalidrawElement[]
+    focusTarget?: WhiteboardFocusTarget | null
     presence?: readonly WhiteboardCursorPresence[]
     viewportStorageKey?: string
     viewModeEnabled?: boolean
