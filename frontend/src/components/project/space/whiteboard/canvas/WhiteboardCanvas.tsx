@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import {
     CaptureUpdateAction,
     Excalidraw,
+    MainMenu,
     THEME,
     reconcileElements,
 } from '@excalidraw/excalidraw'
@@ -166,7 +167,18 @@ export function WhiteboardCanvas({
                             [],
                     )
                 }}
-            />
+            >
+                <MainMenu>
+                    <MainMenu.DefaultItems.LoadScene />
+                    <MainMenu.DefaultItems.Export />
+                    <MainMenu.DefaultItems.SaveAsImage />
+                    <MainMenu.DefaultItems.SearchMenu />
+                    <MainMenu.DefaultItems.Help />
+                    <MainMenu.DefaultItems.ClearCanvas />
+                    <MainMenu.Separator />
+                    <MainMenu.DefaultItems.ChangeCanvasBackground />
+                </MainMenu>
+            </Excalidraw>
             <div className="pointer-events-none absolute inset-0 z-10">
                 {presence.map((item) => {
                     if (item.cursor.x === null || item.cursor.y === null) {
