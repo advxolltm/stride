@@ -52,6 +52,7 @@
       "title": "Teilnehmende",
       "ariaLabel_one": "{{count}} Person in diesem Board",
       "ariaLabel_other": "{{count}} Personen in diesem Board",
+      "focusParticipant": "Zu {{name}} im Board springen",
       "you": "Du"
     },
     "panel": {

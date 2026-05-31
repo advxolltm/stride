@@ -111,6 +111,14 @@ export function CollaboratorsButton({
                             <button
                                 key={participant.user.id}
                                 type="button"
+                                aria-label={t(
+                                    'whiteboardPage.participants.focusParticipant',
+                                    { name: participant.user.name },
+                                )}
+                                title={t(
+                                    'whiteboardPage.participants.focusParticipant',
+                                    { name: participant.user.name },
+                                )}
                                 className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-[var(--surface-secondary)]"
                                 onClick={() => handleParticipantSelect(participant)}
                             >
