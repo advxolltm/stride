@@ -1,0 +1,815 @@
+#!/bin/sh
+set -eu
+
+APP_NAME="STRIDE"
+ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+ENV_FILE="$ROOT_DIR/.env"
+ENV_EXAMPLE="$ROOT_DIR/.env.example"
+PROD_COMPOSE="$ROOT_DIR/compose.prod.yml"
+DEV_COMPOSE="$ROOT_DIR/compose.dev.yml"
+CERT_DIR="$ROOT_DIR/nginx/production/certs"
+TMP_DIR="$ROOT_DIR/tmp"
+
+cd "$ROOT_DIR"
+
+usage() {
+    cat <<'EOF'
+STRIDE CLI
+
+Usage:
+  ./cli start              Interactive production setup and start
+  ./cli devrun             Start the development Docker Compose stack
+  ./cli down [prod|dev]    Stop a stack, defaults to prod
+  ./cli restart [prod|dev] Restart containers, defaults to prod
+  ./cli certificate        Configure production TLS certificates
+  ./cli test               Run frontend and backend test cycle
+  ./cli help               Show this help
+
+Production start configures .env, optional TLS, starts compose.prod.yml,
+and creates the first superuser only for open-network deployments.
+EOF
+}
+
+log() {
+    printf '%s\n' "==> $*"
+}
+
+warn() {
+    printf '%s\n' "Warning: $*" >&2
+}
+
+die() {
+    printf '%s\n' "Error: $*" >&2
+    exit 1
+}
+
+need_command() {
+    command -v "$1" >/dev/null 2>&1 || die "Required command not found: $1"
+}
+
+run_as_root() {
+    if [ "$(id -u)" -eq 0 ]; then
+        "$@"
+    else
+        need_command sudo
+        sudo "$@"
+    fi
+}
+
+shell_quote() {
+    printf "'"
+    printf '%s' "$1" | sed "s/'/'\"'\"'/g"
+    printf "'"
+}
+
+docker_compose() {
+    compose_file=$1
+    shift
+    need_command docker
+    docker compose version >/dev/null 2>&1 || die "Docker Compose v2 is required."
+    docker compose -f "$compose_file" "$@"
+}
+
+compose_file_for_target() {
+    target=${1:-prod}
+    case "$target" in
+        prod|--prod|production)
+            printf '%s\n' "$PROD_COMPOSE"
+            ;;
+        dev|--dev|development)
+            printf '%s\n' "$DEV_COMPOSE"
+            ;;
+        *)
+            die "Unknown stack '$target'. Use prod or dev."
+            ;;
+    esac
+}
+
+ensure_env_file() {
+    if [ ! -f "$ENV_FILE" ]; then
+        [ -f "$ENV_EXAMPLE" ] || die "Missing $ENV_EXAMPLE"
+        cp "$ENV_EXAMPLE" "$ENV_FILE"
+        chmod 600 "$ENV_FILE" 2>/dev/null || true
+        log "Created .env from .env.example."
+    fi
+}
+
+get_env_var() {
+    key=$1
+    [ -f "$ENV_FILE" ] || return 0
+    awk -F= -v key="$key" '$1 == key { sub(/^[^=]*=/, ""); print; exit }' "$ENV_FILE"
+}
+
+set_env_var() {
+    key=$1
+    value=$2
+    tmp_file="$ENV_FILE.tmp.$$"
+    awk -v key="$key" -v value="$value" '
+        BEGIN { found = 0 }
+        $0 ~ "^[[:space:]]*#?[[:space:]]*" key "=" {
+            print key "=" value
+            found = 1
+            next
+        }
+        { print }
+        END {
+            if (!found) {
+                print key "=" value
+            }
+        }
+    ' "$ENV_FILE" > "$tmp_file"
+    mv "$tmp_file" "$ENV_FILE"
+    chmod 600 "$ENV_FILE" 2>/dev/null || true
+}
+
+random_hex() {
+    if command -v openssl >/dev/null 2>&1; then
+        openssl rand -hex 32
+    else
+        LC_ALL=C tr -dc 'A-Fa-f0-9' < /dev/urandom | head -c 64
+        printf '\n'
+    fi
+}
+
+ensure_env_default() {
+    key=$1
+    default_value=$2
+    current_value=$(get_env_var "$key")
+    if [ -z "$current_value" ]; then
+        set_env_var "$key" "$default_value"
+    fi
+}
+
+ensure_secret_env() {
+    key=$1
+    current_value=$(get_env_var "$key")
+    case "$current_value" in
+        ""|insecure-*)
+            set_env_var "$key" "$(random_hex)"
+            log "Generated $key in .env."
+            ;;
+    esac
+}
+
+ensure_base_env() {
+    ensure_env_file
+    ensure_env_default POSTGRES_DB stride_db
+    ensure_env_default POSTGRES_USER stride_root
+    ensure_env_default API_BASE_PATH /api/v1
+    ensure_env_default APPLICATION_MODE closed_network
+    ensure_env_default PASSWORD_MIN_LENGTH 8
+    ensure_env_default PASSWORD_REQUIRE_SPECIAL_CHAR true
+    ensure_env_default PASSWORD_REQUIRE_NUM true
+    ensure_env_default USERNAME_MIN_LENGTH 3
+    ensure_env_default USERNAME_MAX_LENGTH 255
+    ensure_env_default SESSION_EXPIRY_HOURS 24
+    ensure_env_default SITE_DOMAIN ""
+    ensure_secret_env POSTGRES_PASSWORD
+    ensure_secret_env SESSION_SECRET
+}
+
+prompt_required() {
+    prompt_label=$1
+    while :; do
+        printf '%s: ' "$prompt_label" >&2
+        IFS= read -r prompt_value || exit 1
+        if [ -n "$prompt_value" ]; then
+            printf '%s\n' "$prompt_value"
+            return 0
+        fi
+        warn "Value is required."
+    done
+}
+
+prompt_with_default() {
+    prompt_label=$1
+    default_value=$2
+    if [ -n "$default_value" ]; then
+        printf '%s [%s]: ' "$prompt_label" "$default_value" >&2
+    else
+        printf '%s: ' "$prompt_label" >&2
+    fi
+    IFS= read -r prompt_value || exit 1
+    if [ -z "$prompt_value" ]; then
+        printf '%s\n' "$default_value"
+    else
+        printf '%s\n' "$prompt_value"
+    fi
+}
+
+env_int() {
+    key=$1
+    default_value=$2
+    value=$(get_env_var "$key")
+    case "$value" in
+        ""|*[!0-9]*)
+            printf '%s\n' "$default_value"
+            ;;
+        *)
+            printf '%s\n' "$value"
+            ;;
+    esac
+}
+
+env_bool() {
+    key=$1
+    value=$(get_env_var "$key")
+    case "$value" in
+        true|TRUE|True|1|yes|YES|Yes|on|ON|On)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+validate_username_value() {
+    username=$1
+    min_length=$(env_int USERNAME_MIN_LENGTH 3)
+    max_length=$(env_int USERNAME_MAX_LENGTH 255)
+    username_length=${#username}
+
+    if [ "$username_length" -lt "$min_length" ] || [ "$username_length" -gt "$max_length" ]; then
+        printf 'Username must be between %s and %s characters.' "$min_length" "$max_length"
+        return 1
+    fi
+
+    return 0
+}
+
+prompt_username() {
+    while :; do
+        username=$(prompt_required "Superuser username")
+        if username_error=$(validate_username_value "$username"); then
+            printf '%s\n' "$username"
+            return 0
+        fi
+        warn "$username_error"
+    done
+}
+
+read_secret() {
+    secret_prompt=$1
+    if [ -t 0 ]; then
+        printf '%s: ' "$secret_prompt" >&2
+        stty -echo
+        IFS= read -r secret_value || {
+            stty echo
+            exit 1
+        }
+        stty echo
+        printf '\n' >&2
+    else
+        IFS= read -r secret_value || exit 1
+    fi
+    printf '%s' "$secret_value"
+}
+
+validate_password_value() {
+    password=$1
+    min_length=$(env_int PASSWORD_MIN_LENGTH 8)
+    password_length=${#password}
+
+    if [ "$password_length" -lt "$min_length" ]; then
+        printf 'Password must be at least %s characters.' "$min_length"
+        return 1
+    fi
+
+    if env_bool PASSWORD_REQUIRE_SPECIAL_CHAR; then
+        case "$password" in
+            *'!'*|*'@'*|*'#'*|*'$'*|*'%'*|*'^'*|*'&'*|*'*'*)
+                ;;
+            *)
+                printf 'Password must contain at least one special character: !@#$%%^&*'
+                return 1
+                ;;
+        esac
+    fi
+
+    if env_bool PASSWORD_REQUIRE_NUM; then
+        case "$password" in
+            *[0123456789]*)
+                ;;
+            *)
+                printf 'Password must contain at least one number.'
+                return 1
+                ;;
+        esac
+    fi
+
+    return 0
+}
+
+prompt_password_confirm() {
+    while :; do
+        password_one=$(read_secret "Superuser password")
+        password_two=$(read_secret "Confirm superuser password")
+        if [ -z "$password_one" ]; then
+            warn "Password is required."
+        elif [ "$password_one" != "$password_two" ]; then
+            warn "Passwords do not match."
+        elif password_error=$(validate_password_value "$password_one"); then
+            printf '%s\n' "$password_one"
+            return 0
+        else
+            warn "$password_error"
+        fi
+    done
+}
+
+read_yes_no() {
+    prompt_label=$1
+    default_answer=$2
+    while :; do
+        case "$default_answer" in
+            y|Y) suffix="[Y/n]" ;;
+            n|N) suffix="[y/N]" ;;
+            *) suffix="[y/n]" ;;
+        esac
+        printf '%s %s ' "$prompt_label" "$suffix" >&2
+        IFS= read -r answer || exit 1
+        if [ -z "$answer" ]; then
+            answer=$default_answer
+        fi
+        case "$answer" in
+            y|Y|yes|YES|Yes) return 0 ;;
+            n|N|no|NO|No) return 1 ;;
+        esac
+    done
+}
+
+select_network_mode() {
+    cat >&2 <<'EOF'
+Select deployment network mode:
+  1) open network   - public internet, account creation requires a superuser
+  2) closed network - VPN/corporate network, public registration stays enabled
+EOF
+    while :; do
+        printf 'Mode [1/2]: ' >&2
+        IFS= read -r mode_choice || exit 1
+        case "$mode_choice" in
+            1|open|open_network|closed_auth)
+                printf '%s\n' closed_auth
+                return 0
+                ;;
+            2|closed|closed_network|"")
+                printf '%s\n' closed_network
+                return 0
+                ;;
+            *)
+                warn "Choose 1 or 2."
+                ;;
+        esac
+    done
+}
+
+select_certificate_mode() {
+    cat >&2 <<'EOF'
+Certificate setup:
+  1) auto   - issue a Let's Encrypt certificate with host-level certbot
+  2) manual - copy existing fullchain and private key into nginx certs
+  3) no     - leave SITE_DOMAIN empty and let nginx listen on port 80
+EOF
+    while :; do
+        printf 'Certificate mode [1/2/3]: ' >&2
+        IFS= read -r cert_choice || exit 1
+        case "$cert_choice" in
+            1|auto)
+                printf '%s\n' auto
+                return 0
+                ;;
+            2|manual)
+                printf '%s\n' manual
+                return 0
+                ;;
+            3|no|none|"")
+                printf '%s\n' no
+                return 0
+                ;;
+            *)
+                warn "Choose 1, 2, or 3."
+                ;;
+        esac
+    done
+}
+
+clean_domain() {
+    printf '%s' "$1" |
+        sed -e 's#^[[:space:]]*##' \
+            -e 's#[[:space:]]*$##' \
+            -e 's#^https://##' \
+            -e 's#^http://##' \
+            -e 's#/.*$##' \
+            -e 's/:.*$//'
+}
+
+prompt_domain() {
+    while :; do
+        raw_domain=$(prompt_required "Domain")
+        domain=$(clean_domain "$raw_domain")
+        if [ -n "$domain" ]; then
+            printf '%s\n' "$domain"
+            return 0
+        fi
+        warn "Domain is required."
+    done
+}
+
+expand_path() {
+    case "$1" in
+        ~/*)
+            printf '%s/%s\n' "$HOME" "${1#~/}"
+            ;;
+        *)
+            printf '%s\n' "$1"
+            ;;
+    esac
+}
+
+compare_domain_ip() {
+    domain=$1
+    if ! command -v dig >/dev/null 2>&1; then
+        warn "dig is not installed; skipping DNS comparison."
+        return 0
+    fi
+    if ! command -v curl >/dev/null 2>&1; then
+        warn "curl is not installed; skipping public IP comparison."
+        return 0
+    fi
+
+    domain_ip=$(dig +short A "$domain" | awk 'NF { print; exit }')
+    public_ip=$(curl -fsS --max-time 10 https://api.ipify.org 2>/dev/null || true)
+
+    if [ -z "$domain_ip" ]; then
+        warn "No A record found for $domain."
+        read_yes_no "Continue certificate issuance anyway?" n || die "Certificate setup cancelled."
+        return 0
+    fi
+
+    if [ -z "$public_ip" ]; then
+        warn "Could not detect this host's public IPv4 address."
+        read_yes_no "Continue certificate issuance anyway?" y || die "Certificate setup cancelled."
+        return 0
+    fi
+
+    if [ "$domain_ip" != "$public_ip" ]; then
+        warn "$domain resolves to $domain_ip, but this host appears to be $public_ip."
+        read_yes_no "Continue certificate issuance anyway?" n || die "Certificate setup cancelled."
+    else
+        log "$domain resolves to this host ($public_ip)."
+    fi
+}
+
+install_certificate_files() {
+    fullchain_path=$1
+    privkey_path=$2
+
+    [ -f "$fullchain_path" ] || die "Certificate fullchain not found: $fullchain_path"
+    [ -f "$privkey_path" ] || die "Private key not found: $privkey_path"
+
+    mkdir -p "$CERT_DIR"
+    run_as_root install -m 0644 "$fullchain_path" "$CERT_DIR/fullchain.pem"
+    run_as_root install -m 0600 "$privkey_path" "$CERT_DIR/privkey.pem"
+
+    if [ "$(id -u)" -ne 0 ]; then
+        run_as_root chown "$(id -u):$(id -g)" "$CERT_DIR/fullchain.pem" "$CERT_DIR/privkey.pem" || true
+    fi
+    chmod 0644 "$CERT_DIR/fullchain.pem" 2>/dev/null || true
+    chmod 0600 "$CERT_DIR/privkey.pem" 2>/dev/null || true
+}
+
+write_renewal_hook() {
+    domain=$1
+    docker_bin=$(command -v docker 2>/dev/null || printf '%s' docker)
+    hook_path="$CERT_DIR/renew-hook.sh"
+    domain_q=$(shell_quote "$domain")
+    cert_dir_q=$(shell_quote "$CERT_DIR")
+    root_dir_q=$(shell_quote "$ROOT_DIR")
+    docker_bin_q=$(shell_quote "$docker_bin")
+    uid_value=$(id -u)
+    gid_value=$(id -g)
+
+    mkdir -p "$CERT_DIR"
+    cat > "$hook_path" <<EOF
+#!/bin/sh
+set -eu
+
+DOMAIN=$domain_q
+CERT_DIR=$cert_dir_q
+ROOT_DIR=$root_dir_q
+DOCKER_BIN=$docker_bin_q
+
+install -m 0644 "/etc/letsencrypt/live/\$DOMAIN/fullchain.pem" "\$CERT_DIR/fullchain.pem"
+install -m 0600 "/etc/letsencrypt/live/\$DOMAIN/privkey.pem" "\$CERT_DIR/privkey.pem"
+chown $uid_value:$gid_value "\$CERT_DIR/fullchain.pem" "\$CERT_DIR/privkey.pem" 2>/dev/null || true
+"\$DOCKER_BIN" compose -f "\$ROOT_DIR/compose.prod.yml" up -d web >/dev/null 2>&1 || true
+EOF
+    chmod +x "$hook_path"
+    printf '%s\n' "$hook_path"
+}
+
+install_renewal_cron() {
+    hook_path=$1
+    certbot_bin=$(command -v certbot 2>/dev/null || true)
+    [ -n "$certbot_bin" ] || die "certbot is required to install renewal cron."
+
+    marker="STRIDE cert renewal $ROOT_DIR"
+    cron_line="17 3 * * * $(shell_quote "$certbot_bin") renew --quiet --deploy-hook $(shell_quote "$hook_path") # $marker"
+    tmp_file=$(mktemp)
+    new_file=$(mktemp)
+
+    if [ "$(id -u)" -eq 0 ]; then
+        crontab -l > "$tmp_file" 2>/dev/null || true
+    else
+        run_as_root crontab -l > "$tmp_file" 2>/dev/null || true
+    fi
+
+    grep -vF "$marker" "$tmp_file" > "$new_file" || true
+    printf '%s\n' "$cron_line" >> "$new_file"
+
+    if [ "$(id -u)" -eq 0 ]; then
+        crontab "$new_file"
+    else
+        run_as_root crontab "$new_file"
+    fi
+
+    rm -f "$tmp_file" "$new_file"
+    log "Installed daily certbot renewal cron."
+}
+
+stop_web_for_certbot() {
+    CERTBOT_STOPPED_WEB=0
+    web_container=$(docker_compose "$PROD_COMPOSE" ps -q web 2>/dev/null || true)
+    if [ -n "$web_container" ]; then
+        log "Stopping production nginx container so certbot can use port 80."
+        docker_compose "$PROD_COMPOSE" stop web >/dev/null
+        CERTBOT_STOPPED_WEB=1
+    fi
+}
+
+restart_web_after_certbot() {
+    if [ "${CERTBOT_STOPPED_WEB:-0}" = 1 ]; then
+        log "Starting production nginx container again."
+        docker_compose "$PROD_COMPOSE" up -d web >/dev/null
+    fi
+}
+
+issue_auto_certificate() {
+    default_email=$1
+    certbot_bin=$(command -v certbot 2>/dev/null || true)
+    [ -n "$certbot_bin" ] || die "certbot is required for automatic certificates. Install certbot on the host first."
+
+    domain=$(prompt_domain)
+    contact_email=$(prompt_with_default "Let's Encrypt contact email" "$default_email")
+    [ -n "$contact_email" ] || die "A contact email is required for Let's Encrypt."
+
+    compare_domain_ip "$domain"
+    stop_web_for_certbot
+
+    if run_as_root "$certbot_bin" certonly --standalone --non-interactive --agree-tos --email "$contact_email" --preferred-challenges http -d "$domain"; then
+        restart_web_after_certbot
+    else
+        certbot_status=$?
+        restart_web_after_certbot
+        exit "$certbot_status"
+    fi
+
+    install_certificate_files "/etc/letsencrypt/live/$domain/fullchain.pem" "/etc/letsencrypt/live/$domain/privkey.pem"
+    hook_path=$(write_renewal_hook "$domain")
+    install_renewal_cron "$hook_path"
+    set_env_var SITE_DOMAIN "$domain"
+    log "Certificate installed for $domain."
+}
+
+install_manual_certificate() {
+    domain=$(prompt_domain)
+    fullchain_raw=$(prompt_required "Path to certificate fullchain.pem")
+    privkey_raw=$(prompt_required "Path to private key privkey.pem")
+    fullchain_path=$(expand_path "$fullchain_raw")
+    privkey_path=$(expand_path "$privkey_raw")
+
+    install_certificate_files "$fullchain_path" "$privkey_path"
+    set_env_var SITE_DOMAIN "$domain"
+    log "Manual certificate installed for $domain."
+}
+
+setup_certificate_interactive() {
+    default_email=${1:-}
+    ensure_base_env
+    cert_mode=$(select_certificate_mode)
+    case "$cert_mode" in
+        auto)
+            issue_auto_certificate "$default_email"
+            ;;
+        manual)
+            install_manual_certificate
+            ;;
+        no)
+            set_env_var SITE_DOMAIN ""
+            log "SITE_DOMAIN cleared; nginx will listen without TLS certificate statements."
+            ;;
+    esac
+}
+
+normalize_api_base_path() {
+    api_base=$(get_env_var API_BASE_PATH)
+    [ -n "$api_base" ] || api_base=/api/v1
+    case "$api_base" in
+        /*) ;;
+        *) api_base="/$api_base" ;;
+    esac
+    api_base=${api_base%/}
+    [ -n "$api_base" ] || api_base=/api/v1
+    printf '%s\n' "$api_base"
+}
+
+wait_for_backend() {
+    api_base=$(normalize_api_base_path)
+    attempts=60
+    count=1
+    while [ "$count" -le "$attempts" ]; do
+        if docker_compose "$PROD_COMPOSE" exec -T backserver wget -q -T 2 -O /dev/null "http://localhost:8000$api_base/health" >/dev/null 2>&1; then
+            return 0
+        fi
+        sleep 2
+        count=$((count + 1))
+    done
+    die "Backend did not become healthy in time."
+}
+
+create_superuser() {
+    username=$1
+    email=$2
+    password=$3
+
+    log "Creating superuser $email."
+    printf '%s\n' "$password" |
+        docker_compose "$PROD_COMPOSE" exec -T backserver /app/stride-create-user --superuser --password-stdin "$username" "$email"
+}
+
+should_create_initial_superuser() {
+    [ "$1" = closed_auth ]
+}
+
+cmd_start() {
+    ensure_base_env
+
+    application_mode=$(select_network_mode)
+    set_env_var APPLICATION_MODE "$application_mode"
+    log "Set APPLICATION_MODE=$application_mode."
+
+    superuser_username=
+    superuser_email=
+    superuser_password=
+    if should_create_initial_superuser "$application_mode"; then
+        superuser_username=$(prompt_username)
+        superuser_email=$(prompt_required "Superuser email")
+        superuser_password=$(prompt_password_confirm)
+    else
+        log "Closed network selected; first superuser creation skipped."
+    fi
+
+    setup_certificate_interactive "$superuser_email"
+
+    log "Starting production stack."
+    docker_compose "$PROD_COMPOSE" up -d --build
+    wait_for_backend
+    if should_create_initial_superuser "$application_mode"; then
+        create_superuser "$superuser_username" "$superuser_email" "$superuser_password"
+        superuser_password=
+    fi
+    docker_compose "$PROD_COMPOSE" ps
+
+    site_domain=$(get_env_var SITE_DOMAIN)
+    if [ -n "$site_domain" ]; then
+        log "Production is configured for https://$site_domain"
+    else
+        log "Production is available through nginx on port 80."
+    fi
+}
+
+cmd_devrun() {
+    ensure_base_env
+    log "Starting development stack."
+    docker_compose "$DEV_COMPOSE" up -d --build
+    docker_compose "$DEV_COMPOSE" ps
+    log "Development nginx is available at http://localhost:8080"
+}
+
+cmd_down() {
+    compose_file=$(compose_file_for_target "${1:-prod}")
+    log "Stopping stack using $compose_file."
+    docker_compose "$compose_file" down
+}
+
+cmd_restart() {
+    compose_file=$(compose_file_for_target "${1:-prod}")
+    log "Restarting stack using $compose_file."
+    docker_compose "$compose_file" restart
+    docker_compose "$compose_file" ps
+}
+
+wait_for_http() {
+    url=$1
+    attempts=$2
+    count=1
+    while [ "$count" -le "$attempts" ]; do
+        if curl -fsS "$url" >/dev/null 2>&1; then
+            return 0
+        fi
+        sleep 2
+        count=$((count + 1))
+    done
+    return 1
+}
+
+run_frontend_cycle() {
+    need_command npm
+    need_command curl
+    mkdir -p "$TMP_DIR"
+
+    (
+        cd "$ROOT_DIR/frontend"
+        if [ ! -d node_modules ]; then
+            log "Installing frontend dependencies."
+            npm ci
+        fi
+
+        dev_log="$TMP_DIR/frontend-dev.log"
+        log "Starting frontend dev server for a readiness check."
+        npm run dev -- --host 127.0.0.1 --port 3000 > "$dev_log" 2>&1 &
+        dev_pid=$!
+
+        cleanup_dev_server() {
+            kill "$dev_pid" >/dev/null 2>&1 || true
+            wait "$dev_pid" >/dev/null 2>&1 || true
+        }
+        trap cleanup_dev_server EXIT INT TERM
+
+        if ! wait_for_http http://127.0.0.1:3000/ 45; then
+            tail -n 80 "$dev_log" >&2 || true
+            die "Frontend dev server did not become reachable."
+        fi
+
+        cleanup_dev_server
+        trap - EXIT INT TERM
+
+        npm run lint
+        npm run build
+    )
+}
+
+run_backend_cycle() {
+    need_command go
+    need_command govulncheck
+
+    (
+        cd "$ROOT_DIR/backend"
+        govulncheck -show verbose ./...
+        if [ ! -x ./bin/golangci-lint ]; then
+            die "backend/bin/golangci-lint is missing or not executable. Install it with the command from backend/README.md."
+        fi
+        ./bin/golangci-lint run
+        go test -count=1 -p 1 ./...
+    )
+}
+
+cmd_test() {
+    run_frontend_cycle
+    run_backend_cycle
+    log "Test cycle completed."
+}
+
+command_name=${1:-help}
+if [ "$#" -gt 0 ]; then
+    shift
+fi
+
+case "$command_name" in
+    start)
+        cmd_start "$@"
+        ;;
+    devrun)
+        cmd_devrun "$@"
+        ;;
+    down)
+        cmd_down "$@"
+        ;;
+    restart)
+        cmd_restart "$@"
+        ;;
+    certificate|cert)
+        setup_certificate_interactive ""
+        ;;
+    test)
+        cmd_test "$@"
+        ;;
+    help|-h|--help)
+        usage
+        ;;
+    *)
+        usage >&2
+        die "Unknown command: $command_name"
+        ;;
+esac

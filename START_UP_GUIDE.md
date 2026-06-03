@@ -1,5 +1,30 @@
 # STRIDE Start up
 
+## CLI
+
+The root `stride` script wraps common setup and operation tasks:
+
+Usage:
+./stride start Interactive production setup and start
+./stride devrun Start the development Docker Compose stack
+./stride down [prod|dev] Stop a stack, defaults to prod
+./stride restart [prod|dev] Restart containers, defaults to prod
+./stride certificate Configure production TLS certificates
+./stride test Run frontend and backend test cycle
+
+`./stride start` performs interactive production setup. It creates or updates
+`.env`, asks for deployment mode, configures certificates, starts
+`compose.prod.yml`, and creates the first superuser only for public internet
+deployments. Public internet deployment sets `APPLICATION_MODE=closed_auth`;
+VPN/corporate deployment sets `APPLICATION_MODE=closed_network`.
+
+`./stride certificate` repeats only the certificate step. Automatic certificates use
+host-level `certbot`, copy the issued certificate into
+`./nginx/production/certs`, set `SITE_DOMAIN`, and install a renewal cron entry.
+Manual certificates ask for the domain, fullchain path, and private key path.
+Choosing no certificate clears `SITE_DOMAIN` so nginx listens without TLS
+certificate statements.
+
 ## Start
 
 ```bash
@@ -9,8 +34,8 @@ docker compose -f compose.dev.yml ps
 
 Open:
 
-- Frontend via nginx: http://localhost
-- API health from host: `curl -s http://localhost/api/v1/health`
+- Frontend via nginx: http://localhost:8080
+- API health from host: `curl -s http://localhost:8080/api/v1/health`
 
 ## Enter Containers
 
