@@ -1,5 +1,7 @@
 export {
     passwordMinLength,
+    passwordRequireNumber,
+    passwordRequireSpecialChar,
     passwordSpecialChars,
     validateStrongPassword,
 } from './passwordValidation'

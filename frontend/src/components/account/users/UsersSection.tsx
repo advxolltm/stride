@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next'
 
 import PasswordInput from '../../auth/PasswordInput'
 import { ConfirmDialog } from '../../../shared/components'
+import { validationPolicy } from '../../../config/validationPolicy'
 import type { User } from '../../../shared/types'
 import { getApiErrorMessage } from '../../../shared/utils/api/errors'
 import {
@@ -78,6 +79,22 @@ export function UsersSection() {
         return true
     }
 
+    const validateUsername = (username: string) => {
+        if (
+            username.length < validationPolicy.usernameMinLength ||
+            username.length > validationPolicy.usernameMaxLength
+        ) {
+            toast.danger(
+                t('users.usernameLength', {
+                    min: validationPolicy.usernameMinLength,
+                    max: validationPolicy.usernameMaxLength,
+                }),
+            )
+            return false
+        }
+        return true
+    }
+
     const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault()
 
@@ -85,6 +102,7 @@ export function UsersSection() {
         const email = createForm.email.trim()
         const password = createForm.password
 
+        if (!validateUsername(username)) return
         if (!validatePassword(password)) return
 
         try {
@@ -226,11 +244,8 @@ export function UsersSection() {
                         <Modal.Header>
                             <Modal.Heading>{t('users.addUser')}</Modal.Heading>
                         </Modal.Header>
-                        <Form
-                            className="flex flex-col"
-                            onSubmit={handleCreate}
-                        >
-                            <Modal.Body className="flex w-full flex-col gap-4">
+                        <Form className="flex flex-col" onSubmit={handleCreate}>
+                            <Modal.Body className="flex w-full flex-col gap-4 px-6">
                                 <TextField
                                     className="w-full"
                                     name="username"
@@ -245,6 +260,12 @@ export function UsersSection() {
                                 >
                                     <Label>{t('users.username')}</Label>
                                     <Input
+                                        minLength={
+                                            validationPolicy.usernameMinLength
+                                        }
+                                        maxLength={
+                                            validationPolicy.usernameMaxLength
+                                        }
                                         className="p-3"
                                         variant="secondary"
                                         autoComplete="username"
