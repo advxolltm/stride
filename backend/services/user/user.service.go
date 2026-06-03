@@ -106,6 +106,11 @@ func (s userService) validatePassword(password string) error {
 			return ErrPasswordMissingSpecial
 		}
 	}
+	if s.cfg.PasswordRequireNumber {
+		if !strings.ContainsAny(password, "0123456789") {
+			return ErrPasswordMissingNumber
+		}
+	}
 	return nil
 }
 

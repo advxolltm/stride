@@ -150,6 +150,13 @@ func TestUserService_CreateUser(t *testing.T) {
 		assert.ErrorIs(t, err, ErrPasswordMissingSpecial)
 	})
 
+	runServiceTest(t, "returns ErrPasswordMissingNumber and does not call store for password without number", func(t *testing.T, service userService, _ *stubUserStore) {
+		created, err := service.CreateUser(context.Background(), "valid-user", "valid@test.com", "Valid!Pass")
+
+		assert.Nil(t, created)
+		assert.ErrorIs(t, err, ErrPasswordMissingNumber)
+	})
+
 	runServiceTest(t, "hashes password before persisting user", func(t *testing.T, service userService, store *stubUserStore) {
 		ctx := context.Background()
 		createdID := uuid.New()

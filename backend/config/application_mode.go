@@ -6,6 +6,7 @@ type ApplicationMode string
 
 const (
 	ApplicationModeClosedNetwork ApplicationMode = "closed_network"
+	ApplicationModeClosedAuth    ApplicationMode = "closed_auth"
 	ApplicationModeOpenNetwork   ApplicationMode = "open_network"
 )
 
@@ -15,13 +16,13 @@ func ApplicationModeFromEnv() ApplicationMode {
 	)))
 
 	switch mode {
-	case ApplicationModeOpenNetwork:
-		return ApplicationModeOpenNetwork
+	case ApplicationModeClosedAuth, ApplicationModeOpenNetwork:
+		return ApplicationModeClosedAuth
 	default:
 		return ApplicationModeClosedNetwork
 	}
 }
 
 func (m ApplicationMode) IsOpenNetwork() bool {
-	return m == ApplicationModeOpenNetwork
+	return m == ApplicationModeClosedAuth || m == ApplicationModeOpenNetwork
 }

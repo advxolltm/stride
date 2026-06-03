@@ -90,6 +90,7 @@ func (h userRouteHandler) mapServiceError(err error) (int, string) {
 		errors.Is(err, userService.ErrInvalidUsername),
 		errors.Is(err, userService.ErrPasswordTooShort),
 		errors.Is(err, userService.ErrPasswordMissingSpecial),
+		errors.Is(err, userService.ErrPasswordMissingNumber),
 		errors.Is(err, userService.ErrPasswordUnchanged),
 		errors.Is(err, userService.ErrAvatarTooLarge),
 		errors.Is(err, userService.ErrAvatarInvalidType),

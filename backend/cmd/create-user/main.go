@@ -7,8 +7,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
+	"strings"
 )
 
 // Create a user from CLI.
@@ -17,6 +19,7 @@ import (
 //
 //	docker compose -f compose.dev.yml exec backserver go run ./cmd/create-user john john@example.com 'Password123!'
 //	docker compose -f compose.dev.yml exec backserver go run ./cmd/create-user --superuser admin admin@example.com 'Password123!'
+//	printf '%s\n' 'Password123!' | docker compose -f compose.dev.yml exec -T backserver go run ./cmd/create-user --superuser --password-stdin admin admin@example.com
 //
 // Example from host:
 //
@@ -24,20 +27,30 @@ import (
 //	go run ./cmd/create-user john john@example.com 'Password123!'
 func main() {
 	superuser := flag.Bool("superuser", false, "create the user with superuser permissions")
+	passwordStdin := flag.Bool("password-stdin", false, "read the password from stdin instead of an argument")
 	flag.Usage = func() {
-		_, _ = fmt.Fprintf(os.Stderr, "usage: go run ./cmd/create-user [--superuser] <username> <email> <password>\n")
+		_, _ = fmt.Fprintf(os.Stderr, "usage: go run ./cmd/create-user [--superuser] [--password-stdin] <username> <email> [password]\n")
 	}
 	flag.Parse()
 
 	args := flag.Args()
-	if len(args) != 3 {
+	if (!*passwordStdin && len(args) != 3) || (*passwordStdin && len(args) != 2) {
 		flag.Usage()
 		os.Exit(2)
 	}
 
 	username := args[0]
 	email := args[1]
-	password := args[2]
+	password := ""
+	if *passwordStdin {
+		passwordBytes, err := io.ReadAll(os.Stdin)
+		if err != nil {
+			log.Fatal(err)
+		}
+		password = strings.TrimRight(string(passwordBytes), "\r\n")
+	} else {
+		password = args[2]
+	}
 
 	dbConn, err := mainDB.InitGORMDB(mainDB.PostgresDSNFromEnv())
 	if err != nil {
