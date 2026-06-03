@@ -31,6 +31,7 @@
     "passwordMismatch": "New passwords do not match.",
     "passwordTooShort": "Password must be at least {{count}} characters.",
     "passwordMissingSpecial": "Password must contain at least one special character.",
+    "passwordMissingNumber": "Password must contain at least one number.",
     "updateSuccess": "Password updated successfully",
     "updateError": "Failed to update password. Please try again."
   },
@@ -57,6 +58,7 @@
     "password": "Password",
     "newPassword": "New password",
     "confirmPassword": "Confirm password",
+    "usernameLength": "Username must be between {{min}} and {{max}} characters.",
     "create": "Create user",
     "cancel": "Cancel",
     "resetPassword": "Reset password",
@@ -69,6 +71,7 @@
     "passwordMismatch": "Passwords do not match.",
     "passwordTooShort": "Password must be at least {{count}} characters.",
     "passwordMissingSpecial": "Password must contain at least one special character.",
+    "passwordMissingNumber": "Password must contain at least one number.",
     "createSuccess": "User created successfully",
     "createError": "Failed to create user. Please try again.",
     "resetSuccess": "Password reset successfully",

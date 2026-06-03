@@ -31,6 +31,7 @@
     "passwordMismatch": "Die neuen Passwörter stimmen nicht überein.",
     "passwordTooShort": "Das Passwort muss mindestens {{count}} Zeichen lang sein.",
     "passwordMissingSpecial": "Das Passwort muss mindestens ein Sonderzeichen enthalten.",
+    "passwordMissingNumber": "Das Passwort muss mindestens eine Zahl enthalten.",
     "updateSuccess": "Passwort erfolgreich aktualisiert",
     "updateError": "Passwort konnte nicht aktualisiert werden. Bitte versuchen Sie es erneut."
   },
@@ -57,6 +58,7 @@
     "password": "Passwort",
     "newPassword": "Neues Passwort",
     "confirmPassword": "Passwort bestätigen",
+    "usernameLength": "Der Benutzername muss zwischen {{min}} und {{max}} Zeichen lang sein.",
     "create": "Benutzer erstellen",
     "cancel": "Abbrechen",
     "resetPassword": "Passwort zurücksetzen",
@@ -69,6 +71,7 @@
     "passwordMismatch": "Die Passwörter stimmen nicht überein.",
     "passwordTooShort": "Das Passwort muss mindestens {{count}} Zeichen lang sein.",
     "passwordMissingSpecial": "Das Passwort muss mindestens ein Sonderzeichen enthalten.",
+    "passwordMissingNumber": "Das Passwort muss mindestens eine Zahl enthalten.",
     "createSuccess": "Benutzer erfolgreich erstellt",
     "createError": "Benutzer konnte nicht erstellt werden. Bitte versuchen Sie es erneut.",
     "resetSuccess": "Passwort erfolgreich zurückgesetzt",

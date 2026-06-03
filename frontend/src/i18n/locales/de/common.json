@@ -31,6 +31,14 @@
     "show": "Passwort anzeigen",
     "hide": "Passwort ausblenden"
   },
+  "passwordValidation": {
+    "passwordTooShort": "Das Passwort muss mindestens {{count}} Zeichen lang sein.",
+    "passwordMissingSpecial": "Das Passwort muss mindestens ein Sonderzeichen enthalten.",
+    "passwordMissingNumber": "Das Passwort muss mindestens eine Zahl enthalten."
+  },
+  "usernameValidation": {
+    "length": "Der Benutzername muss zwischen {{min}} und {{max}} Zeichen lang sein."
+  },
   "notification": {
     "ariaLabel": "Benachrichtigungen",
     "title": "Benachrichtigungen",
