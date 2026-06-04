@@ -9,6 +9,9 @@ PROD_COMPOSE="$ROOT_DIR/compose.prod.yml"
 DEV_COMPOSE="$ROOT_DIR/compose.dev.yml"
 CERT_DIR="$ROOT_DIR/nginx/production/certs"
 TMP_DIR="$ROOT_DIR/tmp"
+DEV_SUPERUSER_USERNAME="admin"
+DEV_SUPERUSER_EMAIL="admin@example.com"
+DEV_SUPERUSER_PASSWORD="Password123!"
 
 cd "$ROOT_DIR"
 
@@ -653,19 +656,48 @@ should_create_initial_superuser() {
     [ "$1" = closed_auth ]
 }
 
-print_dev_users() {
+dev_db_user() {
     db_user=$(get_env_var POSTGRES_USER)
-    db_name=$(get_env_var POSTGRES_DB)
     [ -n "$db_user" ] || db_user=stride
-    [ -n "$db_name" ] || db_name=stride
+    printf '%s\n' "$db_user"
+}
 
-    log "Sample development users:"
+dev_db_name() {
+    db_name=$(get_env_var POSTGRES_DB)
+    [ -n "$db_name" ] || db_name=stride
+    printf '%s\n' "$db_name"
+}
+
+dev_psql() {
     docker_compose "$DEV_COMPOSE" exec -T db psql \
         -v ON_ERROR_STOP=1 \
         -P pager=off \
-        -U "$db_user" \
-        -d "$db_name" \
-        -c "SELECT username, email, COALESCE(full_name, '') AS full_name FROM users ORDER BY username LIMIT 5;"
+        -U "$(dev_db_user)" \
+        -d "$(dev_db_name)" \
+        "$@"
+}
+
+print_dev_users() {
+    log "Sample development users:"
+    dev_psql -c "SELECT username, email, COALESCE(full_name, '') AS full_name FROM users ORDER BY username LIMIT 5;"
+}
+
+create_dev_superuser_if_needed() {
+    application_mode=$(get_env_var APPLICATION_MODE)
+    [ "$application_mode" = open_network ] || return 0
+
+    log "Creating development superuser $DEV_SUPERUSER_EMAIL."
+    if printf '%s\n' "$DEV_SUPERUSER_PASSWORD" |
+        docker_compose "$DEV_COMPOSE" exec -T backserver go run ./cmd/create-user --superuser --password-stdin "$DEV_SUPERUSER_USERNAME" "$DEV_SUPERUSER_EMAIL"; then
+        :
+    else
+        warn "Development superuser creation failed; it may already exist."
+    fi
+
+    log "Development superuser credentials:"
+    printf '  username: %s\n' "$DEV_SUPERUSER_USERNAME"
+    printf '  email: %s\n' "$DEV_SUPERUSER_EMAIL"
+    printf '  password: %s\n' "$DEV_SUPERUSER_PASSWORD"
 }
 
 cmd_start() {
@@ -710,6 +742,7 @@ cmd_devrun() {
     log "Starting development stack."
     docker_compose "$DEV_COMPOSE" up -d --build
     wait_for_backend "$DEV_COMPOSE"
+    create_dev_superuser_if_needed
     docker_compose "$DEV_COMPOSE" ps
     print_dev_users
     log "Development nginx is available at http://localhost:8080"
