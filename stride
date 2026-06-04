@@ -806,6 +806,7 @@ run_frontend_cycle() {
         cleanup_dev_server
         trap - EXIT INT TERM
 
+        npm run test -- --run
         npm run lint
         npm run build
     )
@@ -829,6 +830,14 @@ run_backend_cycle() {
 cmd_test() {
     run_frontend_cycle
     run_backend_cycle
+    log "Successful checks:"
+    log "  Frontend dev server readiness"
+    log "  Frontend tests"
+    log "  Frontend lint"
+    log "  Frontend build"
+    log "  Backend vulnerability scan"
+    log "  Backend lint"
+    log "  Backend tests"
     log "Test cycle completed."
 }
 
