@@ -197,36 +197,7 @@ func (h whiteboardWSRouteHandler) forwardWhiteboardHubMessages(
 	expiry time.Time,
 	errCh chan<- error,
 ) {
-	for msg := range messages {
-		if isWSSessionExpired(expiry) {
-			errCh <- nil
-			return
-		}
-
-		if !isWhiteboardWSEventType(msg.Type) {
-			continue
-		}
-
-		if err := writeWSMessage(conn, writeMu, websocket.TextMessage, msg.Payload); err != nil {
-			errCh <- err
-			return
-		}
-	}
-	errCh <- nil
-}
-
-func isWhiteboardWSEventType(t routes.WSMessageType) bool {
-	switch t {
-	case routes.WhiteboardElementCreate,
-		routes.WhiteboardElementUpdate,
-		routes.WhiteboardElementDelete,
-		routes.WhiteboardElementLiveUpdate,
-		routes.WhiteboardElementLiveClear,
-		routes.WhiteboardElementRollback:
-		return true
-	default:
-		return false
-	}
+	forwardFilteredHubMessages(messages, conn, writeMu, expiry, isWhiteboardWSEventType, errCh)
 }
 
 func parseWhiteboardLiveClientMessage(
