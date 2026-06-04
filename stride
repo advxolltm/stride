@@ -625,11 +625,12 @@ normalize_api_base_path() {
 }
 
 wait_for_backend() {
+    compose_file=${1:-$PROD_COMPOSE}
     api_base=$(normalize_api_base_path)
     attempts=60
     count=1
     while [ "$count" -le "$attempts" ]; do
-        if docker_compose "$PROD_COMPOSE" exec -T backserver wget -q -T 2 -O /dev/null "http://localhost:8000$api_base/health" >/dev/null 2>&1; then
+        if docker_compose "$compose_file" exec -T backserver wget -q -T 2 -O /dev/null "http://localhost:8000$api_base/health" >/dev/null 2>&1; then
             return 0
         fi
         sleep 2
@@ -650,6 +651,21 @@ create_superuser() {
 
 should_create_initial_superuser() {
     [ "$1" = closed_auth ]
+}
+
+print_dev_users() {
+    db_user=$(get_env_var POSTGRES_USER)
+    db_name=$(get_env_var POSTGRES_DB)
+    [ -n "$db_user" ] || db_user=stride
+    [ -n "$db_name" ] || db_name=stride
+
+    log "Sample development users:"
+    docker_compose "$DEV_COMPOSE" exec -T db psql \
+        -v ON_ERROR_STOP=1 \
+        -P pager=off \
+        -U "$db_user" \
+        -d "$db_name" \
+        -c "SELECT username, email, COALESCE(full_name, '') AS full_name FROM users ORDER BY username LIMIT 5;"
 }
 
 cmd_start() {
@@ -693,7 +709,9 @@ cmd_devrun() {
     ensure_base_env
     log "Starting development stack."
     docker_compose "$DEV_COMPOSE" up -d --build
+    wait_for_backend "$DEV_COMPOSE"
     docker_compose "$DEV_COMPOSE" ps
+    print_dev_users
     log "Development nginx is available at http://localhost:8080"
 }
 
