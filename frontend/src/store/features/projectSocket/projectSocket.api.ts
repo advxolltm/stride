@@ -4,10 +4,8 @@ import {
     handleTaskWsMessage,
     type WsListenerApi,
 } from '../../middleware/wsTaskHandlers'
-import {
-    type projectSocketSocketState,
-    type WSMessage,
-} from './projectSocket.types'
+import type { WSMessage } from '../realtime/realtime.types'
+import type { projectSocketSocketState } from './projectSocket.types'
 
 const createProjectSocketSocketUrl = (projectId: string) =>
     buildApiWebSocketUrl(`/ws/project/${projectId}/kanban`)

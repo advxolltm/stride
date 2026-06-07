@@ -1,7 +1,7 @@
 import type {
     WSMessageMeta,
     WSMessageType as ProjectWSMessageType,
-} from '../projectSocket/projectSocket.types'
+} from '../realtime/realtime.types'
 import type { ApiWhiteboardElement } from './whiteboard.api.types'
 import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types'
 

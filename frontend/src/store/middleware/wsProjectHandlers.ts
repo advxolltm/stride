@@ -18,7 +18,7 @@ import type {
     ProjectMember,
     ProjectSkill,
 } from '../features/project/project.types'
-import { WSMessageType } from '../features/projectSocket/projectSocket.types'
+import { WSMessageType } from '../features/realtime/realtime.types'
 import type { WsListenerApi } from './wsTaskHandlers'
 import { baseApi } from '../api/base.api'
 
@@ -183,10 +183,7 @@ const removeProjectSkillFromCaches = (
     })
 }
 
-const patchProjectSnapshot = (
-    api: WsListenerApi,
-    project: Project,
-) => {
+const patchProjectSnapshot = (api: WsListenerApi, project: Project) => {
     api.dispatch(
         projectApi.util.upsertQueryData('getProjectById', project.id, project),
     )
@@ -212,13 +209,12 @@ const getDeletedProjectId = (payload: unknown) => {
     }
 
     const deletePayload = payload as ProjectDeletePayload
-    return deletePayload.project_id ?? deletePayload.projectId ?? deletePayload.id
+    return (
+        deletePayload.project_id ?? deletePayload.projectId ?? deletePayload.id
+    )
 }
 
-const removeProjectFromCaches = (
-    api: WsListenerApi,
-    projectId: string,
-) => {
+const removeProjectFromCaches = (api: WsListenerApi, projectId: string) => {
     api.dispatch(
         projectApi.util.updateQueryData('getProjects', undefined, (draft) =>
             draft.filter((project) => project.id !== projectId),
@@ -275,15 +271,13 @@ export function handleProjectWsMessage(
     api: WsListenerApi,
 ) {
     switch (type) {
-		case WSMessageType.ChatMessageCreate:
-		case WSMessageType.ChatMessageUpdate:
-		case WSMessageType.ChatMessageDelete:
-		{
-			console.log(type, payload);
-			api.dispatch(baseApi.util.invalidateTags([{ type: 'Messages' }]))
+        case WSMessageType.ChatMessageCreate:
+        case WSMessageType.ChatMessageUpdate:
+        case WSMessageType.ChatMessageDelete: {
+            api.dispatch(baseApi.util.invalidateTags([{ type: 'Messages' }]))
 
-			return true;
-		}
+            return true
+        }
         case WSMessageType.ProjectMemberAdd: {
             const apiMembers = Array.isArray(payload) ? payload : [payload]
 

@@ -20,7 +20,7 @@ import type {
     ApiTaskSkill,
     Task,
 } from '../features/tasks/task.types'
-import { WSMessageType } from '../features/projectSocket/projectSocket.types'
+import { WSMessageType } from '../features/realtime/realtime.types'
 
 export type WsListenerApi = {
     dispatch: (action: unknown) => unknown
@@ -66,9 +66,7 @@ const isApiTaskSkill = (value: unknown): value is ApiTaskSkill =>
     typeof value.project_skill_id === 'string'
 
 const invalidateProjectTasks = (api: WsListenerApi, projectId: string) => {
-    api.dispatch(
-        baseApi.util.invalidateTags([{ type: 'Task', id: projectId }]),
-    )
+    api.dispatch(baseApi.util.invalidateTags([{ type: 'Task', id: projectId }]))
 }
 
 const patchTaskCaches = (

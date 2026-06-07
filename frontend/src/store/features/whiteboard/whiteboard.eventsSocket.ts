@@ -1,8 +1,14 @@
 import { buildApiWebSocketUrl } from '../../api/base.api'
-import { WSMessageType } from '../projectSocket/projectSocket.types'
-import { createWhiteboardLiveClientMessageMeta, isSelfOriginatedWhiteboardEvent } from './whiteboard.client'
-import { parseWhiteboardEventMessage, serializeWhiteboardLiveClientMessage } from './whiteboard.protocol'
-import { watchManagedSocket } from './whiteboard.socketRuntime'
+import { watchManagedSocket } from '../realtime/realtime.socketRuntime'
+import { WSMessageType } from '../realtime/realtime.types'
+import {
+    createWhiteboardLiveClientMessageMeta,
+    isSelfOriginatedWhiteboardEvent,
+} from './whiteboard.client'
+import {
+    parseWhiteboardEventMessage,
+    serializeWhiteboardLiveClientMessage,
+} from './whiteboard.protocol'
 import type {
     WhiteboardEventMessage,
     WhiteboardLiveClientMessage,
@@ -20,6 +26,7 @@ export type WhiteboardEventsSocketLifecycleApi = {
 }
 
 type WhiteboardEventsSocketHandlers = {
+    invalidateElementsCache: () => void
     patchElementsCacheFromEvent: (message: WhiteboardEventMessage) => void
     patchLiveOverlayFromEvent: (message: WhiteboardSocketEventMessage) => void
 }
@@ -49,8 +56,9 @@ export const watchWhiteboardEventsSocket = async (
     await watchManagedSocket({
         cacheDataLoaded: lifecycleApi.cacheDataLoaded,
         cacheEntryRemoved: lifecycleApi.cacheEntryRemoved,
-        createSocket: () => new WebSocket(createWhiteboardEventsSocketUrl(projectId)),
-        createSocketEventHandlers: (socket) => ({
+        createSocket: () =>
+            new WebSocket(createWhiteboardEventsSocketUrl(projectId)),
+        createSocketEventHandlers: (socket, controls) => ({
             open: () => {
                 activeWhiteboardEventSockets.set(projectId, socket)
                 lifecycleApi.updateCachedData((draft) => {
@@ -65,6 +73,9 @@ export const watchWhiteboardEventsSocket = async (
 
                 const message = parseWhiteboardEventMessage(event.data)
                 if (!message) {
+                    controls.reportParseError(
+                        'Failed to parse whiteboard events websocket message',
+                    )
                     lifecycleApi.updateCachedData((draft) => {
                         draft.lastError =
                             'Failed to parse whiteboard events websocket message'
@@ -73,9 +84,11 @@ export const watchWhiteboardEventsSocket = async (
                 }
 
                 const isPersistedEvent =
-                    message.type !== WSMessageType.WhiteboardElementLiveUpdate &&
+                    message.type !==
+                        WSMessageType.WhiteboardElementLiveUpdate &&
                     message.type !== WSMessageType.WhiteboardElementLiveClear
-                const isSelfOriginated = isSelfOriginatedWhiteboardEvent(message)
+                const isSelfOriginated =
+                    isSelfOriginatedWhiteboardEvent(message)
 
                 if (isSelfOriginated && !isPersistedEvent) {
                     return
@@ -113,6 +126,12 @@ export const watchWhiteboardEventsSocket = async (
         onFinally: () => {
             activeWhiteboardEventSockets.delete(projectId)
         },
+        onParseError: () => {
+            handlers.invalidateElementsCache()
+        },
+        onReconnect: () => {
+            handlers.invalidateElementsCache()
+        },
     })
 }
 
@@ -139,10 +158,7 @@ export const sendWhiteboardLiveUpdate = (
         payload,
     })
 
-export const sendWhiteboardLiveClear = (
-    projectId: string,
-    elementId: string,
-) =>
+export const sendWhiteboardLiveClear = (projectId: string, elementId: string) =>
     sendWhiteboardLiveMessage(projectId, {
         type: WSMessageType.WhiteboardElementLiveClear,
         meta: createWhiteboardLiveClientMessageMeta(),
