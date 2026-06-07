@@ -28,7 +28,7 @@ type whiteboardWSRouteHandler struct {
 	upgrader       websocket.Upgrader
 	rdb            *redis.Client
 	hubs           *ProjectHubRegistry
-	presenceStore  *whiteboardSvc.CursorPresenceStore
+	cursorHubs     *CursorHubRegistry
 }
 
 type whiteboardCursorUserResponse struct { //nolint:unused
@@ -95,6 +95,7 @@ func newWhiteboardWSRouteHandler(
 	userService user.UserService,
 	rdb *redis.Client,
 	hubs *ProjectHubRegistry,
+	cursorHubs *CursorHubRegistry,
 ) whiteboardWSRouteHandler {
 	return whiteboardWSRouteHandler{
 		authService:    authService,
@@ -102,7 +103,7 @@ func newWhiteboardWSRouteHandler(
 		userService:    userService,
 		rdb:            rdb,
 		hubs:           hubs,
-		presenceStore:  whiteboardSvc.NewCursorPresenceStore(rdb),
+		cursorHubs:     cursorHubs,
 		upgrader:       newWSUpgrader(),
 	}
 }
@@ -398,8 +399,8 @@ func (h whiteboardWSRouteHandler) cursorConnectGET(c *echo.Context) error {
 		return err
 	}
 
-	if h.rdb == nil || h.presenceStore == nil {
-		slog.Error("whiteboard cursor websocket missing redis client", "projectID", session.ProjectID, "userID", session.UserID)
+	if h.cursorHubs == nil {
+		slog.Error("whiteboard cursor websocket missing cursor hub registry", "projectID", session.ProjectID, "userID", session.UserID)
 		return c.JSON(http.StatusInternalServerError, routes.ErrorResponse{Error: "internal server error"})
 	}
 
@@ -433,65 +434,33 @@ func (h whiteboardWSRouteHandler) cursorConnectGET(c *echo.Context) error {
 		return nil
 	}
 
-	connectionID := uuid.NewString()
-	redisCtx, cancel := context.WithCancel(context.Background())
+	connCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	sub := h.rdb.Subscribe(redisCtx, whiteboardSvc.CursorPresenceChannel(session.ProjectID))
-	closeSub := func() {
-		if sub == nil {
-			return
-		}
-		if err := sub.Close(); err != nil {
-			slog.Error("failed to close whiteboard cursor redis subscription", "error", err, "projectID", session.ProjectID, "userID", session.UserID)
-		}
-		sub = nil
-	}
-	defer closeSub()
-	channel := sub.Channel()
-
-	presenceRecord := &whiteboardSvc.CursorPresenceRecord{
-		ConnectionID: connectionID,
-		User:         mapWhiteboardCursorUser(currentUser),
-		Cursor:       whiteboardSvc.CursorPosition{},
-		UpdatedAt:    time.Now().UTC(),
-	}
-
 	conn.SetPongHandler(func(string) error {
-		if err := conn.SetReadDeadline(time.Now().Add(wsPongWait)); err != nil {
-			return err
-		}
-		return h.presenceStore.RefreshConnection(redisCtx, session.ProjectID, presenceRecord, time.Now().UTC())
+		return conn.SetReadDeadline(time.Now().Add(wsPongWait))
 	})
 
-	if err := h.presenceStore.PutConnection(redisCtx, session.ProjectID, *presenceRecord); err != nil {
-		slog.Error("failed to store whiteboard cursor presence", "error", err, "projectID", session.ProjectID, "userID", session.UserID)
+	sub, err := h.cursorHubs.AttachCursor(requestCtx, session.ProjectID, mapWhiteboardCursorUser(currentUser))
+	if err != nil {
+		slog.Error("failed to attach whiteboard cursor websocket to cursor hub", "error", err, "projectID", session.ProjectID, "userID", session.UserID)
 		return nil
 	}
-	if err := h.presenceStore.PublishSnapshot(redisCtx, session.ProjectID); err != nil {
-		slog.Error("failed to publish whiteboard cursor snapshot", "error", err, "projectID", session.ProjectID)
-		return nil
-	}
+	defer sub.Detach()
 
 	errCh := make(chan error, 3)
 	var writeMu sync.Mutex
 
-	go h.forwardWhiteboardCursorSnapshots(channel, conn, &writeMu, session.Expiry, errCh)
-	go h.consumeWhiteboardCursorUpdates(redisCtx, conn, session.ProjectID, presenceRecord, session.Expiry, errCh)
-	go pingWSConn(redisCtx, conn, &writeMu, errCh)
+	go h.forwardWhiteboardCursorSnapshots(sub.Snapshots, conn, &writeMu, session.Expiry, errCh)
+	go h.consumeWhiteboardCursorUpdates(connCtx, conn, session.ProjectID, sub.ConnectionID, session.Expiry, errCh)
+	go pingWSConn(connCtx, conn, &writeMu, errCh)
 
 	runErrs := []error{<-errCh}
 	cancel()
-	closeSub()
+	sub.Detach()
 	closeConn()
 	for range 2 {
 		runErrs = append(runErrs, <-errCh)
-	}
-
-	if err := h.presenceStore.RemoveConnection(context.Background(), session.ProjectID, connectionID); err != nil {
-		slog.Error("failed to remove whiteboard cursor presence", "error", err, "projectID", session.ProjectID, "connectionID", connectionID)
-	} else if err := h.presenceStore.PublishSnapshot(context.Background(), session.ProjectID); err != nil {
-		slog.Error("failed to publish whiteboard cursor snapshot after disconnect", "error", err, "projectID", session.ProjectID)
 	}
 
 	for _, runErr := range runErrs {
@@ -524,19 +493,19 @@ func mapWhiteboardCursorUser(currentUser *models.User) whiteboardSvc.CursorUser 
 }
 
 func (h whiteboardWSRouteHandler) forwardWhiteboardCursorSnapshots(
-	channel <-chan *redis.Message,
+	snapshots <-chan []byte,
 	conn *websocket.Conn,
 	writeMu *sync.Mutex,
 	expiry time.Time,
 	errCh chan<- error,
 ) {
-	for msg := range channel {
+	for payload := range snapshots {
 		if !expiry.IsZero() && expiry.Before(time.Now()) {
 			errCh <- websocket.ErrCloseSent
 			return
 		}
 
-		if err := writeWSMessage(conn, writeMu, websocket.TextMessage, []byte(msg.Payload)); err != nil {
+		if err := writeWSMessage(conn, writeMu, websocket.TextMessage, payload); err != nil {
 			errCh <- err
 			return
 		}
@@ -549,7 +518,7 @@ func (h whiteboardWSRouteHandler) consumeWhiteboardCursorUpdates(
 	ctx context.Context,
 	conn *websocket.Conn,
 	projectID uuid.UUID,
-	presenceRecord *whiteboardSvc.CursorPresenceRecord,
+	connectionID string,
 	expiry time.Time,
 	errCh chan<- error,
 ) {
@@ -571,12 +540,7 @@ func (h whiteboardWSRouteHandler) consumeWhiteboardCursorUpdates(
 			continue
 		}
 
-		presenceRecord.Cursor = message.Cursor
-		if err := h.presenceStore.RefreshConnection(ctx, projectID, presenceRecord, time.Now().UTC()); err != nil {
-			errCh <- err
-			return
-		}
-		if err := h.presenceStore.PublishSnapshot(ctx, projectID); err != nil {
+		if err := h.cursorHubs.UpdateCursor(ctx, projectID, connectionID, message.Cursor); err != nil {
 			errCh <- err
 			return
 		}
