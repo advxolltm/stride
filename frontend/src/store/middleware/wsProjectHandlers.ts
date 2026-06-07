@@ -271,13 +271,6 @@ export function handleProjectWsMessage(
     api: WsListenerApi,
 ) {
     switch (type) {
-        case WSMessageType.ChatMessageCreate:
-        case WSMessageType.ChatMessageUpdate:
-        case WSMessageType.ChatMessageDelete: {
-            api.dispatch(baseApi.util.invalidateTags([{ type: 'Messages' }]))
-
-            return true
-        }
         case WSMessageType.ProjectMemberAdd: {
             const apiMembers = Array.isArray(payload) ? payload : [payload]
 

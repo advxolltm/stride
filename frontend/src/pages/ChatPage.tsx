@@ -6,10 +6,13 @@ import { useParams } from 'react-router-dom'
 import { ArchivedReadOnlyChip } from '../components/project/space/shared/ArchivedReadOnlyChip'
 import { isProjectArchived } from '../shared/utils/projectStatus'
 import { useGetProjectByIdQuery } from '../store/features/project/project.api'
+import { skipToken } from '@reduxjs/toolkit/query'
+import { useWatchProjectChatSocketQuery } from '../store/features/chat/chat.socket'
 
 export function ChatPage() {
     const { t } = useTranslation('project')
     const { projectId } = useParams()
+    useWatchProjectChatSocketQuery(projectId ?? skipToken)
     const { data: project } = useGetProjectByIdQuery(projectId ?? '', {
         skip: !projectId,
     })
