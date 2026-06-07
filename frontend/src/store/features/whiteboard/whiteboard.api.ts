@@ -194,6 +194,7 @@ export const whiteboardApi = baseApi.injectEndpoints({
             WhiteboardCursorSocketState,
             string
         >({
+            keepUnusedDataFor: 0,
             queryFn: (projectId) => ({
                 data: createWhiteboardCursorSocketState(projectId),
             }),
@@ -205,6 +206,7 @@ export const whiteboardApi = baseApi.injectEndpoints({
             WhiteboardEventsSocketState,
             string
         >({
+            keepUnusedDataFor: 0,
             queryFn: (projectId) => ({
                 data: createWhiteboardEventsSocketState(projectId),
             }),
