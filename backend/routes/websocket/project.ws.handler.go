@@ -64,6 +64,7 @@ func consumeProjectWSDisconnect(conn *websocket.Conn, errCh chan<- error) {
 //
 //	@Summary	Connect to task updates websocket
 //	@Description	Upgrades HTTP connection to WebSocket. After successful handshake, server sends JSON task and project update envelopes with a numeric type and a payload.
+//	@Description	Temporary compatibility alias: /ws/project/{projectId}/kanban serves the same task stream.
 //	@Description	Payload depends on the event type: TaskCreate and TaskUpdate send Task, TaskDelete sends an object with deletedTaskID, TaskMove sends an array of Task, TaskAssign sends TaskAssignee, and TaskUnassign sends an object with taskID and projectMemberID.
 //	@Tags		task
 //	@Param		projectId	path		string	true	"Project ID"
@@ -86,6 +87,7 @@ func isTasksPageWSEventType(t routes.WSMessageType) bool {
 //
 //	@Summary	Connect to chat updates websocket
 //	@Description	Upgrades HTTP connection to WebSocket. After successful handshake, server sends JSON chat and project update envelopes with a numeric type and a payload.
+//	@Description	Temporary compatibility alias: /ws/project/{projectId}/messages serves the same chat stream.
 //	@Description	Chat payloads currently contain message identifiers. Clients should refetch durable chat data after receiving chat create, update, or delete events.
 //	@Tags		chat
 //	@Param		projectId	path		string	true	"Project ID"
