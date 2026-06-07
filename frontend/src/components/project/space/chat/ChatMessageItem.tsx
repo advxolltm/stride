@@ -18,6 +18,7 @@ interface ChatMessageItemProps {
     message: Message
     sender?: ProjectMember
     isOwnMessage: boolean
+    readOnly?: boolean
     timeLabel: string
     editedLabel?: string | null
     onEditMessage: (message: Message, content: string) => Promise<void>
@@ -121,6 +122,7 @@ export function ChatMessageItem({
     message,
     sender,
     isOwnMessage,
+    readOnly = false,
     timeLabel,
     editedLabel,
     onEditMessage,
@@ -193,6 +195,10 @@ export function ChatMessageItem({
     }
 
     async function handleOwnMessageAction(key: Key) {
+        if (readOnly && key !== 'copy-message') {
+            return
+        }
+
         if (key === 'edit-message') {
             setEditValue(message.content)
             setIsEditing(true)
@@ -410,7 +416,7 @@ export function ChatMessageItem({
                                     ].join(' ')}
                                 >
                                     <MessageMenu
-                                        ownMessage
+                                        ownMessage={!readOnly}
                                         onAction={handleOwnMessageAction}
                                         buttonClassName="pointer-events-auto text-default-500 hover:text-default-700 bg-default-50/90 hover:bg-default-100 border border-default-200/80"
                                         onOpenChange={setIsMenuOpen}

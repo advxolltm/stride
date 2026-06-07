@@ -41,11 +41,20 @@
     "loadingDescription": "Preparing the canvas for this project.",
     "errorTitle": "Could not load whiteboard",
     "errorFallback": "Please try again in a moment.",
-    "archivedReadOnly": "Archived project - read only",
-    "shareSuccess": "Share link copied",
     "shareError": "Could not copy share link",
     "overviewAriaLabel": "Overview",
     "shareAriaLabel": "Share whiteboard",
+    "theme": {
+      "switchToDark": "Switch to dark mode",
+      "switchToLight": "Switch to light mode"
+    },
+    "participants": {
+      "title": "Participants",
+      "ariaLabel_one": "{{count}} person in this board",
+      "ariaLabel_other": "{{count}} people in this board",
+      "focusParticipant": "Go to {{name}} on the board",
+      "you": "You"
+    },
     "panel": {
       "title": "Board Hub",
       "open": "Open Board Hub",

@@ -19,7 +19,8 @@
 			"yesterday": "Yesterday"
 		},
 		"input": {
-			"placeholder": "Write Message..."
+			"placeholder": "Write Message...",
+			"archivedPlaceholder": "This project is archived. Chat is read-only."
 		},
 		"panel": {
 			"title": "Project chat",

@@ -4,6 +4,11 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useAppDispatch } from '../../shared/hooks/redux'
 import {
+    isNotificationNavigable,
+    shouldOpenTaskBoard,
+    shouldOpenTaskDrawer,
+} from '../../shared/utils/notificationBehavior'
+import {
     useDeleteNotificationMutation,
     useGetNotificationsQuery,
     useMarkNotificationReadMutation,
@@ -20,30 +25,6 @@ const orderNotifications = (notifications: Notification[]) => {
 }
 
 const READ_VISUAL_DELAY_MS = 2000
-const TASK_DRAWER_NOTIFICATION_MESSAGES = [
-    'You were assigned to task:',
-    'You were unassigned from task:',
-]
-const TASK_BOARD_NOTIFICATION_MESSAGES = ['Task deleted:']
-const NON_NAVIGABLE_PROJECT_NOTIFICATION_MESSAGES = [
-    'You were removed from project:',
-]
-
-const shouldOpenTaskDrawer = (notification: Notification) =>
-    notification.objectType === 'task' &&
-    TASK_DRAWER_NOTIFICATION_MESSAGES.some((messagePrefix) =>
-        notification.message.startsWith(messagePrefix),
-    )
-
-const shouldOpenTaskBoard = (notification: Notification) =>
-    TASK_BOARD_NOTIFICATION_MESSAGES.some((messagePrefix) =>
-        notification.message.startsWith(messagePrefix),
-    )
-
-const isNotificationNavigable = (notification: Notification) =>
-    !NON_NAVIGABLE_PROJECT_NOTIFICATION_MESSAGES.some((messagePrefix) =>
-        notification.message.startsWith(messagePrefix),
-    )
 
 export function NotificationsContainer() {
     const { t } = useTranslation('common')

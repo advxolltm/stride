@@ -201,6 +201,13 @@ func (t *taskStore) AssignTask(ctx context.Context, taskID uuid.UUID, projectMem
 		return nil, fmt.Errorf("failed to assign task %s to project member %s: %w", taskID, projectMemberID, result.Error)
 	}
 
+	result = t.db.WithContext(ctx).
+		Preload("ProjectMember.User").
+		First(&taskAssignee, "id = ?", taskAssignee.ID)
+	if result.Error != nil {
+		return nil, fmt.Errorf("failed to load task assignment %s after create: %w", taskAssignee.ID, result.Error)
+	}
+
 	return &taskAssignee, nil
 }
 

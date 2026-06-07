@@ -5,6 +5,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
 import { getApiErrorMessage } from '../../../../shared/utils/api/errors'
+import { isProjectArchived } from '../../../../shared/utils/projectStatus'
 import { useGetSessionQuery } from '../../../../store/features/auth/auth.api'
 import {
     useDeleteMessageMutation,
@@ -49,6 +50,7 @@ export function ChatSpace({
     )
     const { data: project, isLoading: isProjectLoading } =
         useGetProjectByIdQuery(projectId!)
+    const isArchived = isProjectArchived(project)
 
     const userMap = new Map(project?.members.map((pm) => [pm.id, pm]))
     const messages = data?.pages.flatMap((page) => page.items) ?? []
@@ -213,7 +215,7 @@ export function ChatSpace({
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault()
 
-        if (!messageContent) {
+        if (isArchived || !messageContent) {
             return
         }
 
@@ -234,6 +236,10 @@ export function ChatSpace({
     }
 
     async function handleEditMessage(message: Message, content: string) {
+        if (isArchived) {
+            return
+        }
+
         const nextContent = content.trim()
         if (!nextContent) {
             return
@@ -317,6 +323,10 @@ export function ChatSpace({
     }
 
     async function handleDeleteMessage(message: Message) {
+        if (isArchived) {
+            return
+        }
+
         try {
             await deleteMessage({
                 projectId: projectId!,
@@ -405,6 +415,7 @@ export function ChatSpace({
                                         isOwnMessage={
                                             sender?.userId === user!.id
                                         }
+                                        readOnly={isArchived}
                                         timeLabel={formattedTime(
                                             message.createdAt,
                                         )}
@@ -425,6 +436,7 @@ export function ChatSpace({
                 messageContent={messageContent}
                 onMessageContentChange={setMessageContent}
                 onSubmit={handleSubmit}
+                readOnly={isArchived}
                 variant={variant}
             />
         </div>

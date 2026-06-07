@@ -62,6 +62,21 @@
     "confirm": "OK",
     "projectFallback": "this project"
   },
+  "projectArchived": {
+    "title": "Project Archived",
+    "message": "Project {{projectName}} was archived.",
+    "confirm": "OK"
+  },
+  "projectUnarchived": {
+    "title": "Project Unarchived",
+    "message": "Project {{projectName}} was unarchived.",
+    "confirm": "OK"
+  },
+  "projectDeleted": {
+    "title": "Project Deleted",
+    "message": "Project {{projectName}} was deleted.",
+    "confirm": "OK"
+  },
   "primary": "Primary",
   "danger": "Danger",
   "tailwindMessage": "Tailwind + theme working"

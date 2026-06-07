@@ -350,10 +350,6 @@ export const useWhiteboardSync = ({
         })
     }
 
-    const handleCanvasPointerLeave = () => {
-        clearCursor()
-    }
-
     const excalidrawElements = useMemo(
         () => buildExcalidrawElements(whiteboardElements, liveElementsById),
         [whiteboardElements, liveElementsById],
@@ -363,7 +359,6 @@ export const useWhiteboardSync = ({
         excalidrawElements,
         handleCanvasChange,
         handleCanvasPointerUp,
-        handleCanvasPointerLeave,
         queueCursorUpdate,
     }
 }

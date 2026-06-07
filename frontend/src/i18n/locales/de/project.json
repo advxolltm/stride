@@ -41,11 +41,20 @@
     "loadingDescription": "Die Zeichenfläche für dieses Projekt wird vorbereitet.",
     "errorTitle": "Whiteboard konnte nicht geladen werden",
     "errorFallback": "Bitte versuchen Sie es in einem Moment erneut.",
-    "archivedReadOnly": "Archiviertes Projekt - schreibgeschuetzt",
-    "shareSuccess": "Freigabelink kopiert",
     "shareError": "Freigabelink konnte nicht kopiert werden",
     "overviewAriaLabel": "Übersicht",
     "shareAriaLabel": "Whiteboard teilen",
+    "theme": {
+      "switchToDark": "In den Dunkelmodus wechseln",
+      "switchToLight": "In den Hellmodus wechseln"
+    },
+    "participants": {
+      "title": "Teilnehmende",
+      "ariaLabel_one": "{{count}} Person in diesem Board",
+      "ariaLabel_other": "{{count}} Personen in diesem Board",
+      "focusParticipant": "Zu {{name}} im Board springen",
+      "you": "Du"
+    },
     "panel": {
       "title": "Board Hub",
       "open": "Panel Ã¶ffnen",

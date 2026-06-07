@@ -19,7 +19,8 @@
 			"yesterday": "Gestern"
 		},
 		"input": {
-			"placeholder": "Nachricht schreiben..."
+			"placeholder": "Nachricht schreiben...",
+			"archivedPlaceholder": "Dieses Projekt ist archiviert. Der Chat ist schreibgeschuetzt."
 		},
 		"panel": {
 			"title": "Projektchat",

@@ -4,46 +4,90 @@ import type {
 } from '../projectSocket/projectSocket.types'
 import type { ApiWhiteboardElement } from './whiteboard.api.types'
 import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types'
+import { z } from 'zod'
+import {
+    ApiWhiteboardElementSchema,
+} from './whiteboard.api.types'
+import {
+    WSMessageMetaSchema,
+    WSMessageType,
+} from '../projectSocket/projectSocket.types'
 
-export type WhiteboardCursorUser = {
-    id: string
-    name: string
-    avatarSmall: string
-}
+const ExcalidrawElementSchema = z.custom<ExcalidrawElement>()
 
-export type WhiteboardCursorPosition = {
-    x: number | null
-    y: number | null
-}
+export const WhiteboardCursorUserSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    avatarSmall: z.string(),
+})
 
-export type WhiteboardCursorPresence = {
-    user: WhiteboardCursorUser
-    cursor: WhiteboardCursorPosition
-}
+export type WhiteboardCursorUser = z.infer<typeof WhiteboardCursorUserSchema>
 
-export type WhiteboardCursorClientMessage = {
-    cursor: WhiteboardCursorPosition
-}
+export const WhiteboardCursorPositionSchema = z.object({
+    x: z.number().nullable(),
+    y: z.number().nullable(),
+})
 
-export type WhiteboardDeleteEventPayload = {
-    elementId: string
-}
+export type WhiteboardCursorPosition = z.infer<
+    typeof WhiteboardCursorPositionSchema
+>
 
-export type WhiteboardLiveUpdateEventPayload = {
-    elementId: string
-    elementType: string
-    props: ExcalidrawElement
-    zIndex: number
-}
+export const WhiteboardCursorPresenceSchema = z.object({
+    user: WhiteboardCursorUserSchema,
+    cursor: WhiteboardCursorPositionSchema,
+})
 
-export type WhiteboardLiveClearEventPayload = {
-    elementId: string
-}
+export type WhiteboardCursorPresence = z.infer<
+    typeof WhiteboardCursorPresenceSchema
+>
+export const WhiteboardCursorPresenceListSchema = z.array(
+    WhiteboardCursorPresenceSchema,
+)
+
+export const WhiteboardCursorClientMessageSchema = z.object({
+    cursor: WhiteboardCursorPositionSchema,
+})
+
+export type WhiteboardCursorClientMessage = z.infer<
+    typeof WhiteboardCursorClientMessageSchema
+>
+
+export const WhiteboardDeleteEventPayloadSchema = z.object({
+    elementId: z.string(),
+})
+
+export type WhiteboardDeleteEventPayload = z.infer<
+    typeof WhiteboardDeleteEventPayloadSchema
+>
+
+export const WhiteboardLiveUpdateEventPayloadSchema = z.object({
+    elementId: z.string(),
+    elementType: z.string(),
+    props: ExcalidrawElementSchema,
+    zIndex: z.number(),
+})
+
+export type WhiteboardLiveUpdateEventPayload = z.infer<
+    typeof WhiteboardLiveUpdateEventPayloadSchema
+>
+
+export const WhiteboardLiveClearEventPayloadSchema = z.object({
+    elementId: z.string(),
+})
+
+export type WhiteboardLiveClearEventPayload = z.infer<
+    typeof WhiteboardLiveClearEventPayloadSchema
+>
 
 export type WhiteboardLiveClientMessageMeta = {
     clientId: string
     operationId?: string
 }
+
+export const WhiteboardLiveClientMessageMetaSchema = z.object({
+    clientId: z.string(),
+    operationId: z.string().optional(),
+})
 
 export type WhiteboardLiveUpdateClientMessage = {
     type: typeof ProjectWSMessageType.WhiteboardElementLiveUpdate
@@ -103,3 +147,31 @@ export type WhiteboardLiveEventMessage =
 export type WhiteboardSocketEventMessage =
     | WhiteboardEventMessage
     | WhiteboardLiveEventMessage
+
+export const WhiteboardSocketEventMessageSchema = z.discriminatedUnion('type', [
+    z.object({
+        type: z.literal(WSMessageType.WhiteboardElementCreate),
+        meta: WSMessageMetaSchema.optional(),
+        payload: ApiWhiteboardElementSchema,
+    }),
+    z.object({
+        type: z.literal(WSMessageType.WhiteboardElementUpdate),
+        meta: WSMessageMetaSchema.optional(),
+        payload: ApiWhiteboardElementSchema,
+    }),
+    z.object({
+        type: z.literal(WSMessageType.WhiteboardElementDelete),
+        meta: WSMessageMetaSchema.optional(),
+        payload: WhiteboardDeleteEventPayloadSchema,
+    }),
+    z.object({
+        type: z.literal(WSMessageType.WhiteboardElementLiveUpdate),
+        meta: WSMessageMetaSchema.optional(),
+        payload: WhiteboardLiveUpdateEventPayloadSchema,
+    }),
+    z.object({
+        type: z.literal(WSMessageType.WhiteboardElementLiveClear),
+        meta: WSMessageMetaSchema.optional(),
+        payload: WhiteboardLiveClearEventPayloadSchema,
+    }),
+])

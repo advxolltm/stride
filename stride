@@ -20,13 +20,13 @@ usage() {
 STRIDE CLI
 
 Usage:
-  ./cli start              Interactive production setup and start
-  ./cli devrun             Start the development Docker Compose stack
-  ./cli down [prod|dev]    Stop a stack, defaults to prod
-  ./cli restart [prod|dev] Restart containers, defaults to prod
-  ./cli certificate        Configure production TLS certificates
-  ./cli test               Run frontend and backend test cycle
-  ./cli help               Show this help
+  ./stride start              Interactive production setup and start
+  ./stride devrun             Start the development Docker Compose stack
+  ./stride down [prod|dev]    Stop a stack, defaults to prod
+  ./stride restart [prod|dev] Restart containers, defaults to prod
+  ./stride certificate        Configure production TLS certificates
+  ./stride test               Run frontend and backend test cycle
+  ./stride help               Show this help
 
 Production start configures .env, optional TLS, starts compose.prod.yml,
 and creates the first superuser only for open-network deployments.

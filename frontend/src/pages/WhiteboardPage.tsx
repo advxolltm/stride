@@ -1,17 +1,20 @@
-import { Button, Chip, Tooltip, toast } from '@heroui/react'
+import { Button, Tooltip } from '@heroui/react'
 import { skipToken } from '@reduxjs/toolkit/query'
 import {
-    Archive,
     ChevronRight,
     Home,
+    Moon,
     PanelRightOpen,
-    Share2,
+    Sun,
     Zap,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router-dom'
+import { ArchivedReadOnlyChip } from '../components/project/space/shared/ArchivedReadOnlyChip'
+import { CollaboratorsButton } from '../components/project/space/whiteboard/CollaboratorsButton'
 import { WhiteboardCanvas } from '../components/project/space/whiteboard/canvas/WhiteboardCanvas'
+import type { WhiteboardFocusTarget } from '../components/project/space/whiteboard/canvas/whiteboardCanvas.types'
 import { useWhiteboardSync } from '../components/project/space/whiteboard/sync/useWhiteboardSync'
 import { useWhiteboardTemplateInsertion } from '../components/project/space/whiteboard/sync/useWhiteboardTemplateInsertion'
 import {
@@ -21,8 +24,7 @@ import {
     WhiteboardWorkspacePanel,
     type WhiteboardPanelTab,
 } from '../components/project/space/whiteboard/WhiteboardWorkspacePanel'
-import { UserAvatar } from '../shared/components'
-import { useAppSelector } from '../shared/hooks/redux'
+import { useAppDispatch, useAppSelector } from '../shared/hooks/redux'
 import { getApiErrorMessage } from '../shared/utils/api/errors'
 import { isProjectArchived } from '../shared/utils/projectStatus'
 import { useGetProjectByIdQuery } from '../store/features/project/project.api'
@@ -32,7 +34,11 @@ import {
     useWatchWhiteboardCursorQuery,
     useWatchWhiteboardEventsQuery,
 } from '../store/features/whiteboard/whiteboard.api'
-import type { WhiteboardLiveUpdateEventPayload } from '../store/features/whiteboard/whiteboard.socket.types'
+import type {
+    WhiteboardCursorPresence,
+    WhiteboardLiveUpdateEventPayload,
+} from '../store/features/whiteboard/whiteboard.socket.types'
+import { toggleTheme } from '../store/themeSlice'
 import { selectUserId } from '../store/userSlice'
 
 const emptyLiveElementsById: Record<string, WhiteboardLiveUpdateEventPayload> =
@@ -43,11 +49,16 @@ const DOCK_MEDIA_QUERY = '(min-width: 1280px)'
 export function WhiteboardPage() {
     const { projectId } = useParams()
     const { t } = useTranslation('project')
+    const dispatch = useAppDispatch()
     const currentUserId = useAppSelector(selectUserId)
+    const isDarkMode = useAppSelector((state) => state.theme.isDark)
+    const focusNonceRef = useRef(0)
     const [isPanelOpen, setIsPanelOpen] = useState(false)
     const [isPanelPinned, setIsPanelPinned] = useState(false)
     const [selectedPanelTab, setSelectedPanelTab] =
         useState<WhiteboardPanelTab>('chat')
+    const [focusTarget, setFocusTarget] =
+        useState<WhiteboardFocusTarget | null>(null)
     const [canDockPanel, setCanDockPanel] = useState(() =>
         typeof window !== 'undefined'
             ? window.matchMedia(DOCK_MEDIA_QUERY).matches
@@ -55,14 +66,6 @@ export function WhiteboardPage() {
     )
     const whiteboardCursorWS = useWatchWhiteboardCursorQuery(
         projectId ?? skipToken,
-    )
-    const whiteboardEventsWS = useWatchWhiteboardEventsQuery(
-        projectId ?? skipToken,
-        {
-            selectFromResult: ({ data }) => ({
-                liveElementsById: data?.liveElementsById ?? emptyLiveElementsById,
-            }),
-        },
     )
     const {
         data: project,
@@ -86,13 +89,21 @@ export function WhiteboardPage() {
         refetch: refetchWhiteboardElements,
     } = useGetProjectWhiteboardElementsQuery(projectId ?? '', {
         skip: !projectId || !isWhiteboardReady,
+        refetchOnMountOrArgChange: true,
     })
+    const whiteboardEventsWS = useWatchWhiteboardEventsQuery(
+        projectId && isElementsReady ? projectId : skipToken,
+        {
+            selectFromResult: ({ data }) => ({
+                liveElementsById: data?.liveElementsById ?? emptyLiveElementsById,
+            }),
+        },
+    )
     const liveElementsById = whiteboardEventsWS.liveElementsById
     const isArchived = isProjectArchived(project)
     const {
         excalidrawElements,
         handleCanvasChange,
-        handleCanvasPointerLeave,
         handleCanvasPointerUp,
         queueCursorUpdate,
     } = useWhiteboardSync({
@@ -132,17 +143,6 @@ export function WhiteboardPage() {
         }
     }, [])
 
-    const handleShare = async () => {
-        const shareUrl = project?.joinLink ?? window.location.href
-
-        try {
-            await navigator.clipboard.writeText(shareUrl)
-            toast.success(t('whiteboardPage.shareSuccess'))
-        } catch {
-            toast.danger(t('whiteboardPage.shareError'))
-        }
-    }
-
     function handleOpenPanel() {
         setIsPanelOpen(true)
         setSelectedPanelTab('chat')
@@ -160,6 +160,19 @@ export function WhiteboardPage() {
 
         setIsPanelOpen(true)
         setIsPanelPinned((current) => !current)
+    }
+
+    function handleParticipantSelect(participant: WhiteboardCursorPresence) {
+        if (participant.cursor.x === null || participant.cursor.y === null) {
+            return
+        }
+
+        focusNonceRef.current += 1
+        setFocusTarget({
+            nonce: focusNonceRef.current,
+            x: participant.cursor.x,
+            y: participant.cursor.y,
+        })
     }
 
     async function handleInsertTemplate(
@@ -225,13 +238,10 @@ export function WhiteboardPage() {
     }
 
     const projectName = project?.name ?? projectId
-    const collaborators = project?.members ?? []
     const presence = whiteboardCursorWS.data?.presence ?? []
     const remotePresence = currentUserId
         ? presence.filter((item) => item.user.id !== currentUserId)
         : presence
-    const visibleCollaborators = collaborators.slice(0, 3)
-    const hiddenCollaborators = Math.max(collaborators.length - 3, 0)
     const showDockedPanel = isPanelOpen && isPanelPinned && canDockPanel
     const showDrawerPanel = isPanelOpen && !showDockedPanel
     const controlsRightClass = showDockedPanel
@@ -296,48 +306,40 @@ export function WhiteboardPage() {
                     controlsRightClass,
                 ].join(' ')}
             >
-                {isArchived && (
-                    <Chip
-                        size="sm"
-                        variant="soft"
-                        className="flex shrink-0 flex-row items-center gap-2"
-                    >
-                        <Archive size={14} />
-                        {t('whiteboardPage.archivedReadOnly')}
-                    </Chip>
-                )}
-                <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-10 min-w-10 gap-0 -space-x-2 rounded-full border border-[var(--border)] bg-[color-mix(in_oklch,var(--surface)_94%,transparent)] px-2 text-[var(--foreground)] shadow-lg backdrop-blur-xl hover:bg-[var(--surface-secondary)]"
-                    aria-label={`${collaborators.length} collaborators, ${presence.length} whiteboard users connected`}
-                >
-                    {visibleCollaborators.map((member) => {
-                        const displayName =
-                            member.user.fullName ?? member.user.username
-
-                        return (
-                            <UserAvatar
-                                key={member.id}
-                                name={displayName}
-                                src={member.user.avatarUrl}
-                                className="h-7 w-7 border-2 border-[var(--surface)] text-[10px] font-semibold"
-                                fallbackClassName="text-[var(--accent-foreground)]"
-                                title={displayName}
-                            />
-                        )
-                    })}
-                    {hiddenCollaborators > 0 && (
-                        <span className="flex h-7 min-w-7 items-center justify-center rounded-full border-2 border-[var(--surface)] bg-[var(--surface)] px-1 text-[10px] font-semibold text-[var(--muted)]">
-                            +{hiddenCollaborators}
-                        </span>
-                    )}
-                    {collaborators.length === 0 && (
-                        <span className="px-1.5 text-sm font-medium text-[var(--muted)]">
-                            0
-                        </span>
-                    )}
-                </Button>
+                {isArchived && <ArchivedReadOnlyChip />}
+                <CollaboratorsButton
+                    participants={presence}
+                    currentUserId={currentUserId}
+                    onParticipantSelect={handleParticipantSelect}
+                />
+                <Tooltip delay={0}>
+                    <Tooltip.Trigger className="inline-flex">
+                        <Button
+                            isIconOnly
+                            size="sm"
+                            variant="ghost"
+                            className="h-10 w-10 min-w-10 rounded-full border border-[var(--border)] bg-[color-mix(in_oklch,var(--surface)_94%,transparent)] text-[var(--foreground)] shadow-lg backdrop-blur-xl hover:bg-[var(--surface-secondary)]"
+                            onPress={() => dispatch(toggleTheme())}
+                            aria-label={
+                                isDarkMode
+                                    ? t('whiteboardPage.theme.switchToLight')
+                                    : t('whiteboardPage.theme.switchToDark')
+                            }
+                        >
+                            {isDarkMode ? (
+                                <Sun size={16} />
+                            ) : (
+                                <Moon size={16} />
+                            )}
+                        </Button>
+                    </Tooltip.Trigger>
+                    <Tooltip.Content showArrow placement="bottom" offset={8}>
+                        <Tooltip.Arrow />
+                        {isDarkMode
+                            ? t('whiteboardPage.theme.switchToLight')
+                            : t('whiteboardPage.theme.switchToDark')}
+                    </Tooltip.Content>
+                </Tooltip>
                 {!isPanelOpen ? (
                     <Tooltip delay={0}>
                         <Tooltip.Trigger className="inline-flex">
@@ -362,16 +364,6 @@ export function WhiteboardPage() {
                         </Tooltip.Content>
                     </Tooltip>
                 ) : null}
-                <Button
-                    isIconOnly
-                    size="sm"
-                    variant="ghost"
-                    className="h-10 w-10 min-w-10 rounded-full border border-[var(--border)] bg-[color-mix(in_oklch,var(--surface)_94%,transparent)] text-[var(--foreground)] shadow-lg backdrop-blur-xl hover:bg-[var(--surface-secondary)]"
-                    onPress={handleShare}
-                    aria-label={t('whiteboardPage.shareAriaLabel')}
-                >
-                    <Share2 size={16} />
-                </Button>
             </div>
 
             <div className="flex h-full min-h-0">
@@ -379,6 +371,7 @@ export function WhiteboardPage() {
                     <WhiteboardCanvas
                         key={projectId}
                         elements={excalidrawElements}
+                        focusTarget={focusTarget}
                         presence={remotePresence}
                         viewportStorageKey={
                             projectId
@@ -389,7 +382,6 @@ export function WhiteboardPage() {
                         onChange={handleCanvasChange}
                         onPointerUp={handleCanvasPointerUp}
                         onCursorChange={queueCursorUpdate}
-                        onCursorLeave={handleCanvasPointerLeave}
                     />
                 </div>
 
