@@ -1,6 +1,6 @@
 module backend
 
-go 1.26.3
+go 1.26.4
 
 require (
 	github.com/brianvoe/gofakeit/v7 v7.14.1

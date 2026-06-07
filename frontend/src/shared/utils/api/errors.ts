@@ -1,6 +1,7 @@
 import type { SerializedError } from '@reduxjs/toolkit'
 import type { FetchBaseQueryError } from '@reduxjs/toolkit/query'
 import type { ApiErrorResponse } from './types'
+import { ApiErrorResponseSchema } from './types'
 
 export const isFetchBaseQueryError = (
     error: unknown,
@@ -9,12 +10,7 @@ export const isFetchBaseQueryError = (
 }
 
 export const isApiErrorResponse = (data: unknown): data is ApiErrorResponse => {
-    return (
-        typeof data === 'object' &&
-        data !== null &&
-        'error' in data &&
-        typeof (data as { error: unknown }).error === 'string'
-    )
+    return ApiErrorResponseSchema.safeParse(data).success
 }
 
 export const getApiErrorMessage = (

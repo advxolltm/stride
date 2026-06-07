@@ -7,11 +7,13 @@ import {
 import { transformNotification } from './notification.mappers'
 import {
     NotificationWSMessageType,
-    type ApiNotification,
+    ApiNotificationListSchema,
+    ApiNotificationSchema,
+    NotificationWSMessageEnvelopeSchema,
+    NotificationWSSnapshotPayloadSchema,
     type Notification,
     type NotificationSocketState,
     type NotificationWSMessage,
-    type NotificationWSSnapshotPayload,
 } from './notification.types'
 
 const createNotificationSocketUrl = () =>
@@ -24,31 +26,6 @@ const createNotificationSocketState = (): NotificationSocketState => ({
     lastMessageAt: null,
     lastError: null,
 })
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-    typeof value === 'object' && value !== null
-
-const isApiNotification = (value: unknown): value is ApiNotification =>
-    isRecord(value) &&
-    typeof value.id === 'string' &&
-    typeof value.user_id === 'string' &&
-    typeof value.edit_type === 'string' &&
-    typeof value.object_type === 'string' &&
-    typeof value.object_id === 'string' &&
-    typeof value.message === 'string' &&
-    typeof value.read === 'boolean'
-
-const isApiNotificationList = (value: unknown): value is ApiNotification[] =>
-    Array.isArray(value) && value.every(isApiNotification)
-
-const isNotificationSnapshotPayload = (
-    value: unknown,
-): value is NotificationWSSnapshotPayload =>
-    isRecord(value) &&
-    isApiNotificationList(value.new) &&
-    isApiNotificationList(value.old) &&
-    typeof value.new_count === 'number' &&
-    typeof value.old_count === 'number'
 
 const patchNotification = (
     dispatch: (action: unknown) => unknown,
@@ -84,23 +61,26 @@ const handleNotificationWSMessage = (
 ) => {
     switch (message.type) {
         case NotificationWSMessageType.Snapshot: {
-            if (!isNotificationSnapshotPayload(message.payload)) {
+            const parsedPayload =
+                NotificationWSSnapshotPayloadSchema.safeParse(message.payload)
+            if (!parsedPayload.success) {
                 return false
             }
 
             replaceNotifications(dispatch, [
-                ...message.payload.new.map(transformNotification),
-                ...message.payload.old.map(transformNotification),
+                ...parsedPayload.data.new.map(transformNotification),
+                ...parsedPayload.data.old.map(transformNotification),
             ])
             return true
         }
         case NotificationWSMessageType.New:
         case NotificationWSMessageType.Old: {
-            if (!isApiNotification(message.payload)) {
+            const parsedPayload = ApiNotificationSchema.safeParse(message.payload)
+            if (!parsedPayload.success) {
                 return false
             }
 
-            patchNotification(dispatch, transformNotification(message.payload))
+            patchNotification(dispatch, transformNotification(parsedPayload.data))
             return true
         }
         default:
@@ -112,8 +92,10 @@ export const notificationApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
         getNotifications: builder.query<Notification[], void>({
             query: () => '/notifications',
-            transformResponse: (response: ApiNotification[]) =>
-                response.map(transformNotification),
+            transformResponse: (response: unknown) =>
+                ApiNotificationListSchema.parse(response).map(
+                    transformNotification,
+                ),
             providesTags: [{ type: 'Notification' as const, id: 'LIST' }],
         }),
 
@@ -204,16 +186,17 @@ export const notificationApi = baseApi.injectEndpoints({
                         }
 
                         try {
-                            const parsed = JSON.parse(event.data) as Partial<
-                                NotificationWSMessage<unknown>
-                            >
-
-                            if (!('type' in parsed) || !('payload' in parsed)) {
+                            const raw = JSON.parse(event.data) as unknown
+                            const parsed =
+                                NotificationWSMessageEnvelopeSchema.safeParse(
+                                    raw,
+                                )
+                            if (!parsed.success) {
                                 return
                             }
 
-                            const message =
-                                parsed as NotificationWSMessage<unknown>
+                            const message: NotificationWSMessage<unknown> =
+                                parsed.data
 
                             updateCachedData((draft) => {
                                 draft.lastMessage = message

@@ -1,8 +1,12 @@
-export type User = {
-    id: string
-    username: string
-    email: string
-    fullName: string | null
-    avatarUrl: string | null
-    avatarSmallUrl?: string | null
-}
+import { z } from 'zod'
+
+export const UserSchema = z.object({
+    id: z.string(),
+    username: z.string(),
+    email: z.string(),
+    fullName: z.string().nullable(),
+    avatarUrl: z.string().nullable(),
+    avatarSmallUrl: z.string().nullable().optional(),
+})
+
+export type User = z.infer<typeof UserSchema>

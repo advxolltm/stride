@@ -354,6 +354,10 @@ func TestTaskHandler(t *testing.T) {
 				require.Equal(t, http.StatusCreated, rec.Code)
 				returnedAssignedTask := parse[routes.TaskAssignee](t, rec.Body)
 				require.Equal(t, returnedAssignedTask.TaskID, tsk.ID)
+				require.Equal(t, randomUserOfProject.ID, returnedAssignedTask.ProjectMember.ID)
+				require.Equal(t, randomUserOfProject.Role, returnedAssignedTask.ProjectMember.Role)
+				require.Equal(t, randomUserOfProject.User.ID, returnedAssignedTask.ProjectMember.User.ID)
+				require.Equal(t, randomUserOfProject.User.Email, returnedAssignedTask.ProjectMember.User.Email)
 
 				assignedTasks, err := sut.taskService.GetTasksAssignedToProjectMember(t.Context(), randomUserOfProject.ID)
 				require.NoError(t, err)

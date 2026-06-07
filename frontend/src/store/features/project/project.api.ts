@@ -9,29 +9,31 @@ import {
     removeProjectSkillById,
 } from './project.cache'
 import {
+    ApiProjectListSchema,
+    ApiProjectMemberListSchema,
+    ApiProjectSchema,
+    ApiProjectSkillListSchema,
+    ApiProjectSkillSchema,
+    type AddProjectMembersRequest,
+    type CreateProjectRequest,
+    type CreateProjectSkillRequest,
+    type Project,
+    type ProjectMember,
+    type ProjectSkill,
+    type UpdateProjectRequest,
+} from './project.types'
+import {
     transformProject,
     transformProjectMember,
     transformProjectSkill,
 } from './project.mappers'
-import type {
-    AddProjectMembersRequest,
-    ApiProject,
-    ApiProjectMember,
-    ApiProjectSkill,
-    CreateProjectRequest,
-    CreateProjectSkillRequest,
-    Project,
-    ProjectMember,
-    ProjectSkill,
-    UpdateProjectRequest,
-} from './project.types'
 
 export const projectApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
         getProjects: builder.query<Project[], void>({
             query: () => '/projects',
-            transformResponse: (response: ApiProject[]) =>
-                response.map(transformProject),
+            transformResponse: (response: unknown) =>
+                ApiProjectListSchema.parse(response).map(transformProject),
             providesTags: (result) =>
                 result
                     ? [
@@ -46,15 +48,17 @@ export const projectApi = baseApi.injectEndpoints({
 
         getProjectById: builder.query<Project, string>({
             query: (id) => `/projects/${id}`,
-            transformResponse: (response: ApiProject) =>
-                transformProject(response),
+            transformResponse: (response: unknown) =>
+                transformProject(ApiProjectSchema.parse(response)),
             providesTags: (_result, _error, id) => [{ type: 'Project', id }],
         }),
 
         getProjectMembers: builder.query<ProjectMember[], string>({
             query: (projectId) => `/projects/${projectId}/members`,
-            transformResponse: (response: ApiProjectMember[]) =>
-                response.map(transformProjectMember),
+            transformResponse: (response: unknown) =>
+                ApiProjectMemberListSchema.parse(response).map(
+                    transformProjectMember,
+                ),
             providesTags: (_result, _error, projectId) => [
                 { type: 'ProjectMember' as const, id: projectId },
             ],
@@ -66,8 +70,8 @@ export const projectApi = baseApi.injectEndpoints({
                 method: 'POST',
                 body: { ...body, description: body.description || null },
             }),
-            transformResponse: (response: ApiProject) =>
-                transformProject(response),
+            transformResponse: (response: unknown) =>
+                transformProject(ApiProjectSchema.parse(response)),
             async onQueryStarted(_body, { dispatch, queryFulfilled }) {
                 try {
                     const { data } = await queryFulfilled
@@ -108,8 +112,10 @@ export const projectApi = baseApi.injectEndpoints({
                 method: 'POST',
                 body,
             }),
-            transformResponse: (response: ApiProjectMember[]) =>
-                response.map(transformProjectMember),
+            transformResponse: (response: unknown) =>
+                ApiProjectMemberListSchema.parse(response).map(
+                    transformProjectMember,
+                ),
             async onQueryStarted({ projectId }, { dispatch, queryFulfilled }) {
                 try {
                     const { data } = await queryFulfilled
@@ -172,8 +178,8 @@ export const projectApi = baseApi.injectEndpoints({
                 method: 'POST',
                 body,
             }),
-            transformResponse: (response: ApiProjectSkill) =>
-                transformProjectSkill(response),
+            transformResponse: (response: unknown) =>
+                transformProjectSkill(ApiProjectSkillSchema.parse(response)),
             async onQueryStarted({ projectId }, { dispatch, queryFulfilled }) {
                 try {
                     const { data } = await queryFulfilled
@@ -228,8 +234,8 @@ export const projectApi = baseApi.injectEndpoints({
                 method: 'PATCH',
                 body,
             }),
-            transformResponse: (response: ApiProject) =>
-                transformProject(response),
+            transformResponse: (response: unknown) =>
+                transformProject(ApiProjectSchema.parse(response)),
             async onQueryStarted(
                 { projectId, body },
                 { dispatch, queryFulfilled },
@@ -290,8 +296,10 @@ export const projectApi = baseApi.injectEndpoints({
 
         getProjectSkills: builder.query<ProjectSkill[], string>({
             query: (projectId) => `/projects/${projectId}/skills`,
-            transformResponse: (response: ApiProjectSkill[]) =>
-                response.map(transformProjectSkill),
+            transformResponse: (response: unknown) =>
+                ApiProjectSkillListSchema.parse(response).map(
+                    transformProjectSkill,
+                ),
             providesTags: (_result, _error, projectId) => [
                 { type: 'ProjectSkill' as const, id: projectId },
             ],

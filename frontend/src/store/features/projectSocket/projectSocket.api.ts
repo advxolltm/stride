@@ -5,6 +5,7 @@ import {
     type WsListenerApi,
 } from '../../middleware/wsTaskHandlers'
 import {
+    WSMessageEnvelopeSchema,
     type projectSocketSocketState,
     type WSMessage,
 } from './projectSocket.types'
@@ -69,15 +70,14 @@ export const projectSocketApi = baseApi.injectEndpoints({
                         }
 
                         try {
-                            const parsed = JSON.parse(event.data) as Partial<
-                                WSMessage<unknown>
-                            >
-
-                            if (!('type' in parsed) || !('payload' in parsed)) {
+                            const raw = JSON.parse(event.data) as unknown
+                            const parsed =
+                                WSMessageEnvelopeSchema.safeParse(raw)
+                            if (!parsed.success) {
                                 return
                             }
 
-                            const message = parsed as WSMessage<unknown>
+                            const message: WSMessage<unknown> = parsed.data
 
                             updateCachedData((draft) => {
                                 draft.lastMessage = message

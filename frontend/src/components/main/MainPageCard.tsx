@@ -48,6 +48,7 @@ export function MainPageCard({
         useUpdateProjectMutation()
     const [deleteProject, { isLoading: isDeleting }] =
         useDeleteProjectMutation()
+    const description = project.description ?? ''
     const statusActionLabel = t(
         isArchived ? 'projectCard.unarchive' : 'projectCard.archive',
     )
@@ -142,10 +143,10 @@ export function MainPageCard({
                                 )}
                             </div>
                             <Card.Description
-                                title={project.description}
+                                title={description || undefined}
                                 className="text-muted mt-1 line-clamp-3 w-full text-sm leading-relaxed wrap-break-word"
                             >
-                                {project.description}
+                                {description}
                             </Card.Description>
                         </div>
                     </Card.Header>

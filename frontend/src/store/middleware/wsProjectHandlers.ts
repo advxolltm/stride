@@ -10,10 +10,13 @@ import {
     transformProject,
     transformProjectSkill,
 } from '../features/project/project.mappers'
+import {
+    ApiProjectMemberListSchema,
+    ApiProjectMemberSchema,
+    ApiProjectSchema,
+    ApiProjectSkillSchema,
+} from '../features/project/project.types'
 import type {
-    ApiProject,
-    ApiProjectMember,
-    ApiProjectSkill,
     Project,
     ProjectMember,
     ProjectSkill,
@@ -21,70 +24,30 @@ import type {
 import { WSMessageType } from '../features/projectSocket/projectSocket.types'
 import type { WsListenerApi } from './wsTaskHandlers'
 import { baseApi } from '../api/base.api'
+import { z } from 'zod'
 
-type ProjectMemberRemovePayload = {
-    project_member_id?: string
-    projectMemberId?: string
-    member_id?: string
-    memberId?: string
-    user_id?: string
-    userId?: string
-}
+const ProjectMemberRemovePayloadSchema = z.object({
+    project_member_id: z.string().optional(),
+    projectMemberId: z.string().optional(),
+    member_id: z.string().optional(),
+    memberId: z.string().optional(),
+    user_id: z.string().optional(),
+    userId: z.string().optional(),
+})
 
-type ProjectSkillRemovePayload = {
-    project_skill_id?: string
-    projectSkillId?: string
-    skill_id?: string
-    skillId?: string
-    id?: string
-}
+const ProjectSkillRemovePayloadSchema = z.object({
+    project_skill_id: z.string().optional(),
+    projectSkillId: z.string().optional(),
+    skill_id: z.string().optional(),
+    skillId: z.string().optional(),
+    id: z.string().optional(),
+})
 
-type ProjectDeletePayload = {
-    project_id?: string
-    projectId?: string
-    id?: string
-}
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-    typeof value === 'object' && value !== null
-
-const isApiProjectUser = (value: unknown) =>
-    isRecord(value) &&
-    typeof value.id === 'string' &&
-    typeof value.username === 'string' &&
-    typeof value.email === 'string'
-
-const isApiProjectMember = (value: unknown): value is ApiProjectMember =>
-    isRecord(value) &&
-    typeof value.id === 'string' &&
-    typeof value.user_id === 'string' &&
-    typeof value.project_id === 'string' &&
-    typeof value.role === 'string' &&
-    typeof value.joined_at === 'string' &&
-    isApiProjectUser(value.user)
-
-const isApiProjectSkill = (value: unknown): value is ApiProjectSkill =>
-    isRecord(value) &&
-    typeof value.id === 'string' &&
-    typeof value.project_id === 'string' &&
-    typeof value.name === 'string'
-
-const isApiProject = (value: unknown): value is ApiProject =>
-    isRecord(value) &&
-    typeof value.id === 'string' &&
-    (typeof value.created_by === 'string' || value.created_by === null) &&
-    typeof value.name === 'string' &&
-    typeof value.slug === 'string' &&
-    typeof value.description === 'string' &&
-    typeof value.status === 'string' &&
-    typeof value.created_at === 'string' &&
-    typeof value.updated_at === 'string' &&
-    (typeof value.join_link === 'string' || value.join_link === null) &&
-    isApiProjectUser(value.creator) &&
-    Array.isArray(value.members) &&
-    value.members.every(isApiProjectMember) &&
-    Array.isArray(value.skills) &&
-    value.skills.every(isApiProjectSkill)
+const ProjectDeletePayloadSchema = z.object({
+    project_id: z.string().optional(),
+    projectId: z.string().optional(),
+    id: z.string().optional(),
+})
 
 const patchProjectCaches = (
     api: WsListenerApi,
@@ -207,12 +170,20 @@ const patchProjectSnapshot = (
 }
 
 const getDeletedProjectId = (payload: unknown) => {
-    if (isApiProject(payload)) {
-        return payload.id
+    const project = ApiProjectSchema.safeParse(payload)
+    if (project.success) {
+        return project.data.id
     }
 
-    const deletePayload = payload as ProjectDeletePayload
-    return deletePayload.project_id ?? deletePayload.projectId ?? deletePayload.id
+    const deletePayload = ProjectDeletePayloadSchema.safeParse(payload)
+    if (!deletePayload.success) {
+        return undefined
+    }
+    return (
+        deletePayload.data.project_id ??
+        deletePayload.data.projectId ??
+        deletePayload.data.id
+    )
 }
 
 const removeProjectFromCaches = (
@@ -238,33 +209,41 @@ const removeProjectFromCaches = (
 }
 
 const getRemovedMemberId = (payload: unknown) => {
-    if (isApiProjectMember(payload)) {
-        return payload.user_id
+    const projectMember = ApiProjectMemberSchema.safeParse(payload)
+    if (projectMember.success) {
+        return projectMember.data.user_id
     }
 
-    const removePayload = payload as ProjectMemberRemovePayload
+    const removePayload = ProjectMemberRemovePayloadSchema.safeParse(payload)
+    if (!removePayload.success) {
+        return undefined
+    }
     return (
-        removePayload.project_member_id ??
-        removePayload.projectMemberId ??
-        removePayload.member_id ??
-        removePayload.memberId ??
-        removePayload.user_id ??
-        removePayload.userId
+        removePayload.data.project_member_id ??
+        removePayload.data.projectMemberId ??
+        removePayload.data.member_id ??
+        removePayload.data.memberId ??
+        removePayload.data.user_id ??
+        removePayload.data.userId
     )
 }
 
 const getRemovedSkillId = (payload: unknown) => {
-    if (isApiProjectSkill(payload)) {
-        return payload.id
+    const projectSkill = ApiProjectSkillSchema.safeParse(payload)
+    if (projectSkill.success) {
+        return projectSkill.data.id
     }
 
-    const removePayload = payload as ProjectSkillRemovePayload
+    const removePayload = ProjectSkillRemovePayloadSchema.safeParse(payload)
+    if (!removePayload.success) {
+        return undefined
+    }
     return (
-        removePayload.project_skill_id ??
-        removePayload.projectSkillId ??
-        removePayload.skill_id ??
-        removePayload.skillId ??
-        removePayload.id
+        removePayload.data.project_skill_id ??
+        removePayload.data.projectSkillId ??
+        removePayload.data.skill_id ??
+        removePayload.data.skillId ??
+        removePayload.data.id
     )
 }
 
@@ -275,27 +254,28 @@ export function handleProjectWsMessage(
     api: WsListenerApi,
 ) {
     switch (type) {
-		case WSMessageType.ChatMessageCreate:
-		case WSMessageType.ChatMessageUpdate:
-		case WSMessageType.ChatMessageDelete:
-		{
-			console.log(type, payload);
-			api.dispatch(baseApi.util.invalidateTags([{ type: 'Messages' }]))
-
-			return true;
-		}
+        case WSMessageType.ChatMessageCreate:
+        case WSMessageType.ChatMessageUpdate:
+        case WSMessageType.ChatMessageDelete: {
+            console.log(type, payload)
+            api.dispatch(baseApi.util.invalidateTags([{ type: 'Messages' }]))
+            return true
+        }
         case WSMessageType.ProjectMemberAdd: {
-            const apiMembers = Array.isArray(payload) ? payload : [payload]
+            const parsedList = ApiProjectMemberListSchema.safeParse(payload)
+            let apiMembers: ProjectMember[] | undefined
 
-            if (!apiMembers.every(isApiProjectMember)) {
-                return true
+            if (parsedList.success) {
+                apiMembers = parsedList.data.map(transformProjectMember)
+            } else {
+                const parsedSingle = ApiProjectMemberSchema.safeParse(payload)
+                if (!parsedSingle.success) {
+                    return true
+                }
+                apiMembers = [transformProjectMember(parsedSingle.data)]
             }
 
-            patchAddedMembers(
-                api,
-                projectId,
-                apiMembers.map(transformProjectMember),
-            )
+            patchAddedMembers(api, projectId, apiMembers)
             return true
         }
         case WSMessageType.ProjectMemberRemove: {
@@ -323,14 +303,15 @@ export function handleProjectWsMessage(
             return true
         }
         case WSMessageType.ProjectSkillAdd: {
-            if (!isApiProjectSkill(payload)) {
+            const parsedPayload = ApiProjectSkillSchema.safeParse(payload)
+            if (!parsedPayload.success) {
                 return true
             }
 
             patchProjectSkillCaches(
                 api,
                 projectId,
-                transformProjectSkill(payload),
+                transformProjectSkill(parsedPayload.data),
             )
             return true
         }
@@ -345,11 +326,12 @@ export function handleProjectWsMessage(
             return true
         }
         case WSMessageType.ProjectUpdate: {
-            if (!isApiProject(payload)) {
+            const parsedPayload = ApiProjectSchema.safeParse(payload)
+            if (!parsedPayload.success) {
                 return true
             }
 
-            patchProjectSnapshot(api, transformProject(payload))
+            patchProjectSnapshot(api, transformProject(parsedPayload.data))
             return true
         }
         case WSMessageType.ProjectDelete: {

@@ -1,6 +1,8 @@
-import type { User } from '../../../shared/types'
+import { UserSchema, type User } from '../../../shared/types'
 import { baseApi } from '../../api/base.api'
 import { clearUserId, setUserId } from '../../userSlice'
+import { mapApiUserToUser } from '../user/user.mappers'
+import { ApiUserSchema } from '../user/user.types'
 import type { LoginRequest } from './auth.types'
 
 export const authApi = baseApi.injectEndpoints({
@@ -42,6 +44,8 @@ export const authApi = baseApi.injectEndpoints({
                 method: 'GET',
                 credentials: 'include',
             }),
+            transformResponse: (response: unknown) =>
+                UserSchema.parse(mapApiUserToUser(ApiUserSchema.parse(response))),
             async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
                 try {
                     const { data } = await queryFulfilled
