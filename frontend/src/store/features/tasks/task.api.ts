@@ -16,9 +16,12 @@ import {
     mapProjectSkillToTaskSkill,
     transformTask,
 } from './task.mappers'
+import {
+    ApiTaskAssigneeSchema,
+    ApiTaskListSchema,
+    ApiTaskSchema,
+} from './task.types'
 import type {
-    ApiTask,
-    ApiTaskAssignee,
     AssignTaskRequest,
     CreateTaskRequest,
     MoveTaskRequest,
@@ -32,8 +35,8 @@ export const taskApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
         getTasksForProject: builder.query<Task[], string>({
             query: (projectId) => `/tasks/for-project/${projectId}`,
-            transformResponse: (response: ApiTask[]) =>
-                response.map(transformTask),
+            transformResponse: (response: unknown) =>
+                ApiTaskListSchema.parse(response).map(transformTask),
             providesTags: (_result, _error, projectId) => [
                 { type: 'Task' as const, id: projectId },
             ],
@@ -41,7 +44,8 @@ export const taskApi = baseApi.injectEndpoints({
 
         getTask: builder.query<Task, string>({
             query: (taskId) => `/tasks/task/${taskId}`,
-            transformResponse: (response: ApiTask) => transformTask(response),
+            transformResponse: (response: unknown) =>
+                transformTask(ApiTaskSchema.parse(response)),
             providesTags: (_result, _error, taskId) => [
                 { type: 'Task' as const, id: taskId },
             ],
@@ -53,7 +57,8 @@ export const taskApi = baseApi.injectEndpoints({
                 method: 'POST',
                 body,
             }),
-            transformResponse: (response: ApiTask) => transformTask(response),
+            transformResponse: (response: unknown) =>
+                transformTask(ApiTaskSchema.parse(response)),
             invalidatesTags: (_result, _error, { project_id }) => [
                 { type: 'Task' as const, id: project_id },
             ],
@@ -68,7 +73,8 @@ export const taskApi = baseApi.injectEndpoints({
                 method: 'PATCH',
                 body,
             }),
-            transformResponse: (response: ApiTask) => transformTask(response),
+            transformResponse: (response: unknown) =>
+                transformTask(ApiTaskSchema.parse(response)),
             async onQueryStarted(
                 { taskId, projectId, body },
                 { dispatch, queryFulfilled },
@@ -167,14 +173,14 @@ export const taskApi = baseApi.injectEndpoints({
                 method: 'POST',
                 body,
             }),
-            transformResponse: (response: ApiTaskAssignee) =>
-                mapApiTaskAssigneeToAssignee(response),
+            transformResponse: (response: unknown) =>
+                mapApiTaskAssigneeToAssignee(
+                    ApiTaskAssigneeSchema.parse(response),
+                ),
             async onQueryStarted(
                 { taskId, projectId, body },
                 { dispatch, getState, queryFulfilled },
             ) {
-                // FIXME: The backend currently returns project_member with empty user data.
-                // Use cached project members for display until that response is fixed.
                 const project =
                     projectApi.endpoints.getProjectById.select(projectId)(
                         getState(),
@@ -310,7 +316,8 @@ export const taskApi = baseApi.injectEndpoints({
                 method: 'POST',
                 body,
             }),
-            transformResponse: (response: ApiTask) => transformTask(response),
+            transformResponse: (response: unknown) =>
+                transformTask(ApiTaskSchema.parse(response)),
             async onQueryStarted(
                 { taskId, projectId, body },
                 { dispatch, queryFulfilled },

@@ -1,4 +1,9 @@
 import { baseApi } from '../../api/base.api'
+import {
+    ApiWhiteboardElementListSchema,
+    ApiWhiteboardElementSchema,
+    ApiWhiteboardSchema,
+} from './whiteboard.api.types'
 import type {
     ApiWhiteboard,
     ApiWhiteboardElement,
@@ -54,8 +59,8 @@ export const whiteboardApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
         getProjectWhiteboard: builder.query<Whiteboard, string>({
             query: (projectId) => `/projects/${projectId}/whiteboard`,
-            transformResponse: (response: ApiWhiteboard) =>
-                transformWhiteboard(response),
+            transformResponse: (response: unknown) =>
+                transformWhiteboard(ApiWhiteboardSchema.parse(response)),
             providesTags: (_result, _error, projectId) => [
                 { type: 'Whiteboard' as const, id: projectId },
             ],
@@ -66,8 +71,10 @@ export const whiteboardApi = baseApi.injectEndpoints({
             string
         >({
             query: (projectId) => `/projects/${projectId}/whiteboard/elements`,
-            transformResponse: (response: ApiWhiteboardElement[]) =>
-                response.map(transformWhiteboardElement),
+            transformResponse: (response: unknown) =>
+                ApiWhiteboardElementListSchema.parse(response).map(
+                    transformWhiteboardElement,
+                ),
             providesTags: (_result, _error, projectId) => [
                 { type: 'WhiteboardElement' as const, id: projectId },
             ],
@@ -83,8 +90,10 @@ export const whiteboardApi = baseApi.injectEndpoints({
                 body,
                 headers: createWhiteboardMutationHeaders(),
             }),
-            transformResponse: (response: ApiWhiteboardElement) =>
-                transformWhiteboardElement(response),
+            transformResponse: (response: unknown) =>
+                transformWhiteboardElement(
+                    ApiWhiteboardElementSchema.parse(response),
+                ),
             async onQueryStarted(
                 { projectId },
                 { dispatch, queryFulfilled },
@@ -122,8 +131,10 @@ export const whiteboardApi = baseApi.injectEndpoints({
                 body,
                 headers: createWhiteboardMutationHeaders(),
             }),
-            transformResponse: (response: ApiWhiteboardElement) =>
-                transformWhiteboardElement(response),
+            transformResponse: (response: unknown) =>
+                transformWhiteboardElement(
+                    ApiWhiteboardElementSchema.parse(response),
+                ),
             async onQueryStarted(
                 { projectId },
                 { dispatch, queryFulfilled },

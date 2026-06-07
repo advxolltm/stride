@@ -1,7 +1,15 @@
-import { baseApi } from "../../api/base.api";
-import type { EditMessageRequest, Message, Paginated, SendMessageRequest } from "./chat.types";
+import { baseApi } from '../../api/base.api'
+import {
+    createPaginatedSchema,
+    MessageSchema,
+    type EditMessageRequest,
+    type Message,
+    type Paginated,
+    type SendMessageRequest,
+} from './chat.types'
 
-export const MESSAGE_PAGE_SIZE = 10;
+export const MESSAGE_PAGE_SIZE = 10
+const PaginatedMessageSchema = createPaginatedSchema(MessageSchema)
 
 export const chatApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
@@ -13,18 +21,20 @@ export const chatApi = baseApi.injectEndpoints({
                 url: `/projects/${projectId}/chat`,
                 method: 'POST',
                 body,
-            })
+            }),
+            transformResponse: (response: unknown) => MessageSchema.parse(response),
         }),
-		editMessage: builder.mutation<
-			Message,
-			{ projectId: string; messageId: string; body: EditMessageRequest }
-		>({
+        editMessage: builder.mutation<
+            Message,
+            { projectId: string; messageId: string; body: EditMessageRequest }
+        >({
             query: ({ projectId, messageId, body }) => ({
                 url: `/projects/${projectId}/chat/message/${messageId}`,
                 method: 'PATCH',
                 body,
-            })
-		}),
+            }),
+            transformResponse: (response: unknown) => MessageSchema.parse(response),
+        }),
         deleteMessage: builder.mutation<
             unknown,
             { projectId: string; messageId: string }
@@ -32,7 +42,7 @@ export const chatApi = baseApi.injectEndpoints({
             query: ({ projectId, messageId }) => ({
                 url: `/projects/${projectId}/chat/message/${messageId}`,
                 method: 'DELETE',
-            })
+            }),
         }),
         getMessages: builder.infiniteQuery<
             Paginated<Message>,
@@ -46,35 +56,37 @@ export const chatApi = baseApi.injectEndpoints({
                         page: pageParam,
                         pageSize: MESSAGE_PAGE_SIZE,
                     },
-                };
+                }
             },
             infiniteQueryOptions: {
                 initialPageParam: 0,
                 getNextPageParam: (p) => {
                     if (p.page === 1) {
-                        return undefined;
+                        return undefined
                     }
-                    return p.page - 1;
+                    return p.page - 1
                 },
                 getPreviousPageParam: (p) => {
                     if (p.page === p.pageCount) {
-                        return undefined;
+                        return undefined
                     }
-                    return p.page + 1;
+                    return p.page + 1
                 },
                 // maxPages: 2,
-				refetchCachedPages: true,
+                refetchCachedPages: true,
             },
+            transformResponse: (response: unknown) =>
+                PaginatedMessageSchema.parse(response),
             providesTags: (_result, _error, arg) => [
                 { type: 'Messages', id: arg.projectId },
             ],
-        })
-    })
-});
+        }),
+    }),
+})
 
 export const {
     useGetMessagesInfiniteQuery,
     useSendMessageMutation,
-	useEditMessageMutation,
+    useEditMessageMutation,
     useDeleteMessageMutation,
-} = chatApi;
+} = chatApi
