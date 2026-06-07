@@ -1,4 +1,4 @@
-import { Spinner } from '@heroui/react'
+import { Button, Spinner, toast } from '@heroui/react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -13,18 +13,31 @@ import type { WorkingHoursAllocation } from '../../workingHours/types'
 export function WorkingHoursSection() {
     const { t } = useTranslation('setting')
     const { data: projects = [], isLoading } = useGetProjectsQuery()
+    const [savedHoursByProject, setSavedHoursByProject] = useState<
+        Record<string, number>
+    >({})
     const [draftHoursByProject, setDraftHoursByProject] = useState<
         Record<string, number>
     >({})
 
-    const allocations = useMemo<WorkingHoursAllocation[]>(
+    const savedAllocations = useMemo<WorkingHoursAllocation[]>(
         () =>
             buildMockWorkingHoursAllocations(projects).map((allocation) => ({
                 ...allocation,
                 hours:
+                    savedHoursByProject[allocation.id] ?? allocation.hours,
+            })),
+        [projects, savedHoursByProject],
+    )
+
+    const allocations = useMemo<WorkingHoursAllocation[]>(
+        () =>
+            savedAllocations.map((allocation) => ({
+                ...allocation,
+                hours:
                     draftHoursByProject[allocation.id] ?? allocation.hours,
             })),
-        [draftHoursByProject, projects],
+        [draftHoursByProject, savedAllocations],
     )
 
     const allocated = useMemo(
@@ -32,6 +45,12 @@ export function WorkingHoursSection() {
         [allocations],
     )
     const remaining = Math.max(TOTAL_WEEKLY_HOURS - allocated, 0)
+    const isChanged = allocations.some(
+        (allocation) =>
+            allocation.hours !==
+            (savedAllocations.find((item) => item.id === allocation.id)?.hours ??
+                allocation.hours),
+    )
 
     function handleAllocationChange(projectId: string, nextHours: number) {
         setDraftHoursByProject((current) => {
@@ -50,6 +69,20 @@ export function WorkingHoursSection() {
                 [projectId]: Math.max(0, Math.min(nextHours, maxForProject)),
             }
         })
+    }
+
+    const handleReset = () => {
+        setDraftHoursByProject({})
+    }
+
+    const handleSave = () => {
+        setSavedHoursByProject(
+            Object.fromEntries(
+                allocations.map((allocation) => [allocation.id, allocation.hours]),
+            ),
+        )
+        setDraftHoursByProject({})
+        toast.success(t('workingHours.updateSuccess'))
     }
 
     if (isLoading) {
@@ -94,6 +127,27 @@ export function WorkingHoursSection() {
                             maxHours={maxForProject}
                             initials={allocation.initials}
                             color={allocation.color}
+                            inputAriaLabel={t(
+                                'workingHours.inputAriaLabel',
+                                {
+                                    project: allocation.name,
+                                },
+                            )}
+                            availabilityLabel={t(
+                                'workingHours.availability',
+                                {
+                                    max: maxForProject,
+                                },
+                            )}
+                            integerErrorLabel={t(
+                                'workingHours.validation.integer',
+                            )}
+                            rangeErrorLabel={t(
+                                'workingHours.validation.range',
+                                {
+                                    max: maxForProject,
+                                },
+                            )}
                             onChange={(hours) =>
                                 handleAllocationChange(allocation.id, hours)
                             }
@@ -109,6 +163,21 @@ export function WorkingHoursSection() {
                     </div>
                 )}
             </div>
+
+            {allocations.length > 0 && (
+                <div className="flex justify-end gap-3">
+                    <Button
+                        variant="ghost"
+                        isDisabled={!isChanged}
+                        onPress={handleReset}
+                    >
+                        {t('workingHours.reset')}
+                    </Button>
+                    <Button isDisabled={!isChanged} onPress={handleSave}>
+                        {t('workingHours.save')}
+                    </Button>
+                </div>
+            )}
         </div>
     )
 }

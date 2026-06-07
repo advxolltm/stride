@@ -1,4 +1,5 @@
-import { Spinner } from '@heroui/react'
+import { Button, Spinner, toast } from '@heroui/react'
+import { Pencil } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Project } from '../../../../store/features/project/project.types'
@@ -52,14 +53,45 @@ export function MyProjectWorkingHoursSettings({
         [otherProjects],
     )
 
+    const [isEditing, setIsEditing] = useState(false)
+    const [savedCurrentProjectHours, setSavedCurrentProjectHours] = useState<
+        number | null
+    >(null)
     const [draftCurrentProjectHours, setDraftCurrentProjectHours] =
         useState<number | null>(null)
+    const committedCurrentProjectHours =
+        savedCurrentProjectHours ?? initialCurrentProject.hours
     const currentProjectHours =
-        draftCurrentProjectHours ?? initialCurrentProject.hours
+        draftCurrentProjectHours ?? committedCurrentProjectHours
 
     const allocated = otherCommittedHours + currentProjectHours
     const remaining = Math.max(TOTAL_WEEKLY_HOURS - allocated, 0)
     const maxForCurrentProject = TOTAL_WEEKLY_HOURS - otherCommittedHours
+    const isChanged =
+        draftCurrentProjectHours !== null &&
+        draftCurrentProjectHours !== committedCurrentProjectHours
+
+    const handleStartEditing = () => {
+        setDraftCurrentProjectHours(committedCurrentProjectHours)
+        setIsEditing(true)
+    }
+
+    const handleCancel = () => {
+        setDraftCurrentProjectHours(null)
+        setIsEditing(false)
+    }
+
+    const handleSave = () => {
+        if (draftCurrentProjectHours === null) {
+            setIsEditing(false)
+            return
+        }
+
+        setSavedCurrentProjectHours(draftCurrentProjectHours)
+        setDraftCurrentProjectHours(null)
+        setIsEditing(false)
+        toast.success(t('myWorkingHoursSettings.saveSuccess'))
+    }
 
     if (isLoading) {
         return (
@@ -71,16 +103,31 @@ export function MyProjectWorkingHoursSettings({
 
     return (
         <div className="flex h-full min-h-0 flex-col gap-8 p-2">
-            <div>
-                <h2
-                    className="text-base font-semibold"
-                    style={{ color: 'var(--overlay-foreground)' }}
-                >
-                    {t('myWorkingHoursSettings.title')}
-                </h2>
-                <p className="text-muted-foreground mt-1 text-sm">
-                    {t('myWorkingHoursSettings.description')}
-                </p>
+            <div className="flex items-start justify-between gap-3">
+                <div>
+                    <h2
+                        className="text-base font-semibold"
+                        style={{ color: 'var(--overlay-foreground)' }}
+                    >
+                        {t('myWorkingHoursSettings.title')}
+                    </h2>
+                    <p className="text-muted-foreground mt-1 text-sm">
+                        {t('myWorkingHoursSettings.description')}
+                    </p>
+                </div>
+
+                {!isEditing && (
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onPress={handleStartEditing}
+                        className="gap-1.5"
+                        style={{ color: 'var(--muted)' }}
+                    >
+                        <Pencil size={13} />
+                        {t('myWorkingHoursSettings.edit')}
+                    </Button>
+                )}
             </div>
 
             <div className="min-h-0 flex-1 space-y-5 overflow-y-auto pr-1 [scrollbar-gutter:auto]">
@@ -102,6 +149,28 @@ export function MyProjectWorkingHoursSettings({
                     })}
                     hours={currentProjectHours}
                     maxHours={maxForCurrentProject}
+                    inputAriaLabel={t(
+                        'myWorkingHoursSettings.inputAriaLabel',
+                        {
+                            project: project.name,
+                        },
+                    )}
+                    availabilityLabel={t(
+                        'myWorkingHoursSettings.availability',
+                        {
+                            max: maxForCurrentProject,
+                        },
+                    )}
+                    integerErrorLabel={t(
+                        'myWorkingHoursSettings.validation.integer',
+                    )}
+                    rangeErrorLabel={t(
+                        'myWorkingHoursSettings.validation.range',
+                        {
+                            max: maxForCurrentProject,
+                        },
+                    )}
+                    isEditable={isEditing}
                     onChange={setDraftCurrentProjectHours}
                 />
 
@@ -123,6 +192,23 @@ export function MyProjectWorkingHoursSettings({
                         ))}
                     </div>
                 </div>
+
+                {isEditing && (
+                    <div className="flex gap-2 pt-1">
+                        <Button variant="outline" size="sm" onPress={handleCancel}>
+                            {t('myWorkingHoursSettings.cancel')}
+                        </Button>
+
+                        <Button
+                            variant="primary"
+                            size="sm"
+                            onPress={handleSave}
+                            isDisabled={!isChanged}
+                        >
+                            {t('myWorkingHoursSettings.save')}
+                        </Button>
+                    </div>
+                )}
             </div>
         </div>
     )

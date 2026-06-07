@@ -51,10 +51,19 @@
   "workingHours": {
     "title": "Your Weekly Working Hours",
     "description": "You have 40 hours per week. Distribute them across your projects.",
+    "save": "Save changes",
+    "reset": "Discard changes",
+    "updateSuccess": "Working hours updated successfully",
     "summary": {
       "allocated": "Allocated",
       "remaining": "Remaining"
     },
-    "projectSubtitle": "{{hours}}h / week · max {{max}}h available"
+    "projectSubtitle": "{{hours}}h / week · max {{max}}h available",
+    "inputAriaLabel": "Weekly hours for {{project}}",
+    "availability": "You can assign up to {{max}}h here.",
+    "validation": {
+      "integer": "Enter a whole number.",
+      "range": "Enter a value between 0 and {{max}}h."
+    }
   }
 }
