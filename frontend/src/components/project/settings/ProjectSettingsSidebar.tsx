@@ -1,29 +1,28 @@
 import { Button } from '@heroui/react'
 import { Settings, Target, UserRound, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import i18n from '../../../i18n'
 
 type Tab = 'general' | 'members' | 'skills' | 'my-skills'
 
-const tabs: { id: Tab; label: string; icon: typeof Settings }[] = [
+const tabs: { id: Tab; labelKey: string; icon: typeof Settings }[] = [
     {
         id: 'general',
-        label: i18n.t('settingsSidebar.tabs.general', { ns: 'project' }),
+        labelKey: 'settingsSidebar.tabs.general',
         icon: Settings,
     },
     {
         id: 'members',
-        label: i18n.t('settingsSidebar.tabs.members', { ns: 'project' }),
+        labelKey: 'settingsSidebar.tabs.members',
         icon: Users,
     },
     {
         id: 'skills',
-        label: i18n.t('settingsSidebar.tabs.skills', { ns: 'project' }),
+        labelKey: 'settingsSidebar.tabs.skills',
         icon: Target,
     },
     {
         id: 'my-skills',
-        label: i18n.t('settingsSidebar.tabs.mySkills', { ns: 'project' }),
+        labelKey: 'settingsSidebar.tabs.mySkills',
         icon: UserRound,
     },
 ]
@@ -51,7 +50,7 @@ export function ProjectSettingsSidebar({
                 {t('settingsSidebar.title')}
             </p>
 
-            {tabs.map(({ id, label, icon: Icon }) => {
+            {tabs.map(({ id, labelKey, icon: Icon }) => {
                 const isActive = activeTab === id
                 return (
                     <Button
@@ -79,7 +78,7 @@ export function ProjectSettingsSidebar({
                                     : 'var(--muted)',
                             }}
                         />
-                        {label}
+                        {t(labelKey)}
                     </Button>
                 )
             })}

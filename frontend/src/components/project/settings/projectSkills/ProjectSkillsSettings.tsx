@@ -117,7 +117,7 @@ export function ProjectSkillsSettings({
             </div>
 
             {isOwner && isAdding ? (
-                <div className="grid min-h-0 flex-1 grid-rows-[minmax(420px,3fr)_minmax(280px,2fr)] gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(320px,2fr)] xl:grid-rows-none">
+                <div className="grid min-h-0 flex-1 overflow-y-auto grid-rows-[minmax(420px,3fr)_minmax(280px,2fr)] gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(320px,2fr)] xl:grid-rows-none">
                     <div className="min-h-0">
                         <AddProjectSkillPanel
                             project={project}

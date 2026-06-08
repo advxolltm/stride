@@ -5,9 +5,10 @@ import {
     type WsListenerApi,
 } from '../../middleware/wsTaskHandlers'
 import { watchManagedSocket } from '../realtime/realtime.socketRuntime'
-import type {
-    RealtimeSocketStatus,
-    WSMessage,
+import {
+    WSMessageEnvelopeSchema,
+    type RealtimeSocketStatus,
+    type WSMessage,
 } from '../realtime/realtime.types'
 
 export type TasksSocketState = {
@@ -42,12 +43,10 @@ export const invalidateProjectTasks = (
 
 const parseTasksSocketMessage = (rawMessage: string) => {
     try {
-        const parsed = JSON.parse(rawMessage) as Partial<WSMessage<unknown>>
-        if (typeof parsed.type !== 'number' || !('payload' in parsed)) {
-            return null
-        }
-
-        return parsed as WSMessage<unknown>
+        const parsed = WSMessageEnvelopeSchema.safeParse(
+            JSON.parse(rawMessage) as unknown,
+        )
+        return parsed.success ? parsed.data : null
     } catch {
         return null
     }

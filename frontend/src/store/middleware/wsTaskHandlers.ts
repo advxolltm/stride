@@ -14,56 +14,41 @@ import {
     mapProjectSkillToTaskSkill,
     transformTask,
 } from '../features/tasks/task.mappers'
-import type {
-    ApiTask,
-    ApiTaskAssignee,
-    ApiTaskSkill,
-    Task,
+import {
+    ApiTaskAssigneeSchema,
+    ApiTaskListSchema,
+    ApiTaskSchema,
+    ApiTaskSkillSchema,
+    type Task,
 } from '../features/tasks/task.types'
 import { WSMessageType } from '../features/realtime/realtime.types'
+
+import { z } from 'zod'
 
 export type WsListenerApi = {
     dispatch: (action: unknown) => unknown
     getState: () => unknown
 }
 
-type TaskDeletePayload = {
-    deletedTaskID?: string
-}
+const TaskDeletePayloadSchema = z.object({
+    deletedTaskID: z.string(),
+})
 
-type TaskUnassignPayload = {
-    taskID?: string
-    projectMemberID?: string
-}
+const TaskUnassignPayloadSchema = z.object({
+    taskID: z.string(),
+    projectMemberID: z.string(),
+})
 
-type TaskSkillRemovedPayload = {
-    task_id?: string
-    taskId?: string
-    project_skill_id?: string
-    projectSkillId?: string
-}
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-    typeof value === 'object' && value !== null
-
-const isApiTask = (value: unknown): value is ApiTask =>
-    isRecord(value) && typeof value.id === 'string'
-
-const isApiTaskList = (value: unknown): value is ApiTask[] =>
-    Array.isArray(value) && value.every(isApiTask)
-
-const isApiTaskAssignee = (value: unknown): value is ApiTaskAssignee =>
-    isRecord(value) &&
-    typeof value.id === 'string' &&
-    typeof value.task_id === 'string' &&
-    typeof value.project_member_id === 'string' &&
-    typeof value.assigned_at === 'string'
-
-const isApiTaskSkill = (value: unknown): value is ApiTaskSkill =>
-    isRecord(value) &&
-    typeof value.id === 'string' &&
-    typeof value.task_id === 'string' &&
-    typeof value.project_skill_id === 'string'
+const TaskSkillRemovedPayloadSchema = z.union([
+    z.object({
+        task_id: z.string(),
+        project_skill_id: z.string(),
+    }),
+    z.object({
+        taskId: z.string(),
+        projectSkillId: z.string(),
+    }),
+])
 
 const invalidateProjectTasks = (api: WsListenerApi, projectId: string) => {
     api.dispatch(baseApi.util.invalidateTags([{ type: 'Task', id: projectId }]))
@@ -113,24 +98,26 @@ export function handleTaskWsMessage(
             return true
         }
         case WSMessageType.TaskUpdate: {
-            if (!isApiTask(payload)) {
+            const parsedPayload = ApiTaskSchema.safeParse(payload)
+            if (!parsedPayload.success) {
                 invalidateProjectTasks(api, projectId)
                 return true
             }
 
-            const task = transformTask(payload)
+            const task = transformTask(parsedPayload.data)
             patchTaskCaches(api, projectId, task.id, (draft) => {
                 patchTaskFields(draft, task)
             })
             return true
         }
         case WSMessageType.TaskDelete: {
-            const taskId = (payload as TaskDeletePayload).deletedTaskID
+            const parsedPayload = TaskDeletePayloadSchema.safeParse(payload)
 
-            if (!taskId) {
+            if (!parsedPayload.success) {
                 invalidateProjectTasks(api, projectId)
                 return true
             }
+            const { deletedTaskID: taskId } = parsedPayload.data
 
             api.dispatch(
                 taskApi.util.updateQueryData(
@@ -142,14 +129,19 @@ export function handleTaskWsMessage(
             return true
         }
         case WSMessageType.TaskMove: {
-            if (!isApiTask(payload) && !isApiTaskList(payload)) {
+            const parsedSingleTask = ApiTaskSchema.safeParse(payload)
+            const parsedTaskList = ApiTaskListSchema.safeParse(payload)
+
+            if (!parsedSingleTask.success && !parsedTaskList.success) {
                 invalidateProjectTasks(api, projectId)
                 return true
             }
 
-            const tasks = Array.isArray(payload)
-                ? payload.map(transformTask)
-                : [transformTask(payload)]
+            const tasks = parsedTaskList.success
+                ? parsedTaskList.data.map(transformTask)
+                : parsedSingleTask.success
+                  ? [transformTask(parsedSingleTask.data)]
+                  : []
             api.dispatch(
                 taskApi.util.updateQueryData(
                     'getTasksForProject',
@@ -183,14 +175,16 @@ export function handleTaskWsMessage(
             return true
         }
         case WSMessageType.TaskAssign: {
-            if (!isApiTaskAssignee(payload)) {
+            const parsedPayload = ApiTaskAssigneeSchema.safeParse(payload)
+            if (!parsedPayload.success) {
                 invalidateProjectTasks(api, projectId)
                 return true
             }
+            const assignment = parsedPayload.data
 
             const project = getProject(api, projectId)
             const member = project?.members.find(
-                (item) => item.id === payload.project_member_id,
+                (item) => item.id === assignment.project_member_id,
             )
             if (!member) {
                 invalidateProjectTasks(api, projectId)
@@ -200,26 +194,26 @@ export function handleTaskWsMessage(
             const assignee = {
                 ...mapProjectMemberToTaskAssignee(
                     member,
-                    payload.task_id,
-                    payload.id,
+                    assignment.task_id,
+                    assignment.id,
                 ),
-                assignedAt: payload.assigned_at,
+                assignedAt: assignment.assigned_at,
             }
 
-            patchTaskCaches(api, projectId, payload.task_id, (task) => {
+            patchTaskCaches(api, projectId, assignment.task_id, (task) => {
                 applyTaskAssignee(task, assignee)
             })
             return true
         }
         case WSMessageType.TaskUnassign: {
-            const taskId = (payload as TaskUnassignPayload).taskID
-            const projectMemberId = (payload as TaskUnassignPayload)
-                .projectMemberID
+            const parsedPayload = TaskUnassignPayloadSchema.safeParse(payload)
 
-            if (!taskId || !projectMemberId) {
+            if (!parsedPayload.success) {
                 invalidateProjectTasks(api, projectId)
                 return true
             }
+            const { taskID: taskId, projectMemberID: projectMemberId } =
+                parsedPayload.data
 
             patchTaskCaches(api, projectId, taskId, (task) => {
                 removeTaskAssignee(task, projectMemberId)
@@ -227,14 +221,16 @@ export function handleTaskWsMessage(
             return true
         }
         case WSMessageType.TaskSkillAdded: {
-            if (!isApiTaskSkill(payload)) {
+            const parsedPayload = ApiTaskSkillSchema.safeParse(payload)
+            if (!parsedPayload.success) {
                 invalidateProjectTasks(api, projectId)
                 return true
             }
+            const taskSkill = parsedPayload.data
 
             const project = getProject(api, projectId)
             const projectSkill = project?.skills.find(
-                (skill) => skill.id === payload.project_skill_id,
+                (skill) => skill.id === taskSkill.project_skill_id,
             )
             if (!projectSkill) {
                 invalidateProjectTasks(api, projectId)
@@ -243,27 +239,30 @@ export function handleTaskWsMessage(
 
             const skill = mapProjectSkillToTaskSkill(
                 projectSkill,
-                payload.task_id,
-                payload.id,
+                taskSkill.task_id,
+                taskSkill.id,
             )
 
-            patchTaskCaches(api, projectId, payload.task_id, (task) => {
+            patchTaskCaches(api, projectId, taskSkill.task_id, (task) => {
                 applyTaskSkill(task, skill)
             })
             return true
         }
         case WSMessageType.TaskSkillRemoved: {
-            const taskId =
-                (payload as TaskSkillRemovedPayload).task_id ??
-                (payload as TaskSkillRemovedPayload).taskId
-            const projectSkillId =
-                (payload as TaskSkillRemovedPayload).project_skill_id ??
-                (payload as TaskSkillRemovedPayload).projectSkillId
+            const parsedPayload = TaskSkillRemovedPayloadSchema.safeParse(payload)
 
-            if (!taskId || !projectSkillId) {
+            if (!parsedPayload.success) {
                 invalidateProjectTasks(api, projectId)
                 return true
             }
+            const taskId =
+                'task_id' in parsedPayload.data
+                    ? parsedPayload.data.task_id
+                    : parsedPayload.data.taskId
+            const projectSkillId =
+                'project_skill_id' in parsedPayload.data
+                    ? parsedPayload.data.project_skill_id
+                    : parsedPayload.data.projectSkillId
 
             patchTaskCaches(api, projectId, taskId, (task) => {
                 removeTaskSkill(task, projectSkillId)
