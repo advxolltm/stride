@@ -330,13 +330,16 @@ func generateProjectMembers(users []models.User, projects []models.Project) {
 		isOwnerInMembers := false
 		members := make([]models.ProjectMember, 0, membersCount)
 		for _, memberUser := range memberUsers {
+			role := "member"
 			if memberUser.ID == *projects[pidx].CreatedBy {
 				isOwnerInMembers = true
+				role = "owner"
 			}
 			pm := models.ProjectMember{
 				JoinedAt: f.PastDate(),
 				User:     memberUser,
 				Project:  projects[pidx],
+				Role:     role,
 			}
 
 			members = append(members, pm)
@@ -346,6 +349,7 @@ func generateProjectMembers(users []models.User, projects []models.Project) {
 			JoinedAt: f.PastDate(),
 			User:     *projects[pidx].Creator,
 			Project:  projects[pidx],
+			Role:     "owner",
 		}
 		if !isOwnerInMembers {
 			members = append(members, powner)
