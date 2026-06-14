@@ -5,6 +5,7 @@ import (
 	"backend/models"
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/google/uuid"
@@ -24,6 +25,11 @@ type UpdateUserFields struct {
 	SetAvatarURL bool                 `gorm:"-"`
 }
 
+type SetAllWorkingHoursRequest struct {
+	ProjectID    uuid.UUID
+	WorkingHours int
+}
+
 type (
 	UserStore interface {
 		GetAllUsers(ctx context.Context) ([]models.User, error)
@@ -32,8 +38,12 @@ type (
 		UpdateUser(ctx context.Context, id uuid.UUID, fields UpdateUserFields) (*models.User, error)
 		DeleteUser(ctx context.Context, id uuid.UUID) error
 		GetByEmailAndPassword(ctx context.Context, email, passwordHash string) (uuid.UUID, error)
-		GetUserSkills(ctx context.Context, userID uuid.UUID) ([]models.UserSkill, error)
-		UpdateUserProjectSkills(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, skillIDs []uuid.UUID) ([]models.UserSkill, error)
+		SetWorkingHours(ctx context.Context, projID uuid.UUID, workingHors int, userID uuid.UUID) (*models.ProjectMember, error)
+		AddSkill(ctx context.Context, projID uuid.UUID, skillID uuid.UUID, userID uuid.UUID) (*models.ProjectMember, error)
+		RemoveSkill(ctx context.Context, projID uuid.UUID, skillID uuid.UUID, userID uuid.UUID) (*models.ProjectMember, error)
+		SetAllWorkingHours(ctx context.Context, settings []SetAllWorkingHoursRequest, userID uuid.UUID) error
+		GetUserSkills(ctx context.Context, userID uuid.UUID, projectID uuid.UUID) ([]models.ProjectSkill, error)
+		UpdateUserProjectSkills(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, skillIDs []uuid.UUID) ([]models.ProjectSkill, error)
 	}
 
 	userStore struct {
@@ -150,21 +160,35 @@ func (s *userStore) GetByEmailAndPassword(ctx context.Context, email, password s
 	return user.ID, nil
 }
 
-func (s *userStore) GetUserSkills(ctx context.Context, userID uuid.UUID) ([]models.UserSkill, error) {
-	var userSkills []models.UserSkill
-	result := s.db.WithContext(ctx).
-		Preload("ProjectSkill").
-		Joins("JOIN project_skills ON project_skills.id = user_skills.project_skill_id").
-		Where("user_skills.user_id = ?", userID).
-		Order("project_skills.project_id ASC, project_skills.name ASC").
-		Find(&userSkills)
-	if result.Error != nil {
-		return nil, result.Error
+func (s *userStore) GetUserSkills(ctx context.Context, userID uuid.UUID, projID uuid.UUID) ([]models.ProjectSkill, error) {
+
+	var member models.ProjectMember
+	err := s.db.WithContext(ctx).
+		Where("user_id = ? AND project_id = ?", userID, projID).
+		First(&member).Error
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to find project member: %w", err)
+	}
+
+	var userSkills []models.ProjectSkill
+	err = s.db.WithContext(ctx).Model(&member).Association("Skills").Find(&userSkills)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to find user skills: %w", err)
 	}
 	return userSkills, nil
 }
 
-func (s *userStore) UpdateUserProjectSkills(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, skillIDs []uuid.UUID) ([]models.UserSkill, error) {
+func (s *userStore) UpdateUserProjectSkills(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, skillIDs []uuid.UUID) ([]models.ProjectSkill, error) {
+	var member models.ProjectMember
+	err_mem := s.db.WithContext(ctx).
+		Where("user_id = ? AND project_id = ?", userID, projectID).
+		First(&member).Error
+
+	if err_mem != nil {
+		return nil, ErrUserNotProjectMember
+	}
 	uniqueSkillIDs := make([]uuid.UUID, 0, len(skillIDs))
 	seenSkillIDs := map[uuid.UUID]struct{}{}
 	for _, skillID := range skillIDs {
@@ -195,44 +219,105 @@ func (s *userStore) UpdateUserProjectSkills(ctx context.Context, userID uuid.UUI
 			return ErrUserNotProjectMember
 		}
 
-		if len(uniqueSkillIDs) > 0 {
-			var matchingSkillCount int64
-			if err := tx.Model(&models.ProjectSkill{}).
-				Where("project_id = ? AND id IN ?", projectID, uniqueSkillIDs).
-				Count(&matchingSkillCount).Error; err != nil {
-				return err
-			}
-			if matchingSkillCount != int64(len(uniqueSkillIDs)) {
-				return ErrProjectSkillNotFound
-			}
-		}
-
-		if err := tx.
-			Where("user_id = ? AND project_skill_id IN (?)",
-				userID,
-				tx.Model(&models.ProjectSkill{}).Select("id").Where("project_id = ?", projectID),
-			).
-			Delete(&models.UserSkill{}).Error; err != nil {
-			return err
-		}
-
 		if len(uniqueSkillIDs) == 0 {
-			return nil
+			return tx.Model(&member).Association("Skills").Clear()
 		}
 
-		userSkills := make([]models.UserSkill, len(uniqueSkillIDs))
+		newSkills := make([]models.ProjectSkill, len(uniqueSkillIDs))
 		for i, skillID := range uniqueSkillIDs {
-			userSkills[i] = models.UserSkill{
-				UserID:         userID,
-				ProjectSkillID: skillID,
-			}
+			newSkills[i] = models.ProjectSkill{ID: skillID}
 		}
 
-		return tx.Create(&userSkills).Error
+		return tx.Model(&member).Association("Skills").Replace(&newSkills)
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return s.GetUserSkills(ctx, userID)
+	return s.GetUserSkills(ctx, userID, projectID)
+}
+
+func (s *userStore) SetWorkingHours(ctx context.Context, projID uuid.UUID, workingHors int, userID uuid.UUID) (*models.ProjectMember, error) {
+	member := models.ProjectMember{UserID: userID, ProjectID: projID}
+	result := s.db.WithContext(ctx).Preload("User").Model(&member).Where("user_id = ? AND project_id = ?", userID, projID).Update("working_hours", workingHors)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+	return &member, nil
+}
+
+func (s *userStore) SetAllWorkingHours(ctx context.Context, settings []SetAllWorkingHoursRequest, userID uuid.UUID) error {
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for _, setting := range settings {
+			member := models.ProjectMember{UserID: userID, ProjectID: setting.ProjectID}
+			result := s.db.WithContext(ctx).Preload("User").Model(&member).Where("user_id = ? AND project_id = ?", userID, setting.ProjectID).Update("working_hours", setting.WorkingHours)
+
+			if result.Error != nil {
+				return result.Error
+			}
+			if result.RowsAffected == 0 {
+				return gorm.ErrRecordNotFound
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *userStore) AddSkill(ctx context.Context, projID uuid.UUID, skillID uuid.UUID, userID uuid.UUID) (*models.ProjectMember, error) {
+	var member models.ProjectMember
+	err := s.db.WithContext(ctx).
+		Where("user_id = ? AND project_id = ?", userID, projID).
+		First(&member).Error
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to find project member: %w", err)
+	}
+
+	skill := models.ProjectSkill{ID: skillID}
+	err = s.db.WithContext(ctx).Model(&member).Association("Skills").Append(&skill)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to add skill to project member: %w", err)
+	}
+
+	result := s.db.WithContext(ctx).Preload("User").First(&member, member.ID)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return &member, nil
+}
+
+func (s *userStore) RemoveSkill(ctx context.Context, projID uuid.UUID, skillID uuid.UUID, userID uuid.UUID) (*models.ProjectMember, error) {
+	var member models.ProjectMember
+	err := s.db.WithContext(ctx).
+		Where("user_id = ? AND project_id = ?", userID, projID).
+		First(&member).Error
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to find project member: %w", err)
+	}
+
+	skill := models.ProjectSkill{ID: skillID}
+	err = s.db.WithContext(ctx).Model(&member).Association("Skills").Delete(&skill)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to add skill to project member: %w", err)
+	}
+
+	result := s.db.WithContext(ctx).Preload("User").First(&member, member.ID)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return &member, nil
 }

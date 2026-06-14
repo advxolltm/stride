@@ -42,6 +42,11 @@ type UpdateUserInput struct {
 	RemoveAvatar bool
 }
 
+type SetAllWorkingHoursRequest struct {
+	ProjectID    uuid.UUID
+	WorkingHours int
+}
+
 type (
 	UserService interface {
 		GetAllUsers(ctx context.Context) ([]models.User, error)
@@ -51,8 +56,12 @@ type (
 		ChangePassword(ctx context.Context, id uuid.UUID, currentPassword string, newPassword string) error
 		DeleteUser(ctx context.Context, id uuid.UUID) error
 		GetByEmailAndPassword(ctx context.Context, email, password string) (uuid.UUID, error)
-		GetUserSkills(ctx context.Context, userID uuid.UUID) ([]models.UserSkill, error)
-		UpdateUserProjectSkills(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, skillIDs []uuid.UUID) ([]models.UserSkill, error)
+		GetUserSkills(ctx context.Context, userID uuid.UUID, projectID uuid.UUID) ([]models.ProjectSkill, error)
+		UpdateUserProjectSkills(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, skillIDs []uuid.UUID) ([]models.ProjectSkill, error)
+		SetWorkingHours(ctx context.Context, projID uuid.UUID, workingHors int, userID uuid.UUID) (*models.ProjectMember, error)
+		SetAllWorkingHours(ctx context.Context, settings []SetAllWorkingHoursRequest, userID uuid.UUID) error
+		AddSkill(ctx context.Context, projID uuid.UUID, skillID uuid.UUID, userID uuid.UUID) (*models.ProjectMember, error)
+		RemoveSkill(ctx context.Context, projID uuid.UUID, skillID uuid.UUID, userID uuid.UUID) (*models.ProjectMember, error)
 	}
 	userService struct {
 		userStore user.UserStore
@@ -289,15 +298,15 @@ func (s userService) GetByEmailAndPassword(ctx context.Context, email, password 
 	return userId, nil
 }
 
-func (s userService) GetUserSkills(ctx context.Context, userID uuid.UUID) ([]models.UserSkill, error) {
-	userSkills, err := s.userStore.GetUserSkills(ctx, userID)
+func (s userService) GetUserSkills(ctx context.Context, userID uuid.UUID, projectID uuid.UUID) ([]models.ProjectSkill, error) {
+	userSkills, err := s.userStore.GetUserSkills(ctx, userID, projectID)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrUserStoreFailed, err)
 	}
 	return userSkills, nil
 }
 
-func (s userService) UpdateUserProjectSkills(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, skillIDs []uuid.UUID) ([]models.UserSkill, error) {
+func (s userService) UpdateUserProjectSkills(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, skillIDs []uuid.UUID) ([]models.ProjectSkill, error) {
 	userSkills, err := s.userStore.UpdateUserProjectSkills(ctx, userID, projectID, skillIDs)
 	if err != nil {
 		switch {
@@ -402,4 +411,34 @@ func (s userService) processAndSaveAvatar(userID uuid.UUID, avatar *AvatarInput)
 	}
 
 	return result, nil
+}
+
+func (s userService) SetWorkingHours(ctx context.Context, projID uuid.UUID, workingHors int, userID uuid.UUID) (*models.ProjectMember, error) {
+	return s.userStore.SetWorkingHours(ctx, projID, workingHors, userID)
+}
+func (s userService) AddSkill(ctx context.Context, projID uuid.UUID, skillID uuid.UUID, userID uuid.UUID) (*models.ProjectMember, error) {
+	return s.userStore.AddSkill(ctx, projID, skillID, userID)
+}
+func (s userService) RemoveSkill(ctx context.Context, projID uuid.UUID, skillID uuid.UUID, userID uuid.UUID) (*models.ProjectMember, error) {
+	return s.userStore.RemoveSkill(ctx, projID, skillID, userID)
+}
+
+func (s userService) SetAllWorkingHours(ctx context.Context, settings []SetAllWorkingHoursRequest, userID uuid.UUID) error {
+	// check if sum of working hours exceeds 40 TODO: make this configurable
+	var totalHours int
+	for _, setting := range settings {
+		totalHours += setting.WorkingHours
+	}
+	if totalHours > 40 {
+		return ErrWorkingHoursExceedLimit
+	}
+
+	var settingsForDB []user.SetAllWorkingHoursRequest
+	for _, setting := range settings {
+		settingsForDB = append(settingsForDB, user.SetAllWorkingHoursRequest{
+			ProjectID:    setting.ProjectID,
+			WorkingHours: setting.WorkingHours,
+		})
+	}
+	return s.userStore.SetAllWorkingHours(ctx, settingsForDB, userID)
 }
