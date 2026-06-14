@@ -5,10 +5,13 @@ import { ProjectSpaceHeader } from '../components/project/space/ProjectSpaceHead
 import { TaskBoardProvider } from '../components/project/space/kanban/context/TaskBoardContext'
 import { ProjectChatPanel } from '../components/project/space/chat/ProjectChatPanel'
 import { useParams } from 'react-router-dom'
+import { skipToken } from '@reduxjs/toolkit/query'
+import { useWatchProjectTasksSocketQuery } from '../store/features/tasks/task.socket'
 
 export function TasksPage() {
     const { t } = useTranslation('project')
     const { projectId } = useParams()
+    useWatchProjectTasksSocketQuery(projectId ?? skipToken)
 
     return (
         <div className="flex min-h-[calc(100dvh-7rem)] min-h-0">

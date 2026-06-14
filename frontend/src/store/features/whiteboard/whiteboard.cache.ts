@@ -1,4 +1,4 @@
-import { WSMessageType } from '../projectSocket/projectSocket.types'
+import { WSMessageType } from '../realtime/realtime.types'
 import type {
     ApiWhiteboardElement,
     WhiteboardElement,

@@ -21,7 +21,7 @@ import type {
     ProjectMember,
     ProjectSkill,
 } from '../features/project/project.types'
-import { WSMessageType } from '../features/projectSocket/projectSocket.types'
+import { WSMessageType } from '../features/realtime/realtime.types'
 import type { WsListenerApi } from './wsTaskHandlers'
 import { baseApi } from '../api/base.api'
 import { z } from 'zod'
@@ -146,10 +146,7 @@ const removeProjectSkillFromCaches = (
     })
 }
 
-const patchProjectSnapshot = (
-    api: WsListenerApi,
-    project: Project,
-) => {
+const patchProjectSnapshot = (api: WsListenerApi, project: Project) => {
     api.dispatch(
         projectApi.util.upsertQueryData('getProjectById', project.id, project),
     )
@@ -186,10 +183,7 @@ const getDeletedProjectId = (payload: unknown) => {
     )
 }
 
-const removeProjectFromCaches = (
-    api: WsListenerApi,
-    projectId: string,
-) => {
+const removeProjectFromCaches = (api: WsListenerApi, projectId: string) => {
     api.dispatch(
         projectApi.util.updateQueryData('getProjects', undefined, (draft) =>
             draft.filter((project) => project.id !== projectId),

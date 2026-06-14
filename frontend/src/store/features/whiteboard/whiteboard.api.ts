@@ -94,10 +94,7 @@ export const whiteboardApi = baseApi.injectEndpoints({
                 transformWhiteboardElement(
                     ApiWhiteboardElementSchema.parse(response),
                 ),
-            async onQueryStarted(
-                { projectId },
-                { dispatch, queryFulfilled },
-            ) {
+            async onQueryStarted({ projectId }, { dispatch, queryFulfilled }) {
                 try {
                     const { data: createdElement } = await queryFulfilled
                     dispatch(
@@ -135,10 +132,7 @@ export const whiteboardApi = baseApi.injectEndpoints({
                 transformWhiteboardElement(
                     ApiWhiteboardElementSchema.parse(response),
                 ),
-            async onQueryStarted(
-                { projectId },
-                { dispatch, queryFulfilled },
-            ) {
+            async onQueryStarted({ projectId }, { dispatch, queryFulfilled }) {
                 try {
                     const { data: updatedElement } = await queryFulfilled
                     dispatch(
@@ -212,6 +206,16 @@ export const whiteboardApi = baseApi.injectEndpoints({
             }),
             async onCacheEntryAdded(projectId, lifecycleApi) {
                 await watchWhiteboardEventsSocket(projectId, lifecycleApi, {
+                    invalidateElementsCache: () => {
+                        lifecycleApi.dispatch(
+                            baseApi.util.invalidateTags([
+                                {
+                                    type: 'WhiteboardElement',
+                                    id: projectId,
+                                },
+                            ]),
+                        )
+                    },
                     patchElementsCacheFromEvent: (message) => {
                         lifecycleApi.dispatch(
                             whiteboardApi.util.updateQueryData(
@@ -247,7 +251,11 @@ export const whiteboardApi = baseApi.injectEndpoints({
     }),
 })
 
-export { sendWhiteboardCursor, sendWhiteboardLiveClear, sendWhiteboardLiveUpdate }
+export {
+    sendWhiteboardCursor,
+    sendWhiteboardLiveClear,
+    sendWhiteboardLiveUpdate,
+}
 
 export const {
     useGetProjectWhiteboardQuery,

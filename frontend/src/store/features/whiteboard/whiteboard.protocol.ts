@@ -2,9 +2,7 @@ import type {
     WhiteboardLiveClientMessage,
     WhiteboardSocketEventMessage,
 } from './whiteboard.socket.types'
-import {
-    WhiteboardSocketEventMessageSchema,
-} from './whiteboard.socket.types'
+import { WhiteboardSocketEventMessageSchema } from './whiteboard.socket.types'
 
 export const serializeWhiteboardLiveClientMessage = (
     message: WhiteboardLiveClientMessage,

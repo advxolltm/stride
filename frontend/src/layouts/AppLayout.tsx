@@ -83,11 +83,8 @@ export function AppLayout() {
         new Set(),
     )
     const { t } = useTranslation('common')
-    const {
-        data: notifications = [],
-        isSuccess: areNotificationsLoaded,
-    } = useGetNotificationsQuery()
-    useWatchNotificationsQuery(undefined, { skip: !areNotificationsLoaded })
+    const { data: notifications = [] } = useGetNotificationsQuery()
+    useWatchNotificationsQuery()
     const [markNotificationRead] = useMarkNotificationReadMutation()
     const isWhiteboardRoute = location.pathname.endsWith('/whiteboard')
 

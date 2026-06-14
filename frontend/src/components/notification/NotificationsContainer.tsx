@@ -12,7 +12,6 @@ import {
     useDeleteNotificationMutation,
     useGetNotificationsQuery,
     useMarkNotificationReadMutation,
-    useWatchNotificationsQuery,
 } from '../../store/features/notification/notification.api'
 import { projectApi } from '../../store/features/project/project.api'
 import type { Notification } from '../../store/features/notification/notification.types'
@@ -46,9 +45,7 @@ export function NotificationsContainer() {
     const {
         data: notifications = [],
         isLoading,
-        isSuccess,
     } = useGetNotificationsQuery()
-    useWatchNotificationsQuery(undefined, { skip: !isSuccess })
 
     const [markRead] = useMarkNotificationReadMutation()
     const [deleteNotification] = useDeleteNotificationMutation()

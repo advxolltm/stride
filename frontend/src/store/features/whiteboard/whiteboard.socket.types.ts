@@ -1,17 +1,12 @@
-import type {
-    WSMessageMeta,
-    WSMessageType as ProjectWSMessageType,
-} from '../projectSocket/projectSocket.types'
-import type { ApiWhiteboardElement } from './whiteboard.api.types'
-import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types'
-import { z } from 'zod'
-import {
-    ApiWhiteboardElementSchema,
-} from './whiteboard.api.types'
 import {
     WSMessageMetaSchema,
     WSMessageType,
-} from '../projectSocket/projectSocket.types'
+    type WSMessageMeta,
+} from '../realtime/realtime.types'
+import type { ApiWhiteboardElement } from './whiteboard.api.types'
+import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types'
+import { z } from 'zod'
+import { ApiWhiteboardElementSchema } from './whiteboard.api.types'
 
 const ExcalidrawElementSchema = z.custom<ExcalidrawElement>()
 
@@ -90,13 +85,13 @@ export const WhiteboardLiveClientMessageMetaSchema = z.object({
 })
 
 export type WhiteboardLiveUpdateClientMessage = {
-    type: typeof ProjectWSMessageType.WhiteboardElementLiveUpdate
+    type: typeof WSMessageType.WhiteboardElementLiveUpdate
     meta: WhiteboardLiveClientMessageMeta
     payload: WhiteboardLiveUpdateEventPayload
 }
 
 export type WhiteboardLiveClearClientMessage = {
-    type: typeof ProjectWSMessageType.WhiteboardElementLiveClear
+    type: typeof WSMessageType.WhiteboardElementLiveClear
     meta: WhiteboardLiveClientMessageMeta
     payload: WhiteboardLiveClearEventPayload
 }
@@ -106,31 +101,31 @@ export type WhiteboardLiveClientMessage =
     | WhiteboardLiveClearClientMessage
 
 export type WhiteboardCreateEventMessage = {
-    type: typeof ProjectWSMessageType.WhiteboardElementCreate
+    type: typeof WSMessageType.WhiteboardElementCreate
     meta?: WSMessageMeta
     payload: ApiWhiteboardElement
 }
 
 export type WhiteboardUpdateEventMessage = {
-    type: typeof ProjectWSMessageType.WhiteboardElementUpdate
+    type: typeof WSMessageType.WhiteboardElementUpdate
     meta?: WSMessageMeta
     payload: ApiWhiteboardElement
 }
 
 export type WhiteboardDeleteEventMessage = {
-    type: typeof ProjectWSMessageType.WhiteboardElementDelete
+    type: typeof WSMessageType.WhiteboardElementDelete
     meta?: WSMessageMeta
     payload: WhiteboardDeleteEventPayload
 }
 
 export type WhiteboardLiveUpdateEventMessage = {
-    type: typeof ProjectWSMessageType.WhiteboardElementLiveUpdate
+    type: typeof WSMessageType.WhiteboardElementLiveUpdate
     meta?: WSMessageMeta
     payload: WhiteboardLiveUpdateEventPayload
 }
 
 export type WhiteboardLiveClearEventMessage = {
-    type: typeof ProjectWSMessageType.WhiteboardElementLiveClear
+    type: typeof WSMessageType.WhiteboardElementLiveClear
     meta?: WSMessageMeta
     payload: WhiteboardLiveClearEventPayload
 }
