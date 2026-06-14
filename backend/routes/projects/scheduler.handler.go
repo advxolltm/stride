@@ -46,9 +46,15 @@ func mapToReturnAssignment(ass schedulerService.ReturnStruct) routes.AssignmentS
 	}
 }
 
+type SchedulingSettings struct {
+	OptimizationGoals []string `json:"optimization_goals"`
+	TimeoutSeconds    *int     `json:"timeout_seconds,omitempty"`
+}
+
 type SchedulingRequest struct {
 	TaskIDs []uuid.UUID `json:"task_ids"`
 	UserIDs []uuid.UUID `json:"user_ids"`
+	Settings SchedulingSettings `json:"settings"`
 }
 
 type SchedulingAssignment struct {
@@ -92,7 +98,7 @@ func (h *schedulerRouteHandler) schedulerPOSTHandle(c *echo.Context) error {
 
 	// combined path, check if empty post -- schedule project, else schedule specific tasks to specific users
 	if len(req.TaskIDs) == 0 && len(req.UserIDs) == 0 {
-		assignment, err_a := h.schedulerService.ScheduleProject(c.Request().Context(), id)
+		assignment, err_a := h.schedulerService.ScheduleProject(c.Request().Context(), id, schedulerService.Settings(req.Settings))
 		if err_a != nil && assignment == nil {
 			return c.JSON(http.StatusInternalServerError, routes.ErrorResponse{Error: err_a.Error()})
 		}
@@ -103,7 +109,7 @@ func (h *schedulerRouteHandler) schedulerPOSTHandle(c *echo.Context) error {
 		TaskIDs: req.TaskIDs,
 		UserIDs: req.UserIDs,
 		ProjID:  id,
-	})
+	}, schedulerService.Settings(req.Settings))
 
 	if err_a != nil && assignment == nil {
 		return c.JSON(http.StatusInternalServerError, routes.ErrorResponse{Error: err_a.Error()})

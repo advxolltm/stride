@@ -25,6 +25,11 @@ import (
 var db *gorm.DB
 var rdb *redis.Client
 
+var schedulerSettings scheduler.Settings = scheduler.Settings{
+	OptimizationGoals: []string{"max-hours-scheduled", "distribute-evenly"},
+	TimeoutSeconds:    nil,
+}
+
 func TestMain(m *testing.M) {
 	testutils.RunTestMain(m, &db, &rdb, true, true)
 }
@@ -132,7 +137,7 @@ func TestProjectService(t *testing.T) {
 			TaskIDs: []uuid.UUID{task1.ID, task2.ID},
 		}
 
-		assignments, err_s := sServe.ScheduleTasksToUsers(ctx, req)
+		assignments, err_s := sServe.ScheduleTasksToUsers(ctx, req, schedulerSettings)
 		require.NoError(t, err_s)
 
 		as_len := len(assignments.NewAssignments)
@@ -183,7 +188,7 @@ func TestProjectService(t *testing.T) {
 			TaskIDs: []uuid.UUID{task2.ID},
 		}
 
-		assignments, err_s := sServe.ScheduleTasksToUsers(ctx, req)
+		assignments, err_s := sServe.ScheduleTasksToUsers(ctx, req, schedulerSettings)
 
 		require.NoError(t, err_s)
 
@@ -216,7 +221,7 @@ func TestProjectService(t *testing.T) {
 			TaskIDs: []uuid.UUID{task1.ID},
 		}
 
-		_, err_s := sServe.ScheduleTasksToUsers(ctx, req)
+		_, err_s := sServe.ScheduleTasksToUsers(ctx, req, schedulerSettings)
 
 		//require.Error(t, err_s, "some tasks are missing a start/due date.")
 		assert.Error(t, err_s, "some tasks are missing a start/due date.")
@@ -250,7 +255,7 @@ func TestProjectService(t *testing.T) {
 			TaskIDs: []uuid.UUID{taskA.ID, taskB.ID},
 		}
 
-		_, err_s := sServe.ScheduleTasksToUsers(ctx, req)
+		_, err_s := sServe.ScheduleTasksToUsers(ctx, req, schedulerSettings)
 		assert.Error(t, err_s, "the tasks all have to belong to the specified project.")
 	})
 
@@ -276,7 +281,7 @@ func TestProjectService(t *testing.T) {
 			TaskIDs: []uuid.UUID{task1.ID},
 		}
 
-		_, err_s := sServe.ScheduleTasksToUsers(ctx, req)
+		_, err_s := sServe.ScheduleTasksToUsers(ctx, req, schedulerSettings)
 		assert.Contains(t, err_s.Error(), "user is not a member of the project")
 	})
 
@@ -303,7 +308,7 @@ func TestProjectService(t *testing.T) {
 		err = tServe.CreateTask(ctx, &task2)
 		require.NoError(t, err)
 
-		assignments, err_s := sServe.ScheduleProject(ctx, proj.ID)
+		assignments, err_s := sServe.ScheduleProject(ctx, proj.ID, schedulerSettings)
 		require.NoError(t, err_s)
 
 		assert.Equal(t, 2, len(assignments.NewAssignments))
@@ -336,7 +341,7 @@ func TestProjectService(t *testing.T) {
 		_, err = tServe.AssignTask(ctx, task1.ID, pms[0].ID)
 		require.NoError(t, err)
 
-		assignments, err_s := sServe.ScheduleProject(ctx, proj.ID)
+		assignments, err_s := sServe.ScheduleProject(ctx, proj.ID, schedulerSettings)
 		require.NoError(t, err_s)
 
 		assert.Equal(t, 0, len(assignments.NewAssignments))
@@ -345,7 +350,7 @@ func TestProjectService(t *testing.T) {
 	runTest(t, db, "ScheduleProject, Invalid Project ID", func(t *testing.T, db *gorm.DB, pServe projectService.ProjectService, uServ userService.UserService, tServe taskService.TaskService, sServe scheduler.SchedulerService) {
 		fakeProjID := testutils.RandomUUID(t)
 
-		_, err_s := sServe.ScheduleProject(ctx, fakeProjID)
+		_, err_s := sServe.ScheduleProject(ctx, fakeProjID, schedulerSettings)
 		assert.Error(t, err_s)
 	})
 
@@ -383,7 +388,7 @@ func TestProjectService(t *testing.T) {
 			TaskIDs: []uuid.UUID{task2.ID},
 		}
 
-		assignments, err_s := sServe.ScheduleTasksToUsers(ctx, req)
+		assignments, err_s := sServe.ScheduleTasksToUsers(ctx, req, schedulerSettings)
 		require.NoError(t, err_s)
 
 		fmt.Println(assignments)

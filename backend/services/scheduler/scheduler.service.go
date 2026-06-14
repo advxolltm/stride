@@ -37,6 +37,11 @@ type SchedTask struct {
 	NeededSkills  []SchedSkill `json:"needed_skills"`
 }
 
+type Settings struct {
+	OptimizationGoals []string `json:"optimization_goals"`
+	TimeoutSeconds    *int     `json:"timeout_seconds,omitempty"`
+}
+
 type SchedulingRequest struct {
 	TaskIDs []uuid.UUID
 	UserIDs []uuid.UUID // This reqires the model.User ID, not ProjectMember ID
@@ -57,6 +62,7 @@ type InputPayload struct {
 	Users       []SchedProjMem `json:"users"`
 	Tasks       []SchedTask    `json:"tasks"`
 	Assignments []Assignment   `json:"assignments"`
+	Settings Settings `json:"settings"`
 }
 
 func Map[T any, V any](input []T, f func(T) V) []V {
@@ -106,8 +112,8 @@ func mapToSchedTask(task models.Task, startDate time.Time, endDate time.Time) Sc
 
 type (
 	SchedulerService interface {
-		ScheduleProject(c context.Context, projID uuid.UUID) (*ReturnStruct, error)
-		ScheduleTasksToUsers(c context.Context, req SchedulingRequest) (*ReturnStruct, error)
+		ScheduleProject(c context.Context, projID uuid.UUID, settings Settings) (*ReturnStruct, error)
+		ScheduleTasksToUsers(c context.Context, req SchedulingRequest, settings Settings) (*ReturnStruct, error)
 	}
 	schedulerService struct {
 		taskService    taskService.TaskService
@@ -145,7 +151,7 @@ func NewSchedulerService(tServe taskService.TaskService, pServe projectService.P
 	return &schedulerService{tServe, pServe}
 }
 
-func (s schedulerService) ScheduleTasksToUsers(c context.Context, req SchedulingRequest) (*ReturnStruct, error) {
+func (s schedulerService) ScheduleTasksToUsers(c context.Context, req SchedulingRequest, settings Settings) (*ReturnStruct, error) {
 	// check if there is anything to schedule
 	if len(req.TaskIDs) == 0 || len(req.UserIDs) == 0 {
 		return &ReturnStruct{
@@ -250,7 +256,7 @@ func (s schedulerService) ScheduleTasksToUsers(c context.Context, req Scheduling
 	tasks := Map(final_tasks, func(mod models.Task) SchedTask { return mapToSchedTask(mod, minStart, maxEnd) })
 
 	// The scheduler returns an assignment of ProjectMemberIDs to TaskIDs, matches your Haskell logic perfectly
-	assignments, err := sendToScheduler(users, tasks, old_assignments)
+	assignments, err := sendToScheduler(users, tasks, old_assignments, settings)
 	if err != nil {
 		return nil, err
 	}
@@ -286,7 +292,7 @@ func (s schedulerService) ScheduleTasksToUsers(c context.Context, req Scheduling
 	}, nil
 }
 
-func (s schedulerService) ScheduleProject(c context.Context, projID uuid.UUID) (*ReturnStruct, error) {
+func (s schedulerService) ScheduleProject(c context.Context, projID uuid.UUID, settings Settings) (*ReturnStruct, error) {
 	raw_tasks, err_t := s.taskService.GetUnassignedTasksForProject(c, projID)
 	if err_t != nil {
 		return nil, err_t
@@ -304,10 +310,10 @@ func (s schedulerService) ScheduleProject(c context.Context, projID uuid.UUID) (
 		TaskIDs: taskIDs,
 		UserIDs: userIDs,
 		ProjID:  projID,
-	})
+	}, settings)
 }
 
-func sendToScheduler(users []SchedProjMem, tasks []SchedTask, old_assignments []Assignment) ([]Assignment, error) {
+func sendToScheduler(users []SchedProjMem, tasks []SchedTask, old_assignments []Assignment, settings Settings) ([]Assignment, error) {
 	host := os.Getenv("SCHEDULER_HOST")
 	if host == "" {
 		host = "scheduleserver" // Fallback default
@@ -324,6 +330,7 @@ func sendToScheduler(users []SchedProjMem, tasks []SchedTask, old_assignments []
 		Users:       users,
 		Tasks:       tasks,
 		Assignments: old_assignments,
+		Settings: settings,
 	}
 	body, err := json.Marshal(inPayload)
 	if err != nil {
