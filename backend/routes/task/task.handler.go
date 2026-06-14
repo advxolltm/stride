@@ -110,14 +110,14 @@ func (h taskRouteHandler) taskGET(c *echo.Context) error {
 }
 
 type createTaskRequest struct {
-	ProjectID               uuid.UUID        `json:"project_id"`
-	Title                   string           `json:"title"`
-	Description             *string          `json:"description"`
-	Status                  string           `json:"status"`
-	StartDate               *routes.DateOnly `json:"start_date" swaggertype:"string" format:"date"`
-	DueDate                 *routes.DateOnly `json:"due_date" swaggertype:"string" format:"date"`
-	ExpectedDurationMinutes *int             `json:"expected_duration_minutes"`
-	Position                *int             `json:"position"`
+	ProjectID             uuid.UUID        `json:"project_id"`
+	Title                 string           `json:"title"`
+	Description           *string          `json:"description"`
+	Status                string           `json:"status"`
+	StartDate             *routes.DateOnly `json:"start_date" swaggertype:"string" format:"date"`
+	DueDate               *routes.DateOnly `json:"due_date" swaggertype:"string" format:"date"`
+	ExpectedDurationHours *int             `json:"expected_duration_hours"`
+	Position              *int             `json:"position"`
 } //	@name	CreateTaskRequest
 
 // @Summary	Create a new task. Must be member of the project of the task.
@@ -159,15 +159,15 @@ func (h taskRouteHandler) taskPOST(c *echo.Context) error {
 	}
 
 	task := models.Task{
-		ProjectID:               userPM.ProjectID,
-		CreatedBy:               userPM.ID,
-		Title:                   req.Title,
-		Description:             req.Description,
-		Status:                  req.Status,
-		StartDate:               req.StartDate.ToTime(),
-		DueDate:                 req.DueDate.ToTime(),
-		ExpectedDurationMinutes: req.ExpectedDurationMinutes,
-		Position:                pos,
+		ProjectID:             userPM.ProjectID,
+		CreatedBy:             userPM.ID,
+		Title:                 req.Title,
+		Description:           req.Description,
+		Status:                req.Status,
+		StartDate:             req.StartDate.ToTime(),
+		DueDate:               req.DueDate.ToTime(),
+		ExpectedDurationHours: req.ExpectedDurationHours,
+		Position:              pos,
 	}
 
 	err = h.taskService.CreateTask(ctx, &task)
@@ -185,12 +185,12 @@ func (h taskRouteHandler) taskPOST(c *echo.Context) error {
 }
 
 type updateTaskFieldsRequest struct {
-	Title                   routes.Nullable[string]          `json:"title"`
-	Description             routes.Nullable[string]          `json:"description,omitempty"`
-	Status                  routes.Nullable[string]          `json:"status"`
-	StartDate               routes.Nullable[routes.DateOnly] `json:"start_date,omitempty" swaggertype:"string" format:"date"`
-	DueDate                 routes.Nullable[routes.DateOnly] `json:"due_date,omitempty" swaggertype:"string" format:"date"`
-	ExpectedDurationMinutes routes.Nullable[int]             `json:"expected_duration_minutes,omitempty"`
+	Title                 routes.Nullable[string]          `json:"title"`
+	Description           routes.Nullable[string]          `json:"description,omitempty"`
+	Status                routes.Nullable[string]          `json:"status"`
+	StartDate             routes.Nullable[routes.DateOnly] `json:"start_date,omitempty" swaggertype:"string" format:"date"`
+	DueDate               routes.Nullable[routes.DateOnly] `json:"due_date,omitempty" swaggertype:"string" format:"date"`
+	ExpectedDurationHours routes.Nullable[int]             `json:"expected_duration_hours,omitempty"`
 } //	@name	UpdateTaskFieldsRequest
 
 // @Summary	Update a specific task. Must be member of the project of the task.
@@ -232,12 +232,12 @@ func (h taskRouteHandler) taskPATCH(c *echo.Context) error {
 	}
 
 	updatedTask, err := h.taskService.UpdateTask(ctx, taskID, taskService.UpdateTaskFields{
-		Title:                   req.Title.Ptr(),
-		Description:             req.Description.PtrPtr(),
-		Status:                  req.Status.Ptr(),
-		StartDate:               routes.ToTimeOpt(req.StartDate.PtrPtr()),
-		DueDate:                 routes.ToTimeOpt(req.DueDate.PtrPtr()),
-		ExpectedDurationMinutes: req.ExpectedDurationMinutes.PtrPtr(),
+		Title:                 req.Title.Ptr(),
+		Description:           req.Description.PtrPtr(),
+		Status:                req.Status.Ptr(),
+		StartDate:             routes.ToTimeOpt(req.StartDate.PtrPtr()),
+		DueDate:               routes.ToTimeOpt(req.DueDate.PtrPtr()),
+		ExpectedDurationHours: req.ExpectedDurationHours.PtrPtr(),
 	})
 
 	if err != nil {
@@ -801,7 +801,7 @@ func (h taskRouteHandler) taskAddSkill(c *echo.Context) error {
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
 	}
 
-	if err := routes.SendWSUpdate(ctx, h.rdb, projIDOfTask, routes.TaskSkillAdded, routes.MapTaskSkill(*taskSkill)); err != nil {
+	if err := routes.SendWSUpdate(ctx, h.rdb, projIDOfTask, routes.TaskSkillAdded, routes.TaskSkill{ID: taskSkill.ID, TaskID: taskID, ProjectSkillID: taskSkill.ID}); err != nil {
 		slog.Error("taskAddSkillPOST: Failed to send ws update", "error", err)
 	}
 

@@ -152,7 +152,7 @@ func TestTaskStore(t *testing.T) {
 			runTest(t, db, "a task should be able to be updated", func(t *testing.T, db *gorm.DB, sut task.TaskStore) {
 				newTitle := testutils.Faker().BookTitle()
 				newDescription := testutils.Faker().ProductDescription()
-				var newExpectedDurationMinutes *int
+				var newExpectedDurationHours *int
 
 				tsk := testutils.SelectRandomTask(t, db)
 				updatedTask, err := sut.UpdateTask(t.Context(), tsk.ID, task.UpdateTaskFields{
@@ -160,7 +160,7 @@ func TestTaskStore(t *testing.T) {
 					Description: new(&newDescription), // changing optional description
 					// Status: ..., not changing non-optional status
 					// StartDate: ..., not changing optional startdate
-					ExpectedDurationMinutes: new(newExpectedDurationMinutes), // setting optional value to nil
+					ExpectedDurationHours: new(newExpectedDurationHours),
 				})
 
 				testutils.TAssertNoError(t, err)
@@ -183,8 +183,8 @@ func TestTaskStore(t *testing.T) {
 					t.Errorf("startDate: expected %s, got %s", tsk.StartDate, *updatedTask.StartDate)
 				}
 
-				if updatedTask.ExpectedDurationMinutes != nil {
-					t.Errorf("expectedDurationMinutes: expected nil, got: %d", *updatedTask.ExpectedDurationMinutes)
+				if updatedTask.ExpectedDurationHours != nil {
+					t.Errorf("expectedDurationHours: expected nil, got: %d", *updatedTask.ExpectedDurationHours)
 				}
 			})
 

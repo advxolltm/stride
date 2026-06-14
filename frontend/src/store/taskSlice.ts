@@ -11,7 +11,7 @@ export type Task = {
     status: string;
     start_date: string | null;
     due_date: string | null;
-    expected_duration_minutes: number | null;
+    expected_duration_hours: number | null;
     position: number;
     created_at: string;
     updated_at: string;

@@ -53,7 +53,7 @@ func runTest(t *testing.T, name string, f func(t *testing.T, tx *gorm.DB, as aut
 			aServ := authService.NewAuthenticationService(uServ)
 			nStore := notificationStore.NewNotificationStreamStore(rdb)
 			nServ := notificationService.NewNotificationService(nStore)
-			handler := projectsHandler.NewProjectsGroup(pServ, nil, nil, nServ, aServ, rdb)
+			handler := projectsHandler.NewProjectsGroup(pServ, nil, nil, nServ, aServ, rdb, nil, nil)
 
 			e := echo.New()
 			handler.AddRoutes(e.Group("/api"))

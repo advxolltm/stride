@@ -27,8 +27,12 @@ type stubUserStore struct {
 	updateUserFn              func(ctx context.Context, id uuid.UUID, fields userStore.UpdateUserFields) (*models.User, error)
 	deleteUserFn              func(ctx context.Context, id uuid.UUID) error
 	getByEmailAndPasswordFn   func(ctx context.Context, email, password string) (uuid.UUID, error)
-	getUserSkillsFn           func(ctx context.Context, userID uuid.UUID) ([]models.UserSkill, error)
-	updateUserProjectSkillsFn func(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, skillIDs []uuid.UUID) ([]models.UserSkill, error)
+	getUserSkillsFn           func(ctx context.Context, userID uuid.UUID, projectID uuid.UUID) ([]models.ProjectSkill, error)
+	updateUserProjectSkillsFn func(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, skillIDs []uuid.UUID) ([]models.ProjectSkill, error)
+	addSkillFn                func(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, skillID uuid.UUID) (*models.ProjectMember, error)
+	removeSkillFn             func(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, skillID uuid.UUID) (*models.ProjectMember, error)
+	setAllWorkingHoursFn      func(ctx context.Context, req []userStore.SetAllWorkingHoursRequest, projectID uuid.UUID) error
+	setWorkingHoursFn         func(ctx context.Context, userID uuid.UUID, workingHours int, projectID uuid.UUID) (*models.ProjectMember, error)
 }
 
 func (s *stubUserStore) GetAllUsers(ctx context.Context) ([]models.User, error) {
@@ -73,18 +77,46 @@ func (s *stubUserStore) GetByEmailAndPassword(ctx context.Context, email, passwo
 	return s.getByEmailAndPasswordFn(ctx, email, password)
 }
 
-func (s *stubUserStore) GetUserSkills(ctx context.Context, userID uuid.UUID) ([]models.UserSkill, error) {
+func (s *stubUserStore) GetUserSkills(ctx context.Context, userID uuid.UUID, projectID uuid.UUID) ([]models.ProjectSkill, error) {
 	if s.getUserSkillsFn == nil {
 		panic("unexpected GetUserSkills call")
 	}
-	return s.getUserSkillsFn(ctx, userID)
+	return s.getUserSkillsFn(ctx, userID, projectID)
 }
 
-func (s *stubUserStore) UpdateUserProjectSkills(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, skillIDs []uuid.UUID) ([]models.UserSkill, error) {
+func (s *stubUserStore) UpdateUserProjectSkills(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, skillIDs []uuid.UUID) ([]models.ProjectSkill, error) {
 	if s.updateUserProjectSkillsFn == nil {
 		panic("unexpected UpdateUserProjectSkills call")
 	}
 	return s.updateUserProjectSkillsFn(ctx, userID, projectID, skillIDs)
+}
+
+func (s *stubUserStore) AddSkill(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, skillID uuid.UUID) (*models.ProjectMember, error) {
+	if s.addSkillFn == nil {
+		panic("unexpected AddSkill call")
+	}
+	return s.addSkillFn(ctx, userID, projectID, skillID)
+}
+
+func (s *stubUserStore) RemoveSkill(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, skillID uuid.UUID) (*models.ProjectMember, error) {
+	if s.removeSkillFn == nil {
+		panic("unexpected RemoveSkill call")
+	}
+	return s.removeSkillFn(ctx, userID, projectID, skillID)
+}
+
+func (s *stubUserStore) SetAllWorkingHours(ctx context.Context, req []userStore.SetAllWorkingHoursRequest, projectID uuid.UUID) error {
+	if s.setAllWorkingHoursFn == nil {
+		panic("unexpected SetAllWorkingHours call")
+	}
+	return s.setAllWorkingHoursFn(ctx, req, projectID)
+}
+
+func (s *stubUserStore) SetWorkingHours(ctx context.Context, userID uuid.UUID, workingHours int, projectID uuid.UUID) (*models.ProjectMember, error) {
+	if s.setWorkingHoursFn == nil {
+		panic("unexpected SetWorkingHours call")
+	}
+	return s.setWorkingHoursFn(ctx, userID, workingHours, projectID)
 }
 
 func newTestService(t *testing.T, store *stubUserStore) userService {

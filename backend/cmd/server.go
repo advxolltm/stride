@@ -29,6 +29,7 @@ import (
 	chatService "backend/services/chat"
 	notificationService "backend/services/notification"
 	projectService "backend/services/project"
+	schedulerService "backend/services/scheduler"
 	taskService "backend/services/task"
 	userService "backend/services/user"
 	whiteboardService "backend/services/whiteboard"
@@ -176,6 +177,7 @@ func main() {
 	workerCtx, stopWorkers := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stopWorkers()
 	go whiteboardFlusher.Run(workerCtx)
+	schedService := schedulerService.NewSchedulerService(taskService, projectService)
 
 	// Routes
 	// Register route handler by adding them to the array
@@ -185,10 +187,10 @@ func main() {
 	handlers := []routes.RouteHandler{
 		routes.NewHealthRouteHandler(),
 		routes.NewAuthRouteHandler(authService, userService),
-		projects.NewProjectsGroup(projectService, whiteboardService, chatService, notificationService, authService, rdb),
+		projects.NewProjectsGroup(projectService, whiteboardService, chatService, notificationService, authService, rdb, schedService, taskService),
 		taskHandler.NewTaskRouteHandler(authService, taskService, projectService, notificationService, rdb),
 		routes.NewNotificationRouteHandler(notificationService, authService),
-		routes.NewUserRouteHandler(userService, authService),
+		routes.NewUserRouteHandler(userService, authService, projectService),
 		wsRoutes.NewWSRouteHandler(authService, projectService, userService, rdb),
 	}
 

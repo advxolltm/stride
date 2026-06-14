@@ -15,12 +15,17 @@ import (
 
 type (
 	UpdateTaskFields struct {
-		Title                   *string
-		Description             **string
-		Status                  *string
-		StartDate               **time.Time
-		DueDate                 **time.Time
-		ExpectedDurationMinutes **int
+		Title                 *string
+		Description           **string
+		Status                *string
+		StartDate             **time.Time
+		DueDate               **time.Time
+		ExpectedDurationHours **int
+	}
+
+	Assignment struct {
+		TaskID          uuid.UUID
+		ProjectMemberID uuid.UUID
 	}
 
 	TaskService interface {
@@ -33,8 +38,11 @@ type (
 		AssignTask(ctx context.Context, taskID uuid.UUID, projectMemberID uuid.UUID) (*models.TaskAssignee, error)
 		UnassignTask(ctx context.Context, taskID uuid.UUID, projectMemberID uuid.UUID) error
 		MoveTask(ctx context.Context, id uuid.UUID, pos int) error
-		AddSkill(ctx context.Context, taskID uuid.UUID, skillID uuid.UUID) (*models.TaskSkill, error)
+		AddSkill(ctx context.Context, taskID uuid.UUID, skillID uuid.UUID) (*models.ProjectSkill, error)
 		RemoveSkill(ctx context.Context, taskID uuid.UUID, skillID uuid.UUID) error
+		GetTasksInsideInterval(ctx context.Context, projectID uuid.UUID, startTime time.Time, endTime time.Time) ([]models.Task, error)
+		AssignTaskBulk(ctx context.Context, assignments []Assignment) ([]models.TaskAssignee, error)
+		GetUnassignedTasksForProject(ctx context.Context, projectID uuid.UUID) ([]models.Task, error)
 	}
 
 	taskService struct {
@@ -42,6 +50,14 @@ type (
 		projectService project.ProjectService
 	}
 )
+
+func Map[T any, V any](input []T, f func(T) V) []V {
+	result := make([]V, len(input))
+	for i, v := range input {
+		result[i] = f(v)
+	}
+	return result
+}
 
 // AssignTask implements [TaskService].
 func (t *taskService) AssignTask(ctx context.Context, taskID uuid.UUID, projectMemberID uuid.UUID) (*models.TaskAssignee, error) {
@@ -77,12 +93,16 @@ func (t *taskService) GetTasksForProject(ctx context.Context, projectID uuid.UUI
 	return t.taskStore.GetTasksForProject(ctx, projectID)
 }
 
+func (t *taskService) GetUnassignedTasksForProject(ctx context.Context, projectID uuid.UUID) ([]models.Task, error) {
+	return t.taskStore.GetUnassignedTasksForProject(ctx, projectID)
+}
+
 // MoveTask implements [TaskService].
 func (t *taskService) MoveTask(ctx context.Context, id uuid.UUID, pos int) error {
 	return t.taskStore.MoveTask(ctx, id, pos)
 }
 
-func (t *taskService) AddSkill(ctx context.Context, taskID uuid.UUID, skillID uuid.UUID) (*models.TaskSkill, error) {
+func (t *taskService) AddSkill(ctx context.Context, taskID uuid.UUID, skillID uuid.UUID) (*models.ProjectSkill, error) {
 	isSameProj, err := t.isSkillAndTaskInTheSameProject(ctx, taskID, skillID)
 	if err != nil {
 		if errors.Is(err, project.ErrNonExistentProjectTask) || errors.Is(err, project.ErrNonExistentProjectSkill) {
@@ -147,14 +167,27 @@ func (t *taskService) UnassignTask(ctx context.Context, taskID uuid.UUID, projec
 // UpdateTask implements [TaskService].
 func (t *taskService) UpdateTask(ctx context.Context, id uuid.UUID, fields UpdateTaskFields) (*models.Task, error) {
 	return t.taskStore.UpdateTask(ctx, id, taskStore.UpdateTaskFields{
-		Title:                   fields.Title,
-		Description:             fields.Description,
-		Status:                  fields.Status,
-		StartDate:               fields.StartDate,
-		DueDate:                 fields.DueDate,
-		ExpectedDurationMinutes: fields.ExpectedDurationMinutes,
-		UpdatedAt:               time.Now(),
+		Title:                 fields.Title,
+		Description:           fields.Description,
+		Status:                fields.Status,
+		StartDate:             fields.StartDate,
+		DueDate:               fields.DueDate,
+		ExpectedDurationHours: fields.ExpectedDurationHours,
+		UpdatedAt:             time.Now(),
 	})
+}
+
+func (t *taskService) GetTasksInsideInterval(ctx context.Context, projectID uuid.UUID, startTime time.Time, endTime time.Time) ([]models.Task, error) {
+	return t.taskStore.GetTasksInsideInterval(ctx, projectID, startTime, endTime)
+}
+
+func (t *taskService) AssignTaskBulk(ctx context.Context, assignments []Assignment) ([]models.TaskAssignee, error) {
+	return t.taskStore.AssignTaskBulk(ctx, Map(assignments, func(ass Assignment) taskStore.Assignment {
+		return taskStore.Assignment{
+			TaskID:          ass.TaskID,
+			ProjectMemberID: ass.ProjectMemberID,
+		}
+	}))
 }
 
 func NewTaskService(taskStore taskStore.TaskStore, projectService project.ProjectService) TaskService {

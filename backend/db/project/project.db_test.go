@@ -187,7 +187,7 @@ func TestProjectStore(t *testing.T) {
 	runTest(t, db, "Get Project Members returns correct list", func(t *testing.T, db *gorm.DB, store project.ProjectStore) {
 		project := testutils.SelectRandomProject(t, db)
 
-		result := db.WithContext(ctx).Preload("Members").Preload("Members.User").First(&project, "id = ?", project.ID)
+		result := db.WithContext(ctx).Preload("Members").Preload("Members.User").Preload("Members.Skills").First(&project, "id = ?", project.ID)
 		require.NoError(t, result.Error)
 
 		retMembers, getErr := store.GetProjectMembers(ctx, project.ID)

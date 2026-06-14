@@ -39,7 +39,7 @@ export const ApiTaskSchema = z.object({
     status: TaskStatusSchema,
     start_date: z.string().nullable(),
     due_date: z.string().nullable(),
-    expected_duration_minutes: z.number().nullable(),
+    expected_duration_hours: z.number().nullable(),
     position: z.number(),
     created_at: z.string(),
     updated_at: z.string(),
@@ -80,7 +80,7 @@ export const TaskSchema = z.object({
     status: TaskStatusSchema,
     startDate: z.string().nullable(),
     dueDate: z.string().nullable(),
-    expectedDurationMinutes: z.number().nullable(),
+    expectedDurationHours: z.number().nullable(),
     position: z.number(),
     createdAt: z.string(),
     updatedAt: z.string(),
@@ -107,7 +107,7 @@ export const CreateTaskRequestSchema = z.object({
     status: TaskStatusSchema,
     start_date: z.string().nullable().optional(),
     due_date: z.string().nullable().optional(),
-    expected_duration_minutes: z.number().nullable().optional(),
+    expected_duration_hours: z.number().nullable().optional(),
     position: z.number().nullable().optional(),
 })
 
@@ -119,7 +119,7 @@ export const UpdateTaskRequestSchema = z.object({
     status: TaskStatusSchema.nullable().optional(),
     start_date: z.string().nullable().optional(),
     due_date: z.string().nullable().optional(),
-    expected_duration_minutes: z.number().nullable().optional(),
+    expected_duration_hours: z.number().nullable().optional(),
     skill_ids: z.array(z.string()).optional(),
 })
 

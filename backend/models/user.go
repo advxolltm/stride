@@ -21,5 +21,4 @@ type User struct {
 	ProjectMemberships []ProjectMember     `gorm:"foreignKey:UserID"`
 	CreatedTasks       []Task              `gorm:"foreignKey:CreatedBy"`
 	WhiteboardElements []WhiteboardElement `gorm:"foreignKey:CreatedBy"`
-	UserSkills         []UserSkill         `gorm:"foreignKey:UserID"`
 }

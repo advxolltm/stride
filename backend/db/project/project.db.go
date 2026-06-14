@@ -84,7 +84,7 @@ func (s *projectStore) GetProject(ctx context.Context, id uuid.UUID) (*models.Pr
 func (s *projectStore) GetProjectMembers(ctx context.Context, id uuid.UUID) ([]models.ProjectMember, error) {
 	var project models.Project
 
-	result := s.db.Preload("Members").Preload("Members.User").First(&project, id)
+	result := s.db.Preload("Members").Preload("Members.User").Preload("Members.Skills").First(&project, id)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, ErrProjectNotFound

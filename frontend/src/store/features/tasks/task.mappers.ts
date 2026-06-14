@@ -49,7 +49,7 @@ export const transformTask = (task: ApiTask): Task => ({
     status: task.status as Task['status'],
     startDate: task.start_date,
     dueDate: task.due_date,
-    expectedDurationMinutes: task.expected_duration_minutes,
+    expectedDurationHours: task.expected_duration_hours,
     position: task.position,
     createdAt: task.created_at,
     updatedAt: task.updated_at,
