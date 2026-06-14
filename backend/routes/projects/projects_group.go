@@ -7,6 +7,8 @@ import (
 	chatService "backend/services/chat"
 	notificationService "backend/services/notification"
 	projectService "backend/services/project"
+	schedService "backend/services/scheduler"
+	taskService "backend/services/task"
 	whiteboardSvc "backend/services/whiteboard"
 
 	"github.com/labstack/echo/v5"
@@ -19,6 +21,7 @@ type ProjectsGroup struct {
 	skillsHandler     *skillsRouteHandler
 	whiteboardHandler *whiteboardRouteHandler
 	chatHandler       *chatRouteHandler
+	schedulerHandler  *schedulerRouteHandler
 	authService       authService.AuthService
 }
 
@@ -29,12 +32,15 @@ func NewProjectsGroup(
 	ns notificationService.NotificationService,
 	as authService.AuthService,
 	rdb *redis.Client,
+	ss schedService.SchedulerService,
+	ts taskService.TaskService,
 ) *ProjectsGroup {
 	return &ProjectsGroup{
 		projectHandler:    newProjectRouteHandler(ps, ns, as, rdb),
 		skillsHandler:     newSkillsRouteHandler(ps, as, rdb),
 		whiteboardHandler: newWhiteboardRouteHandler(ws, as, rdb),
 		chatHandler:       newChatRouteHandler(cs, as, ps, ns, rdb),
+		schedulerHandler:  newSchedulerRouteHandler(ss, as, ps, ts),
 		authService:       as,
 	}
 }
@@ -48,6 +54,7 @@ func (pg *ProjectsGroup) AddRoutes(api *echo.Group) {
 	pg.skillsHandler.registerRoutes(g)
 	pg.whiteboardHandler.registerRoutes(g)
 	pg.chatHandler.registerRoutes(g)
+	pg.schedulerHandler.registerRoutes(g)
 }
 
 // compile-time check

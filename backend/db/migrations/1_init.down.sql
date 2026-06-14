@@ -3,7 +3,6 @@ DROP TABLE IF EXISTS whiteboards;
 DROP TABLE IF EXISTS task_assignees;
 DROP TABLE IF EXISTS tasks;
 DROP TABLE IF EXISTS messages;
-DROP TABLE IF EXISTS user_skills;
 DROP TABLE IF EXISTS task_skills;
 DROP TABLE IF EXISTS project_skills;
 DROP TABLE IF EXISTS project_members;

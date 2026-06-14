@@ -159,7 +159,7 @@ func TestTaskService(t *testing.T) {
 			runTest(t, db, "a task should be able to be updated", func(t *testing.T, db *gorm.DB, sut taskService.TaskService) {
 				newTitle := testutils.Faker().BookTitle()
 				newDescription := testutils.Faker().ProductDescription()
-				var newExpectedDurationMinutes *int
+				var newExpectedDurationHours *int
 
 				tsk := testutils.SelectRandomTask(t, db)
 				updatedTask, err := sut.UpdateTask(t.Context(), tsk.ID, taskService.UpdateTaskFields{
@@ -167,7 +167,7 @@ func TestTaskService(t *testing.T) {
 					Description: new(&newDescription), // changing optional description
 					// Status: ..., not changing non-optional status
 					// StartDate: ..., not changing optional startdate
-					ExpectedDurationMinutes: new(newExpectedDurationMinutes), // setting optional value to nil
+					ExpectedDurationHours: new(newExpectedDurationHours), // setting optional value to nil
 				})
 
 				testutils.TAssertNoError(t, err)
@@ -190,8 +190,8 @@ func TestTaskService(t *testing.T) {
 					t.Errorf("startDate: expected %s, got %s", tsk.StartDate, *updatedTask.StartDate)
 				}
 
-				if updatedTask.ExpectedDurationMinutes != nil {
-					t.Errorf("expectedDurationMinutes: expected nil, got: %d", *updatedTask.ExpectedDurationMinutes)
+				if updatedTask.ExpectedDurationHours != nil {
+					t.Errorf("expectedDurationHours: expected nil, got: %d", *updatedTask.ExpectedDurationHours)
 				}
 			})
 
@@ -310,8 +310,7 @@ func TestTaskService(t *testing.T) {
 			taskSkill, err := sut.AddSkill(t.Context(), task.ID, skill.ID)
 			require.NoError(t, err)
 			require.NotNil(t, taskSkill)
-			require.Equal(t, task.ID, taskSkill.TaskID)
-			require.Equal(t, skill.ID, taskSkill.ProjectSkillID)
+			require.Equal(t, skill.ID, taskSkill.ID)
 
 			taskSkill, err = sut.AddSkill(t.Context(), task.ID, skill.ID)
 			require.Nil(t, taskSkill)
@@ -337,22 +336,21 @@ func TestTaskService(t *testing.T) {
 
 			taskSkill, err := sut.AddSkill(t.Context(), task.ID, skill.ID)
 			require.NotNil(t, taskSkill)
-			require.Equal(t, task.ID, taskSkill.TaskID)
-			require.Equal(t, skill.ID, taskSkill.ProjectSkillID)
+			require.Equal(t, skill.ID, taskSkill.ID)
 			require.NoError(t, err)
 
 			updatedTask, err := sut.GetTask(t.Context(), task.ID)
 			require.NoError(t, err)
-			require.Len(t, updatedTask.TaskSkills, len(task.TaskSkills)+1)
+			require.Len(t, updatedTask.NeededSkills, len(task.NeededSkills)+1)
 
 			skillFound := false
-			for _, s := range updatedTask.TaskSkills {
-				if s.ProjectSkillID == skill.ID && s.TaskID == task.ID {
+			for _, s := range updatedTask.NeededSkills {
+				if s.ID == skill.ID {
 					skillFound = true
 					break
 				}
 			}
-			require.Truef(t, skillFound, "expected skill %s to be included in the tasks skill-array: %v", skill.ID, updatedTask.TaskSkills)
+			require.Truef(t, skillFound, "expected skill %s to be included in the tasks skill-array: %v", skill.ID, updatedTask.NeededSkills)
 		})
 	})
 
@@ -399,18 +397,18 @@ func TestTaskService(t *testing.T) {
 			project := testutils.SelectRandomProject(t, db)
 
 			task := testutils.Choice(&project.Tasks)
-			skill := testutils.Choice(&task.TaskSkills)
+			skill := testutils.Choice(&task.NeededSkills)
 
-			err := sut.RemoveSkill(t.Context(), task.ID, skill.ProjectSkillID)
+			err := sut.RemoveSkill(t.Context(), task.ID, skill.ID)
 			require.NoError(t, err)
 
 			updatedTask, err := sut.GetTask(t.Context(), task.ID)
 			require.NoError(t, err)
-			require.Len(t, updatedTask.TaskSkills, len(task.TaskSkills)-1)
+			require.Len(t, updatedTask.NeededSkills, len(task.NeededSkills)-1)
 
-			for _, s := range updatedTask.TaskSkills {
-				if s.ProjectSkillID == skill.ProjectSkillID && s.TaskID == task.ID {
-					require.Fail(t, "expected skill %s to be excluded in the tasks skill-array: %v", updatedTask.TaskSkills)
+			for _, s := range updatedTask.NeededSkills {
+				if s.ID == skill.ID {
+					require.Fail(t, "expected skill %s to be excluded in the tasks skill-array: %v", updatedTask.NeededSkills)
 				}
 			}
 		})
