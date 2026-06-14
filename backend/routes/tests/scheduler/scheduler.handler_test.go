@@ -42,9 +42,16 @@ type AssignmentStruct struct {
 	ChangedAssignments []ReturnAssignment `json:"changed_assignments"`
 }
 
+type SchedulingSettings struct {
+	OptimizationGoals []string `json:"optimization_goals"`
+	TimeoutSeconds    *int     `json:"timeout_seconds,omitempty"`
+}
+
+
 type SchedulingRequest struct {
 	TaskIDs []uuid.UUID `json:"task_ids"`
 	UserIDs []uuid.UUID `json:"user_ids"`
+	Settings SchedulingSettings `json:"settings"`
 }
 
 func TestMain(m *testing.M) {
@@ -158,6 +165,10 @@ func TestSchedulerRouteHandler_Integration(t *testing.T) {
 		reqBody := SchedulingRequest{
 			TaskIDs: []uuid.UUID{task1.ID, task2.ID},
 			UserIDs: []uuid.UUID{users[0].ID, users[1].ID},
+			Settings: SchedulingSettings{
+				OptimizationGoals: []string{"max-hours-scheduled", "distribute-evenly"},
+				TimeoutSeconds: nil,
+			},
 		}
 		body, _ := json.Marshal(reqBody)
 
@@ -202,6 +213,10 @@ func TestSchedulerRouteHandler_Integration(t *testing.T) {
 		reqBody := SchedulingRequest{
 			TaskIDs: []uuid.UUID{task2.ID},
 			UserIDs: []uuid.UUID{users[0].ID, users[1].ID},
+			Settings: SchedulingSettings{
+				OptimizationGoals: []string{"max-hours-scheduled", "distribute-evenly"},
+				TimeoutSeconds: nil,
+			},
 		}
 		body, _ := json.Marshal(reqBody)
 
@@ -229,6 +244,10 @@ func TestSchedulerRouteHandler_Integration(t *testing.T) {
 		reqBody := SchedulingRequest{
 			TaskIDs: []uuid.UUID{task1.ID},
 			UserIDs: []uuid.UUID{users[0].ID},
+			Settings: SchedulingSettings{
+				OptimizationGoals: []string{"max-hours-scheduled", "distribute-evenly"},
+				TimeoutSeconds: nil,
+			},
 		}
 		body, _ := json.Marshal(reqBody)
 
@@ -265,6 +284,10 @@ func TestSchedulerRouteHandler_Integration(t *testing.T) {
 		reqBody := SchedulingRequest{
 			TaskIDs: []uuid.UUID{taskA.ID, taskB.ID},
 			UserIDs: []uuid.UUID{users[0].ID},
+			Settings: SchedulingSettings{
+				OptimizationGoals: []string{"max-hours-scheduled", "distribute-evenly"},
+				TimeoutSeconds: nil,
+			},
 		}
 		body, _ := json.Marshal(reqBody)
 
@@ -294,6 +317,10 @@ func TestSchedulerRouteHandler_Integration(t *testing.T) {
 		reqBody := SchedulingRequest{
 			TaskIDs: []uuid.UUID{task1.ID},
 			UserIDs: []uuid.UUID{testutils.RandomUUID(t)},
+			Settings: SchedulingSettings{
+				OptimizationGoals: []string{"max-hours-scheduled", "distribute-evenly"},
+				TimeoutSeconds: nil,
+			},
 		}
 		body, _ := json.Marshal(reqBody)
 
@@ -328,7 +355,16 @@ func TestSchedulerRouteHandler_Integration(t *testing.T) {
 		task2.NeededSkills = []models.ProjectSkill{skills[1]}
 		require.NoError(t, ts.CreateTask(ctx, &task2))
 
-		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/projects/%s/scheduler", proj.ID.String()), nil)
+		reqBody := SchedulingRequest{
+			Settings: SchedulingSettings{
+				OptimizationGoals: []string{"max-hours-scheduled", "distribute-evenly"},
+				TimeoutSeconds: nil,
+			},
+		}
+		body, _ := json.Marshal(reqBody)
+
+		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/projects/%s/scheduler", proj.ID.String()), bytes.NewBuffer(body))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 		req.AddCookie(cookie)
 
 		rec := httptest.NewRecorder()
@@ -358,7 +394,16 @@ func TestSchedulerRouteHandler_Integration(t *testing.T) {
 		_, err := ts.AssignTask(ctx, task1.ID, pms[0].ID)
 		require.NoError(t, err)
 
-		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/projects/%s/scheduler", proj.ID.String()), nil)
+		reqBody := SchedulingRequest{
+			Settings: SchedulingSettings{
+				OptimizationGoals: []string{"max-hours-scheduled", "distribute-evenly"},
+				TimeoutSeconds: nil,
+			},
+		}
+		body, _ := json.Marshal(reqBody)
+
+		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/projects/%s/scheduler", proj.ID.String()), bytes.NewBuffer(body))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 		req.AddCookie(cookie)
 
 		rec := httptest.NewRecorder()
@@ -409,6 +454,10 @@ func TestSchedulerRouteHandler_Integration(t *testing.T) {
 		reqBody := SchedulingRequest{
 			TaskIDs: []uuid.UUID{task2.ID},
 			UserIDs: []uuid.UUID{users[0].ID, users[1].ID},
+			Settings: SchedulingSettings{
+				OptimizationGoals: []string{"max-hours-scheduled", "distribute-evenly"},
+				TimeoutSeconds: nil,
+			},
 		}
 		body, _ := json.Marshal(reqBody)
 
