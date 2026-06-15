@@ -180,6 +180,40 @@ func TestCursorHubRegistry_SlowSubscriberEvicted(t *testing.T) {
 	}
 }
 
+func TestCursorHub_DeliverSnapshotKeepsSubscriberThatDrainsBeforeGrace(t *testing.T) {
+	hub := &cursorHub{projectID: uuid.New()}
+	connectionID := uuid.NewString()
+	send := make(chan []byte, 1)
+	send <- []byte("stale")
+	subs := map[string]chan []byte{connectionID: send}
+	presenceByConnection := map[string]whiteboardSvc.CursorPresenceRecord{
+		connectionID: {
+			ConnectionID: connectionID,
+			User:         cursorTestUser("user-a", "User A"),
+			UpdatedAt:    time.Now().UTC(),
+		},
+	}
+
+	evictedCh := make(chan bool, 1)
+	go func() {
+		evictedCh <- hub.deliverSnapshot(subs, presenceByConnection, []byte("fresh"))
+	}()
+
+	time.Sleep(10 * time.Millisecond)
+	require.Equal(t, []byte("stale"), <-send)
+
+	select {
+	case evicted := <-evictedCh:
+		require.False(t, evicted, "subscriber that drains before grace should not be evicted")
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for cursor snapshot delivery")
+	}
+
+	assert.Contains(t, subs, connectionID)
+	assert.Contains(t, presenceByConnection, connectionID)
+	assert.Equal(t, []byte("fresh"), <-send)
+}
+
 func TestCursorHubRegistry_TeardownAfterLastDetach(t *testing.T) {
 	registry := NewCursorHubRegistry()
 	projectID := uuid.New()
