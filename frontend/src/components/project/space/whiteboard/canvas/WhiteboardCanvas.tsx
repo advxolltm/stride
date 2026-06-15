@@ -142,7 +142,7 @@ export function WhiteboardCanvas({
             captureUpdate: CaptureUpdateAction.NEVER,
         })
         updateViewport(nextScrollX, nextScrollY, zoom)
-    }, [focusTarget?.nonce])
+    }, [focusTarget, updateViewport])
 
     return (
         <div

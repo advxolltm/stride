@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import type { AppState } from '@excalidraw/excalidraw/types'
 
 type PersistedViewport = {
@@ -82,20 +82,19 @@ export const useWhiteboardViewport = (viewportStorageKey?: string) => {
           }
         : undefined
 
-    const updateViewport = (
-        scrollX: number,
-        scrollY: number,
-        zoom: AppState['zoom'],
-    ) => {
-        const nextViewport = {
-            scrollX,
-            scrollY,
-            zoom: zoom.value,
-        }
+    const updateViewport = useCallback(
+        (scrollX: number, scrollY: number, zoom: AppState['zoom']) => {
+            const nextViewport = {
+                scrollX,
+                scrollY,
+                zoom: zoom.value,
+            }
 
-        setViewport(nextViewport)
-        persistViewport(viewportStorageKey, nextViewport)
-    }
+            setViewport(nextViewport)
+            persistViewport(viewportStorageKey, nextViewport)
+        },
+        [viewportStorageKey],
+    )
 
     return {
         initialAppState,
