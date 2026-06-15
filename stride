@@ -775,6 +775,23 @@ wait_for_http() {
     return 1
 }
 
+wait_for_tcp() {
+    host=$1
+    port=$2
+    attempts=$3
+    need_command nc
+
+    count=1
+    while [ "$count" -le "$attempts" ]; do
+        if nc -z "$host" "$port" >/dev/null 2>&1; then
+            return 0
+        fi
+        sleep 2
+        count=$((count + 1))
+    done
+    return 1
+}
+
 run_frontend_cycle() {
     need_command npm
     need_command curl
@@ -806,24 +823,97 @@ run_frontend_cycle() {
         cleanup_dev_server
         trap - EXIT INT TERM
 
-        npm run test -- --run
+        npm run test:run
+        npm run typecheck
         npm run lint
         npm run build
     )
 }
 
+start_backend_test_redis() {
+    need_command docker
+
+    redis_container=$(docker run -d --rm \
+        -p 127.0.0.1::6379 \
+        redis:8.4-alpine \
+        redis-server --appendonly no --save "" --stop-writes-on-bgsave-error no)
+
+    redis_port=$(docker port "$redis_container" 6379/tcp | sed 's/.*://')
+    [ -n "$redis_port" ] || die "Could not determine test Redis port."
+
+    if ! wait_for_tcp 127.0.0.1 "$redis_port" 30; then
+        docker rm -f "$redis_container" >/dev/null 2>&1 || true
+        die "Test Redis did not become reachable."
+    fi
+
+    TEST_REDIS_CONTAINER=$redis_container
+    TEST_REDIS_PORT=$redis_port
+    export TEST_REDIS_CONTAINER TEST_REDIS_PORT
+}
+
+stop_backend_test_redis() {
+    if [ -n "${TEST_REDIS_CONTAINER:-}" ]; then
+        docker rm -f "$TEST_REDIS_CONTAINER" >/dev/null 2>&1 || true
+        TEST_REDIS_CONTAINER=
+    fi
+}
+
+start_backend_test_scheduler() {
+    if [ -n "$(docker_compose "$DEV_COMPOSE" ps -q scheduleserver 2>/dev/null || true)" ]; then
+        TEST_SCHEDULER_STARTED=0
+    else
+        TEST_SCHEDULER_STARTED=1
+    fi
+
+    docker_compose "$DEV_COMPOSE" up -d --build scheduleserver
+
+    scheduler_port=$(docker_compose "$DEV_COMPOSE" port scheduleserver 7270 | sed 's/.*://')
+    [ -n "$scheduler_port" ] || die "Could not determine scheduler server port."
+
+    if ! wait_for_tcp 127.0.0.1 "$scheduler_port" 60; then
+        die "Scheduler server did not become reachable."
+    fi
+
+    TEST_SCHEDULER_PORT=$scheduler_port
+    export TEST_SCHEDULER_PORT TEST_SCHEDULER_STARTED
+}
+
+stop_backend_test_scheduler() {
+    if [ "${TEST_SCHEDULER_STARTED:-0}" = 1 ]; then
+        docker_compose "$DEV_COMPOSE" stop scheduleserver >/dev/null 2>&1 || true
+        TEST_SCHEDULER_STARTED=0
+    fi
+}
+
 run_backend_cycle() {
     need_command go
     need_command govulncheck
+    mkdir -p "$TMP_DIR"
 
     (
         cd "$ROOT_DIR/backend"
+        start_backend_test_redis
+        start_backend_test_scheduler
+
+        cleanup_backend_test_services() {
+            stop_backend_test_redis
+            stop_backend_test_scheduler
+        }
+        trap cleanup_backend_test_services EXIT INT TERM
+
         govulncheck -show verbose ./...
         if [ ! -x ./bin/golangci-lint ]; then
             die "backend/bin/golangci-lint is missing or not executable. Install it with the command from backend/README.md."
         fi
         ./bin/golangci-lint run
-        go test -count=1 -p 1 ./...
+        REDIS_HOST=127.0.0.1 \
+            REDIS_PORT="$TEST_REDIS_PORT" \
+            SCHEDULER_HOST=127.0.0.1 \
+            SCHEDULER_PORT="$TEST_SCHEDULER_PORT" \
+            go test -count=1 -p 1 ./...
+
+        cleanup_backend_test_services
+        trap - EXIT INT TERM
     )
 }
 
@@ -833,6 +923,7 @@ cmd_test() {
     log "Successful checks:"
     log "  Frontend dev server readiness"
     log "  Frontend tests"
+    log "  Frontend typecheck"
     log "  Frontend lint"
     log "  Frontend build"
     log "  Backend vulnerability scan"
