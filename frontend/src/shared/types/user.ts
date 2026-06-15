@@ -7,6 +7,7 @@ export const UserSchema = z.object({
     fullName: z.string().nullable(),
     avatarUrl: z.string().nullable(),
     avatarSmallUrl: z.string().nullable().optional(),
+    isSuperuser: z.boolean(),
 })
 
 export type User = z.infer<typeof UserSchema>

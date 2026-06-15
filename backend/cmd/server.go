@@ -63,6 +63,22 @@ func envEnabled(name string) bool {
 	return value == "1" || value == "true" || value == "yes" || value == "on"
 }
 
+func envEnabledDefault(name string, fallback bool) bool {
+	if _, ok := os.LookupEnv(name); !ok {
+		return fallback
+	}
+	return envEnabled(name)
+}
+
+func isProductionEnv() bool {
+	for _, name := range []string{"APP_ENV", "ENV", "GO_ENV"} {
+		if strings.EqualFold(strings.TrimSpace(os.Getenv(name)), "production") {
+			return true
+		}
+	}
+	return false
+}
+
 func closeMigration(migration *migrate.Migrate) {
 	if migration == nil {
 		return
@@ -79,12 +95,17 @@ func initMainDB(dsn string) (*gorm.DB, error) {
 		return db.InitGORMDB(dsn)
 	}
 
-	mainDB, migration, err := db.InitDB(dsn)
+	production := isProductionEnv()
+	mainDB, migration, err := db.InitDBWithOptions(dsn, db.MigrationOptions{
+		DropBeforeMigrate: envEnabledDefault("RESET_DB_BEFORE_MIGRATIONS", !production),
+	})
 	if err != nil {
 		return nil, err
 	}
 	closeMigration(migration)
-	testutils.SeedDB(mainDB)
+	if envEnabledDefault("SEED_DB", !production) {
+		testutils.SeedDB(mainDB)
+	}
 
 	return mainDB, nil
 }

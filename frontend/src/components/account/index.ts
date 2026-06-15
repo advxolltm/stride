@@ -1,4 +1,4 @@
-export { ProfileSection  } from './profile/ProfileSection'
-export { SecuritySection  } from './security/SecuritySection'
+export { ProfileSection } from './profile/ProfileSection'
+export { SecuritySection } from './security/SecuritySection'
 export { SkillsSection } from './skills/SkillsSection'
-
+export { UsersSection } from './users/UsersSection'

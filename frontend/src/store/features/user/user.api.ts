@@ -2,13 +2,11 @@ import type { User } from '../../../shared/types'
 import { baseApi } from '../../api/base.api'
 import type { AppDispatch, RootState } from '../../store'
 import { patchUserIdentityInCaches } from './user.cache'
-import {
-    mapApiUserSkillToUserSkill,
-    mapApiUserToUser,
-} from './user.mappers'
+import { mapApiUserSkillToUserSkill, mapApiUserToUser } from './user.mappers'
 import type {
     ChangePasswordRequest,
     CreateUserRequest,
+    ResetPasswordRequest,
     UpdateUserRequest,
     UpdateUserProjectSkillsRequest,
     UserSkill,
@@ -84,7 +82,21 @@ export const userApi = baseApi.injectEndpoints({
 
         deleteUser: builder.mutation<void, string>({
             query: (id) => ({ url: `/users/${id}`, method: 'DELETE' }),
-            invalidatesTags: (_result, _error, id) => [{ type: 'User', id }],
+            invalidatesTags: (_result, _error, id) => [
+                'User',
+                { type: 'User', id },
+            ],
+        }),
+
+        resetUserPassword: builder.mutation<
+            void,
+            { id: string; body: ResetPasswordRequest }
+        >({
+            query: ({ id, body }) => ({
+                url: `/users/${id}/password/reset`,
+                method: 'PATCH',
+                body,
+            }),
         }),
 
         getMyUserSkills: builder.query<UserSkill[], string>({
@@ -138,6 +150,7 @@ export const {
     useUpdateUserMutation,
     useChangePasswordMutation,
     useDeleteUserMutation,
+    useResetUserPasswordMutation,
     useGetMyUserSkillsQuery,
     useUpdateUserProjectSkillsMutation,
 } = userApi

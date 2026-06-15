@@ -16,6 +16,7 @@ import (
 const (
 	cursorSnapshotBufferSize = 16
 	cursorBroadcastInterval  = 40 * time.Millisecond
+	cursorSlowClientGrace    = 100 * time.Millisecond
 )
 
 var errCursorHubRegistryNil = errors.New("cursor hub registry not configured")
@@ -373,9 +374,7 @@ func (h *cursorHub) deliverSnapshot(
 ) bool {
 	evicted := false
 	for connectionID, send := range subs {
-		select {
-		case send <- payload:
-		default:
+		if !deliverCursorSnapshot(send, payload) {
 			close(send)
 			delete(subs, connectionID)
 			delete(presenceByConnection, connectionID)
@@ -383,6 +382,23 @@ func (h *cursorHub) deliverSnapshot(
 		}
 	}
 	return evicted
+}
+
+func deliverCursorSnapshot(send chan []byte, payload []byte) bool {
+	select {
+	case send <- payload:
+		return true
+	default:
+	}
+
+	timer := time.NewTimer(cursorSlowClientGrace)
+	defer timer.Stop()
+	select {
+	case send <- payload:
+		return true
+	case <-timer.C:
+		return false
+	}
 }
 
 func buildCursorSnapshot(

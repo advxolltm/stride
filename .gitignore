@@ -33,8 +33,11 @@ pnpm-debug.log*
 nginx/logs/
 nginx/*.log
 nginx/*.pid
+nginx/production/certs/*
+!nginx/production/certs/.gitkeep
 
 redis_data/
+data/
 
 
 postgres_data/
@@ -45,4 +48,3 @@ pgdata/
 
 .cache/
 tmp/
-

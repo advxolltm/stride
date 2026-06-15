@@ -4,7 +4,8 @@
   "tabs": {
     "profile": "Profil",
     "security": "Sicherheit",
-    "skills": "Fähigkeiten"
+    "skills": "Fähigkeiten",
+    "users": "Benutzer"
   },
   "profile": {
     "title": "Persönliche Informationen",
@@ -30,6 +31,7 @@
     "passwordMismatch": "Die neuen Passwörter stimmen nicht überein.",
     "passwordTooShort": "Das Passwort muss mindestens {{count}} Zeichen lang sein.",
     "passwordMissingSpecial": "Das Passwort muss mindestens ein Sonderzeichen enthalten.",
+    "passwordMissingNumber": "Das Passwort muss mindestens eine Zahl enthalten.",
     "updateSuccess": "Passwort erfolgreich aktualisiert",
     "updateError": "Passwort konnte nicht aktualisiert werden. Bitte versuchen Sie es erneut."
   },
@@ -46,5 +48,35 @@
     "updateError": "Fähigkeiten konnten nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
     "emptySkills": "Für dieses Projekt sind noch keine Fähigkeiten verfügbar.",
     "emptyProjects": "Sie sind noch kein Mitglied eines Projekts."
+  },
+  "users": {
+    "title": "Benutzer",
+    "description": "Benutzerkonten und Zugriffswiederherstellung verwalten",
+    "addUser": "Benutzer hinzufügen",
+    "username": "Benutzername",
+    "email": "E-Mail",
+    "password": "Passwort",
+    "newPassword": "Neues Passwort",
+    "confirmPassword": "Passwort bestätigen",
+    "usernameLength": "Der Benutzername muss zwischen {{min}} und {{max}} Zeichen lang sein.",
+    "create": "Benutzer erstellen",
+    "cancel": "Abbrechen",
+    "resetPassword": "Passwort zurücksetzen",
+    "resetPasswordTitle": "Passwort zurücksetzen",
+    "delete": "Löschen",
+    "deleting": "Wird gelöscht...",
+    "deleteTitle": "Benutzer löschen?",
+    "deleteMessage": "{{user}} wird dauerhaft gelöscht.",
+    "superuserBadge": "Superuser",
+    "passwordMismatch": "Die Passwörter stimmen nicht überein.",
+    "passwordTooShort": "Das Passwort muss mindestens {{count}} Zeichen lang sein.",
+    "passwordMissingSpecial": "Das Passwort muss mindestens ein Sonderzeichen enthalten.",
+    "passwordMissingNumber": "Das Passwort muss mindestens eine Zahl enthalten.",
+    "createSuccess": "Benutzer erfolgreich erstellt",
+    "createError": "Benutzer konnte nicht erstellt werden. Bitte versuchen Sie es erneut.",
+    "resetSuccess": "Passwort erfolgreich zurückgesetzt",
+    "resetError": "Passwort konnte nicht zurückgesetzt werden. Bitte versuchen Sie es erneut.",
+    "deleteSuccess": "Benutzer erfolgreich gelöscht",
+    "deleteError": "Benutzer konnte nicht gelöscht werden. Bitte versuchen Sie es erneut."
   }
 }

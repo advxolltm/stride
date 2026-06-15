@@ -11,6 +11,7 @@ var (
 	ErrInvalidUsername         = errors.New("invalid username")
 	ErrPasswordTooShort        = errors.New("password too short")
 	ErrPasswordMissingSpecial  = errors.New("password must contain a special character")
+	ErrPasswordMissingNumber  = errors.New("password must contain a number")
 	ErrPasswordUnchanged       = errors.New("new password must be different from current password")
 	ErrPasswordHashFailed      = errors.New("failed to hash password")
 	ErrUserStoreFailed         = errors.New("user store operation failed")

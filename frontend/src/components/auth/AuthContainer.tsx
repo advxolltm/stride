@@ -40,11 +40,13 @@ export default function AuthContainer({
                         </Card.Description>
                     </Card.Header>
                     {children}
-                    <Card.Footer className="mt-5 justify-center p-0">
-                        <p className="text-center text-sm text-[var(--muted)]">
-                            {footer}
-                        </p>
-                    </Card.Footer>
+                    {footer ? (
+                        <Card.Footer className="mt-5 justify-center p-0">
+                            <p className="text-center text-sm text-[var(--muted)]">
+                                {footer}
+                            </p>
+                        </Card.Footer>
+                    ) : null}
                 </div>
             </Card>
         </div>

@@ -17,9 +17,16 @@ describe('validateStrongPassword', () => {
         })
     })
 
-    it('accepts passwords with the minimum length and a special character', () => {
+    it('rejects passwords without a number', () => {
+        expect(validateStrongPassword('Password!')).toEqual({
+            isValid: false,
+            error: 'passwordMissingNumber',
+        })
+    })
+
+    it('accepts passwords with the minimum length, a special character, and a number', () => {
         expect(
-            validateStrongPassword('A'.repeat(passwordMinLength - 1) + '!'),
+            validateStrongPassword('A'.repeat(passwordMinLength - 2) + '!1'),
         ).toEqual({ isValid: true })
     })
 })

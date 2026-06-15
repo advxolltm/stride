@@ -7,17 +7,27 @@ import {
     TextField,
     toast,
 } from '@heroui/react'
-import { useNavigate } from 'react-router'
+import { Navigate, useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import AuthContainer from '../../components/auth/AuthContainer'
 import PasswordInput from '../../components/auth/PasswordInput'
+import { isOpenNetworkApplicationMode } from '../../config/applicationMode'
+import { validationPolicy } from '../../config/validationPolicy'
 import { getApiErrorMessage } from '../../shared/utils/api/errors'
+import {
+    passwordMinLength,
+    validateStrongPassword,
+} from '../../shared/utils/passwordValidation'
 import { useCreateUserMutation } from '../../store/features/user/user.api'
 
 export default function RegisterPage() {
     const { t } = useTranslation('common')
     const navigate = useNavigate()
     const [createUser, { isLoading }] = useCreateUserMutation()
+
+    if (isOpenNetworkApplicationMode) {
+        return <Navigate to="/login" replace />
+    }
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
@@ -26,6 +36,29 @@ export default function RegisterPage() {
         const username = String(formData.get('username') ?? '').trim()
         const email = String(formData.get('email') ?? '').trim()
         const password = String(formData.get('password') ?? '')
+
+        if (
+            username.length < validationPolicy.usernameMinLength ||
+            username.length > validationPolicy.usernameMaxLength
+        ) {
+            toast.danger(
+                t('usernameValidation.length', {
+                    min: validationPolicy.usernameMinLength,
+                    max: validationPolicy.usernameMaxLength,
+                }),
+            )
+            return
+        }
+
+        const passwordValidation = validateStrongPassword(password)
+        if (!passwordValidation.isValid) {
+            toast.danger(
+                t(`passwordValidation.${passwordValidation.error}`, {
+                    count: passwordMinLength,
+                }),
+            )
+            return
+        }
 
         try {
             await createUser({
@@ -73,6 +106,8 @@ export default function RegisterPage() {
                         Username
                     </Label>
                     <Input
+                        minLength={validationPolicy.usernameMinLength}
+                        maxLength={validationPolicy.usernameMaxLength}
                         placeholder="Choose a username"
                         className="w-full rounded-xl border border-[var(--border)] bg-[var(--field-background)] px-3 py-2.5 pr-10 text-sm text-[var(--field-foreground)] transition-all outline-none placeholder:text-[var(--field-placeholder)] focus:border-[var(--focus)] focus:ring-2 focus:ring-[var(--focus)]/15"
                     />

@@ -259,6 +259,68 @@ func TestUserRouteHandler_Integration(t *testing.T) {
 		assert.Equal(t, "noauth@test.com", u.Email)
 	})
 
+	runTest(t, "POST /users returns 401 without auth in open network mode", func(t *testing.T, tx *gorm.DB) {
+		t.Setenv("APPLICATION_MODE", "open_network")
+		env := newUserTestEnv(t, tx)
+		body := map[string]string{
+			"username": "open-noauth",
+			"email":    "open-noauth@test.com",
+			"password": "Str0ng!Pass",
+		}
+		b, _ := json.Marshal(body)
+		req := httptest.NewRequest(http.MethodPost, "/api/users", bytes.NewReader(b))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
+		env.e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusUnauthorized, rec.Code)
+	})
+
+	runTest(t, "POST /users returns 403 for non-superuser in open network mode", func(t *testing.T, tx *gorm.DB) {
+		t.Setenv("APPLICATION_MODE", "open_network")
+		env := newUserTestEnv(t, tx)
+		body := map[string]string{
+			"username": "open-normal",
+			"email":    "open-normal@test.com",
+			"password": "Str0ng!Pass",
+		}
+		b, _ := json.Marshal(body)
+		req := httptest.NewRequest(http.MethodPost, "/api/users", bytes.NewReader(b))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		req.AddCookie(env.globalCookie)
+		rec := httptest.NewRecorder()
+		env.e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusForbidden, rec.Code)
+	})
+
+	runTest(t, "POST /users returns 201 for superuser in open network mode", func(t *testing.T, tx *gorm.DB) {
+		t.Setenv("APPLICATION_MODE", "open_network")
+		env := newUserTestEnv(t, tx)
+		superuser, err := env.uServe.CreateUserWithOptions(
+			env.ctx,
+			"superuser-"+uuid.NewString()[:8],
+			"superuser-"+uuid.NewString()[:8]+"@test.com",
+			"AdminValid!123",
+			userService.CreateUserOptions{IsSuperuser: true},
+		)
+		require.NoError(t, err)
+
+		body := map[string]string{
+			"username": "open-created",
+			"email":    "open-created@test.com",
+			"password": "Str0ng!Pass",
+		}
+		b, _ := json.Marshal(body)
+		req := httptest.NewRequest(http.MethodPost, "/api/users", bytes.NewReader(b))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		req.AddCookie(getCookie(t, env.aServ, superuser.Email, "AdminValid!123"))
+		rec := httptest.NewRecorder()
+		env.e.ServeHTTP(rec, req)
+
+		require.Equal(t, http.StatusCreated, rec.Code)
+	})
+
 	// ── PATCH /users/:id ────────────────────────────────────────────
 
 	runTest(t, "PATCH /users/:id returns 200 when updating self", func(t *testing.T, tx *gorm.DB) {

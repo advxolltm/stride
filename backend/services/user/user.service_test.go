@@ -182,6 +182,13 @@ func TestUserService_CreateUser(t *testing.T) {
 		assert.ErrorIs(t, err, ErrPasswordMissingSpecial)
 	})
 
+	runServiceTest(t, "returns ErrPasswordMissingNumber and does not call store for password without number", func(t *testing.T, service userService, _ *stubUserStore) {
+		created, err := service.CreateUser(context.Background(), "valid-user", "valid@test.com", "Valid!Pass")
+
+		assert.Nil(t, created)
+		assert.ErrorIs(t, err, ErrPasswordMissingNumber)
+	})
+
 	runServiceTest(t, "hashes password before persisting user", func(t *testing.T, service userService, store *stubUserStore) {
 		ctx := context.Background()
 		createdID := uuid.New()
@@ -208,6 +215,25 @@ func TestUserService_CreateUser(t *testing.T) {
 		assert.Equal(t, "valid@test.com", persisted.Email)
 		assert.NotEqual(t, plainPassword, persisted.PasswordHash)
 		assert.NoError(t, bcrypt.CompareHashAndPassword([]byte(persisted.PasswordHash), []byte(plainPassword)))
+	})
+
+	runServiceTest(t, "persists superuser flag when requested", func(t *testing.T, service userService, store *stubUserStore) {
+		store.createUserFn = func(_ context.Context, user *models.User) error {
+			assert.True(t, user.IsSuperuser)
+			return nil
+		}
+
+		created, err := service.CreateUserWithOptions(
+			context.Background(),
+			"valid-user",
+			"valid@test.com",
+			"Valid!123",
+			CreateUserOptions{IsSuperuser: true},
+		)
+
+		require.NoError(t, err)
+		require.NotNil(t, created)
+		assert.True(t, created.IsSuperuser)
 	})
 
 	runServiceTest(t, "maps duplicate email from store", func(t *testing.T, service userService, store *stubUserStore) {

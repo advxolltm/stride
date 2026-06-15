@@ -7,6 +7,7 @@ export const mapApiUserToUser = ({
     email,
     full_name,
     avatar_url,
+    is_superuser,
 }: ApiUser): User => ({
     id,
     username,
@@ -14,6 +15,7 @@ export const mapApiUserToUser = ({
     fullName: full_name,
     avatarUrl: avatar_url?.original ?? null,
     avatarSmallUrl: avatar_url?.[300] ?? avatar_url?.original ?? null,
+    isSuperuser: is_superuser,
 })
 
 export const mapApiUserSkillToUserSkill = ({

@@ -19,6 +19,7 @@ export const ApiUserSchema = z.object({
     password_hash: z.string().optional(),
     full_name: z.string().nullable(),
     avatar_url: AvatarUrlSetSchema,
+    is_superuser: z.boolean(),
 })
 
 export type ApiUser = z.infer<typeof ApiUserSchema>
@@ -76,6 +77,12 @@ export const ChangePasswordRequestSchema = z.object({
 })
 
 export type ChangePasswordRequest = z.infer<typeof ChangePasswordRequestSchema>
+
+export const ResetPasswordRequestSchema = z.object({
+    new_password: z.string(),
+})
+
+export type ResetPasswordRequest = z.infer<typeof ResetPasswordRequestSchema>
 
 export const UpdateUserProjectSkillsRequestSchema = z.object({
     project_skill_ids: z.array(z.string()),
