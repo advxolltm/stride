@@ -21,7 +21,7 @@ import {
     ApiTaskSkillSchema,
     type Task,
 } from '../features/tasks/task.types'
-import { WSMessageType } from '../features/projectSocket/projectSocket.types'
+import { WSMessageType } from '../features/realtime/realtime.types'
 
 import { z } from 'zod'
 
@@ -51,9 +51,7 @@ const TaskSkillRemovedPayloadSchema = z.union([
 ])
 
 const invalidateProjectTasks = (api: WsListenerApi, projectId: string) => {
-    api.dispatch(
-        baseApi.util.invalidateTags([{ type: 'Task', id: projectId }]),
-    )
+    api.dispatch(baseApi.util.invalidateTags([{ type: 'Task', id: projectId }]))
 }
 
 const patchTaskCaches = (

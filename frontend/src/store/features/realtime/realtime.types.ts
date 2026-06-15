@@ -76,17 +76,8 @@ export const WSMessageEnvelopeSchema = z.object({
     payload: z.unknown(),
 })
 
-export type projectSocketStatus =
+export type RealtimeSocketStatus =
     | 'connecting'
     | 'connected'
     | 'disconnected'
     | 'error'
-
-export type projectSocketSocketState = {
-    projectId: string
-    url: string
-    status: projectSocketStatus
-    lastMessage: WSMessage<unknown> | null
-    lastMessageAt: string | null
-    lastError: string | null
-}

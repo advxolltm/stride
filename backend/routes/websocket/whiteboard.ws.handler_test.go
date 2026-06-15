@@ -59,7 +59,7 @@ func newWSTestDeps(db *gorm.DB, rdb *redis.Client) wsTestDeps {
 		authService:    aServ,
 		projectService: pServ,
 		userService:    uServ,
-		handler:        newWhiteboardWSRouteHandler(aServ, pServ, uServ, rdb, NewProjectHubRegistry(rdb)),
+		handler:        newWhiteboardWSRouteHandler(aServ, pServ, uServ, rdb, NewProjectHubRegistry(rdb), NewCursorHubRegistry()),
 	}
 }
 
@@ -130,10 +130,6 @@ func waitForWSEnvelopeWithMeta(t *testing.T, conn *websocket.Conn, timeout time.
 	var envelope wsEnvelopeWithMeta
 	require.NoError(t, json.Unmarshal(payload, &envelope))
 	return envelope
-}
-
-func cursorPresenceKeyForTest(projectID uuid.UUID) string {
-	return fmt.Sprintf("whiteboard:cursor:presence:%s", projectID)
 }
 
 func waitForCursorSnapshot(
@@ -507,24 +503,6 @@ func TestWhiteboardWSEndpoint(t *testing.T) {
 		require.NotNil(t, presence.Cursor.Y)
 		assert.Equal(t, x, *presence.Cursor.X)
 		assert.Equal(t, y, *presence.Cursor.Y)
-
-		key := cursorPresenceKeyForTest(project.ID)
-		require.Eventually(t, func() bool {
-			rawRecords, err := rdb.HGetAll(ctx, key).Result()
-			if err != nil {
-				return false
-			}
-			for _, raw := range rawRecords {
-				var record whiteboardSvc.CursorPresenceRecord
-				if json.Unmarshal([]byte(raw), &record) != nil {
-					return false
-				}
-				if record.User.ID == owner.ID.String() && record.Cursor.X != nil && record.Cursor.Y != nil {
-					return *record.Cursor.X == x && *record.Cursor.Y == y
-				}
-			}
-			return false
-		}, 3*time.Second, 50*time.Millisecond)
 	})
 
 	runTest(t, "cursor disconnect removes presence and republishes snapshot", func(t *testing.T, tx *gorm.DB, deps wsTestDeps) {
@@ -570,22 +548,6 @@ func TestWhiteboardWSEndpoint(t *testing.T) {
 
 		assert.Nil(t, cursorPresenceByUser(snapshot, owner.ID.String()))
 		require.NotNil(t, cursorPresenceByUser(snapshot, other.ID.String()))
-
-		key := cursorPresenceKeyForTest(project.ID)
-		require.Eventually(t, func() bool {
-			rawRecords, err := rdb.HGetAll(ctx, key).Result()
-			if err != nil || len(rawRecords) != 1 {
-				return false
-			}
-			for _, raw := range rawRecords {
-				var record whiteboardSvc.CursorPresenceRecord
-				if json.Unmarshal([]byte(raw), &record) != nil {
-					return false
-				}
-				return record.User.ID == other.ID.String()
-			}
-			return false
-		}, 3*time.Second, 50*time.Millisecond)
 	})
 
 	runTest(t, "expired session stops whiteboard forwarding", func(t *testing.T, tx *gorm.DB, deps wsTestDeps) {

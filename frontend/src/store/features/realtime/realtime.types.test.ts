@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { WSMessageType } from './projectSocket.types'
+import { WSMessageType } from './realtime.types'
 
 describe('WSMessageType', () => {
     it('uses unique numeric ids matching the backend iota order', () => {
