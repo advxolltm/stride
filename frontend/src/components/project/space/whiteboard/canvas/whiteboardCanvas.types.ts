@@ -1,4 +1,6 @@
 import type {
+    NonDeletedExcalidrawElement,
+    Ordered,
     OrderedExcalidrawElement,
 } from '@excalidraw/excalidraw/element/types'
 import type {
@@ -18,7 +20,9 @@ export interface WhiteboardCanvasProps {
     presence?: readonly WhiteboardCursorPresence[]
     viewportStorageKey?: string
     viewModeEnabled?: boolean
+	taskPreviewModeEnabled?: boolean
     onChange?: (elements: readonly OrderedExcalidrawElement[]) => void
     onPointerUp?: (elements: readonly OrderedExcalidrawElement[]) => void
     onCursorChange?: (message: WhiteboardCursorClientMessage) => void
+	onElementsSelectedChanged?: (elements: readonly Ordered<NonDeletedExcalidrawElement>[], groupedElements: readonly Ordered<NonDeletedExcalidrawElement>[], selectedOuterGroupIds: readonly string[]) => void
 }

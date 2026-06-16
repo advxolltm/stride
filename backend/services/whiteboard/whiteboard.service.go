@@ -25,6 +25,9 @@ type (
 		UpdateElement(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, id uuid.UUID, fields whiteboard.UpdateElementFields) (*models.WhiteboardElement, error)
 		DeleteElement(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, id uuid.UUID) error
 
+
+		FindTaskLinkElements(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, taskID uuid.UUID) ([]models.WhiteboardElement, error)
+
 		BufferCreateElement(ctx context.Context, projectID uuid.UUID, meta ElementBufferMeta, req CreateElementInput) (*BufferedElement, error)
 		BufferUpdateElement(ctx context.Context, projectID uuid.UUID, elementID uuid.UUID, meta ElementBufferMeta, fields whiteboard.UpdateElementFields) (*BufferedElement, error)
 		BufferDeleteElement(ctx context.Context, projectID uuid.UUID, elementID uuid.UUID, meta ElementBufferMeta) (*BufferedElement, error)
@@ -139,4 +142,11 @@ func (s *whiteboardService) DeleteElement(ctx context.Context, userID uuid.UUID,
 		return err
 	}
 	return s.store.DeleteElement(ctx, projectID, id)
+}
+
+func (s *whiteboardService) FindTaskLinkElements(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, taskID uuid.UUID) ([]models.WhiteboardElement, error) {
+	if err := ValidateUserAccessToProject(ctx, s.projectService, userID, projectID); err != nil {
+		return nil, err
+	}
+	return s.store.FindTaskLinkElements(ctx, projectID, taskID)
 }

@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { ArchivedReadOnlyChip } from '../components/project/space/shared/ArchivedReadOnlyChip'
 import { CollaboratorsButton } from '../components/project/space/whiteboard/CollaboratorsButton'
 import { WhiteboardCanvas } from '../components/project/space/whiteboard/canvas/WhiteboardCanvas'
@@ -40,6 +40,12 @@ import type {
 } from '../store/features/whiteboard/whiteboard.socket.types'
 import { toggleTheme } from '../store/themeSlice'
 import { selectUserId } from '../store/userSlice'
+import { LinkTaskButton } from '../components/project/space/whiteboard/LinkTaskButton'
+import type { NonDeletedExcalidrawElement, Ordered } from '@excalidraw/excalidraw/element/types'
+import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
+import type { Task } from '../store/features/tasks/task.types'
+import { ViewTaskButton } from '../components/project/space/whiteboard/ViewTaskButton'
+import { createAndApplyNewLinkTaskGroup, searchSelectedTaskRegionID } from '../shared/utils/whiteboardTaskLinking/whiteboardTaskLinking'
 
 const emptyLiveElementsById: Record<string, WhiteboardLiveUpdateEventPayload> =
     {}
@@ -48,11 +54,13 @@ const DOCK_MEDIA_QUERY = '(min-width: 1280px)'
 
 export function WhiteboardPage() {
     const { projectId } = useParams()
+    const [searchParams, setSearchParams] = useSearchParams();
     const { t } = useTranslation('project')
     const dispatch = useAppDispatch()
     const currentUserId = useAppSelector(selectUserId)
     const isDarkMode = useAppSelector((state) => state.theme.isDark)
     const focusNonceRef = useRef(0)
+    const excalidrawApiRef = useRef<ExcalidrawImperativeAPI | null>(null)
     const [isPanelOpen, setIsPanelOpen] = useState(false)
     const [isPanelPinned, setIsPanelPinned] = useState(false)
     const [selectedPanelTab, setSelectedPanelTab] =
@@ -64,6 +72,8 @@ export function WhiteboardPage() {
             ? window.matchMedia(DOCK_MEDIA_QUERY).matches
             : false,
     )
+    const [isLinkTaskButtonVisible, setIsLinkTaskButtonVisible] = useState(false);
+    const [viewTaskRegionTask, setViewTaskRegionTask] = useState<string | null>(null);
     const whiteboardCursorWS = useWatchWhiteboardCursorQuery(
         projectId ?? skipToken,
     )
@@ -142,6 +152,34 @@ export function WhiteboardPage() {
             mediaQuery.removeEventListener('change', syncDockAvailability)
         }
     }, [])
+
+    function handleLinkTaskSelect(task: Task) {
+        if (excalidrawApiRef.current) {
+            createAndApplyNewLinkTaskGroup(excalidrawApiRef.current, task);
+        }
+    }
+
+    function handleElementsSelected(
+		elements: readonly Ordered<NonDeletedExcalidrawElement>[], 
+		groupedElements: readonly Ordered<NonDeletedExcalidrawElement>[],
+		selectedOuterGroupIds: readonly string[]
+	): void {
+		if(elements.length === 0) {
+			setViewTaskRegionTask(null);
+			setIsLinkTaskButtonVisible(false);
+			return;
+		}
+
+		const taskRegionID = searchSelectedTaskRegionID(elements, groupedElements, selectedOuterGroupIds);
+		if(taskRegionID) {
+			setViewTaskRegionTask(taskRegionID);
+			setIsLinkTaskButtonVisible(false);
+		} else {
+			setViewTaskRegionTask(null);
+			setIsLinkTaskButtonVisible(true);
+		}
+    }
+
 
     function handleOpenPanel() {
         setIsPanelOpen(true)
@@ -307,6 +345,8 @@ export function WhiteboardPage() {
                 ].join(' ')}
             >
                 {isArchived && <ArchivedReadOnlyChip />}
+                {isLinkTaskButtonVisible && <LinkTaskButton onSelect={handleLinkTaskSelect} />}
+                {viewTaskRegionTask && <ViewTaskButton taskId={viewTaskRegionTask} />}
                 <CollaboratorsButton
                     participants={presence}
                     currentUserId={currentUserId}
@@ -369,6 +409,35 @@ export function WhiteboardPage() {
             <div className="flex h-full min-h-0">
                 <div className="min-w-0 flex-1">
                     <WhiteboardCanvas
+                        ref={excalidrawApi => {
+                            excalidrawApiRef.current = excalidrawApi;
+                            if (!excalidrawApiRef.current) {
+                                return;
+                            }
+
+                            const focusTaskId = searchParams.get("focusTaskId");
+                            if (!focusTaskId) {
+                                return;
+                            }
+
+                            // NOTE: both the rectangle and the title above the rectangle have this id 
+                            // providing both to the scrollToContent(..., { fitToContent: true }) ensures 
+                            // that both (and by extension the actual content of the link) are properly in view
+                            const targets = excalidrawElements.filter(
+                                e => e.customData?.taskLinkId === focusTaskId
+                            );
+
+                            if (targets.length > 0) {
+                                excalidrawApiRef.current.scrollToContent(targets, {
+                                    fitToViewport: true,
+                                    viewportZoomFactor: 0.95,
+                                });
+                            }
+
+                            const nextParams = new URLSearchParams(searchParams);
+                            nextParams.delete("focusTaskId");
+                            setSearchParams(nextParams, { replace: true });
+                        }}
                         key={projectId}
                         elements={excalidrawElements}
                         focusTarget={focusTarget}
@@ -382,6 +451,7 @@ export function WhiteboardPage() {
                         onChange={handleCanvasChange}
                         onPointerUp={handleCanvasPointerUp}
                         onCursorChange={queueCursorUpdate}
+                        onElementsSelectedChanged={handleElementsSelected}
                     />
                 </div>
 

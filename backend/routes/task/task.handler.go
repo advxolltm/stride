@@ -1,27 +1,33 @@
 package task
 
 import (
+	"backend/db/whiteboard"
 	"backend/models"
 	"backend/routes"
 	authService "backend/services/auth"
 	notificationService "backend/services/notification"
 	projectService "backend/services/project"
 	taskService "backend/services/task"
+	whiteboardService "backend/services/whiteboard"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
 	"github.com/redis/go-redis/v9"
+	"gorm.io/datatypes"
 )
 
 type taskRouteHandler struct {
 	authService         authService.AuthService
 	taskService         taskService.TaskService
+	whiteboardService   whiteboardService.WhiteboardService
 	projectService      projectService.ProjectService
 	notificationService notificationService.NotificationService
 	rdb                 *redis.Client
@@ -30,6 +36,7 @@ type taskRouteHandler struct {
 func NewTaskRouteHandler(
 	authService authService.AuthService,
 	taskService taskService.TaskService,
+	whiteboardService whiteboardService.WhiteboardService,
 	projectService projectService.ProjectService,
 	notificationService notificationService.NotificationService,
 	rdb *redis.Client,
@@ -37,6 +44,7 @@ func NewTaskRouteHandler(
 	return &taskRouteHandler{
 		authService:         authService,
 		taskService:         taskService,
+		whiteboardService:   whiteboardService,
 		projectService:      projectService,
 		notificationService: notificationService,
 		rdb:                 rdb,
@@ -193,6 +201,30 @@ type updateTaskFieldsRequest struct {
 	ExpectedDurationHours routes.Nullable[int]             `json:"expected_duration_hours,omitempty"`
 } //	@name	UpdateTaskFieldsRequest
 
+type whiteboardElementWSUpdate struct {
+	ID           uuid.UUID      `json:"id"`
+	WhiteboardID uuid.UUID      `json:"whiteboardId"`
+	CreatedBy    *uuid.UUID     `json:"createdBy"`
+	ElementType  string         `json:"elementType"`
+	Props        datatypes.JSON `json:"props"`
+	ZIndex       int            `json:"zIndex"`
+	CreatedAt    string         `json:"createdAt"`
+	UpdatedAt    string         `json:"updatedAt"`
+}
+
+func mapWhiteboardElementWSUpdate(element *models.WhiteboardElement) whiteboardElementWSUpdate {
+	return whiteboardElementWSUpdate{
+		ID:           element.ID,
+		WhiteboardID: element.WhiteboardID,
+		CreatedBy:    element.CreatedBy,
+		ElementType:  element.ElementType,
+		Props:        element.Props,
+		ZIndex:       element.ZIndex,
+		CreatedAt:    element.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:    element.UpdatedAt.Format(time.RFC3339),
+	}
+}
+
 // @Summary	Update a specific task. Must be member of the project of the task.
 // @Tags		task
 // @Param		id		path		string					true	"Task ID"
@@ -243,6 +275,57 @@ func (h taskRouteHandler) taskPATCH(c *echo.Context) error {
 	if err != nil {
 		status, msg := h.mapServiceError(err)
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
+	}
+
+	if updatedTask.Title != task.Title {
+		affectedTaskLinkElements, err := h.whiteboardService.FindTaskLinkElements(ctx, userID, updatedTask.ProjectID, updatedTask.ID)
+		if err != nil {
+			// TODO: maybe rollback the task-update change?
+			slog.Error("taskPATCH: Failed to update linked whiteboard elements", "task", updatedTask.ID, "error", err)
+		} else {
+			for _, affectedElement := range affectedTaskLinkElements {
+				if affectedElement.ElementType == "text" {
+					var propsMap map[string]any
+					if err = json.Unmarshal(affectedElement.Props, &propsMap); err != nil {
+						// TODO: maybe rollback the task-update change?
+						slog.Error("taskPATCH: Failed to update linked whiteboard elements", "task", updatedTask.ID, "whiteboard-element", affectedElement.ID, "error", err)
+					}
+
+					propsMap["text"] = updatedTask.Title
+					propsMap["originalText"] = updatedTask.Title
+
+					// TODO: somehow calculate this better, but this seems to be good enough for now
+					propsMap["width"] = len(updatedTask.Title) * 10
+
+					updatedProps, err := json.Marshal(propsMap)
+					if err != nil {
+						// TODO: maybe rollback the task-update change?
+						slog.Error("taskPATCH: Failed to update linked whiteboard elements", "task", updatedTask.ID, "whiteboard-element", affectedElement.ID, "error", err)
+					}
+
+					affectedElement.Props = updatedProps
+
+					updatedAffectedElement, err := h.whiteboardService.UpdateElement(ctx, userID, task.ProjectID, affectedElement.ID, whiteboard.UpdateElementFields{
+						Props: &affectedElement.Props,
+					})
+
+					if err := routes.SendWSUpdate(
+						c.Request().Context(),
+						h.rdb,
+						task.ProjectID,
+						routes.WhiteboardElementUpdate,
+						mapWhiteboardElementWSUpdate(updatedAffectedElement),
+					); err != nil {
+						slog.Error("taskPATCH: Failed to send ws update", "error", err)
+					}
+
+					if err != nil {
+						// TODO: maybe rollback the task-update change?
+						slog.Error("taskPATCH: Failed to update linked whiteboard elements", "task", updatedTask.ID, "whiteboard-element", affectedElement.ID, "error", err)
+					}
+				}
+			}
+		}
 	}
 
 	mappedTask := routes.MapTask(*updatedTask)
@@ -311,6 +394,35 @@ func (h taskRouteHandler) taskDELETE(c *echo.Context) error {
 	if err != nil {
 		status, msg := h.mapServiceError(err)
 		return c.JSON(status, routes.ErrorResponse{Error: msg})
+	}
+
+	affectedTaskLinkElements, err := h.whiteboardService.FindTaskLinkElements(ctx, userID, task.ProjectID, task.ID)
+	if err != nil {
+		// TODO: maybe rollback the task-update change?
+		slog.Error("taskDELETE: Failed to update linked whiteboard elements", "task", task.ID, "error", err)
+	} else {
+		for _, affectedElement := range affectedTaskLinkElements {
+			err = h.whiteboardService.DeleteElement(ctx, userID, task.ProjectID, affectedElement.ID)
+			if err != nil {
+				// TODO: maybe rollback the task-update change?
+				slog.Error("taskDELETE: Failed to delete linked whiteboard elements", "task", task.ID, "whiteboard-element", affectedElement.ID, "error", err)
+			}
+
+			if err := routes.SendWSUpdate(
+				c.Request().Context(),
+				h.rdb,
+				task.ProjectID,
+				routes.WhiteboardElementDelete,
+				mapWhiteboardElementWSUpdate(&affectedElement),
+			); err != nil {
+				slog.Error("taskDELETE: Failed to send ws update", "error", err)
+			}
+
+			if err != nil {
+				// TODO: maybe rollback the task-update change?
+				slog.Error("taskDELETE: Failed to update linked whiteboard elements", "task", task.ID, "whiteboard-element", affectedElement.ID, "error", err)
+			}
+		}
 	}
 
 	type taskDeleteWSUpdate struct {
