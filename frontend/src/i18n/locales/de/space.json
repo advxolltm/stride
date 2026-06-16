@@ -68,7 +68,8 @@
       "skillsEmpty": "Keine Fähigkeiten gefunden",
       "skillsUnavailable": "Keine Fähigkeiten verfügbar",
       "assigneeSearch": "Benutzer suchen...",
-      "assigneeEmpty": "Kein Zuständiger"
+      "assigneeEmpty": "Kein Zuständiger",
+	  "linkedWhiteboardRegion": "Verknüpfter Whiteboard Bereich"
     }
   }
 }

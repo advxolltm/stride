@@ -18,6 +18,7 @@ type (
 		CreateElement(ctx context.Context, element *models.WhiteboardElement) (*models.WhiteboardElement, error)
 		UpdateElement(ctx context.Context, projectID uuid.UUID, id uuid.UUID, fields UpdateElementFields) (*models.WhiteboardElement, error)
 		DeleteElement(ctx context.Context, projectID uuid.UUID, id uuid.UUID) error
+		FindTaskLinkElements(ctx context.Context, projectID uuid.UUID, taskID uuid.UUID) ([]models.WhiteboardElement, error)
 	}
 
 	UpdateElementFields struct {
@@ -81,6 +82,20 @@ func (s *whiteboardStore) CreateElement(ctx context.Context, element *models.Whi
 		return nil, result.Error
 	}
 	return element, nil
+}
+
+func (s *whiteboardStore) FindTaskLinkElements(ctx context.Context, projectID uuid.UUID, taskID uuid.UUID) ([]models.WhiteboardElement, error) {
+	var elements []models.WhiteboardElement
+	result := s.db.WithContext(ctx).Model(&models.WhiteboardElement{}).
+		Where("whiteboard_id = (SELECT id FROM whiteboards WHERE project_id = ?)", projectID).
+		Where("props->'customData'->>'taskLinkId' = ?", taskID).
+		Find(&elements)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return elements, nil
 }
 
 func (s *whiteboardStore) UpdateElement(ctx context.Context, projectID uuid.UUID, id uuid.UUID, fields UpdateElementFields) (*models.WhiteboardElement, error) {

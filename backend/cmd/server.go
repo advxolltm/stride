@@ -188,7 +188,7 @@ func main() {
 		routes.NewHealthRouteHandler(),
 		routes.NewAuthRouteHandler(authService, userService),
 		projects.NewProjectsGroup(projectService, whiteboardService, chatService, notificationService, authService, rdb, schedService, taskService),
-		taskHandler.NewTaskRouteHandler(authService, taskService, projectService, notificationService, rdb),
+		taskHandler.NewTaskRouteHandler(authService, taskService, whiteboardService, projectService, notificationService, rdb),
 		routes.NewNotificationRouteHandler(notificationService, authService),
 		routes.NewUserRouteHandler(userService, authService, projectService),
 		wsRoutes.NewWSRouteHandler(authService, projectService, userService, rdb),

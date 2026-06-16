@@ -25,11 +25,13 @@ import (
 	projectStore "backend/db/project"
 	taskStore "backend/db/task"
 	userStore "backend/db/user"
+	whiteboardStore "backend/db/whiteboard"
 	authService "backend/services/auth"
 	notificationService "backend/services/notification"
 	projectService "backend/services/project"
 	taskService "backend/services/task"
 	userService "backend/services/user"
+	whiteboardService "backend/services/whiteboard"
 )
 
 var db *gorm.DB
@@ -43,17 +45,21 @@ func newTestTaskHandler(db *gorm.DB, rdb *redis.Client) taskRouteHandler {
 	userStore := userStore.NewUserStore(db)
 	projectStore := projectStore.NewProjectStore(db)
 	taskStore := taskStore.NewTaskStore(db)
+	pendingStore := whiteboardStore.NewPendingElementStore(rdb)
+	whiteboardStore := whiteboardStore.NewWhiteboardStore(db)
 	notificationStore := notificationStore.NewNotificationStreamStore(rdb)
 
 	userService := userService.NewUserService(userStore)
 	projectService := projectService.NewProjectService(projectStore)
 	authService := authService.NewAuthenticationService(userService)
+	whiteboardService := whiteboardService.NewWhiteboardService(whiteboardStore, projectService, pendingStore)
 	taskService := taskService.NewTaskService(taskStore, projectService)
 	notificationService := notificationService.NewNotificationService(notificationStore)
 
 	return taskRouteHandler{
 		authService:         authService,
 		taskService:         taskService,
+		whiteboardService:   whiteboardService,
 		projectService:      projectService,
 		notificationService: notificationService,
 		rdb:                 rdb,
