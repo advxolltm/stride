@@ -22,10 +22,11 @@ func NewWSRouteHandler(
 	rdb *redis.Client,
 ) *WSRouteHandler {
 	hubs := NewProjectHubRegistry(rdb)
+	cursorHubs := NewCursorHubRegistry()
 	return &WSRouteHandler{
 		projectHandler:      newProjectWSRouteHandler(authService, projectService, rdb, hubs),
 		notificationHandler: newNotificationWSRouteHandler(authService, rdb),
-		whiteboardHandler:   newWhiteboardWSRouteHandler(authService, projectService, userService, rdb, hubs),
+		whiteboardHandler:   newWhiteboardWSRouteHandler(authService, projectService, userService, rdb, hubs, cursorHubs),
 	}
 }
 

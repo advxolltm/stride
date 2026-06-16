@@ -14,6 +14,40 @@ If you want to build an executable, run the following command which puts the bin
 go build -o bin/server cmd/server.go
 ```
 
+## Application Mode
+
+`APPLICATION_MODE` controls who can create users.
+
+- `closed_network` (default): public registration through `POST /users` remains enabled.
+- `closed_auth`: public registration is disabled. `POST /users` requires an authenticated user with `is_superuser=true`.
+- `open_network`: legacy alias for `closed_auth`.
+
+Create the first superuser with the CLI:
+
+```bash
+go run ./cmd/create-user --superuser admin admin@example.com 'Password123!'
+```
+
+To avoid passing the password as a process argument, read it from stdin:
+
+```bash
+printf '%s\n' 'Password123!' | go run ./cmd/create-user --superuser --password-stdin admin admin@example.com
+```
+
+Create a normal user with the same command without the flag:
+
+```bash
+go run ./cmd/create-user john john@example.com 'Password123!'
+```
+
+Inside Docker:
+
+```bash
+docker compose -f compose.dev.yml exec backserver go run ./cmd/create-user --superuser admin admin@example.com 'Password123!'
+```
+
+Production images include `/app/stride-create-user` for the same purpose.
+
 ## Generate OpenAPI / Swagger documentation
 
 We use [swaggo/swag](https://github.com/swaggo/swag) for API documenation. When run, the tool parses special comments in the [Delcarative Comments Format](https://github.com/swaggo/swag#declarative-comments-format).

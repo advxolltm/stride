@@ -17,7 +17,7 @@ export const patchTaskFields = (task: Task, updatedTask: Task) => {
     task.status = updatedTask.status
     task.startDate = updatedTask.startDate
     task.dueDate = updatedTask.dueDate
-    task.expectedDurationMinutes = updatedTask.expectedDurationMinutes
+    task.expectedDurationHours = updatedTask.expectedDurationHours
     task.position = updatedTask.position
     task.updatedAt = updatedTask.updatedAt
     task.completedAt = updatedTask.completedAt
@@ -88,8 +88,8 @@ export const applyTaskUpdate = (task: Task, update: UpdateTaskRequest) => {
     if (hasOwn(update, 'due_date')) {
         task.dueDate = update.due_date ?? null
     }
-    if (hasOwn(update, 'expected_duration_minutes')) {
-        task.expectedDurationMinutes = update.expected_duration_minutes ?? null
+    if (hasOwn(update, 'expected_duration_hours')) {
+        task.expectedDurationHours = update.expected_duration_hours ?? null
     }
 }
 

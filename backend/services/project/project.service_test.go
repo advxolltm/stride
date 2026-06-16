@@ -195,7 +195,7 @@ func TestProjectService(t *testing.T) {
 	runTest(t, db, "Get Project Members returns correct list", func(t *testing.T, db *gorm.DB, service projectService.ProjectService, userServ userService.UserService) {
 		project := testutils.SelectRandomProject(t, db)
 
-		result := db.WithContext(ctx).Preload("Members").Preload("Members.User").First(&project, "id = ?", project.ID)
+		result := db.WithContext(ctx).Preload("Members").Preload("Members.User").Preload("Members.Skills").First(&project, "id = ?", project.ID)
 		require.NoError(t, result.Error)
 
 		retMembers, getErr := service.GetProjectMembers(ctx, project.ID)

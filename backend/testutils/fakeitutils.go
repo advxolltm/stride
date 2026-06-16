@@ -205,7 +205,7 @@ func fakeTaskWithProjects(projects []models.Project) func(int) models.Task {
 		desc := f.ProductDescription()
 		startDate := f.PastDate()
 		dueDate := f.FutureDate()
-		expMinutes := f.Minute()
+		expHours := f.Hour()
 
 		project := Choice(&projects)
 		taskCreator := Choice(&project.Members)
@@ -220,17 +220,17 @@ func fakeTaskWithProjects(projects []models.Project) func(int) models.Task {
 		}
 
 		return models.Task{
-			Title:                   f.BookTitle(),
-			Description:             &desc,
-			Status:                  status,
-			StartDate:               &startDate,
-			DueDate:                 &dueDate,
-			ExpectedDurationMinutes: &expMinutes,
-			Position:                idx,
-			CompletedAt:             completedAt,
-			CreatedBy:               taskCreator.ID,
-			Creator:                 taskCreator,
-			Project:                 project,
+			Title:                 f.BookTitle(),
+			Description:           &desc,
+			Status:                status,
+			StartDate:             &startDate,
+			DueDate:               &dueDate,
+			ExpectedDurationHours: &expHours,
+			Position:              idx,
+			CompletedAt:           completedAt,
+			CreatedBy:             taskCreator.ID,
+			Creator:               taskCreator,
+			Project:               project,
 		}
 	}
 }
@@ -295,7 +295,7 @@ func SelectRandomProjects(t *testing.T, db *gorm.DB, count int) []models.Project
 		Preload("Members.User", nil).
 		Preload("Skills", nil).
 		Preload("Messages", nil).
-		Preload("Tasks.TaskSkills", nil).
+		Preload("Tasks.NeededSkills", nil).
 		Preload("Whiteboards", nil).
 		Find(t.Context())
 	AssertNoError(err)
@@ -311,6 +311,7 @@ func SelectRandomTask(t *testing.T, db *gorm.DB) models.Task {
 	t.Helper()
 	tasks, err := gorm.G[models.Task](db).
 		Preload("Assignees", nil).
+		Preload("NeededSkills", nil).
 		Find(t.Context())
 	AssertNoError(err)
 	return Choice(&tasks)
@@ -330,13 +331,16 @@ func generateProjectMembers(users []models.User, projects []models.Project) {
 		isOwnerInMembers := false
 		members := make([]models.ProjectMember, 0, membersCount)
 		for _, memberUser := range memberUsers {
+			role := "member"
 			if memberUser.ID == *projects[pidx].CreatedBy {
 				isOwnerInMembers = true
+				role = "owner"
 			}
 			pm := models.ProjectMember{
 				JoinedAt: f.PastDate(),
 				User:     memberUser,
 				Project:  projects[pidx],
+				Role:     role,
 			}
 
 			members = append(members, pm)
@@ -346,6 +350,7 @@ func generateProjectMembers(users []models.User, projects []models.Project) {
 			JoinedAt: f.PastDate(),
 			User:     *projects[pidx].Creator,
 			Project:  projects[pidx],
+			Role:     "owner",
 		}
 		if !isOwnerInMembers {
 			members = append(members, powner)
@@ -417,14 +422,7 @@ func generateProjectTaskSkills(projects []models.Project) {
 	for pidx := range projects {
 		for tidx := range projects[pidx].Tasks {
 			requiredSkills := ChoiceSubsetNonEmpty(projects[pidx].Skills)
-			taskSkills := Map(requiredSkills, func(ps models.ProjectSkill) models.TaskSkill {
-				return models.TaskSkill{
-					TaskID:         projects[pidx].Tasks[tidx].ID,
-					ProjectSkillID: ps.ID,
-				}
-			})
-
-			projects[pidx].Tasks[tidx].TaskSkills = taskSkills
+			projects[pidx].Tasks[tidx].NeededSkills = requiredSkills
 		}
 	}
 }
@@ -433,18 +431,10 @@ func generateProjectMemberSkills(projects []models.Project) {
 	for pidx := range projects {
 		for midx := range projects[pidx].Members {
 			requiredSkills := ChoiceSubsetNonEmpty(projects[pidx].Skills)
-			userSkills := Map(requiredSkills, func(ps models.ProjectSkill) models.UserSkill {
-				return models.UserSkill{
-					UserID:         projects[pidx].Members[midx].ID,
-					ProjectSkillID: ps.ID,
-				}
-			})
-
-			if len(projects[pidx].Members[midx].User.UserSkills) == 0 {
-				projects[pidx].Members[midx].User.UserSkills = userSkills
-			} else {
-				projects[pidx].Members[midx].User.UserSkills = append(projects[pidx].Members[midx].User.UserSkills, userSkills...)
-			}
+			projects[pidx].Members[midx].Skills = append(
+				projects[pidx].Members[midx].Skills,
+				requiredSkills...,
+			)
 		}
 	}
 }

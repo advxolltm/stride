@@ -92,7 +92,7 @@ func assertEqualTaskResponse(t *testing.T, expected models.Task, actual routes.T
 	assert.Equal(t, expected.Status, actual.Status, "task.Status")
 	assert.Equal(t, expected.StartDate, actual.StartDate, "task.StartDate")
 	assert.Equal(t, expected.DueDate, actual.DueDate, "task.DueDate")
-	assert.Equal(t, expected.ExpectedDurationMinutes, actual.ExpectedDurationMinutes, "task.ExpectedDurationMinutes")
+	assert.Equal(t, expected.ExpectedDurationHours, actual.ExpectedDurationHours, "task.ExpectedDurationHours")
 	assert.Equal(t, expected.Position, actual.Position, "task.Position")
 	assert.True(t, expected.CreatedAt.UTC().Equal(actual.CreatedAt.UTC()), "task.CreatedAt")
 	assert.True(t, expected.UpdatedAt.UTC().Equal(actual.UpdatedAt.UTC()), "task.UpdatedAt")
@@ -241,9 +241,9 @@ func TestTaskHandler(t *testing.T) {
 				newDescription := testutils.Faker().ProductDescription()
 
 				taskUpdateFields := map[string]any{
-					"title":                     newTitle,
-					"description":               newDescription,
-					"expected_duration_minutes": nil,
+					"title":                   newTitle,
+					"description":             newDescription,
+					"expected_duration_hours": nil,
 				}
 
 				taskUpdateJson, err := json.Marshal(taskUpdateFields)
@@ -270,7 +270,7 @@ func TestTaskHandler(t *testing.T) {
 				assert.Equal(t, tsk.Status, resp.Status, "task.Status")
 				assert.Equal(t, tsk.StartDate, resp.StartDate, "task.StartDate")
 				assert.Equal(t, tsk.DueDate, resp.DueDate, "task.DueDate")
-				assert.Nil(t, resp.ExpectedDurationMinutes, "task.ExpectedDurationMinutes")
+				assert.Nil(t, resp.ExpectedDurationHours, "task.ExpectedDurationHours")
 				assert.Equal(t, tsk.Position, resp.Position, "task.Position")
 				testutils.RequireEqualTime(t, tsk.CreatedAt, resp.CreatedAt, "task.CreatedAt")
 				assert.Greater(t, resp.UpdatedAt, tsk.UpdatedAt, "task.UpdatedAt")
@@ -354,6 +354,10 @@ func TestTaskHandler(t *testing.T) {
 				require.Equal(t, http.StatusCreated, rec.Code)
 				returnedAssignedTask := parse[routes.TaskAssignee](t, rec.Body)
 				require.Equal(t, returnedAssignedTask.TaskID, tsk.ID)
+				require.Equal(t, randomUserOfProject.ID, returnedAssignedTask.ProjectMember.ID)
+				require.Equal(t, randomUserOfProject.Role, returnedAssignedTask.ProjectMember.Role)
+				require.Equal(t, randomUserOfProject.User.ID, returnedAssignedTask.ProjectMember.User.ID)
+				require.Equal(t, randomUserOfProject.User.Email, returnedAssignedTask.ProjectMember.User.Email)
 
 				assignedTasks, err := sut.taskService.GetTasksAssignedToProjectMember(t.Context(), randomUserOfProject.ID)
 				require.NoError(t, err)

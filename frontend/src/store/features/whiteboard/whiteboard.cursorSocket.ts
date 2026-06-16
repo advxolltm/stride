@@ -1,10 +1,8 @@
 import { buildApiWebSocketUrl } from '../../api/base.api'
-import type {
-    WhiteboardCursorClientMessage,
-    WhiteboardCursorPresence,
-} from './whiteboard.socket.types'
+import { WhiteboardCursorPresenceListSchema } from './whiteboard.socket.types'
+import { watchManagedSocket } from '../realtime/realtime.socketRuntime'
+import type { WhiteboardCursorClientMessage } from './whiteboard.socket.types'
 import type { WhiteboardCursorSocketState } from './whiteboard.ui.types'
-import { watchManagedSocket } from './whiteboard.socketRuntime'
 
 export type WhiteboardCursorSocketLifecycleApi = {
     cacheDataLoaded: Promise<unknown>
@@ -30,38 +28,12 @@ export const createWhiteboardCursorSocketState = (
     lastError: null,
 })
 
-const isWhiteboardCursorPresence = (
-    value: unknown,
-): value is WhiteboardCursorPresence => {
-    if (!value || typeof value !== 'object') {
-        return false
-    }
-
-    const record = value as Partial<WhiteboardCursorPresence>
-    const user = record.user
-    const cursor = record.cursor
-
-    return (
-        !!user &&
-        typeof user === 'object' &&
-        typeof user.id === 'string' &&
-        typeof user.name === 'string' &&
-        typeof user.avatarSmall === 'string' &&
-        !!cursor &&
-        typeof cursor === 'object' &&
-        (cursor.x === null || typeof cursor.x === 'number') &&
-        (cursor.y === null || typeof cursor.y === 'number')
-    )
-}
-
 const parseWhiteboardCursorSnapshot = (rawMessage: string) => {
     try {
-        const parsed = JSON.parse(rawMessage) as unknown
-        if (!Array.isArray(parsed)) {
-            return null
-        }
-
-        return parsed.every(isWhiteboardCursorPresence) ? parsed : null
+        const parsed = WhiteboardCursorPresenceListSchema.safeParse(
+            JSON.parse(rawMessage) as unknown,
+        )
+        return parsed.success ? parsed.data : null
     } catch {
         return null
     }
@@ -74,8 +46,9 @@ export const watchWhiteboardCursorSocket = async (
     await watchManagedSocket({
         cacheDataLoaded: lifecycleApi.cacheDataLoaded,
         cacheEntryRemoved: lifecycleApi.cacheEntryRemoved,
-        createSocket: () => new WebSocket(createWhiteboardCursorSocketUrl(projectId)),
-        createSocketEventHandlers: (socket) => ({
+        createSocket: () =>
+            new WebSocket(createWhiteboardCursorSocketUrl(projectId)),
+        createSocketEventHandlers: (socket, controls) => ({
             open: () => {
                 activeWhiteboardCursorSockets.set(projectId, socket)
                 lifecycleApi.updateCachedData((draft) => {
@@ -90,6 +63,9 @@ export const watchWhiteboardCursorSocket = async (
 
                 const snapshot = parseWhiteboardCursorSnapshot(event.data)
                 if (!snapshot) {
+                    controls.reportParseError(
+                        'Failed to parse whiteboard cursor snapshot',
+                    )
                     lifecycleApi.updateCachedData((draft) => {
                         draft.lastError =
                             'Failed to parse whiteboard cursor snapshot'

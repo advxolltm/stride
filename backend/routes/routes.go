@@ -49,7 +49,7 @@ type Paginated[T any] struct {
 }
 
 type PaginationRequest struct {
-	Page int `query:"page"`
+	Page     int `query:"page"`
 	PageSize int `query:"pageSize"`
 }
 
@@ -98,29 +98,22 @@ func ToTimeOpt(d **DateOnly) **time.Time {
 
 type (
 	Task struct {
-		ID                      uuid.UUID      `json:"id"`
-		ProjectID               uuid.UUID      `json:"project_id"`
-		CreatedBy               uuid.UUID      `json:"created_by"`
-		Title                   string         `json:"title"`
-		Description             *string        `json:"description"`
-		Status                  string         `json:"status"`
-		StartDate               *time.Time     `json:"start_date"`
-		DueDate                 *time.Time     `json:"due_date"`
-		ExpectedDurationMinutes *int           `json:"expected_duration_minutes"`
-		Position                int            `json:"position"`
-		CreatedAt               time.Time      `json:"created_at"`
-		UpdatedAt               time.Time      `json:"updated_at"`
-		CompletedAt             *time.Time     `json:"completed_at"`
-		TaskSkills              []TaskSkill    `json:"task_skills"`
-		TaskAssignees           []TaskAssignee `json:"task_assignees"`
+		ID                    uuid.UUID      `json:"id"`
+		ProjectID             uuid.UUID      `json:"project_id"`
+		CreatedBy             uuid.UUID      `json:"created_by"`
+		Title                 string         `json:"title"`
+		Description           *string        `json:"description"`
+		Status                string         `json:"status"`
+		StartDate             *time.Time     `json:"start_date"`
+		DueDate               *time.Time     `json:"due_date"`
+		ExpectedDurationHours *int           `json:"expected_duration_hours"`
+		Position              int            `json:"position"`
+		CreatedAt             time.Time      `json:"created_at"`
+		UpdatedAt             time.Time      `json:"updated_at"`
+		CompletedAt           *time.Time     `json:"completed_at"`
+		TaskSkills            []TaskSkill    `json:"task_skills"`
+		TaskAssignees         []TaskAssignee `json:"task_assignees"`
 	} // @name Task
-
-	TaskSkill struct {
-		ID             uuid.UUID    `json:"id"`
-		TaskID         uuid.UUID    `json:"task_id"`
-		ProjectSkillID uuid.UUID    `json:"project_skill_id"`
-		ProjectSkill   ProjectSkill `json:"project_skill"`
-	} // @name TaskSkill
 
 	ProjectSkill struct {
 		ID          uuid.UUID `json:"id"`
@@ -128,6 +121,13 @@ type (
 		Name        string    `json:"name"`
 		Description *string   `json:"description"`
 	} // @name ProjectSkill
+
+	TaskSkill struct {
+		ID             uuid.UUID    `json:"id"`
+		TaskID         uuid.UUID    `json:"task_id"`
+		ProjectSkillID uuid.UUID    `json:"project_skill_id"`
+		ProjectSkill   ProjectSkill `json:"project_skill"`
+	} // @name TaskSkill
 
 	UserSkill struct {
 		ID             uuid.UUID    `json:"id"`
@@ -175,6 +175,15 @@ type (
 	} // @name MessageCount
 )
 
+func MapProjectSkillToUserSkill(ps models.ProjectSkill, uid uuid.UUID) UserSkill {
+	return UserSkill{
+		ID:             ps.ID,
+		UserID:         uid,
+		ProjectSkillID: ps.ID,
+		ProjectSkill:   MapProjectSkill(ps),
+	}
+}
+
 func MapMessage(msg models.Message) Message {
 	return Message{
 		ID:        msg.ID,
@@ -191,21 +200,30 @@ func MapMessage(msg models.Message) Message {
 
 func MapTask(task models.Task) Task {
 	return Task{
-		ID:                      task.ID,
-		ProjectID:               task.ProjectID,
-		CreatedBy:               task.CreatedBy,
-		Title:                   task.Title,
-		Description:             task.Description,
-		Status:                  task.Status,
-		StartDate:               task.StartDate,
-		DueDate:                 task.DueDate,
-		ExpectedDurationMinutes: task.ExpectedDurationMinutes,
-		Position:                task.Position,
-		CreatedAt:               task.CreatedAt,
-		UpdatedAt:               task.UpdatedAt,
-		CompletedAt:             task.CompletedAt,
-		TaskSkills:              Map(task.TaskSkills, MapTaskSkill),
-		TaskAssignees:           Map(task.Assignees, MapTaskAssignee),
+		ID:                    task.ID,
+		ProjectID:             task.ProjectID,
+		CreatedBy:             task.CreatedBy,
+		Title:                 task.Title,
+		Description:           task.Description,
+		Status:                task.Status,
+		StartDate:             task.StartDate,
+		DueDate:               task.DueDate,
+		ExpectedDurationHours: task.ExpectedDurationHours,
+		Position:              task.Position,
+		CreatedAt:             task.CreatedAt,
+		UpdatedAt:             task.UpdatedAt,
+		CompletedAt:           task.CompletedAt,
+		TaskSkills:            Map(task.NeededSkills, func(ps models.ProjectSkill) TaskSkill { return MapProjectSkillToTaskSkill(ps, task.ID) }),
+		TaskAssignees:         Map(task.Assignees, MapTaskAssignee),
+	}
+}
+
+func MapProjectSkillToTaskSkill(ps models.ProjectSkill, taskId uuid.UUID) TaskSkill {
+	return TaskSkill{
+		ID:             ps.ID,
+		TaskID:         taskId,
+		ProjectSkillID: ps.ID,
+		ProjectSkill:   MapProjectSkill(ps),
 	}
 }
 
@@ -215,24 +233,6 @@ func MapProjectSkill(projectSkill models.ProjectSkill) ProjectSkill {
 		ProjectID:   projectSkill.ProjectID,
 		Name:        projectSkill.Name,
 		Description: projectSkill.Description,
-	}
-}
-
-func MapUserSkill(userSkill models.UserSkill) UserSkill {
-	return UserSkill{
-		ID:             userSkill.ID,
-		UserID:         userSkill.UserID,
-		ProjectSkillID: userSkill.ProjectSkillID,
-		ProjectSkill:   MapProjectSkill(userSkill.ProjectSkill),
-	}
-}
-
-func MapTaskSkill(taskSkill models.TaskSkill) TaskSkill {
-	return TaskSkill{
-		ID:             taskSkill.ID,
-		TaskID:         taskSkill.TaskID,
-		ProjectSkillID: taskSkill.ProjectSkillID,
-		ProjectSkill:   MapProjectSkill(taskSkill.ProjectSkill),
 	}
 }
 
@@ -273,14 +273,14 @@ type (
 	}
 
 	User struct {
-		ID        uuid.UUID  `json:"id"`
-		Username  string     `json:"username"`
-		Email     string     `json:"email"`
-		FullName  *string    `json:"full_name"`
-		AvatarURL *AvatarURL `json:"avatar_url"`
+		ID          uuid.UUID  `json:"id"`
+		Username    string     `json:"username"`
+		Email       string     `json:"email"`
+		FullName    *string    `json:"full_name"`
+		AvatarURL   *AvatarURL `json:"avatar_url"`
+		IsSuperuser bool       `json:"is_superuser"`
 	}
 )
-
 
 func mapAvatarURL(a *models.AvatarURLMap) *AvatarURL {
 	if a == nil {
@@ -303,11 +303,12 @@ func MapUser(user models.User) User {
 		}
 	}
 	return User{
-		ID:        user.ID,
-		Username:  user.Username,
-		Email:     user.Email,
-		FullName:  user.FullName,
-		AvatarURL: avatar,
+		ID:          user.ID,
+		Username:    user.Username,
+		Email:       user.Email,
+		FullName:    user.FullName,
+		AvatarURL:   avatar,
+		IsSuperuser: user.IsSuperuser,
 	}
 }
 func MapToReturnProj(p models.Project) ReturnProj {
@@ -344,11 +345,12 @@ func MapToReturnProj(p models.Project) ReturnProj {
 
 func MapToReturnMember(m models.ProjectMember) ReturnMember {
 	res := ReturnMember{
-		ID:        m.ID,
-		UserID:    m.UserID,
-		ProjectID: m.ProjectID,
-		Role:      m.Role,
-		JoinedAt:  m.JoinedAt,
+		ID:           m.ID,
+		UserID:       m.UserID,
+		ProjectID:    m.ProjectID,
+		Role:         m.Role,
+		JoinedAt:     m.JoinedAt,
+		WorkingHours: m.WorkingHours,
 	}
 
 	res.User = &ReturnUser{
@@ -391,6 +393,16 @@ func MapPaginated[TDB, TRoute any](p dbtypes.Paginated[TDB], f func(TDB) TRoute)
 	}
 }
 
+type ReturnAssignment struct {
+	UserID uuid.UUID `json:"user_id"`
+	TaskID uuid.UUID `json:"task_id"`
+}
+
+type AssignmentStruct struct {
+	NewAssignments     []ReturnAssignment `json:"new_assignments"`
+	ChangedAssignments []ReturnAssignment `json:"changed_assignments"`
+}
+
 type ReturnUser struct {
 	ID        uuid.UUID  `json:"id"`
 	Username  string     `json:"username"`
@@ -423,12 +435,13 @@ type ReturnProj struct {
 }
 
 type ReturnMember struct {
-	ID        uuid.UUID   `json:"id"`
-	UserID    uuid.UUID   `json:"user_id"`
-	ProjectID uuid.UUID   `json:"project_id"`
-	Role      string      `json:"role"`
-	JoinedAt  time.Time   `json:"joined_at"`
-	User      *ReturnUser `json:"user,omitempty"`
+	ID           uuid.UUID   `json:"id"`
+	UserID       uuid.UUID   `json:"user_id"`
+	ProjectID    uuid.UUID   `json:"project_id"`
+	Role         string      `json:"role"`
+	JoinedAt     time.Time   `json:"joined_at"`
+	User         *ReturnUser `json:"user,omitempty"`
+	WorkingHours int         `json:"working_hours"`
 }
 
 // Websocket Messages for live updates

@@ -1,0 +1,137 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-stride_db}
+      POSTGRES_USER: ${POSTGRES_USER:-stride_root}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - ./data/db:/var/lib/postgresql/data/
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - stride_prod
+
+  redis:
+    image: redis:8.4-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - ./data/redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - stride_prod
+
+  backserver:
+    build:
+      context: ./backend
+      dockerfile: ./docker/prod.Dockerfile
+      target: production
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      PORT: "8000"
+      API_BASE_PATH: ${API_BASE_PATH:-/api/v1}
+      APPLICATION_MODE: ${APPLICATION_MODE:-closed_network}
+      RUN_DB_MIGRATIONS: "true"
+      RESET_DB_BEFORE_MIGRATIONS: "false"
+      SEED_DB: "false"
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_USER: ${POSTGRES_USER:-stride_root}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      DB_NAME: ${POSTGRES_DB:-stride_db}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      MEDIA_DIR: /app/media
+      PASSWORD_MIN_LENGTH: ${PASSWORD_MIN_LENGTH:-8}
+      PASSWORD_REQUIRE_SPECIAL_CHAR: ${PASSWORD_REQUIRE_SPECIAL_CHAR:-true}
+      PASSWORD_REQUIRE_NUM: ${PASSWORD_REQUIRE_NUM:-true}
+      USERNAME_MIN_LENGTH: ${USERNAME_MIN_LENGTH:-3}
+      USERNAME_MAX_LENGTH: ${USERNAME_MAX_LENGTH:-255}
+      SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET is required}
+      SESSION_EXPIRY_HOURS: ${SESSION_EXPIRY_HOURS:-24}
+    volumes:
+      - ./data/media:/app/media
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -T 2 -O /dev/null \"http://localhost:8000$${API_BASE_PATH:-/api/v1}/health\" || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - stride_prod
+
+  frontserver:
+    build:
+      context: ./frontend
+      dockerfile: ./docker/prod.Dockerfile
+      target: production
+      args:
+        VITE_API_BASE_PATH: ${API_BASE_PATH:-/api/v1}
+        APPLICATION_MODE: ${APPLICATION_MODE:-closed_network}
+        PASSWORD_MIN_LENGTH: ${PASSWORD_MIN_LENGTH:-8}
+        PASSWORD_REQUIRE_SPECIAL_CHAR: ${PASSWORD_REQUIRE_SPECIAL_CHAR:-true}
+        PASSWORD_REQUIRE_NUM: ${PASSWORD_REQUIRE_NUM:-true}
+        USERNAME_MIN_LENGTH: ${USERNAME_MIN_LENGTH:-3}
+        USERNAME_MAX_LENGTH: ${USERNAME_MAX_LENGTH:-255}
+    restart: unless-stopped
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -T 2 -O /dev/null http://localhost:3000/ || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - stride_prod
+
+  web:
+    build:
+      context: ./nginx
+      dockerfile: ./production/prod.Dockerfile
+      target: production
+    restart: unless-stopped
+    environment:
+      API_BASE_PATH: ${API_BASE_PATH:-/api/v1}
+      SITE_DOMAIN: ${SITE_DOMAIN:-}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./data/media:/media:ro
+      - ./nginx/production/certs:/etc/nginx/certs:ro
+    healthcheck:
+      test: ["CMD-SHELL", "nginx -t || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      backserver:
+        condition: service_healthy
+      frontserver:
+        condition: service_healthy
+    networks:
+      - stride_prod
+
+networks:
+  stride_prod:
+    driver: bridge

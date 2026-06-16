@@ -29,6 +29,7 @@ import (
 	chatService "backend/services/chat"
 	notificationService "backend/services/notification"
 	projectService "backend/services/project"
+	schedulerService "backend/services/scheduler"
 	taskService "backend/services/task"
 	userService "backend/services/user"
 	whiteboardService "backend/services/whiteboard"
@@ -62,6 +63,22 @@ func envEnabled(name string) bool {
 	return value == "1" || value == "true" || value == "yes" || value == "on"
 }
 
+func envEnabledDefault(name string, fallback bool) bool {
+	if _, ok := os.LookupEnv(name); !ok {
+		return fallback
+	}
+	return envEnabled(name)
+}
+
+func isProductionEnv() bool {
+	for _, name := range []string{"APP_ENV", "ENV", "GO_ENV"} {
+		if strings.EqualFold(strings.TrimSpace(os.Getenv(name)), "production") {
+			return true
+		}
+	}
+	return false
+}
+
 func closeMigration(migration *migrate.Migrate) {
 	if migration == nil {
 		return
@@ -78,12 +95,17 @@ func initMainDB(dsn string) (*gorm.DB, error) {
 		return db.InitGORMDB(dsn)
 	}
 
-	mainDB, migration, err := db.InitDB(dsn)
+	production := isProductionEnv()
+	mainDB, migration, err := db.InitDBWithOptions(dsn, db.MigrationOptions{
+		DropBeforeMigrate: envEnabledDefault("RESET_DB_BEFORE_MIGRATIONS", !production),
+	})
 	if err != nil {
 		return nil, err
 	}
 	closeMigration(migration)
-	testutils.SeedDB(mainDB)
+	if envEnabledDefault("SEED_DB", !production) {
+		testutils.SeedDB(mainDB)
+	}
 
 	return mainDB, nil
 }
@@ -155,6 +177,7 @@ func main() {
 	workerCtx, stopWorkers := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stopWorkers()
 	go whiteboardFlusher.Run(workerCtx)
+	schedService := schedulerService.NewSchedulerService(taskService, projectService)
 
 	// Routes
 	// Register route handler by adding them to the array
@@ -164,10 +187,10 @@ func main() {
 	handlers := []routes.RouteHandler{
 		routes.NewHealthRouteHandler(),
 		routes.NewAuthRouteHandler(authService, userService),
-		projects.NewProjectsGroup(projectService, whiteboardService, chatService, notificationService, authService, rdb),
+		projects.NewProjectsGroup(projectService, whiteboardService, chatService, notificationService, authService, rdb, schedService, taskService),
 		taskHandler.NewTaskRouteHandler(authService, taskService, projectService, notificationService, rdb),
 		routes.NewNotificationRouteHandler(notificationService, authService),
-		routes.NewUserRouteHandler(userService, authService),
+		routes.NewUserRouteHandler(userService, authService, projectService),
 		wsRoutes.NewWSRouteHandler(authService, projectService, userService, rdb),
 	}
 

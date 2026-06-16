@@ -1,134 +1,144 @@
-import type { User } from '../../../shared/types'
+import { z } from 'zod'
+import { UserSchema } from '../../../shared/types'
+import {
+    ApiProjectMemberSchema,
+    ApiProjectSkillSchema,
+} from '../project/project.types'
 
-export type ApiTaskAssignee = {
-    id: string
-    task_id: string
-    project_member_id: string
-    assigned_at: string
-    project_member: {
-        id: string
-        user_id: string
-        project_id: string
-        role: string
-        joined_at: string
-        user: {
-            id: string
-            username: string
-            email: string
-            full_name: string | null
-            avatar_url: {
-                '300': string
-                '600': string
-                original: string
-            } | null
-        }
-    }
-}
+export const TaskStatusSchema = z.enum(['todo', 'in_progress', 'done'])
+export type TaskStatus = z.infer<typeof TaskStatusSchema>
 
-export type ApiProjectSkill = {
-    id: string
-    project_id: string
-    name: string
-    description: string | null
-}
+export const ApiTaskAssigneeSchema = z.object({
+    id: z.string(),
+    task_id: z.string(),
+    project_member_id: z.string(),
+    assigned_at: z.string(),
+    project_member: ApiProjectMemberSchema,
+})
 
-export type ApiTaskSkill = {
-    id: string
-    task_id: string
-    project_skill_id: string
-    project_skill: ApiProjectSkill
-}
+export type ApiTaskAssignee = z.infer<typeof ApiTaskAssigneeSchema>
+export const ApiTaskAssigneeListSchema = z.array(ApiTaskAssigneeSchema)
 
-export type ApiTask = {
-    id: string
-    project_id: string
-    created_by: string
-    title: string
-    description: string | null
-    status: string
-    start_date: string | null
-    due_date: string | null
-    expected_duration_minutes: number | null
-    position: number
-    created_at: string
-    updated_at: string
-    completed_at: string | null
-    task_assignees: ApiTaskAssignee[]
-    task_skills: ApiTaskSkill[]
-}
+export const ApiTaskSkillSchema = z.object({
+    id: z.string(),
+    task_id: z.string(),
+    project_skill_id: z.string(),
+    project_skill: ApiProjectSkillSchema,
+})
 
-export type TaskStatus = 'todo' | 'in_progress' | 'done'
+export type ApiTaskSkill = z.infer<typeof ApiTaskSkillSchema>
+export const ApiTaskSkillListSchema = z.array(ApiTaskSkillSchema)
+export type ApiProjectSkill = z.infer<typeof ApiProjectSkillSchema>
 
-export type TaskAssignee = {
-    id: string
-    taskId: string
-    projectMemberId: string
-    assignedAt: string
-    user: User
-}
+export const ApiTaskSchema = z.object({
+    id: z.string(),
+    project_id: z.string(),
+    created_by: z.string(),
+    title: z.string(),
+    description: z.string().nullable(),
+    status: TaskStatusSchema,
+    start_date: z.string().nullable(),
+    due_date: z.string().nullable(),
+    expected_duration_hours: z.number().nullable(),
+    position: z.number(),
+    created_at: z.string(),
+    updated_at: z.string(),
+    completed_at: z.string().nullable(),
+    task_assignees: ApiTaskAssigneeListSchema,
+    task_skills: ApiTaskSkillListSchema,
+})
 
-export type TaskSkill = {
-    id: string
-    taskId: string
-    projectSkillId: string
-    name: string
-    description: string | null
-}
+export type ApiTask = z.infer<typeof ApiTaskSchema>
+export const ApiTaskListSchema = z.array(ApiTaskSchema)
 
-export type Task = {
-    id: string
-    projectId: string
-    createdBy: string
-    title: string
-    description: string | null
-    status: TaskStatus
-    startDate: string | null
-    dueDate: string | null
-    expectedDurationMinutes: number | null
-    position: number
-    createdAt: string
-    updatedAt: string
-    completedAt: string | null
-    assignees?: TaskAssignee[]
-    skills?: TaskSkill[]
-}
+export const TaskAssigneeSchema = z.object({
+    id: z.string(),
+    taskId: z.string(),
+    projectMemberId: z.string(),
+    assignedAt: z.string(),
+    user: UserSchema,
+})
 
-export type Column = {
-    id: TaskStatus
-    label: string
-    dotColor: string
-    tasks: Task[]
-}
+export type TaskAssignee = z.infer<typeof TaskAssigneeSchema>
 
-export type CreateTaskRequest = {
-    project_id: string
-    title: string
-    description?: string | null
-    status: TaskStatus
-    start_date?: string | null
-    due_date?: string | null
-    expected_duration_minutes?: number | null
-    position?: number | null
-}
+export const TaskSkillSchema = z.object({
+    id: z.string(),
+    taskId: z.string(),
+    projectSkillId: z.string(),
+    name: z.string(),
+    description: z.string().nullable(),
+})
 
-export type UpdateTaskRequest = {
-    title?: string | null
-    description?: string | null
-    status?: TaskStatus | null
-    start_date?: string | null
-    due_date?: string | null
-    expected_duration_minutes?: number | null
-    skill_ids?: string[]
-}
+export type TaskSkill = z.infer<typeof TaskSkillSchema>
 
-export type AssignTaskRequest = {
-    project_member_id: string
-}
+export const TaskSchema = z.object({
+    id: z.string(),
+    projectId: z.string(),
+    createdBy: z.string(),
+    title: z.string(),
+    description: z.string().nullable(),
+    status: TaskStatusSchema,
+    startDate: z.string().nullable(),
+    dueDate: z.string().nullable(),
+    expectedDurationHours: z.number().nullable(),
+    position: z.number(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+    completedAt: z.string().nullable(),
+    assignees: z.array(TaskAssigneeSchema).optional(),
+    skills: z.array(TaskSkillSchema).optional(),
+})
 
-export type UnassignTaskRequest = {
-    project_member_id: string
-}
+export type Task = z.infer<typeof TaskSchema>
 
-export type MoveTaskRequest = {
-    position: number
-}
+export const ColumnSchema = z.object({
+    id: TaskStatusSchema,
+    label: z.string(),
+    dotColor: z.string(),
+    tasks: z.array(TaskSchema),
+})
+
+export type Column = z.infer<typeof ColumnSchema>
+
+export const CreateTaskRequestSchema = z.object({
+    project_id: z.string(),
+    title: z.string(),
+    description: z.string().nullable().optional(),
+    status: TaskStatusSchema,
+    start_date: z.string().nullable().optional(),
+    due_date: z.string().nullable().optional(),
+    expected_duration_hours: z.number().nullable().optional(),
+    position: z.number().nullable().optional(),
+})
+
+export type CreateTaskRequest = z.infer<typeof CreateTaskRequestSchema>
+
+export const UpdateTaskRequestSchema = z.object({
+    title: z.string().nullable().optional(),
+    description: z.string().nullable().optional(),
+    status: TaskStatusSchema.nullable().optional(),
+    start_date: z.string().nullable().optional(),
+    due_date: z.string().nullable().optional(),
+    expected_duration_hours: z.number().nullable().optional(),
+    skill_ids: z.array(z.string()).optional(),
+})
+
+export type UpdateTaskRequest = z.infer<typeof UpdateTaskRequestSchema>
+
+export const AssignTaskRequestSchema = z.object({
+    project_member_id: z.string(),
+})
+
+export type AssignTaskRequest = z.infer<typeof AssignTaskRequestSchema>
+
+export const UnassignTaskRequestSchema = z.object({
+    project_member_id: z.string(),
+})
+
+export type UnassignTaskRequest = z.infer<typeof UnassignTaskRequestSchema>
+
+export const MoveTaskRequestSchema = z.object({
+    position: z.number(),
+})
+
+export type MoveTaskRequest = z.infer<typeof MoveTaskRequestSchema>

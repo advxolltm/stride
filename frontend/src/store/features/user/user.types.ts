@@ -1,56 +1,93 @@
-export type ApiErrorResponse = {
-    error: string
-}
+import { z } from 'zod'
+import { ApiErrorResponseSchema } from '../../../shared/utils/api/types'
 
-export type ApiUser = {
-    id: string
-    username: string
-    email: string
-    password_hash?: string
-    full_name: string | null
-    avatar_url: { 300: string; 600: string; original: string } | null
-}
+export { ApiErrorResponseSchema }
+export type ApiErrorResponse = z.infer<typeof ApiErrorResponseSchema>
 
-export type ApiUserSkill = {
-    id: string
-    user_id: string
-    project_skill_id: string
-    project_skill: {
-        id: string
-        project_id: string
-        name: string
-        description: string | null
-    }
-}
+const AvatarUrlSetSchema = z
+    .object({
+        300: z.string(),
+        600: z.string(),
+        original: z.string(),
+    })
+    .nullable()
 
-export type UserSkill = {
-    id: string
-    userId: string
-    projectSkillId: string
-    projectSkill: {
-        id: string
-        projectId: string
-        name: string
-        description: string | null
-    }
-}
+export const ApiUserSchema = z.object({
+    id: z.string(),
+    username: z.string(),
+    email: z.string(),
+    password_hash: z.string().optional(),
+    full_name: z.string().nullable(),
+    avatar_url: AvatarUrlSetSchema,
+    is_superuser: z.boolean(),
+})
 
-export type CreateUserRequest = {
-    username: string
-    email: string
-    password: string
-}
+export type ApiUser = z.infer<typeof ApiUserSchema>
+export const ApiUserListSchema = z.array(ApiUserSchema)
 
-export type UpdateUserRequest = Partial<{
-    email: string
-    full_name: string
-}>
+const ApiUserSkillProjectSkillSchema = z.object({
+    id: z.string(),
+    project_id: z.string(),
+    name: z.string(),
+    description: z.string().nullable(),
+})
 
-export type ChangePasswordRequest = {
-    current_password: string
-    new_password: string
-}
+export const ApiUserSkillSchema = z.object({
+    id: z.string(),
+    user_id: z.string(),
+    project_skill_id: z.string(),
+    project_skill: ApiUserSkillProjectSkillSchema,
+})
 
-export type UpdateUserProjectSkillsRequest = {
-    project_skill_ids: string[]
-}
+export type ApiUserSkill = z.infer<typeof ApiUserSkillSchema>
+export const ApiUserSkillListSchema = z.array(ApiUserSkillSchema)
+
+export const UserSkillSchema = z.object({
+    id: z.string(),
+    userId: z.string(),
+    projectSkillId: z.string(),
+    projectSkill: z.object({
+        id: z.string(),
+        projectId: z.string(),
+        name: z.string(),
+        description: z.string().nullable(),
+    }),
+})
+
+export type UserSkill = z.infer<typeof UserSkillSchema>
+
+export const CreateUserRequestSchema = z.object({
+    username: z.string(),
+    email: z.string(),
+    password: z.string(),
+})
+
+export type CreateUserRequest = z.infer<typeof CreateUserRequestSchema>
+
+export const UpdateUserRequestSchema = z.object({
+    email: z.string().optional(),
+    full_name: z.string().optional(),
+})
+
+export type UpdateUserRequest = z.infer<typeof UpdateUserRequestSchema>
+
+export const ChangePasswordRequestSchema = z.object({
+    current_password: z.string(),
+    new_password: z.string(),
+})
+
+export type ChangePasswordRequest = z.infer<typeof ChangePasswordRequestSchema>
+
+export const ResetPasswordRequestSchema = z.object({
+    new_password: z.string(),
+})
+
+export type ResetPasswordRequest = z.infer<typeof ResetPasswordRequestSchema>
+
+export const UpdateUserProjectSkillsRequestSchema = z.object({
+    project_skill_ids: z.array(z.string()),
+})
+
+export type UpdateUserProjectSkillsRequest = z.infer<
+    typeof UpdateUserProjectSkillsRequestSchema
+>

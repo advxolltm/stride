@@ -5,7 +5,8 @@
     "profile": "Profile",
     "security": "Security",
     "skills": "Skills",
-    "workingHours": "Working Hours"
+    "workingHours": "Working Hours",
+    "users": "Users"
   },
   "profile": {
     "title": "Personal Information",
@@ -31,6 +32,7 @@
     "passwordMismatch": "New passwords do not match.",
     "passwordTooShort": "Password must be at least {{count}} characters.",
     "passwordMissingSpecial": "Password must contain at least one special character.",
+    "passwordMissingNumber": "Password must contain at least one number.",
     "updateSuccess": "Password updated successfully",
     "updateError": "Failed to update password. Please try again."
   },
@@ -65,5 +67,35 @@
       "integer": "Enter a whole number.",
       "range": "Enter a value between 0 and {{max}}h."
     }
+  },
+  "users": {
+    "title": "Users",
+    "description": "Manage user accounts and access recovery",
+    "addUser": "Add user",
+    "username": "Username",
+    "email": "Email",
+    "password": "Password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm password",
+    "usernameLength": "Username must be between {{min}} and {{max}} characters.",
+    "create": "Create user",
+    "cancel": "Cancel",
+    "resetPassword": "Reset password",
+    "resetPasswordTitle": "Reset password",
+    "delete": "Delete",
+    "deleting": "Deleting...",
+    "deleteTitle": "Delete user?",
+    "deleteMessage": "This will permanently delete {{user}}.",
+    "superuserBadge": "Superuser",
+    "passwordMismatch": "Passwords do not match.",
+    "passwordTooShort": "Password must be at least {{count}} characters.",
+    "passwordMissingSpecial": "Password must contain at least one special character.",
+    "passwordMissingNumber": "Password must contain at least one number.",
+    "createSuccess": "User created successfully",
+    "createError": "Failed to create user. Please try again.",
+    "resetSuccess": "Password reset successfully",
+    "resetError": "Failed to reset password. Please try again.",
+    "deleteSuccess": "User deleted successfully",
+    "deleteError": "Failed to delete user. Please try again."
   }
 }

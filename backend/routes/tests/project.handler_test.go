@@ -53,14 +53,14 @@ func runTest(t *testing.T, name string, f func(t *testing.T, tx *gorm.DB, as aut
 			aServ := authService.NewAuthenticationService(uServ)
 			nStore := notificationStore.NewNotificationStreamStore(rdb)
 			nServ := notificationService.NewNotificationService(nStore)
-			handler := projectsHandler.NewProjectsGroup(pServ, nil, nil, nServ, aServ, rdb)
+			handler := projectsHandler.NewProjectsGroup(pServ, nil, nil, nServ, aServ, rdb, nil, nil)
 
 			e := echo.New()
 			handler.AddRoutes(e.Group("/api"))
 
-			loginUser, err := uServ.CreateUser(context.Background(), "cookieMonster", "cookie@monster.com", "nomnom*!")
+			loginUser, err := uServ.CreateUser(context.Background(), "cookieMonster", "cookie@monster.com", "nomnom*!1")
 			require.NoError(t, err)
-			cookie := getCookie(t, aServ, loginUser.Email, "nomnom*!")
+			cookie := getCookie(t, aServ, loginUser.Email, "nomnom*!1")
 
 			f(t, tx, aServ, pServ, uServ, e, cookie, *loginUser)
 			return fmt.Errorf("rollback %s", t.Name())

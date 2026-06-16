@@ -26,6 +26,7 @@ export const mapApiTaskAssigneeToAssignee = (
             assignee.project_member.user.avatar_url?.['300'] ??
             assignee.project_member.user.avatar_url?.original ??
             null,
+        isSuperuser: false,
     },
 })
 
@@ -48,7 +49,7 @@ export const transformTask = (task: ApiTask): Task => ({
     status: task.status as Task['status'],
     startDate: task.start_date,
     dueDate: task.due_date,
-    expectedDurationMinutes: task.expected_duration_minutes,
+    expectedDurationHours: task.expected_duration_hours,
     position: task.position,
     createdAt: task.created_at,
     updatedAt: task.updated_at,
@@ -73,6 +74,8 @@ export const mapProjectMemberToTaskAssignee = (
         email: member.user.email,
         fullName: member.user.fullName,
         avatarUrl: member.user.avatarUrl,
+        avatarSmallUrl: member.user.avatarSmallUrl,
+        isSuperuser: false,
     },
 })
 

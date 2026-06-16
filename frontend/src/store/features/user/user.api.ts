@@ -2,68 +2,41 @@ import type { User } from '../../../shared/types'
 import { baseApi } from '../../api/base.api'
 import type { AppDispatch, RootState } from '../../store'
 import { patchUserIdentityInCaches } from './user.cache'
+import { mapApiUserSkillToUserSkill, mapApiUserToUser } from './user.mappers'
 import type {
-    ApiUser,
-    ApiUserSkill,
     ChangePasswordRequest,
     CreateUserRequest,
+    ResetPasswordRequest,
     UpdateUserRequest,
     UpdateUserProjectSkillsRequest,
     UserSkill,
 } from './user.types'
-
-export const mapApiUserToUser = ({
-    id,
-    username,
-    email,
-    full_name,
-    avatar_url,
-}: ApiUser): User => ({
-    id,
-    username,
-    email,
-    fullName: full_name,
-    avatarUrl: avatar_url?.original ?? null,
-    avatarSmallUrl: avatar_url?.[300] ?? avatar_url?.original ?? null,
-})
-
-export const mapApiUserSkillToUserSkill = ({
-    id,
-    user_id,
-    project_skill_id,
-    project_skill,
-}: ApiUserSkill): UserSkill => ({
-    id,
-    userId: user_id,
-    projectSkillId: project_skill_id,
-    projectSkill: {
-        id: project_skill.id,
-        projectId: project_skill.project_id,
-        name: project_skill.name,
-        description: project_skill.description,
-    },
-})
+import {
+    ApiUserListSchema,
+    ApiUserSchema,
+    ApiUserSkillListSchema,
+} from './user.types'
 
 export const userApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
         getUsers: builder.query<User[], void>({
             query: () => '/users',
-            transformResponse: (response: ApiUser[]) =>
-                response.map(mapApiUserToUser),
+            transformResponse: (response: unknown) =>
+                ApiUserListSchema.parse(response).map(mapApiUserToUser),
             providesTags: ['User'],
         }),
 
         getUserById: builder.query<User, string>({
             query: (id) => `/users/${id}`,
-            transformResponse: (response: ApiUser) =>
-                mapApiUserToUser(response),
+            transformResponse: (response: unknown) =>
+                mapApiUserToUser(ApiUserSchema.parse(response)),
             providesTags: (_result, _error, id) => [{ type: 'User', id }],
         }),
 
         createUser: builder.mutation<User, CreateUserRequest>({
             query: (body) => ({ url: '/users', method: 'POST', body }),
-            transformResponse: (response: ApiUser) =>
-                mapApiUserToUser(response),
+            transformResponse: (response: unknown) =>
+                mapApiUserToUser(ApiUserSchema.parse(response)),
             invalidatesTags: ['User'],
         }),
 
@@ -76,8 +49,8 @@ export const userApi = baseApi.injectEndpoints({
                 method: 'PATCH',
                 body,
             }),
-            transformResponse: (response: ApiUser) =>
-                mapApiUserToUser(response),
+            transformResponse: (response: unknown) =>
+                mapApiUserToUser(ApiUserSchema.parse(response)),
             async onQueryStarted(_arg, lifecycleApi) {
                 try {
                     const { data } = await lifecycleApi.queryFulfilled
@@ -109,13 +82,29 @@ export const userApi = baseApi.injectEndpoints({
 
         deleteUser: builder.mutation<void, string>({
             query: (id) => ({ url: `/users/${id}`, method: 'DELETE' }),
-            invalidatesTags: (_result, _error, id) => [{ type: 'User', id }],
+            invalidatesTags: (_result, _error, id) => [
+                'User',
+                { type: 'User', id },
+            ],
+        }),
+
+        resetUserPassword: builder.mutation<
+            void,
+            { id: string; body: ResetPasswordRequest }
+        >({
+            query: ({ id, body }) => ({
+                url: `/users/${id}/password/reset`,
+                method: 'PATCH',
+                body,
+            }),
         }),
 
         getMyUserSkills: builder.query<UserSkill[], string>({
             query: (id) => `/users/${id}/skills`,
-            transformResponse: (response: ApiUserSkill[]) =>
-                response.map(mapApiUserSkillToUserSkill),
+            transformResponse: (response: unknown) =>
+                ApiUserSkillListSchema.parse(response).map(
+                    mapApiUserSkillToUserSkill,
+                ),
             providesTags: (_result, _error, id) => [{ type: 'UserSkill', id }],
         }),
 
@@ -132,8 +121,10 @@ export const userApi = baseApi.injectEndpoints({
                 method: 'PUT',
                 body,
             }),
-            transformResponse: (response: ApiUserSkill[]) =>
-                response.map(mapApiUserSkillToUserSkill),
+            transformResponse: (response: unknown) =>
+                ApiUserSkillListSchema.parse(response).map(
+                    mapApiUserSkillToUserSkill,
+                ),
             async onQueryStarted({ userId }, { dispatch, queryFulfilled }) {
                 try {
                     const { data } = await queryFulfilled
@@ -159,6 +150,7 @@ export const {
     useUpdateUserMutation,
     useChangePasswordMutation,
     useDeleteUserMutation,
+    useResetUserPasswordMutation,
     useGetMyUserSkillsQuery,
     useUpdateUserProjectSkillsMutation,
 } = userApi

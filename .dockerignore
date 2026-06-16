@@ -37,6 +37,7 @@ tmp
 postgres-data
 postgres_data
 pgdata
+data
 **/postgres-data
 **/postgres_data
 **/pgdata

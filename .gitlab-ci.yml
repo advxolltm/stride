@@ -25,6 +25,10 @@ variables:
   # App
   API_BASE_PATH: /api/v1
 
+  # Scheduler server info
+  SCHEDULER_HOST: "127.0.0.1"
+  SCHEDULER_PORT: "7270"
+
 workflow:
   rules:
     - if: $CI_PIPELINE_SOURCE == "web"
@@ -33,7 +37,11 @@ workflow:
 
 build-backend:
   stage: build
+<<<<<<< HEAD
   image: golang:1.26.4
+=======
+  image: golang:1.26.4-bookworm
+>>>>>>> origin/master
   before_script:
     - cd backend
   script:
@@ -78,7 +86,11 @@ build-frontend:
 test-backend:
   stage: test
   # Run the job natively in Go, rather than installing Go inside a DB image
+<<<<<<< HEAD
   image: golang:1.26.4-alpine
+=======
+  image: golang:1.26.4-bookworm
+>>>>>>> origin/master
   services:
     # Use the non-root Bitnami image to bypass the CI environment's user restrictions
     - name: bitnami/postgresql:latest
@@ -100,8 +112,11 @@ test-backend:
     - job: build-backend
       artifacts: true
   before_script:
+    # bypass apt get because its not available in the CI env
+    - wget -qO get-pip.py https://bootstrap.pypa.io/get-pip.py
+    - python3 get-pip.py --break-system-packages
     # Install the psql client just for the DB health check, along with git/bash
-    - apk add --no-cache git bash postgresql-client
+    #- apk add --no-cache git bash postgresql-client
     - wget -O- -nv https://golangci-lint.run/install.sh | sh -s v2.12.0
     - go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
     - go install github.com/swaggo/swag/cmd/swag@latest
@@ -109,8 +124,18 @@ test-backend:
   script:
     - if [ -z "$CI" ]; then echo "CI variable is not set"; exit 1; fi
     - echo "CI=$CI"
-    - until PGPASSWORD=$DB_PASSWORD psql -h "postgres" -U stride -d stride -c "SELECT 'OK' AS status;"; do echo "Waiting for postgres..."; sleep 2; done
+
+    # Start the scheduler server in the background
+    - cd services/scheduler
+    - python3 -m pip install --no-cache-dir --break-system-packages ortools msgspec
+    - python3 scheduler.service.py &
+    - cd ../../
+
+    #- until PGPASSWORD=$DB_PASSWORD psql -h "postgres" -U stride -d stride -c "SELECT 'OK' AS status;"; do echo "Waiting for postgres..."; sleep 2; done
+    - until bash -c 'exec 3<>/dev/tcp/$DB_HOST/$DB_PORT' 2>/dev/null; do echo "Waiting for postgres..."; sleep 2; done
+    - sleep 5 # wait for db to be fully ready
     - until bash -c 'exec 3<>/dev/tcp/$REDIS_HOST/$REDIS_PORT; printf "*1\r\n\$4\r\nPING\r\n" >&3; IFS= read -r -t 2 response <&3; [[ "$response" == "+PONG"* ]]' 2>/dev/null; do echo "Waiting for redis..."; sleep 2; done
+    - until bash -c 'exec 3<>/dev/tcp/$SCHEDULER_HOST/$SCHEDULER_PORT' 2>/dev/null; do echo "Waiting for scheduler..."; sleep 2; done
     - go mod download
     - swag init -g server.go -d ./cmd,./routes
     - govulncheck -show verbose ./...

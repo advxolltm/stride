@@ -21,14 +21,18 @@ import (
 )
 
 type stubUserStore struct {
-	getAllUsersFn              func(ctx context.Context) ([]models.User, error)
-	getUserFn                  func(ctx context.Context, id uuid.UUID) (*models.User, error)
-	createUserFn               func(ctx context.Context, user *models.User) error
-	updateUserFn               func(ctx context.Context, id uuid.UUID, fields userStore.UpdateUserFields) (*models.User, error)
-	deleteUserFn               func(ctx context.Context, id uuid.UUID) error
-	getByEmailAndPasswordFn    func(ctx context.Context, email, password string) (uuid.UUID, error)
-	getUserSkillsFn           func(ctx context.Context, userID uuid.UUID) ([]models.UserSkill, error)
-	updateUserProjectSkillsFn func(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, skillIDs []uuid.UUID) ([]models.UserSkill, error)
+	getAllUsersFn             func(ctx context.Context) ([]models.User, error)
+	getUserFn                 func(ctx context.Context, id uuid.UUID) (*models.User, error)
+	createUserFn              func(ctx context.Context, user *models.User) error
+	updateUserFn              func(ctx context.Context, id uuid.UUID, fields userStore.UpdateUserFields) (*models.User, error)
+	deleteUserFn              func(ctx context.Context, id uuid.UUID) error
+	getByEmailAndPasswordFn   func(ctx context.Context, email, password string) (uuid.UUID, error)
+	getUserSkillsFn           func(ctx context.Context, userID uuid.UUID, projectID uuid.UUID) ([]models.ProjectSkill, error)
+	updateUserProjectSkillsFn func(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, skillIDs []uuid.UUID) ([]models.ProjectSkill, error)
+	addSkillFn                func(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, skillID uuid.UUID) (*models.ProjectMember, error)
+	removeSkillFn             func(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, skillID uuid.UUID) (*models.ProjectMember, error)
+	setAllWorkingHoursFn      func(ctx context.Context, req []userStore.SetAllWorkingHoursRequest, projectID uuid.UUID) error
+	setWorkingHoursFn         func(ctx context.Context, userID uuid.UUID, workingHours int, projectID uuid.UUID) (*models.ProjectMember, error)
 }
 
 func (s *stubUserStore) GetAllUsers(ctx context.Context) ([]models.User, error) {
@@ -73,18 +77,46 @@ func (s *stubUserStore) GetByEmailAndPassword(ctx context.Context, email, passwo
 	return s.getByEmailAndPasswordFn(ctx, email, password)
 }
 
-func (s *stubUserStore) GetUserSkills(ctx context.Context, userID uuid.UUID) ([]models.UserSkill, error) {
+func (s *stubUserStore) GetUserSkills(ctx context.Context, userID uuid.UUID, projectID uuid.UUID) ([]models.ProjectSkill, error) {
 	if s.getUserSkillsFn == nil {
 		panic("unexpected GetUserSkills call")
 	}
-	return s.getUserSkillsFn(ctx, userID)
+	return s.getUserSkillsFn(ctx, userID, projectID)
 }
 
-func (s *stubUserStore) UpdateUserProjectSkills(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, skillIDs []uuid.UUID) ([]models.UserSkill, error) {
+func (s *stubUserStore) UpdateUserProjectSkills(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, skillIDs []uuid.UUID) ([]models.ProjectSkill, error) {
 	if s.updateUserProjectSkillsFn == nil {
 		panic("unexpected UpdateUserProjectSkills call")
 	}
 	return s.updateUserProjectSkillsFn(ctx, userID, projectID, skillIDs)
+}
+
+func (s *stubUserStore) AddSkill(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, skillID uuid.UUID) (*models.ProjectMember, error) {
+	if s.addSkillFn == nil {
+		panic("unexpected AddSkill call")
+	}
+	return s.addSkillFn(ctx, userID, projectID, skillID)
+}
+
+func (s *stubUserStore) RemoveSkill(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, skillID uuid.UUID) (*models.ProjectMember, error) {
+	if s.removeSkillFn == nil {
+		panic("unexpected RemoveSkill call")
+	}
+	return s.removeSkillFn(ctx, userID, projectID, skillID)
+}
+
+func (s *stubUserStore) SetAllWorkingHours(ctx context.Context, req []userStore.SetAllWorkingHoursRequest, projectID uuid.UUID) error {
+	if s.setAllWorkingHoursFn == nil {
+		panic("unexpected SetAllWorkingHours call")
+	}
+	return s.setAllWorkingHoursFn(ctx, req, projectID)
+}
+
+func (s *stubUserStore) SetWorkingHours(ctx context.Context, userID uuid.UUID, workingHours int, projectID uuid.UUID) (*models.ProjectMember, error) {
+	if s.setWorkingHoursFn == nil {
+		panic("unexpected SetWorkingHours call")
+	}
+	return s.setWorkingHoursFn(ctx, userID, workingHours, projectID)
 }
 
 func newTestService(t *testing.T, store *stubUserStore) userService {
@@ -150,6 +182,13 @@ func TestUserService_CreateUser(t *testing.T) {
 		assert.ErrorIs(t, err, ErrPasswordMissingSpecial)
 	})
 
+	runServiceTest(t, "returns ErrPasswordMissingNumber and does not call store for password without number", func(t *testing.T, service userService, _ *stubUserStore) {
+		created, err := service.CreateUser(context.Background(), "valid-user", "valid@test.com", "Valid!Pass")
+
+		assert.Nil(t, created)
+		assert.ErrorIs(t, err, ErrPasswordMissingNumber)
+	})
+
 	runServiceTest(t, "hashes password before persisting user", func(t *testing.T, service userService, store *stubUserStore) {
 		ctx := context.Background()
 		createdID := uuid.New()
@@ -176,6 +215,25 @@ func TestUserService_CreateUser(t *testing.T) {
 		assert.Equal(t, "valid@test.com", persisted.Email)
 		assert.NotEqual(t, plainPassword, persisted.PasswordHash)
 		assert.NoError(t, bcrypt.CompareHashAndPassword([]byte(persisted.PasswordHash), []byte(plainPassword)))
+	})
+
+	runServiceTest(t, "persists superuser flag when requested", func(t *testing.T, service userService, store *stubUserStore) {
+		store.createUserFn = func(_ context.Context, user *models.User) error {
+			assert.True(t, user.IsSuperuser)
+			return nil
+		}
+
+		created, err := service.CreateUserWithOptions(
+			context.Background(),
+			"valid-user",
+			"valid@test.com",
+			"Valid!123",
+			CreateUserOptions{IsSuperuser: true},
+		)
+
+		require.NoError(t, err)
+		require.NotNil(t, created)
+		assert.True(t, created.IsSuperuser)
 	})
 
 	runServiceTest(t, "maps duplicate email from store", func(t *testing.T, service userService, store *stubUserStore) {

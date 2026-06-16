@@ -2,6 +2,8 @@ package db
 
 import (
 	"embed"
+	"errors"
+	"fmt"
 	"log"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -14,20 +16,24 @@ import (
 )
 
 type Paginated[T any] struct {
-	Items []T
-	Page int
-	PageSize int
-	PageCount int
+	Items          []T
+	Page           int
+	PageSize       int
+	PageCount      int
 	TotalItemCount int
 }
 
 //go:embed migrations/*.sql
 var fs embed.FS
 
-func migrateDB(postgresURL string) (*migrate.Migrate, error) {
+type MigrationOptions struct {
+	DropBeforeMigrate bool
+}
+
+func newMigration(postgresURL string) (*migrate.Migrate, error) {
 	d, err := iofs.New(fs, "migrations")
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	m, err := migrate.NewWithSourceInstance(
@@ -35,27 +41,47 @@ func migrateDB(postgresURL string) (*migrate.Migrate, error) {
 		d,
 		postgresURL)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
-	if err := m.Drop(); err != nil && err != migrate.ErrNoChange {
-		log.Fatalf("failed to drop database: %s", err.Error())
-	}
+	return m, nil
+}
 
+func closeMigration(m *migrate.Migrate) error {
+	if m == nil {
+		return nil
+	}
 	if srcErr, dbErr := m.Close(); srcErr != nil || dbErr != nil {
-		log.Fatalf("failed to close migrate: src=%s, db=%s", srcErr.Error(), dbErr.Error())
+		return errors.Join(srcErr, dbErr)
+	}
+	return nil
+}
+
+func migrateDB(postgresURL string, options MigrationOptions) (*migrate.Migrate, error) {
+	m, err := newMigration(postgresURL)
+	if err != nil {
+		return nil, err
 	}
 
-	m, err = migrate.NewWithSourceInstance(
-		"iofs",
-		d,
-		postgresURL)
+	if options.DropBeforeMigrate {
+		if err := m.Drop(); err != nil && err != migrate.ErrNoChange {
+			_ = closeMigration(m)
+			return nil, fmt.Errorf("failed to drop database: %w", err)
+		}
+
+		if err := closeMigration(m); err != nil {
+			return nil, fmt.Errorf("failed to close migration after drop: %w", err)
+		}
+
+		m, err = newMigration(postgresURL)
+	}
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		log.Fatalf("failed to run up migrations: %s", err.Error())
+		_ = closeMigration(m)
+		return nil, fmt.Errorf("failed to run up migrations: %w", err)
 	}
 	return m, nil
 }
@@ -77,7 +103,11 @@ func InitGORMDB(dsn string) (*gorm.DB, error) {
 }
 
 func InitDB(postgresURL string) (*gorm.DB, *migrate.Migrate, error) {
-	m, err := migrateDB(postgresURL)
+	return InitDBWithOptions(postgresURL, MigrationOptions{DropBeforeMigrate: true})
+}
+
+func InitDBWithOptions(postgresURL string, options MigrationOptions) (*gorm.DB, *migrate.Migrate, error) {
+	m, err := migrateDB(postgresURL, options)
 	if err != nil {
 		return nil, nil, err
 	}

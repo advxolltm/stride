@@ -6,6 +6,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-stride}
       POSTGRES_USER: ${POSTGRES_USER:-stride}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-stride}
+      SCHEDULER_HOST: "scheduleserver"
+      SCHEDULER_PORT: "7270"
     ports:
       - "5432:5432"
     volumes:
@@ -58,6 +60,7 @@ services:
     environment:
       CHOKIDAR_USEPOLLING: "true"
       VITE_API_BASE_PATH: ${API_BASE_PATH:-/api/v1}
+      APPLICATION_MODE: ${APPLICATION_MODE:-closed_network}
       PASSWORD_MIN_LENGTH: ${PASSWORD_MIN_LENGTH}
       PASSWORD_REQUIRE_SPECIAL_CHAR: ${PASSWORD_REQUIRE_SPECIAL_CHAR}
       PASSWORD_REQUIRE_NUM: ${PASSWORD_REQUIRE_NUM}
@@ -82,6 +85,7 @@ services:
     environment:
       PORT: "8000"
       API_BASE_PATH: ${API_BASE_PATH:-/api/v1}
+      APPLICATION_MODE: ${APPLICATION_MODE:-closed_network}
       DB_HOST: db
       DB_PORT: "5432"
       DB_USER: ${POSTGRES_USER:-stride}
@@ -118,6 +122,20 @@ services:
         condition: service_healthy
     networks:
       - stride_net
+
+  scheduleserver:
+    build:
+      context: ./backend/services/scheduler
+      dockerfile: ./docker/dev.scheduler.Dockerfile
+    restart: unless-stopped
+    working_dir: /app
+    ports:
+      - "7270:7270"
+    volumes:
+      - ./backend/services/scheduler:/app
+    networks:
+      - stride_net
+
 
   web:
     build:

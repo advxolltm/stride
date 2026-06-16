@@ -13,6 +13,7 @@ import {
     useGetMessagesInfiniteQuery,
     useSendMessageMutation,
 } from '../../../../store/features/chat/chat.api'
+import { useWatchProjectChatSocketQuery } from '../../../../store/features/chat/chat.socket'
 import type { Message } from '../../../../store/features/chat/chat.types'
 import { useGetProjectByIdQuery } from '../../../../store/features/project/project.api'
 import { useGetUserByIdQuery } from '../../../../store/features/user/user.api'
@@ -32,6 +33,8 @@ export function ChatSpace({
     const { t, i18n } = useTranslation('chat')
     const { projectId: routeProjectId } = useParams()
     const projectId = projectIdProp ?? routeProjectId
+
+    useWatchProjectChatSocketQuery(projectId ?? skipToken)
 
     const {
         data,

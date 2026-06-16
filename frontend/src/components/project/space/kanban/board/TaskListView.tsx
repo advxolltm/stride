@@ -104,7 +104,7 @@ export function TaskListView({
                 description: null,
                 start_date: null,
                 due_date: null,
-                expected_duration_minutes: null,
+                expected_duration_hours: null,
             }).unwrap()
 
             toast.success(t('tasks.messages.createSuccess'))
