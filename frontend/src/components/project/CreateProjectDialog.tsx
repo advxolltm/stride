@@ -76,8 +76,6 @@ export function CreateProjectDialog({
         <Modal.Backdrop isOpen={isOpen} onOpenChange={handleOpenChange}>
             <Modal.Container size="lg">
                 <Modal.Dialog>
-                    <Modal.CloseTrigger />
-
                     <Modal.Header>
                         <Modal.Heading>{t('createDialog.title')}</Modal.Heading>
                     </Modal.Header>
