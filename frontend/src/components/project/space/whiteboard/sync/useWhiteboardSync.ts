@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { isInvisiblySmallElement } from '@excalidraw/excalidraw'
 import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types'
 import {
     sendWhiteboardLiveClear,
     sendWhiteboardLiveUpdate,
     useCreateProjectWhiteboardElementMutation,
-    useDeleteProjectWhiteboardElementMutation,
+    useDeleteProjectWhiteboardElementsBulkMutation,
     useUpdateProjectWhiteboardElementMutation,
 } from '../../../../../store/features/whiteboard/whiteboard.api'
 import type { WhiteboardElement } from '../../../../../store/features/whiteboard/whiteboard.api.types'
@@ -30,6 +30,7 @@ type WhiteboardSyncState = {
     pendingCreateElementIds: Set<string>
     pendingDeleteElementIds: Set<string>
     pendingUpdateElementIds: Set<string>
+    pendingDeleteBackendElementIds: Map<string, string>
     persistedElementSnapshots: Map<string, string>
     localSceneSnapshots: Map<string, string>
     pendingLiveElements: Map<string, WhiteboardLiveUpdateEventPayload>
@@ -43,6 +44,7 @@ const createWhiteboardSyncState = (): WhiteboardSyncState => ({
     pendingCreateElementIds: new Set(),
     pendingDeleteElementIds: new Set(),
     pendingUpdateElementIds: new Set(),
+    pendingDeleteBackendElementIds: new Map(),
     persistedElementSnapshots: new Map(),
     localSceneSnapshots: new Map(),
     pendingLiveElements: new Map(),
@@ -59,10 +61,12 @@ export const useWhiteboardSync = ({
 }: UseWhiteboardSyncArgs) => {
     const syncStateRef = useRef<WhiteboardSyncState>(createWhiteboardSyncState())
     const liveFrameRef = useRef<number | null>(null)
+    const deleteFlushTimeoutRef = useRef<number | null>(null)
+    const isDeleteFlushInFlightRef = useRef(false)
     const [createProjectWhiteboardElement] =
         useCreateProjectWhiteboardElementMutation()
-    const [deleteProjectWhiteboardElement] =
-        useDeleteProjectWhiteboardElementMutation()
+    const [deleteProjectWhiteboardElementsBulk] =
+        useDeleteProjectWhiteboardElementsBulkMutation()
     const [updateProjectWhiteboardElement] =
         useUpdateProjectWhiteboardElementMutation()
     const { clearCursor, queueCursorUpdate } = useWhiteboardCursorSync({
@@ -84,34 +88,34 @@ export const useWhiteboardSync = ({
             if (sendWhiteboardLiveUpdate(projectId, payload)) {
                 syncState.lastSentLiveSnapshots.set(
                     elementId,
-                    serializeElementSnapshot(payload.props, payload.zIndex),
+                    serializeElementSnapshot(payload.props),
                 )
             }
         })
         syncState.pendingLiveElements.clear()
     }
 
-    const clearLiveElement = (elementId: string) => {
-        const syncState = syncStateRef.current
-        if (!projectId || !syncState.touchedLiveElementIds.has(elementId)) {
-            return
-        }
+    const clearLiveElement = useCallback(
+        (elementId: string) => {
+            const syncState = syncStateRef.current
+            if (!projectId || !syncState.touchedLiveElementIds.has(elementId)) {
+                return
+            }
 
-        sendWhiteboardLiveClear(projectId, elementId)
-        syncState.pendingLiveElements.delete(elementId)
-        syncState.lastSentLiveSnapshots.delete(elementId)
-        syncState.touchedLiveElementIds.delete(elementId)
-    }
+            sendWhiteboardLiveClear(projectId, elementId)
+            syncState.pendingLiveElements.delete(elementId)
+            syncState.lastSentLiveSnapshots.delete(elementId)
+            syncState.touchedLiveElementIds.delete(elementId)
+        },
+        [projectId],
+    )
 
-    const queueLiveUpdate = (element: ExcalidrawElement, zIndex: number) => {
+    const queueLiveUpdate = (element: ExcalidrawElement) => {
         const syncState = syncStateRef.current
-        const nextSnapshot = serializeElementSnapshot(element, zIndex)
+        const nextSnapshot = serializeElementSnapshot(element)
         const pendingLiveElement = syncState.pendingLiveElements.get(element.id)
         const previousSnapshot = pendingLiveElement
-            ? serializeElementSnapshot(
-                  pendingLiveElement.props,
-                  pendingLiveElement.zIndex,
-              )
+            ? serializeElementSnapshot(pendingLiveElement.props)
             : syncState.lastSentLiveSnapshots.get(element.id) ??
               syncState.persistedElementSnapshots.get(element.id)
 
@@ -123,7 +127,7 @@ export const useWhiteboardSync = ({
             elementId: element.id,
             elementType: element.type,
             props: element,
-            zIndex,
+            zIndex: 0,
         })
         syncState.touchedLiveElementIds.add(element.id)
 
@@ -151,19 +155,13 @@ export const useWhiteboardSync = ({
         syncState.persistedElementSnapshots = new Map(
             whiteboardElements.map((backendElement) => [
                 backendElement.props.id,
-                serializeElementSnapshot(
-                    backendElement.props,
-                    backendElement.zIndex,
-                ),
+                serializeElementSnapshot(backendElement.props),
             ]),
         )
         syncState.localSceneSnapshots = new Map(
             whiteboardElements.map((backendElement) => [
                 backendElement.props.id,
-                serializeElementSnapshot(
-                    backendElement.props,
-                    backendElement.zIndex,
-                ),
+                serializeElementSnapshot(backendElement.props),
             ]),
         )
         syncState.pendingCreateElementIds = filterElementIDSet(
@@ -181,12 +179,62 @@ export const useWhiteboardSync = ({
         syncState.isElementIdMappingReady = true
     }, [whiteboardElements])
 
+    const flushPendingDeletes = useCallback(() => {
+        const syncState = syncStateRef.current
+        deleteFlushTimeoutRef.current = null
+
+        if (!projectId || syncState.pendingDeleteBackendElementIds.size === 0) {
+            return
+        }
+
+        if (isDeleteFlushInFlightRef.current) {
+            return
+        }
+
+        const deletedElements = Array.from(
+            syncState.pendingDeleteBackendElementIds.entries(),
+        )
+        const backendElementIds = deletedElements.map(([, backendElementId]) => {
+            return backendElementId
+        })
+
+        isDeleteFlushInFlightRef.current = true
+
+        void deleteProjectWhiteboardElementsBulk({
+            projectId,
+            elementIds: backendElementIds,
+        })
+            .unwrap()
+            .then(() => {
+                deletedElements.forEach(([elementId]) => {
+                    syncState.pendingDeleteBackendElementIds.delete(elementId)
+                    syncState.excalidrawToBackendElementId.delete(elementId)
+                    syncState.persistedElementSnapshots.delete(elementId)
+                    syncState.localSceneSnapshots.delete(elementId)
+                })
+            })
+            .finally(() => {
+                isDeleteFlushInFlightRef.current = false
+                deletedElements.forEach(([elementId]) => {
+                    if (!syncState.pendingDeleteBackendElementIds.has(elementId)) {
+                        syncState.pendingDeleteElementIds.delete(elementId)
+                        clearLiveElement(elementId)
+                    }
+                })
+            })
+    }, [clearLiveElement, deleteProjectWhiteboardElementsBulk, projectId])
+
     useEffect(() => {
         return () => {
             const syncState = syncStateRef.current
             if (liveFrameRef.current !== null) {
                 window.cancelAnimationFrame(liveFrameRef.current)
             }
+            if (deleteFlushTimeoutRef.current !== null) {
+                window.clearTimeout(deleteFlushTimeoutRef.current)
+                deleteFlushTimeoutRef.current = null
+            }
+            flushPendingDeletes()
 
             if (projectId) {
                 Array.from(syncState.touchedLiveElementIds).forEach(
@@ -200,7 +248,18 @@ export const useWhiteboardSync = ({
                 clearCursor()
             }
         }
-    }, [clearCursor, projectId])
+    }, [clearCursor, flushPendingDeletes, projectId])
+
+    const schedulePendingDeleteFlush = () => {
+        if (deleteFlushTimeoutRef.current !== null) {
+            return
+        }
+
+        deleteFlushTimeoutRef.current = window.setTimeout(
+            flushPendingDeletes,
+            0,
+        )
+    }
 
     const deletePersistedElement = (elementId: string) => {
         if (!projectId) {
@@ -222,20 +281,8 @@ export const useWhiteboardSync = ({
         }
 
         syncState.pendingDeleteElementIds.add(elementId)
-
-        void deleteProjectWhiteboardElement({
-            projectId,
-            elementId: backendElementId,
-        })
-            .unwrap()
-            .then(() => {
-                syncState.excalidrawToBackendElementId.delete(elementId)
-                syncState.persistedElementSnapshots.delete(elementId)
-            })
-            .finally(() => {
-                syncState.pendingDeleteElementIds.delete(elementId)
-                clearLiveElement(elementId)
-            })
+        syncState.pendingDeleteBackendElementIds.set(elementId, backendElementId)
+        schedulePendingDeleteFlush()
     }
 
     const handleCanvasChange = (elements: readonly ExcalidrawElement[]) => {
@@ -244,8 +291,8 @@ export const useWhiteboardSync = ({
             return
         }
 
-        elements.forEach((element, index) => {
-            const nextSnapshot = serializeElementSnapshot(element, index)
+        elements.forEach((element) => {
+            const nextSnapshot = serializeElementSnapshot(element)
             const previousSnapshot = syncState.localSceneSnapshots.get(element.id)
 
             if (element.isDeleted) {
@@ -259,7 +306,7 @@ export const useWhiteboardSync = ({
             }
 
             syncState.localSceneSnapshots.set(element.id, nextSnapshot)
-            queueLiveUpdate(element, index)
+            queueLiveUpdate(element)
         })
     }
 
@@ -274,8 +321,8 @@ export const useWhiteboardSync = ({
             flushPendingLiveUpdates()
         }
 
-        elements.forEach((element, index) => {
-            const nextSnapshot = serializeElementSnapshot(element, index)
+        elements.forEach((element) => {
+            const nextSnapshot = serializeElementSnapshot(element)
             const backendElementId =
                 syncState.excalidrawToBackendElementId.get(element.id)
 
@@ -300,7 +347,7 @@ export const useWhiteboardSync = ({
 
                 void createProjectWhiteboardElement({
                     projectId,
-                    body: toWhiteboardElementPayload(element, index),
+                    body: toWhiteboardElementPayload(element),
                 })
                     .unwrap()
                     .then((createdElement) => {
@@ -334,7 +381,7 @@ export const useWhiteboardSync = ({
             void updateProjectWhiteboardElement({
                 projectId,
                 elementId: backendElementId,
-                body: toWhiteboardElementPayload(element, index),
+                body: toWhiteboardElementPayload(element),
             })
                 .unwrap()
                 .then(() => {

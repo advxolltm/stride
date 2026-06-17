@@ -35,7 +35,7 @@ export type WhiteboardElement = z.infer<typeof WhiteboardElementSchema>
 export const CreateWhiteboardElementRequestSchema = z.object({
     elementType: z.string(),
     props: ExcalidrawElementSchema,
-    zIndex: z.number(),
+    zIndex: z.number().optional(),
 })
 
 export type CreateWhiteboardElementRequest = z.infer<
