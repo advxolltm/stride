@@ -6,7 +6,7 @@ import {
     sendWhiteboardLiveUpdate,
     useCreateProjectWhiteboardElementMutation,
     useDeleteProjectWhiteboardElementsBulkMutation,
-    useUpdateProjectWhiteboardElementMutation,
+    useUpdateProjectWhiteboardElementsBulkMutation,
 } from '../../../../../store/features/whiteboard/whiteboard.api'
 import type { WhiteboardElement } from '../../../../../store/features/whiteboard/whiteboard.api.types'
 import type { WhiteboardLiveUpdateEventPayload } from '../../../../../store/features/whiteboard/whiteboard.socket.types'
@@ -23,6 +23,12 @@ type UseWhiteboardSyncArgs = {
     isReadOnly?: boolean
     whiteboardElements: WhiteboardElement[]
     liveElementsById: Record<string, WhiteboardLiveUpdateEventPayload>
+}
+
+type PendingBulkUpdateElement = {
+    element: ExcalidrawElement
+    backendElementId: string
+    snapshot: string
 }
 
 type WhiteboardSyncState = {
@@ -67,8 +73,8 @@ export const useWhiteboardSync = ({
         useCreateProjectWhiteboardElementMutation()
     const [deleteProjectWhiteboardElementsBulk] =
         useDeleteProjectWhiteboardElementsBulkMutation()
-    const [updateProjectWhiteboardElement] =
-        useUpdateProjectWhiteboardElementMutation()
+    const [updateProjectWhiteboardElementsBulk] =
+        useUpdateProjectWhiteboardElementsBulkMutation()
     const { clearCursor, queueCursorUpdate } = useWhiteboardCursorSync({
         projectId,
     })
@@ -321,6 +327,8 @@ export const useWhiteboardSync = ({
             flushPendingLiveUpdates()
         }
 
+        const updatedElements: PendingBulkUpdateElement[] = []
+
         elements.forEach((element) => {
             const nextSnapshot = serializeElementSnapshot(element)
             const backendElementId =
@@ -377,24 +385,39 @@ export const useWhiteboardSync = ({
             }
 
             syncState.pendingUpdateElementIds.add(element.id)
-
-            void updateProjectWhiteboardElement({
-                projectId,
-                elementId: backendElementId,
-                body: toWhiteboardElementPayload(element),
+            updatedElements.push({
+                element,
+                backendElementId,
+                snapshot: nextSnapshot,
             })
-                .unwrap()
-                .then(() => {
+        })
+
+        if (updatedElements.length === 0) {
+            return
+        }
+
+        void updateProjectWhiteboardElementsBulk({
+            projectId,
+            body: updatedElements.map(({ element, backendElementId }) => ({
+                elementId: backendElementId,
+                ...toWhiteboardElementPayload(element),
+            })),
+        })
+            .unwrap()
+            .then(() => {
+                updatedElements.forEach(({ element, snapshot }) => {
                     syncState.persistedElementSnapshots.set(
                         element.id,
-                        nextSnapshot,
+                        snapshot,
                     )
                 })
-                .finally(() => {
+            })
+            .finally(() => {
+                updatedElements.forEach(({ element }) => {
                     syncState.pendingUpdateElementIds.delete(element.id)
                     clearLiveElement(element.id)
                 })
-        })
+            })
     }
 
     const excalidrawElements = useMemo(

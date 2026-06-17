@@ -189,6 +189,48 @@ export const whiteboardApi = baseApi.injectEndpoints({
             },
         }),
 
+        updateProjectWhiteboardElementsBulk: builder.mutation<
+            WhiteboardElement[],
+            {
+                projectId: string
+                body: Array<
+                    UpdateWhiteboardElementRequest & { elementId: string }
+                >
+            }
+        >({
+            query: ({ projectId, body }) => ({
+                url: `/projects/${projectId}/whiteboard/elements/bulk`,
+                method: 'PATCH',
+                body,
+                headers: createWhiteboardMutationHeaders(),
+            }),
+            transformResponse: (response: unknown) =>
+                ApiWhiteboardElementListSchema.parse(response).map(
+                    transformWhiteboardElement,
+                ),
+            async onQueryStarted({ projectId }, { dispatch, queryFulfilled }) {
+                try {
+                    const { data: updatedElements } = await queryFulfilled
+                    dispatch(
+                        whiteboardApi.util.updateQueryData(
+                            'getProjectWhiteboardElements',
+                            projectId,
+                            (draft) => {
+                                updatedElements.forEach((updatedElement) =>
+                                    applyPersistedElementToCache(
+                                        draft,
+                                        updatedElement,
+                                    ),
+                                )
+                            },
+                        ),
+                    )
+                } catch {
+                    return
+                }
+            },
+        }),
+
         deleteProjectWhiteboardElement: builder.mutation<
             void,
             { projectId: string; elementId: string }
@@ -339,6 +381,7 @@ export const {
     useCreateProjectWhiteboardElementMutation,
     useCreateProjectWhiteboardElementsBulkMutation,
     useUpdateProjectWhiteboardElementMutation,
+    useUpdateProjectWhiteboardElementsBulkMutation,
     useDeleteProjectWhiteboardElementMutation,
     useDeleteProjectWhiteboardElementsBulkMutation,
     useWatchWhiteboardCursorQuery,
