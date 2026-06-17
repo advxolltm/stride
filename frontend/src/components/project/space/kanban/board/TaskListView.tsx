@@ -33,7 +33,11 @@ import type {
     ListColumnId,
     OptionalColumnId,
 } from './taskList.config'
-import { TASK_LIST_COLUMN_ORDER } from './taskList.config'
+import {
+    getActiveTaskListColumns,
+    getTaskListGridTemplateColumns,
+    getTaskListTableWidth,
+} from './taskList.utils'
 import { TaskSkillChips } from './TaskSkillChips'
 
 interface TaskListViewProps {
@@ -83,10 +87,7 @@ export function TaskListView({
     )
 
     const activeColumns = useMemo(
-        () =>
-            TASK_LIST_COLUMN_ORDER.filter((columnId) =>
-                visibleColumns.includes(columnId),
-            ),
+        () => getActiveTaskListColumns(visibleColumns),
         [visibleColumns],
     )
 
@@ -115,21 +116,13 @@ export function TaskListView({
         }
     }
 
-    function getGridTemplateColumns() {
-        const optionalParts = activeColumns.map(
-            (columnId) => `${columnWidths[columnId]}px`,
-        )
-
-        return [`${columnWidths.task}px`, ...optionalParts].join(' ')
-    }
+    const gridTemplateColumns = useMemo(
+        () => getTaskListGridTemplateColumns(activeColumns, columnWidths),
+        [activeColumns, columnWidths],
+    )
 
     const tableWidth = useMemo(
-        () =>
-            columnWidths.task +
-            activeColumns.reduce(
-                (total, columnId) => total + columnWidths[columnId],
-                0,
-            ),
+        () => getTaskListTableWidth(activeColumns, columnWidths),
         [activeColumns, columnWidths],
     )
     const lastResizableColumnId: ListColumnId | null =
@@ -205,6 +198,23 @@ export function TaskListView({
                 )
             }
 
+            case 'estimatedTime':
+                return (
+                    <div className="flex items-center gap-2 text-sm">
+                        <Clock3
+                            size={14}
+                            className="text-muted-foreground shrink-0"
+                        />
+                        <span className="truncate">
+                            {task.expectedDurationHours != null
+                                ? t('tasks.list.estimatedTimeValue', {
+                                      count: task.expectedDurationHours,
+                                  })
+                                : '-'}
+                        </span>
+                    </div>
+                )
+
             case 'startDate':
                 return (
                     <div className="flex items-center gap-2 text-sm">
@@ -264,7 +274,8 @@ export function TaskListView({
                                 type="submit"
                                 size="sm"
                                 isDisabled={
-                                    !newTaskTitle.trim() || isCreatingTask
+                                    !newTaskTitle.trim() ||
+                                    isCreatingTask
                                 }
                             >
                                 {t('tasks.actions.createTask')}
@@ -288,13 +299,13 @@ export function TaskListView({
             <div className="min-h-0 flex-1 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
                 <div className="h-full overflow-auto">
                     <div
-                        className="min-h-full"
-                        style={{ minWidth: `${tableWidth}px` }}
+                        className="min-h-full min-w-full"
+                        style={{ width: `${tableWidth}px` }}
                     >
                         <div
                             className="text-muted-foreground sticky top-0 z-20 grid items-center gap-4 border-b border-[var(--border)] bg-[var(--surface)] px-5 py-4 text-sm font-medium before:absolute before:inset-0 before:bg-[var(--surface)] before:content-['']"
                             style={{
-                                gridTemplateColumns: getGridTemplateColumns(),
+                                gridTemplateColumns,
                             }}
                         >
                             <div className="group hover:text-foreground relative z-10 flex min-w-0 items-center gap-2 pr-3 transition-colors">
@@ -344,7 +355,7 @@ export function TaskListView({
                             ))}
                         </div>
 
-                        <div className="divide-y divide-[var(--border)]">
+                        <div>
                             {tasks.length === 0 ? (
                                 <div className="flex min-h-[280px] flex-col items-center justify-center gap-3 px-6 py-12 text-center">
                                     <div className="text-muted-foreground flex h-12 w-12 items-center justify-center rounded-full bg-[var(--surface-secondary)]">
@@ -365,10 +376,9 @@ export function TaskListView({
                                         <button
                                             key={task.id}
                                             type="button"
-                                            className="group relative grid w-full cursor-pointer items-center gap-4 px-5 py-4 text-left transition-colors duration-150 hover:bg-[var(--surface-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]/40"
+                                            className="group relative grid w-full cursor-pointer items-center gap-4 border-b border-[var(--border)] px-5 py-4 text-left transition-colors duration-150 last:border-b-0 hover:bg-[var(--surface-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]/40"
                                             style={{
-                                                gridTemplateColumns:
-                                                    getGridTemplateColumns(),
+                                                gridTemplateColumns,
                                             }}
                                             onClick={() => onTaskClick(task)}
                                         >

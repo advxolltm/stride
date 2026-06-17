@@ -3,6 +3,7 @@ export type OptionalColumnId =
     | 'skills'
     | 'assignee'
     | 'status'
+    | 'estimatedTime'
     | 'startDate'
     | 'dueDate'
 
@@ -15,6 +16,7 @@ export const TASK_LIST_COLUMN_ORDER: OptionalColumnId[] = [
     'skills',
     'assignee',
     'status',
+    'estimatedTime',
     'startDate',
     'dueDate',
 ]
@@ -25,6 +27,7 @@ export const DEFAULT_TASK_LIST_COLUMN_WIDTHS: ColumnWidthMap = {
     skills: 180,
     assignee: 180,
     status: 140,
+    estimatedTime: 160,
     startDate: 140,
     dueDate: 140,
 }
@@ -35,6 +38,7 @@ export const TASK_LIST_COLUMN_MIN_WIDTHS: Record<ListColumnId, number> = {
     skills: 150,
     assignee: 150,
     status: 120,
+    estimatedTime: 140,
     startDate: 120,
     dueDate: 120,
 }
@@ -45,6 +49,7 @@ export const TASK_LIST_COLUMN_MAX_WIDTHS: Record<ListColumnId, number> = {
     skills: 360,
     assignee: 320,
     status: 240,
+    estimatedTime: 220,
     startDate: 220,
     dueDate: 220,
 }

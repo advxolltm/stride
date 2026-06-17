@@ -21,13 +21,24 @@ import {
     SlidersHorizontal,
     UserPlus,
 } from 'lucide-react'
-import { type MouseEvent as ReactMouseEvent, useEffect, useMemo, useState } from 'react'
+import { type MouseEvent as ReactMouseEvent, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ConfirmDialog } from '../../../../../shared/components'
+import { getApiErrorMessage } from '../../../../../shared/utils/api/errors'
+import {
+    useConfirmScheduledAssignmentsMutation,
+    useScheduleProjectTasksMutation,
+} from '../../../../../store/features/project/project.api'
 import type { Task } from '../../../../../store/features/tasks/task.types'
 import { ArchivedReadOnlyChip } from '../../shared/ArchivedReadOnlyChip'
 import { useTaskBoard } from '../context/useTaskBoard'
 import { SchedulerFlowModal } from '../scheduler/SchedulerFlowModal'
+import {
+    buildSchedulerTriggerRequest,
+    flattenSchedulerAssignments,
+    mapProjectMemberToSchedulerMemberOption,
+    mapTaskToSchedulerTaskOption,
+} from '../scheduler/scheduler.mappers'
 import type {
     SchedulerMemberOption,
     SchedulerTaskOption,
@@ -36,38 +47,13 @@ import { TaskEditDrawer } from '../task/drawer/TaskEditDrawer'
 import { KanbanCard } from './KanbanCard'
 import { KanbanColumn } from './KanbanColumn'
 import {
-    type ColumnWidthMap,
     type ListColumnId,
-    type OptionalColumnId,
-    DEFAULT_TASK_LIST_COLUMN_WIDTHS,
-    TASK_LIST_COLUMN_MAX_WIDTHS,
-    TASK_LIST_COLUMN_MIN_WIDTHS,
     TASK_LIST_COLUMN_ORDER,
 } from './taskList.config'
 import { TaskListView } from './TaskListView'
+import { clampTaskListColumnWidth } from './taskList.utils'
+import { useTaskListPreferences } from './useTaskListPreferences'
 import { useKanbanState } from './useKanbanState'
-
-const TASK_LIST_PREFERENCES_STORAGE_KEY = 'task-list-preferences'
-
-interface TaskListProjectPreferences {
-    visibleColumns?: OptionalColumnId[]
-    columnWidths?: Partial<ColumnWidthMap>
-}
-
-type TaskListPreferencesMap = Record<string, TaskListProjectPreferences>
-
-function normalizeVisibleListColumns(
-    visibleColumns?: OptionalColumnId[],
-): OptionalColumnId[] {
-    const savedColumns = new Set(visibleColumns ?? [])
-    savedColumns.add('description')
-
-    const normalized = TASK_LIST_COLUMN_ORDER.filter((columnId) =>
-        savedColumns.has(columnId),
-    )
-
-    return normalized.length > 0 ? normalized : [...TASK_LIST_COLUMN_ORDER]
-}
 
 function taskMatchesSearch(task: Task, query: string) {
     const searchableText = [
@@ -92,10 +78,14 @@ function taskMatchesSearch(task: Task, query: string) {
 
 export function KanbanBoard() {
     const { t } = useTranslation('space')
-    const { isLoading, isArchived, members, projectId } = useTaskBoard()
+    const { isLoading, isArchived, members, projectId, statusOptions } =
+        useTaskBoard()
     const [taskSearch, setTaskSearch] = useState('')
     const [isSchedulerOpen, setSchedulerOpen] = useState(false)
     const [isListAddingTask, setListAddingTask] = useState(false)
+    const [scheduleProjectTasks] = useScheduleProjectTasksMutation()
+    const [confirmScheduledAssignments] =
+        useConfirmScheduledAssignmentsMutation()
     const {
         localColumns,
         activeTask,
@@ -114,37 +104,12 @@ export function KanbanBoard() {
         handleDragOver,
         handleDragEnd,
     } = useKanbanState()
-    const listPreferences = useMemo<TaskListProjectPreferences>(() => {
-        if (typeof window === 'undefined') {
-            return {}
-        }
-
-        const rawValue = window.localStorage.getItem(
-            TASK_LIST_PREFERENCES_STORAGE_KEY,
-        )
-        if (!rawValue) {
-            return {}
-        }
-
-        try {
-            const parsed = JSON.parse(rawValue) as TaskListPreferencesMap
-            return parsed[projectId] ?? {}
-        } catch {
-            return {}
-        }
-    }, [projectId])
-
-    const [visibleListColumns, setVisibleListColumns] = useState<
-        OptionalColumnId[]
-    >(() => normalizeVisibleListColumns(listPreferences.visibleColumns))
-    const [listColumnWidths, setListColumnWidths] = useState<ColumnWidthMap>(
-        () => {
-            return {
-                ...DEFAULT_TASK_LIST_COLUMN_WIDTHS,
-                ...listPreferences.columnWidths,
-            }
-        },
-    )
+    const {
+        visibleListColumns,
+        listColumnWidths,
+        toggleColumn: toggleListColumn,
+        updateColumnWidth,
+    } = useTaskListPreferences(projectId)
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -166,75 +131,100 @@ export function KanbanBoard() {
             localColumns.flatMap((column) =>
                 column.tasks
                     .filter((task) => task.status !== 'done')
-                    .map((task) => ({
-                        id: task.id,
-                        title: task.title,
-                        status: task.status,
-                        status_label: column.label,
-                    })),
+                    .map((task) =>
+                        mapTaskToSchedulerTaskOption(task, statusOptions),
+                    ),
             ),
-        [localColumns],
+        [localColumns, statusOptions],
+    )
+    const estimatedSchedulerTaskCount = useMemo(
+        () =>
+            schedulerTasks.filter(
+                (task) => (task.expectedDurationHours ?? 0) > 0,
+            ).length,
+        [schedulerTasks],
     )
 
     const schedulerMembers = useMemo<SchedulerMemberOption[]>(
-        () =>
-            members.map((member) => ({
-                id: member.userId,
-                name: member.user.fullName ?? member.user.username,
-                initials: (
-                    member.user.fullName ?? member.user.username
-                )
-                    .split(' ')
-                    .map((part) => part[0])
-                    .join('')
-                    .slice(0, 2)
-                    .toUpperCase(),
-                avatarUrl: member.user.avatarSmallUrl ?? member.user.avatarUrl,
-                working_hours: 40,
-            })),
+        () => members.map(mapProjectMemberToSchedulerMemberOption),
         [members],
     )
+    const schedulableSchedulerMembers = useMemo(
+        () =>
+            schedulerMembers.filter((member) => member.workingHours > 0),
+        [schedulerMembers],
+    )
+    const skippedSchedulerMemberCount =
+        schedulerMembers.length - schedulableSchedulerMembers.length
 
-    useEffect(() => {
-        const rawValue = window.localStorage.getItem(
-            TASK_LIST_PREFERENCES_STORAGE_KEY,
-        )
-
-        let currentPreferences: TaskListPreferencesMap = {}
-        if (rawValue) {
-            try {
-                currentPreferences = JSON.parse(rawValue) as TaskListPreferencesMap
-            } catch {
-                currentPreferences = {}
-            }
+    async function handleSchedulerRun() {
+        if (schedulerTasks.length === 0) {
+            toast.info(t('tasks.scheduler.intro.noTasks'))
+            return []
         }
 
-        currentPreferences[projectId] = {
-            visibleColumns: visibleListColumns,
-            columnWidths: listColumnWidths,
+        if (schedulableSchedulerMembers.length === 0) {
+            toast.info(t('tasks.scheduler.intro.noMembers'))
+            return []
         }
 
-        window.localStorage.setItem(
-            TASK_LIST_PREFERENCES_STORAGE_KEY,
-            JSON.stringify(currentPreferences),
-        )
-    }, [listColumnWidths, projectId, visibleListColumns])
+        if (estimatedSchedulerTaskCount === 0) {
+            toast.info(t('tasks.scheduler.intro.noEstimatedTasks'))
+            return []
+        }
 
-    function handleSchedulerConfirm() {
-        toast.info('Scheduler assignments are mocked for now.')
+        try {
+            const response = await scheduleProjectTasks({
+                projectId,
+                body: buildSchedulerTriggerRequest(
+                    schedulerTasks,
+                    schedulableSchedulerMembers,
+                ),
+            }).unwrap()
+
+            return flattenSchedulerAssignments(response)
+        } catch (error: unknown) {
+            toast.danger(
+                getApiErrorMessage(
+                    error,
+                    t('tasks.scheduler.messages.generateError'),
+                ),
+            )
+            throw error
+        }
     }
 
-    function toggleListColumn(columnId: OptionalColumnId) {
-        setVisibleListColumns((current) => {
-            if (current.includes(columnId)) {
-                const next = current.filter((item) => item !== columnId)
-                return next.length > 0 ? next : current
-            }
+    async function handleSchedulerConfirm(assignments: {
+        userId: string
+        taskId: string
+    }[]) {
+        const validAssignments = assignments.filter((assignment) =>
+            schedulerMembers.some((member) => member.id === assignment.userId),
+        )
 
-            return TASK_LIST_COLUMN_ORDER.filter((item) =>
-                [...current, columnId].includes(item),
+        if (validAssignments.length !== assignments.length) {
+            toast.danger(t('tasks.scheduler.review.invalidAssignments'))
+            return
+        }
+
+        try {
+            await confirmScheduledAssignments({
+                projectId,
+                body: validAssignments.map((assignment) => ({
+                    user_id: assignment.userId,
+                    task_id: assignment.taskId,
+                })),
+            }).unwrap()
+            toast.success(t('tasks.scheduler.messages.confirmSuccess'))
+        } catch (error: unknown) {
+            toast.danger(
+                getApiErrorMessage(
+                    error,
+                    t('tasks.scheduler.messages.confirmError'),
+                ),
             )
-        })
+            throw error
+        }
     }
 
     function handleListColumnResizeStart(
@@ -248,18 +238,12 @@ export function KanbanBoard() {
         const startWidth = listColumnWidths[columnId]
 
         function handlePointerMove(moveEvent: MouseEvent) {
-            const nextWidth = Math.max(
-                TASK_LIST_COLUMN_MIN_WIDTHS[columnId],
-                Math.min(
-                    TASK_LIST_COLUMN_MAX_WIDTHS[columnId],
-                    startWidth + (moveEvent.clientX - startX),
-                ),
+            const nextWidth = clampTaskListColumnWidth(
+                columnId,
+                startWidth + (moveEvent.clientX - startX),
             )
 
-            setListColumnWidths((current) => ({
-                ...current,
-                [columnId]: nextWidth,
-            }))
+            updateColumnWidth(columnId, nextWidth)
         }
 
         function handlePointerUp() {
@@ -470,6 +454,10 @@ export function KanbanBoard() {
                 onOpenChange={setSchedulerOpen}
                 tasks={schedulerTasks}
                 members={schedulerMembers}
+                schedulableMemberCount={schedulableSchedulerMembers.length}
+                skippedMemberCount={skippedSchedulerMemberCount}
+                estimatedTaskCount={estimatedSchedulerTaskCount}
+                onRun={handleSchedulerRun}
                 onConfirm={handleSchedulerConfirm}
             />
         </div>
