@@ -2,15 +2,19 @@ import { Button, Spinner, toast } from '@heroui/react'
 import { Pencil } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useAppSelector } from '../../../../shared/hooks/redux'
+import { getApiErrorMessage } from '../../../../shared/utils/api/errors'
 import type { Project } from '../../../../store/features/project/project.types'
-import {
-    TOTAL_WEEKLY_HOURS,
-    buildMockWorkingHoursAllocations,
-} from '../../../workingHours/mockWorkingHours'
+import { useGetProjectsQuery } from '../../../../store/features/project/project.api'
+import { useSetProjectWorkingHoursMutation } from '../../../../store/features/user/user.api'
+import { selectUserId } from '../../../../store/userSlice'
+import type { WorkingHoursAllocation } from '../../../workingHours/types'
 import { WorkingHoursAllocationCard } from '../../../workingHours/WorkingHoursAllocationCard'
 import { WorkingHoursSummaryCard } from '../../../workingHours/WorkingHoursSummaryCard'
-import { useGetProjectsQuery } from '../../../../store/features/project/project.api'
-import type { WorkingHoursAllocation } from '../../../workingHours/types'
+import {
+    TOTAL_WEEKLY_HOURS,
+    buildWorkingHoursAllocations,
+} from '../../../workingHours/workingHours.mappers'
 
 interface MyProjectWorkingHoursSettingsProps {
     project: Project
@@ -20,10 +24,16 @@ export function MyProjectWorkingHoursSettings({
     project,
 }: Readonly<MyProjectWorkingHoursSettingsProps>) {
     const { t } = useTranslation('project')
+    const userId = useAppSelector(selectUserId)
     const { data: projects = [], isLoading } = useGetProjectsQuery()
+    const [setProjectWorkingHours, { isLoading: isSaving }] =
+        useSetProjectWorkingHoursMutation()
     const allocations = useMemo<WorkingHoursAllocation[]>(
-        () => buildMockWorkingHoursAllocations(projects),
-        [projects],
+        () =>
+            userId
+                ? buildWorkingHoursAllocations(projects, userId)
+                : ([] as WorkingHoursAllocation[]),
+        [projects, userId],
     )
 
     const initialCurrentProject = useMemo(
@@ -37,10 +47,12 @@ export function MyProjectWorkingHoursSettings({
                     .join('')
                     .slice(0, 2)
                     .toUpperCase(),
-                hours: TOTAL_WEEKLY_HOURS,
+                hours:
+                    project.members.find((member) => member.userId === userId)
+                        ?.workingHours ?? 0,
                 color: '#4f46e5',
             },
-        [allocations, project.id, project.name],
+        [allocations, project.id, project.members, project.name, userId],
     )
 
     const otherProjects = useMemo(
@@ -82,15 +94,35 @@ export function MyProjectWorkingHoursSettings({
     }
 
     const handleSave = () => {
-        if (draftCurrentProjectHours === null) {
-            setIsEditing(false)
+        if (
+            draftCurrentProjectHours === null ||
+            !userId ||
+            !isChanged ||
+            isSaving
+        ) {
             return
         }
 
-        setSavedCurrentProjectHours(draftCurrentProjectHours)
-        setDraftCurrentProjectHours(null)
-        setIsEditing(false)
-        toast.success(t('myWorkingHoursSettings.saveSuccess'))
+        void setProjectWorkingHours({
+            userId,
+            projectId: project.id,
+            body: { working_hours: draftCurrentProjectHours },
+        })
+            .unwrap()
+            .then(() => {
+                setSavedCurrentProjectHours(draftCurrentProjectHours)
+                setDraftCurrentProjectHours(null)
+                setIsEditing(false)
+                toast.success(t('myWorkingHoursSettings.saveSuccess'))
+            })
+            .catch((error: unknown) => {
+                toast.danger(
+                    getApiErrorMessage(
+                        error,
+                        t('myWorkingHoursSettings.saveError'),
+                    ),
+                )
+            })
     }
 
     if (isLoading) {
@@ -194,7 +226,7 @@ export function MyProjectWorkingHoursSettings({
                 </div>
 
                 {isEditing && (
-                    <div className="flex gap-2 pt-1">
+                    <div className="flex items-center justify-end gap-2 pt-1">
                         <Button variant="outline" size="sm" onPress={handleCancel}>
                             {t('myWorkingHoursSettings.cancel')}
                         </Button>
@@ -203,7 +235,8 @@ export function MyProjectWorkingHoursSettings({
                             variant="primary"
                             size="sm"
                             onPress={handleSave}
-                            isDisabled={!isChanged}
+                            isDisabled={!isChanged || isSaving}
+                            isPending={isSaving}
                         >
                             {t('myWorkingHoursSettings.save')}
                         </Button>

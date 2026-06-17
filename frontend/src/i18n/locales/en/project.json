@@ -232,6 +232,7 @@
     "cancel": "Cancel",
     "save": "Save changes",
     "saveSuccess": "Working hours updated successfully",
+    "saveError": "Failed to update working hours",
     "summary": {
       "allocated": "Allocated total",
       "remaining": "Remaining elsewhere"
@@ -248,6 +249,7 @@
   },
   "settingsSidebar": {
     "title": "Project settings",
+    "close": "Close settings",
     "tabs": {
       "general": "General",
       "members": "Team",
