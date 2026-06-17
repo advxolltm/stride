@@ -69,7 +69,11 @@
       },
       "templatesTitle": "Vorlagen",
       "templatesComingSoon": "DemnÃ¤chst verfÃ¼gbar"
-    }
+    },
+	"region": {
+		"linkTask": "Aufgabe verknüpfen",
+		"viewTask": "Aufgabe anzeigen"
+	}
   },
   "spaces": {
     "title": "Bereiche",

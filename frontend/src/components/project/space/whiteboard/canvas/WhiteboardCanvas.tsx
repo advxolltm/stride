@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, forwardRef, useImperativeHandle } from 'react'
 import {
     CaptureUpdateAction,
     Excalidraw,
@@ -10,7 +10,7 @@ import type {
     ExcalidrawElement,
     OrderedExcalidrawElement,
 } from '@excalidraw/excalidraw/element/types'
-import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
+import type { AppState, ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
 import '@excalidraw/excalidraw/index.css'
 import './WhiteboardCanvas.css'
 
@@ -50,18 +50,26 @@ const getSceneSignature = (elements: readonly ExcalidrawElement[]) =>
         )
         .join('|')
 
-export function WhiteboardCanvas({
+export const WhiteboardCanvas = forwardRef<
+    ExcalidrawImperativeAPI | null,
+    WhiteboardCanvasProps
+>(function WhiteboardCanvas({
     elements,
     focusTarget,
     presence = [],
     viewportStorageKey,
+    taskPreviewModeEnabled = false,
     viewModeEnabled = false,
     onChange,
     onPointerUp,
     onCursorChange,
-}: WhiteboardCanvasProps) {
+    onElementsSelectedChanged,
+}, ref) {
     const containerRef = useRef<HTMLDivElement | null>(null)
+
     const excalidrawApiRef = useRef<ExcalidrawImperativeAPI | null>(null)
+    useImperativeHandle(ref, () => excalidrawApiRef.current!);
+
     const isDarkMode = useAppSelector((state) => state.theme.isDark)
     const latestExternalSceneRef =
         useRef<readonly OrderedExcalidrawElement[]>(elements)
@@ -69,6 +77,7 @@ export function WhiteboardCanvas({
         useRef<readonly OrderedExcalidrawElement[]>(elements)
     const isLocallyInteractingRef = useRef(false)
     const externalSceneSignatureRef = useRef<string | null>(null)
+
     const sceneElements = useMemo(
         () => elements.map((element) => ({ ...element })),
         [elements],
@@ -142,7 +151,23 @@ export function WhiteboardCanvas({
             captureUpdate: CaptureUpdateAction.NEVER,
         })
         updateViewport(nextScrollX, nextScrollY, zoom)
-    }, [focusTarget, updateViewport])
+    }, [focusTarget?.nonce, focusTarget, updateViewport])
+
+    const handleElementsChange = (nextElements: readonly OrderedExcalidrawElement[]) => {
+        const nextSceneSignature = getSceneSignature(nextElements);
+        if (externalSceneSignatureRef.current !== null && nextSceneSignature === externalSceneSignatureRef.current) { 
+			externalSceneSignatureRef.current = null;
+			return;
+		}
+
+        onChange?.(nextElements)
+    }
+
+    const handleSelectionChange = (nextElements: readonly OrderedExcalidrawElement[], appState: AppState) => {
+        const selectedElements = nextElements.filter(el => appState.selectedElementIds[el.id]);
+        const selectedGroupedElements = nextElements.filter(el => el.groupIds.some(groupId => appState.selectedGroupIds[groupId]));
+        onElementsSelectedChanged?.(selectedElements, selectedGroupedElements, Object.keys(appState.selectedGroupIds));
+    }
 
     return (
         <div
@@ -164,18 +189,9 @@ export function WhiteboardCanvas({
                         image: false,
                     },
                 }}
-                onChange={(nextElements) => {
-                    const nextSceneSignature = getSceneSignature(nextElements)
-
-                    if (
-                        externalSceneSignatureRef.current !== null &&
-                        nextSceneSignature === externalSceneSignatureRef.current
-                    ) {
-                        externalSceneSignatureRef.current = null
-                        return
-                    }
-
-                    onChange?.(nextElements)
+                onChange={(nextElements, appState) => {
+					handleElementsChange(nextElements);
+					handleSelectionChange(nextElements, appState);
                 }}
                 onPointerDown={() => {
                     isLocallyInteractingRef.current = true
@@ -194,20 +210,22 @@ export function WhiteboardCanvas({
                     applyExternalScene(latestExternalSceneRef.current)
                     onPointerUp?.(
                         excalidrawApiRef.current?.getSceneElementsIncludingDeleted() ??
-                            [],
+                        [],
                     )
                 }}
             >
-                <MainMenu>
-                    <MainMenu.DefaultItems.LoadScene />
-                    <MainMenu.DefaultItems.Export />
-                    <MainMenu.DefaultItems.SaveAsImage />
-                    <MainMenu.DefaultItems.SearchMenu />
-                    <MainMenu.DefaultItems.Help />
-                    <MainMenu.DefaultItems.ClearCanvas />
-                    <MainMenu.Separator />
-                    <MainMenu.DefaultItems.ChangeCanvasBackground />
-                </MainMenu>
+                {!taskPreviewModeEnabled &&
+                    <MainMenu>
+                        <MainMenu.DefaultItems.LoadScene />
+                        <MainMenu.DefaultItems.Export />
+                        <MainMenu.DefaultItems.SaveAsImage />
+                        <MainMenu.DefaultItems.SearchMenu />
+                        <MainMenu.DefaultItems.Help />
+                        <MainMenu.DefaultItems.ClearCanvas />
+                        <MainMenu.Separator />
+                        <MainMenu.DefaultItems.ChangeCanvasBackground />
+                    </MainMenu>
+                }
             </Excalidraw>
             <div className="pointer-events-none absolute inset-0 z-10">
                 {presence.map((item) => {
@@ -260,4 +278,4 @@ export function WhiteboardCanvas({
             </div>
         </div>
     )
-}
+})

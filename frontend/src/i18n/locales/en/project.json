@@ -71,6 +71,10 @@
       "templatesComingSoon": "Coming soon",
       "useTemplate": "Use template"
     },
+	"region": {
+		"linkTask": "Link Task",
+		"viewTask": "View Task"
+	},
     "templateImportSuccess": "Template added to the whiteboard",
     "templateImportError": "Could not add template to the whiteboard"
   },

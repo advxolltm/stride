@@ -137,7 +137,8 @@
       "skillsEmpty": "No skills found",
       "skillsUnavailable": "No skills available",
       "assigneeSearch": "Search users...",
-      "assigneeEmpty": "No assignee"
+      "assigneeEmpty": "No assignee",
+	  "linkedWhiteboardRegion": "Linked Whiteboard Region"
     }
   }
 }

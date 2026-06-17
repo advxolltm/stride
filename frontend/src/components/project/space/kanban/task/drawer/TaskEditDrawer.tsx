@@ -9,6 +9,7 @@ import { TaskSkillsField } from './fields/TaskSkillsField'
 import { TaskStatusField } from './fields/TaskStatusField'
 import { TaskTitleField } from './fields/TaskTitleField'
 import { TaskStartDateField } from './fields/TaskStartDateField'
+import { TaskLinkedCanvasField } from './fields/TaskLinkedCanvasField'
 interface TaskEditDrawerProps {
     task: Task | null
     isOpen: boolean
@@ -53,6 +54,7 @@ export function TaskEditDrawer({
                             <TaskStatusField task={task} />
                             <TaskAssigneeField task={task} />
                             <TaskSkillsField task={task} />
+							<TaskLinkedCanvasField task={task} />
                         </Drawer.Body>
                     </Drawer.Dialog>
                 </Drawer.Content>

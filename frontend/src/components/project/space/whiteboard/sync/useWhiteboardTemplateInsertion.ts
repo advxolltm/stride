@@ -1,12 +1,16 @@
 import { useState } from 'react'
 import { toast } from '@heroui/react'
-import { convertToExcalidrawElements } from '@excalidraw/excalidraw'
+import {
+    convertToExcalidrawElements,
+    restoreElements,
+} from '@excalidraw/excalidraw'
 import { parseMermaidToExcalidraw } from '@excalidraw/mermaid-to-excalidraw'
 import { useTranslation } from 'react-i18next'
 import { getApiErrorMessage } from '../../../../../shared/utils/api/errors'
-import { useCreateProjectWhiteboardElementMutation } from '../../../../../store/features/whiteboard/whiteboard.api'
+import { useCreateProjectWhiteboardElementsBulkMutation } from '../../../../../store/features/whiteboard/whiteboard.api'
 import type { WhiteboardElement } from '../../../../../store/features/whiteboard/whiteboard.api.types'
 import type { WhiteboardTemplateDefinition } from '../whiteboardTemplates'
+import { buildExcalidrawElements } from './whiteboardSync.utils'
 
 type UseWhiteboardTemplateInsertionArgs = {
     projectId?: string
@@ -47,8 +51,8 @@ export const useWhiteboardTemplateInsertion = ({
     const [insertingTemplateId, setInsertingTemplateId] = useState<
         string | null
     >(null)
-    const [createProjectWhiteboardElement] =
-        useCreateProjectWhiteboardElementMutation()
+    const [createProjectWhiteboardElementsBulk] =
+        useCreateProjectWhiteboardElementsBulkMutation()
 
     async function insertTemplate(template: WhiteboardTemplateDefinition) {
         if (!projectId || isReadOnly) {
@@ -58,10 +62,6 @@ export const useWhiteboardTemplateInsertion = ({
         setInsertingTemplateId(template.id)
 
         const { x, y } = getTemplateInsertOrigin(whiteboardElements)
-        const nextZIndex = whiteboardElements.reduce(
-            (currentMax, element) => Math.max(currentMax, element.zIndex),
-            -1,
-        )
 
         try {
             const templateElements =
@@ -89,19 +89,25 @@ export const useWhiteboardTemplateInsertion = ({
                 x: element.x + x,
                 y: element.y + y,
             }))
-
-            await Promise.all(
-                positionedTemplateElements.map((element, index) =>
-                    createProjectWhiteboardElement({
-                        projectId,
-                        body: {
-                            elementType: element.type,
-                            props: element,
-                            zIndex: nextZIndex + index + 1,
-                        },
-                    }).unwrap(),
-                ),
+            const existingProps = buildExcalidrawElements(
+                whiteboardElements,
+                {},
             )
+            const reconciledElements = restoreElements(
+                [...existingProps, ...positionedTemplateElements],
+                null,
+                { repairBindings: true },
+            )
+            const newElements = reconciledElements.slice(existingProps.length)
+
+            await createProjectWhiteboardElementsBulk({
+                projectId,
+                body: newElements.map((element) => ({
+                    elementType: element.type,
+                    props: element,
+                    zIndex: 0,
+                })),
+            }).unwrap()
 
             await refetchWhiteboardElements()
             toast.success(t('whiteboardPage.templateImportSuccess'))
