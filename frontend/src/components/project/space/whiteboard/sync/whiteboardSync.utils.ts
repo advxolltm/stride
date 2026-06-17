@@ -10,10 +10,20 @@ type RenderedWhiteboardElement = {
 }
 
 export const serializeElementSnapshot = (element: ExcalidrawElement) =>
-    JSON.stringify({
-        elementType: element.type,
-        props: element,
-    })
+    JSON.stringify((() => {
+        const {
+            version: _version,
+            versionNonce: _versionNonce,
+            seed: _seed,
+            updated: _updated,
+            ...props
+        } = element
+
+        return {
+            elementType: element.type,
+            props,
+        }
+    })())
 
 export const filterElementIDSet = (
     elementIDs: Set<string>,
