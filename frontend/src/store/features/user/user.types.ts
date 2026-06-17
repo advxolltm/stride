@@ -91,3 +91,24 @@ export const UpdateUserProjectSkillsRequestSchema = z.object({
 export type UpdateUserProjectSkillsRequest = z.infer<
     typeof UpdateUserProjectSkillsRequestSchema
 >
+
+export const SetProjectWorkingHoursRequestSchema = z.object({
+    working_hours: z.number().int().min(0),
+})
+
+export type SetProjectWorkingHoursRequest = z.infer<
+    typeof SetProjectWorkingHoursRequestSchema
+>
+
+export const SetAllWorkingHoursEntrySchema = z.object({
+    project_id: z.string(),
+    working_hours: z.number().int().min(0),
+})
+
+export const SetAllWorkingHoursRequestSchema = z.array(
+    SetAllWorkingHoursEntrySchema,
+)
+
+export type SetAllWorkingHoursRequest = z.infer<
+    typeof SetAllWorkingHoursRequestSchema
+>

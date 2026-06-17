@@ -1,33 +1,38 @@
 import { Button, Spinner, toast } from '@heroui/react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useAppSelector } from '../../../shared/hooks/redux'
+import { getApiErrorMessage } from '../../../shared/utils/api/errors'
+import { useGetProjectsQuery } from '../../../store/features/project/project.api'
 import {
-    TOTAL_WEEKLY_HOURS,
-    buildMockWorkingHoursAllocations,
-} from '../../workingHours/mockWorkingHours'
+    useSetAllWorkingHoursMutation,
+} from '../../../store/features/user/user.api'
+import { selectUserId } from '../../../store/userSlice'
+import type { WorkingHoursAllocation } from '../../workingHours/types'
 import { WorkingHoursAllocationCard } from '../../workingHours/WorkingHoursAllocationCard'
 import { WorkingHoursSummaryCard } from '../../workingHours/WorkingHoursSummaryCard'
-import { useGetProjectsQuery } from '../../../store/features/project/project.api'
-import type { WorkingHoursAllocation } from '../../workingHours/types'
+import {
+    TOTAL_WEEKLY_HOURS,
+    buildWorkingHoursAllocations,
+} from '../../workingHours/workingHours.mappers'
 
 export function WorkingHoursSection() {
     const { t } = useTranslation('setting')
-    const { data: projects = [], isLoading } = useGetProjectsQuery()
-    const [savedHoursByProject, setSavedHoursByProject] = useState<
-        Record<string, number>
-    >({})
+    const userId = useAppSelector(selectUserId)
+    const { data: projects = [], isLoading: isLoadingProjects } =
+        useGetProjectsQuery()
+    const [setAllWorkingHours, { isLoading: isSaving }] =
+        useSetAllWorkingHoursMutation()
     const [draftHoursByProject, setDraftHoursByProject] = useState<
         Record<string, number>
     >({})
 
-    const savedAllocations = useMemo<WorkingHoursAllocation[]>(
+    const savedAllocations = useMemo(
         () =>
-            buildMockWorkingHoursAllocations(projects).map((allocation) => ({
-                ...allocation,
-                hours:
-                    savedHoursByProject[allocation.id] ?? allocation.hours,
-            })),
-        [projects, savedHoursByProject],
+            userId
+                ? buildWorkingHoursAllocations(projects, userId)
+                : ([] as WorkingHoursAllocation[]),
+        [projects, userId],
     )
 
     const allocations = useMemo<WorkingHoursAllocation[]>(
@@ -40,6 +45,17 @@ export function WorkingHoursSection() {
         [draftHoursByProject, savedAllocations],
     )
 
+    const savedHoursByProject = useMemo(
+        () =>
+            Object.fromEntries(
+                savedAllocations.map((allocation) => [
+                    allocation.id,
+                    allocation.hours,
+                ]),
+            ),
+        [savedAllocations],
+    )
+
     const allocated = useMemo(
         () => allocations.reduce((sum, item) => sum + item.hours, 0),
         [allocations],
@@ -47,9 +63,7 @@ export function WorkingHoursSection() {
     const remaining = Math.max(TOTAL_WEEKLY_HOURS - allocated, 0)
     const isChanged = allocations.some(
         (allocation) =>
-            allocation.hours !==
-            (savedAllocations.find((item) => item.id === allocation.id)?.hours ??
-                allocation.hours),
+            allocation.hours !== savedHoursByProject[allocation.id],
     )
 
     function handleAllocationChange(projectId: string, nextHours: number) {
@@ -75,17 +89,27 @@ export function WorkingHoursSection() {
         setDraftHoursByProject({})
     }
 
-    const handleSave = () => {
-        setSavedHoursByProject(
-            Object.fromEntries(
-                allocations.map((allocation) => [allocation.id, allocation.hours]),
-            ),
-        )
-        setDraftHoursByProject({})
-        toast.success(t('workingHours.updateSuccess'))
+    const handleSave = async () => {
+        if (!userId || !isChanged || isSaving) return
+
+        try {
+            await setAllWorkingHours({
+                userId,
+                body: allocations.map((allocation) => ({
+                    project_id: allocation.id,
+                    working_hours: allocation.hours,
+                })),
+            }).unwrap()
+            setDraftHoursByProject({})
+            toast.success(t('workingHours.updateSuccess'))
+        } catch (error: unknown) {
+            toast.danger(
+                getApiErrorMessage(error, t('workingHours.updateError')),
+            )
+        }
     }
 
-    if (isLoading) {
+    if (isLoadingProjects) {
         return (
             <div className="flex min-h-40 items-center justify-center">
                 <Spinner size="md" />
@@ -168,12 +192,16 @@ export function WorkingHoursSection() {
                 <div className="flex justify-end gap-3">
                     <Button
                         variant="ghost"
-                        isDisabled={!isChanged}
+                        isDisabled={!isChanged || isSaving}
                         onPress={handleReset}
                     >
                         {t('workingHours.reset')}
                     </Button>
-                    <Button isDisabled={!isChanged} onPress={handleSave}>
+                    <Button
+                        isDisabled={!isChanged || isSaving}
+                        isPending={isSaving}
+                        onPress={handleSave}
+                    >
                         {t('workingHours.save')}
                     </Button>
                 </div>

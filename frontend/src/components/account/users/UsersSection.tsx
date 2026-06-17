@@ -240,7 +240,6 @@ export function UsersSection() {
             >
                 <Modal.Container size="md">
                     <Modal.Dialog>
-                        <Modal.CloseTrigger />
                         <Modal.Header>
                             <Modal.Heading>{t('users.addUser')}</Modal.Heading>
                         </Modal.Header>
@@ -334,7 +333,6 @@ export function UsersSection() {
             >
                 <Modal.Container size="md">
                     <Modal.Dialog>
-                        <Modal.CloseTrigger />
                         <Modal.Header>
                             <Modal.Heading>
                                 {t('users.resetPasswordTitle')}
