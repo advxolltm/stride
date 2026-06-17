@@ -151,6 +151,26 @@ func NewSchedulerService(tServe taskService.TaskService, pServe projectService.P
 	return &schedulerService{tServe, pServe}
 }
 
+func filterSchedulableMembers(
+	members []models.ProjectMember,
+) ([]models.ProjectMember, error) {
+	var schedulableMembers []models.ProjectMember
+
+	for _, member := range members {
+		if member.WorkingHours > 0 {
+			schedulableMembers = append(schedulableMembers, member)
+		}
+	}
+
+	if len(schedulableMembers) > 0 {
+		return schedulableMembers, nil
+	}
+
+	return nil, fmt.Errorf(
+		"no selected members have working hours greater than 0, so there is nobody the scheduler can assign tasks to",
+	)
+}
+
 func (s schedulerService) ScheduleTasksToUsers(c context.Context, req SchedulingRequest, settings Settings) (*ReturnStruct, error) {
 	// check if there is anything to schedule
 	if len(req.TaskIDs) == 0 || len(req.UserIDs) == 0 {
@@ -178,6 +198,11 @@ func (s schedulerService) ScheduleTasksToUsers(c context.Context, req Scheduling
 		//The scheduler works with ProjectMember IDs because the tasks use Projectmember IDs, but the frontend works with UserIDs
 		// So here we are...
 		member_user_map[user.ID] = userid
+	}
+
+	schedulableUsers, err := filterSchedulableMembers(raw_users)
+	if err != nil {
+		return nil, err
 	}
 
 	var minStart time.Time
@@ -252,7 +277,7 @@ func (s schedulerService) ScheduleTasksToUsers(c context.Context, req Scheduling
 		final_tasks = append(final_tasks, task)
 	}
 
-	users := Map(raw_users, mapToSchedProjMem)
+	users := Map(schedulableUsers, mapToSchedProjMem)
 	tasks := Map(final_tasks, func(mod models.Task) SchedTask { return mapToSchedTask(mod, minStart, maxEnd) })
 
 	// The scheduler returns an assignment of ProjectMemberIDs to TaskIDs, matches your Haskell logic perfectly
@@ -272,15 +297,24 @@ func (s schedulerService) ScheduleTasksToUsers(c context.Context, req Scheduling
 	// Split into new assignments and changed assignments of old ones
 	// Swap the ProjectMemberIDs for User IDs when returning the assignments
 	for _, ass := range assignments {
+		mappedUserID, ok := member_user_map[ass.UserID]
+		if !ok || mappedUserID == uuid.Nil {
+			return nil, fmt.Errorf(
+				"scheduler returned assignment for unknown project member %s on task %s",
+				ass.UserID,
+				ass.TaskID,
+			)
+		}
+
 		if _, ok := old_map[ass.TaskID]; ok && old_map[ass.TaskID] != ass.UserID {
 			changed_assignments = append(changed_assignments, Assignment{
-				UserID: member_user_map[ass.UserID],
+				UserID: mappedUserID,
 				TaskID: ass.TaskID,
 			})
 		}
 		if _, ok := old_map[ass.TaskID]; !ok {
 			new_assignments = append(new_assignments, Assignment{
-				UserID: member_user_map[ass.UserID],
+				UserID: mappedUserID,
 				TaskID: ass.TaskID,
 			})
 		}

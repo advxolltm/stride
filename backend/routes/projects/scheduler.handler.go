@@ -158,6 +158,22 @@ func (h *schedulerRouteHandler) confirmPOSTHandle(c *echo.Context) error {
 		if err_m != nil {
 			return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "failed to find a project user"})
 		}
+
+		task, err_t := h.taskService.GetTask(c.Request().Context(), assignment.TaskID)
+		if err_t != nil {
+			return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "failed to find task"})
+		}
+
+		for _, existingAssignee := range task.Assignees {
+			if err := h.taskService.UnassignTask(
+				c.Request().Context(),
+				assignment.TaskID,
+				existingAssignee.ProjectMemberID,
+			); err != nil {
+				return c.JSON(http.StatusInternalServerError, routes.ErrorResponse{Error: "failed to replace task assignee"})
+			}
+		}
+
 		taskAssignments[i] = taskService.Assignment{
 			TaskID:          assignment.TaskID,
 			ProjectMemberID: member.ID,
