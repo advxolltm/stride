@@ -37,6 +37,7 @@ export const ApiProjectMemberSchema = z.object({
     project_id: z.string(),
     role: ProjectRoleSchema,
     joined_at: z.string(),
+    working_hours: z.number(),
     user: ApiProjectUserSchema,
 })
 
@@ -78,6 +79,7 @@ export const ProjectMemberSchema = z.object({
     projectId: z.string(),
     role: ProjectRoleSchema,
     joinedAt: z.string(),
+    workingHours: z.number(),
     user: ProjectUserSchema,
 })
 
@@ -141,4 +143,72 @@ export const AddProjectMembersRequestSchema = z.array(AddProjectMemberSchema)
 
 export type AddProjectMembersRequest = z.infer<
     typeof AddProjectMembersRequestSchema
+>
+
+export const SchedulerOptimizationGoalSchema = z.enum([
+    'distribute-evenly',
+    'max-hours-scheduled',
+    'max-tasks-scheduled',
+])
+
+export const SchedulerSettingsSchema = z.object({
+    optimization_goals: z.array(SchedulerOptimizationGoalSchema),
+    timeout_seconds: z.number().int().positive().optional(),
+})
+
+export type SchedulerSettings = z.infer<typeof SchedulerSettingsSchema>
+
+export const SchedulerScheduleRequestSchema = z.object({
+    task_ids: z.array(z.string()),
+    user_ids: z.array(z.string()),
+    settings: SchedulerSettingsSchema,
+})
+
+export type SchedulerScheduleRequest = z.infer<
+    typeof SchedulerScheduleRequestSchema
+>
+
+export const ApiSchedulerAssignmentSchema = z.object({
+    user_id: z.string(),
+    task_id: z.string(),
+})
+
+export type ApiSchedulerAssignment = z.infer<
+    typeof ApiSchedulerAssignmentSchema
+>
+export const ApiSchedulerAssignmentListSchema = z.array(
+    ApiSchedulerAssignmentSchema,
+)
+
+export const ApiSchedulerPreviewResponseSchema = z.object({
+    new_assignments: ApiSchedulerAssignmentListSchema,
+    changed_assignments: ApiSchedulerAssignmentListSchema,
+})
+
+export type ApiSchedulerPreviewResponse = z.infer<
+    typeof ApiSchedulerPreviewResponseSchema
+>
+
+export const SchedulerAssignmentSchema = z.object({
+    userId: z.string(),
+    taskId: z.string(),
+})
+
+export type SchedulerAssignment = z.infer<typeof SchedulerAssignmentSchema>
+
+export const SchedulerPreviewResponseSchema = z.object({
+    newAssignments: z.array(SchedulerAssignmentSchema),
+    changedAssignments: z.array(SchedulerAssignmentSchema),
+})
+
+export type SchedulerPreviewResponse = z.infer<
+    typeof SchedulerPreviewResponseSchema
+>
+
+export const SchedulerConfirmRequestSchema = z.array(
+    ApiSchedulerAssignmentSchema,
+)
+
+export type SchedulerConfirmRequest = z.infer<
+    typeof SchedulerConfirmRequestSchema
 >

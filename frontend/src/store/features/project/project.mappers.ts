@@ -1,5 +1,7 @@
 import type {
     ApiProject,
+    ApiSchedulerAssignment,
+    ApiSchedulerPreviewResponse,
     ApiProjectMember,
     ApiProjectSkill,
     ApiProjectUser,
@@ -7,6 +9,8 @@ import type {
     ProjectMember,
     ProjectSkill,
     ProjectUser,
+    SchedulerAssignment,
+    SchedulerPreviewResponse,
 } from './project.types'
 
 // Keep API snake_case out of components and cache helpers.
@@ -36,6 +40,7 @@ export const transformProjectMember = (
     projectId: member.project_id,
     role: member.role,
     joinedAt: member.joined_at,
+    workingHours: member.working_hours,
     user: transformApiUser(member.user),
 })
 
@@ -52,4 +57,19 @@ export const transformProject = (project: ApiProject): Project => ({
     creator: transformApiUser(project.creator),
     members: project.members?.map(transformProjectMember) ?? [],
     skills: project.skills?.map(transformProjectSkill) ?? [],
+})
+
+export const transformSchedulerAssignment = (
+    assignment: ApiSchedulerAssignment,
+): SchedulerAssignment => ({
+    userId: assignment.user_id,
+    taskId: assignment.task_id,
+})
+
+export const transformSchedulerPreviewResponse = (
+    response: ApiSchedulerPreviewResponse,
+): SchedulerPreviewResponse => ({
+    newAssignments: response.new_assignments.map(transformSchedulerAssignment),
+    changedAssignments:
+        response.changed_assignments.map(transformSchedulerAssignment),
 })

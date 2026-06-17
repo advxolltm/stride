@@ -11,6 +11,8 @@ import {
 import {
     ApiProjectListSchema,
     ApiProjectMemberListSchema,
+    ApiSchedulerAssignmentListSchema,
+    ApiSchedulerPreviewResponseSchema,
     ApiProjectSchema,
     ApiProjectSkillListSchema,
     ApiProjectSkillSchema,
@@ -20,12 +22,17 @@ import {
     type Project,
     type ProjectMember,
     type ProjectSkill,
+    type SchedulerConfirmRequest,
+    type SchedulerPreviewResponse,
+    type SchedulerScheduleRequest,
     type UpdateProjectRequest,
 } from './project.types'
 import {
     transformProject,
     transformProjectMember,
     transformProjectSkill,
+    transformSchedulerAssignment,
+    transformSchedulerPreviewResponse,
 } from './project.mappers'
 
 export const projectApi = baseApi.injectEndpoints({
@@ -61,6 +68,39 @@ export const projectApi = baseApi.injectEndpoints({
                 ),
             providesTags: (_result, _error, projectId) => [
                 { type: 'ProjectMember' as const, id: projectId },
+            ],
+        }),
+
+        scheduleProjectTasks: builder.mutation<
+            SchedulerPreviewResponse,
+            { projectId: string; body: SchedulerScheduleRequest }
+        >({
+            query: ({ projectId, body }) => ({
+                url: `/projects/${projectId}/scheduler`,
+                method: 'POST',
+                body,
+            }),
+            transformResponse: (response: unknown) =>
+                transformSchedulerPreviewResponse(
+                    ApiSchedulerPreviewResponseSchema.parse(response),
+                ),
+        }),
+
+        confirmScheduledAssignments: builder.mutation<
+            import('./project.types').SchedulerAssignment[],
+            { projectId: string; body: SchedulerConfirmRequest }
+        >({
+            query: ({ projectId, body }) => ({
+                url: `/projects/${projectId}/scheduler/confirm`,
+                method: 'POST',
+                body,
+            }),
+            transformResponse: (response: unknown) =>
+                ApiSchedulerAssignmentListSchema.parse(response).map(
+                    transformSchedulerAssignment,
+                ),
+            invalidatesTags: (_result, _error, { projectId }) => [
+                { type: 'Task' as const, id: projectId },
             ],
         }),
 
@@ -448,6 +488,8 @@ export const {
     useGetProjectsQuery,
     useGetProjectByIdQuery,
     useGetProjectMembersQuery,
+    useScheduleProjectTasksMutation,
+    useConfirmScheduledAssignmentsMutation,
     useCreateProjectMutation,
     useAddProjectMembersMutation,
     useAddProjectSkillMutation,
