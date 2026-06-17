@@ -249,3 +249,32 @@ func TestUserStore_GetByEmailAndPassword(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+func TestUserStore_SetWorkingHours(t *testing.T) {
+	runTest(t, "returns the fully loaded updated project member", func(t *testing.T, s userStore.UserStore) {
+		project := testutils.SelectRandomProject(t, db)
+		require.NotEmpty(t, project.Members)
+
+		memberBefore := project.Members[0]
+		updatedHours := memberBefore.WorkingHours + 1
+
+		member, err := s.SetWorkingHours(
+			context.Background(),
+			project.ID,
+			updatedHours,
+			memberBefore.UserID,
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, memberBefore.ID, member.ID)
+		assert.Equal(t, memberBefore.UserID, member.UserID)
+		assert.Equal(t, project.ID, member.ProjectID)
+		assert.NotEmpty(t, member.Role)
+		assert.Contains(t, []string{"owner", "member"}, member.Role)
+		assert.False(t, member.JoinedAt.IsZero())
+		assert.Equal(t, updatedHours, member.WorkingHours)
+		assert.Equal(t, memberBefore.UserID, member.User.ID)
+		assert.NotEmpty(t, member.User.Username)
+		assert.NotEmpty(t, member.User.Email)
+	})
+}

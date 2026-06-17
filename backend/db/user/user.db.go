@@ -239,7 +239,10 @@ func (s *userStore) UpdateUserProjectSkills(ctx context.Context, userID uuid.UUI
 
 func (s *userStore) SetWorkingHours(ctx context.Context, projID uuid.UUID, workingHors int, userID uuid.UUID) (*models.ProjectMember, error) {
 	member := models.ProjectMember{UserID: userID, ProjectID: projID}
-	result := s.db.WithContext(ctx).Preload("User").Model(&member).Where("user_id = ? AND project_id = ?", userID, projID).Update("working_hours", workingHors)
+	result := s.db.WithContext(ctx).
+		Model(&models.ProjectMember{}).
+		Where("user_id = ? AND project_id = ?", userID, projID).
+		Update("working_hours", workingHors)
 
 	if result.Error != nil {
 		return nil, result.Error
@@ -247,6 +250,14 @@ func (s *userStore) SetWorkingHours(ctx context.Context, projID uuid.UUID, worki
 	if result.RowsAffected == 0 {
 		return nil, gorm.ErrRecordNotFound
 	}
+
+	if err := s.db.WithContext(ctx).
+		Preload("User").
+		Where("user_id = ? AND project_id = ?", userID, projID).
+		First(&member).Error; err != nil {
+		return nil, err
+	}
+
 	return &member, nil
 }
 
