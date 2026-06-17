@@ -153,44 +153,6 @@ export const whiteboardApi = baseApi.injectEndpoints({
             },
         }),
 
-        updateProjectWhiteboardElement: builder.mutation<
-            WhiteboardElement,
-            {
-                projectId: string
-                elementId: string
-                body: UpdateWhiteboardElementRequest
-            }
-        >({
-            query: ({ projectId, elementId, body }) => ({
-                url: `/projects/${projectId}/whiteboard/elements/${elementId}`,
-                method: 'PATCH',
-                body,
-                headers: createWhiteboardMutationHeaders(),
-            }),
-            transformResponse: (response: unknown) =>
-                transformWhiteboardElement(
-                    ApiWhiteboardElementSchema.parse(response),
-                ),
-            async onQueryStarted({ projectId }, { dispatch, queryFulfilled }) {
-                try {
-                    const { data: updatedElement } = await queryFulfilled
-                    dispatch(
-                        whiteboardApi.util.updateQueryData(
-                            'getProjectWhiteboardElements',
-                            projectId,
-                            (draft) =>
-                                applyPersistedElementToCache(
-                                    draft,
-                                    updatedElement,
-                                ),
-                        ),
-                    )
-                } catch {
-                    return
-                }
-            },
-        }),
-
         updateProjectWhiteboardElementsBulk: builder.mutation<
             WhiteboardElement[],
             {
@@ -387,7 +349,6 @@ export const {
     useGetProjectWhiteboardElementsQuery,
     useCreateProjectWhiteboardElementMutation,
     useCreateProjectWhiteboardElementsBulkMutation,
-    useUpdateProjectWhiteboardElementMutation,
     useUpdateProjectWhiteboardElementsBulkMutation,
     useDeleteProjectWhiteboardElementMutation,
     useDeleteProjectWhiteboardElementsBulkMutation,
