@@ -1,7 +1,10 @@
 import { Modal } from '@heroui/react'
-import { useEffect, useMemo, useState } from 'react'
-import type { SchedulerAssignment, SchedulerConfirmRequest, SchedulerMemberOption, SchedulerTaskOption } from './types'
-import { buildMockSchedulerAssignments, buildSchedulerTriggerRequest } from './mockScheduler'
+import { useEffect, useState } from 'react'
+import type {
+    SchedulerAssignment,
+    SchedulerMemberOption,
+    SchedulerTaskOption,
+} from './types'
 import { SchedulerIntroStep } from './SchedulerIntroStep'
 import { SchedulerLoadingStep } from './SchedulerLoadingStep'
 import { SchedulerReviewStep } from './SchedulerReviewStep'
@@ -13,7 +16,11 @@ interface SchedulerFlowModalProps {
     onOpenChange: (open: boolean) => void
     tasks: SchedulerTaskOption[]
     members: SchedulerMemberOption[]
-    onConfirm: (assignments: SchedulerConfirmRequest) => void
+    schedulableMemberCount: number
+    skippedMemberCount: number
+    estimatedTaskCount: number
+    onRun: () => Promise<SchedulerAssignment[]>
+    onConfirm: (assignments: SchedulerAssignment[]) => Promise<void>
 }
 
 export function SchedulerFlowModal({
@@ -21,63 +28,89 @@ export function SchedulerFlowModal({
     onOpenChange,
     tasks,
     members,
+    schedulableMemberCount,
+    skippedMemberCount,
+    estimatedTaskCount,
+    onRun,
     onConfirm,
 }: SchedulerFlowModalProps) {
     const [step, setStep] = useState<SchedulerStep>('intro')
     const [assignments, setAssignments] = useState<SchedulerAssignment[]>([])
+    const [isConfirming, setIsConfirming] = useState(false)
 
-    const triggerPayload = useMemo(
-        () => buildSchedulerTriggerRequest(tasks, members),
-        [members, tasks],
-    )
+    function resetFlowState() {
+        setStep('intro')
+        setAssignments([])
+        setIsConfirming(false)
+    }
 
-    useEffect(() => {
-        if (!isOpen) {
-            setStep('intro')
-            setAssignments([])
+    function handleOpenChange(nextOpen: boolean) {
+        if (!nextOpen) {
+            resetFlowState()
         }
-    }, [isOpen])
+
+        onOpenChange(nextOpen)
+    }
 
     useEffect(() => {
         if (step !== 'loading') {
             return
         }
 
-        const timeoutId = window.setTimeout(() => {
-            setAssignments(
-                buildMockSchedulerAssignments(triggerPayload, members),
-            )
-            setStep('review')
-        }, 1200)
+        let isMounted = true
 
-        return () => window.clearTimeout(timeoutId)
-    }, [members, step, triggerPayload])
+        void onRun()
+            .then((nextAssignments) => {
+                if (!isMounted) return
+
+                setAssignments(nextAssignments)
+                setStep('review')
+            })
+            .catch(() => {
+                if (!isMounted) return
+
+                resetFlowState()
+                onOpenChange(false)
+            })
+
+        return () => {
+            isMounted = false
+        }
+    }, [onOpenChange, onRun, step])
 
     function handleAssignmentChange(taskId: string, userId: string) {
         setAssignments((current) =>
             current.map((assignment) =>
-                assignment.task_id === taskId
-                    ? { ...assignment, user_id: userId }
+                assignment.taskId === taskId
+                    ? { ...assignment, userId }
                     : assignment,
             ),
         )
     }
 
-    function handleConfirm() {
-        onConfirm(assignments)
-        onOpenChange(false)
+    async function handleConfirm() {
+        setIsConfirming(true)
+
+        try {
+            await onConfirm(assignments)
+            handleOpenChange(false)
+        } finally {
+            setIsConfirming(false)
+        }
     }
 
     return (
-        <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
+        <Modal isOpen={isOpen} onOpenChange={handleOpenChange}>
             <Modal.Backdrop>
                 <Modal.Container placement="auto">
                     <Modal.Dialog className="sm:max-w-xl">
-                        <Modal.CloseTrigger />
                         {step === 'intro' ? (
                             <SchedulerIntroStep
                                 taskCount={tasks.length}
-                                onCancel={() => onOpenChange(false)}
+                                schedulableMemberCount={schedulableMemberCount}
+                                skippedMemberCount={skippedMemberCount}
+                                estimatedTaskCount={estimatedTaskCount}
+                                onCancel={() => handleOpenChange(false)}
                                 onRun={() => setStep('loading')}
                             />
                         ) : null}
@@ -89,7 +122,8 @@ export function SchedulerFlowModal({
                                 assignments={assignments}
                                 tasks={tasks}
                                 members={members}
-                                onCancel={() => onOpenChange(false)}
+                                isConfirming={isConfirming}
+                                onCancel={() => handleOpenChange(false)}
                                 onAssignmentChange={handleAssignmentChange}
                                 onConfirm={handleConfirm}
                             />

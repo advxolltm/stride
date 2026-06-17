@@ -6,6 +6,7 @@ import {
     SearchField,
     useFilter,
 } from '@heroui/react'
+import { useTranslation } from 'react-i18next'
 import { UserAvatar } from '../../../../../shared/components'
 import type { SchedulerAssignment, SchedulerMemberOption, SchedulerTaskOption } from './types'
 
@@ -22,9 +23,10 @@ export function SchedulerAssignmentRow({
     members,
     onChange,
 }: SchedulerAssignmentRowProps) {
+    const { t } = useTranslation('space')
     const { contains } = useFilter({ sensitivity: 'base' })
     const selectedMember = members.find(
-        (member) => member.id === assignment.user_id,
+        (member) => member.id === assignment.userId,
     )
     const items = members.map((member) => ({
         id: member.id,
@@ -45,18 +47,21 @@ export function SchedulerAssignmentRow({
                     {task.title}
                 </p>
                 <p className="text-default-700 mt-1 text-xs font-medium">
-                    {task.status_label}
+                    {task.statusLabel}
                 </p>
             </div>
 
             <Autocomplete
                 fullWidth
-                aria-label={`Assign ${task.title}`}
+                aria-label={t('tasks.scheduler.assignment.ariaLabel', {
+                    taskTitle: task.title,
+                })}
                 className="w-full max-w-52"
-                placeholder="Select assignee"
+                placeholder={t('tasks.scheduler.assignment.placeholder')}
                 variant="secondary"
-                value={assignment.user_id}
-                onChange={handleChange}
+                selectionMode="single"
+                selectedKey={assignment.userId}
+                onSelectionChange={handleChange}
             >
                 <Autocomplete.Trigger>
                     <Autocomplete.Value>
@@ -64,7 +69,7 @@ export function SchedulerAssignmentRow({
                             if (isPlaceholder || !state.selectedItems.length) {
                                 return (
                                     <span className="text-muted">
-                                        No assignee
+                                        {t('tasks.scheduler.assignment.empty')}
                                     </span>
                                 )
                             }
@@ -101,18 +106,24 @@ export function SchedulerAssignmentRow({
                             autoFocus
                             name={`scheduler-assignee-search-${task.id}`}
                             variant="secondary"
-                            aria-label="Search users"
+                            aria-label={t('tasks.scheduler.assignment.search')}
                         >
                             <SearchField.Group>
                                 <SearchField.SearchIcon />
-                                <SearchField.Input placeholder="Search users..." />
+                                <SearchField.Input
+                                    placeholder={t(
+                                        'tasks.scheduler.assignment.search',
+                                    )}
+                                />
                                 <SearchField.ClearButton />
                             </SearchField.Group>
                         </SearchField>
 
                         <ListBox
                             renderEmptyState={() => (
-                                <EmptyState>No assignee</EmptyState>
+                                <EmptyState>
+                                    {t('tasks.scheduler.assignment.empty')}
+                                </EmptyState>
                             )}
                         >
                             {items.map((item) => (
