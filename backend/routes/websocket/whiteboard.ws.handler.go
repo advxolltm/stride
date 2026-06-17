@@ -170,6 +170,8 @@ func (h whiteboardWSRouteHandler) connectGET(c *echo.Context) error {
 	})
 
 	var writeMu sync.Mutex
+	var selectionMu sync.Mutex
+	selectionClientID := ""
 	connCtx, connCancel := context.WithCancel(context.Background())
 	defer connCancel()
 	errCh := make(chan error, 4)
@@ -185,10 +187,41 @@ func (h whiteboardWSRouteHandler) connectGET(c *echo.Context) error {
 		session.Expiry,
 		liveItems,
 		errCh,
+		func(clientID string) {
+			selectionMu.Lock()
+			selectionClientID = clientID
+			selectionMu.Unlock()
+		},
 	)
 
 	runErr := <-errCh
 	connCancel()
+	selectionMu.Lock()
+	disconnectedClientID := selectionClientID
+	selectionMu.Unlock()
+	if disconnectedClientID != "" {
+		clearCtx, clearCancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer clearCancel()
+		if err := routes.SendWSUpdateWithMeta(
+			clearCtx,
+			h.rdb,
+			session.ProjectID,
+			routes.WhiteboardElementSelectionUpdate,
+			&routes.WSMessageMeta{
+				OriginUserID: &session.UserID,
+				ClientID:     disconnectedClientID,
+			},
+			whiteboardElementSelectionWSUpdate{ElementIDs: []string{}},
+		); err != nil {
+			slog.Debug(
+				"failed to clear whiteboard selection on disconnect",
+				"error", err,
+				"projectID", session.ProjectID,
+				"userID", session.UserID,
+				"clientID", disconnectedClientID,
+			)
+		}
+	}
 	if runErr != nil && !websocket.IsCloseError(runErr, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
 		slog.Debug("whiteboard ws closed", "error", runErr, "user-id", session.UserID)
 	}
@@ -268,6 +301,7 @@ func (h whiteboardWSRouteHandler) consumeWhiteboardLiveClientMessages(
 	expiry time.Time,
 	out chan<- whiteboardLiveItem,
 	errCh chan<- error,
+	onSelectionUpdate func(clientID string),
 ) {
 	defer close(out)
 
@@ -287,6 +321,9 @@ func (h whiteboardWSRouteHandler) consumeWhiteboardLiveClientMessages(
 		if !ok {
 			slog.Debug("ignored invalid whiteboard live client payload", "userID", userID)
 			continue
+		}
+		if messageType == routes.WhiteboardElementSelectionUpdate && clientID != "" {
+			onSelectionUpdate(clientID)
 		}
 
 		item := whiteboardLiveItem{
@@ -327,7 +364,8 @@ func liveItemElementID(payload any) string {
 // same elementId into the latest value and flushes at most once per
 // whiteboardLiveCoalesceInterval. LiveClear frames bypass coalescing and also
 // evict any pending LiveUpdate for the same element so the clear is never
-// re-overwritten by a stale frame.
+// re-overwritten by a stale frame. Selection updates also publish immediately
+// so disconnect cleanup cannot be followed by a queued stale selection.
 func (h whiteboardWSRouteHandler) coalesceWhiteboardLiveUpdates(
 	ctx context.Context,
 	projectID uuid.UUID,
@@ -381,8 +419,14 @@ func (h whiteboardWSRouteHandler) coalesceWhiteboardLiveUpdates(
 				}
 				continue
 			}
-			// LiveUpdate and SelectionUpdate: keep only the most recent frame
-			// per coalescing key.
+			if item.messageType == routes.WhiteboardElementSelectionUpdate {
+				if err := publish(item); err != nil {
+					errCh <- err
+					return
+				}
+				continue
+			}
+			// LiveUpdate: keep only the most recent frame per element.
 			if item.elementID == "" {
 				if err := publish(item); err != nil {
 					errCh <- err
