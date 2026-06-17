@@ -73,7 +73,9 @@
 	"region": {
 		"linkTask": "Aufgabe verknüpfen",
 		"viewTask": "Aufgabe anzeigen"
-	}
+	},
+    "bulkDeleteError": "Die ausgewählten Whiteboard-Elemente konnten nicht gelöscht werden",
+    "bulkUpdateError": "Die ausgewählten Whiteboard-Elemente konnten nicht aktualisiert werden"
   },
   "spaces": {
     "title": "Bereiche",

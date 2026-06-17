@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { toast } from '@heroui/react'
 import { isInvisiblySmallElement } from '@excalidraw/excalidraw'
 import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types'
+import { useTranslation } from 'react-i18next'
+import { getApiErrorMessage } from '../../../../../shared/utils/api/errors'
 import {
     sendWhiteboardLiveClear,
     sendWhiteboardSelectionUpdate,
@@ -68,6 +71,7 @@ export const useWhiteboardSync = ({
     whiteboardElements,
     liveElementsById,
 }: UseWhiteboardSyncArgs) => {
+    const { t } = useTranslation('project')
     const syncStateRef = useRef<WhiteboardSyncState>(createWhiteboardSyncState())
     const liveThrottleTimeoutRef = useRef<number | null>(null)
     const lastLiveFlushTimeRef = useRef<number>(0)
@@ -259,6 +263,14 @@ export const useWhiteboardSync = ({
                     syncState.localSceneSnapshots.delete(elementId)
                 })
             })
+            .catch((error: unknown) => {
+                toast.danger(
+                    getApiErrorMessage(
+                        error,
+                        t('whiteboardPage.bulkDeleteError'),
+                    ),
+                )
+            })
             .finally(() => {
                 isDeleteFlushInFlightRef.current = false
                 deletedElements.forEach(([elementId]) => {
@@ -268,7 +280,7 @@ export const useWhiteboardSync = ({
                     }
                 })
             })
-    }, [clearLiveElement, deleteProjectWhiteboardElementsBulk, projectId])
+    }, [clearLiveElement, deleteProjectWhiteboardElementsBulk, projectId, t])
 
     useEffect(() => {
         return () => {
@@ -469,6 +481,14 @@ export const useWhiteboardSync = ({
                         snapshot,
                     )
                 })
+            })
+            .catch((error: unknown) => {
+                toast.danger(
+                    getApiErrorMessage(
+                        error,
+                        t('whiteboardPage.bulkUpdateError'),
+                    ),
+                )
             })
             .finally(() => {
                 updatedElements.forEach(({ element }) => {
