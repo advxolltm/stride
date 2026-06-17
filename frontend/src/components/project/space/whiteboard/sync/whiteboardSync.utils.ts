@@ -9,21 +9,22 @@ type RenderedWhiteboardElement = {
     fallbackOrder: number
 }
 
-export const serializeElementSnapshot = (element: ExcalidrawElement) =>
-    JSON.stringify((() => {
-        const {
-            version: _version,
-            versionNonce: _versionNonce,
-            seed: _seed,
-            updated: _updated,
-            ...props
-        } = element
+const VOLATILE_ELEMENT_FIELDS = new Set([
+    'version',
+    'versionNonce',
+    'seed',
+    'updated',
+])
 
-        return {
-            elementType: element.type,
-            props,
-        }
-    })())
+export const serializeElementSnapshot = (element: ExcalidrawElement) =>
+    JSON.stringify({
+        elementType: element.type,
+        props: Object.fromEntries(
+            Object.entries(element).filter(
+                ([key]) => !VOLATILE_ELEMENT_FIELDS.has(key),
+            ),
+        ),
+    })
 
 export const filterElementIDSet = (
     elementIDs: Set<string>,

@@ -89,7 +89,7 @@ export const useWhiteboardSync = ({
         lastSelectionSnapshotRef.current = ''
     }, [projectId])
 
-    const flushPendingLiveUpdates = () => {
+    const flushPendingLiveUpdates = useCallback(() => {
         const syncState = syncStateRef.current
         if (!projectId || syncState.pendingLiveElements.size === 0) {
             return
@@ -104,7 +104,7 @@ export const useWhiteboardSync = ({
             }
         })
         syncState.pendingLiveElements.clear()
-    }
+    }, [projectId])
 
     const clearLiveElement = useCallback(
         (elementId: string) => {
@@ -303,7 +303,13 @@ export const useWhiteboardSync = ({
                 clearCursor()
             }
         }
-    }, [clearCursor, flushPendingDeletes, isReadOnly, projectId])
+    }, [
+        clearCursor,
+        flushPendingDeletes,
+        flushPendingLiveUpdates,
+        isReadOnly,
+        projectId,
+    ])
 
     const schedulePendingDeleteFlush = () => {
         if (deleteFlushTimeoutRef.current !== null) {

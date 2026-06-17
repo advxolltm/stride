@@ -75,7 +75,7 @@ export type WhiteboardLiveClearEventPayload = z.infer<
 >
 
 export const WhiteboardSelectionEventPayloadSchema = z.object({
-    elementIds: z.array(z.string()),
+    elementIds: z.array(z.string().min(1)),
 })
 
 export type WhiteboardSelectionEventPayload = z.infer<

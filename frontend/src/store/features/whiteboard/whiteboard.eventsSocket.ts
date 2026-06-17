@@ -9,6 +9,7 @@ import {
     parseWhiteboardEventMessage,
     serializeWhiteboardLiveClientMessage,
 } from './whiteboard.protocol'
+import { isPersistedWhiteboardEventMessage } from './whiteboard.cache'
 import type {
     WhiteboardEventMessage,
     WhiteboardLiveClientMessage,
@@ -86,12 +87,7 @@ export const watchWhiteboardEventsSocket = async (
                 }
 
                 const isPersistedEvent =
-                    message.type !==
-                        WSMessageType.WhiteboardElementLiveUpdate &&
-                    message.type !==
-                        WSMessageType.WhiteboardElementLiveClear &&
-                    message.type !==
-                        WSMessageType.WhiteboardElementSelectionUpdate
+                    isPersistedWhiteboardEventMessage(message)
                 const isSelfOriginated =
                     isSelfOriginatedWhiteboardEvent(message)
 

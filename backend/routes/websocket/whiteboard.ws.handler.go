@@ -352,8 +352,6 @@ func liveItemElementID(payload any) string {
 		return v.ElementID
 	case whiteboardElementLiveClearWSUpdate:
 		return v.ElementID
-	case whiteboardElementSelectionWSUpdate:
-		return "selection"
 	default:
 		return ""
 	}
