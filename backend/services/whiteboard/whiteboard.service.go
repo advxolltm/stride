@@ -25,12 +25,13 @@ type (
 		UpdateElement(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, id uuid.UUID, fields whiteboard.UpdateElementFields) (*models.WhiteboardElement, error)
 		DeleteElement(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, id uuid.UUID) error
 
-
 		FindTaskLinkElements(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, taskID uuid.UUID) ([]models.WhiteboardElement, error)
 
 		BufferCreateElement(ctx context.Context, projectID uuid.UUID, meta ElementBufferMeta, req CreateElementInput) (*BufferedElement, error)
+		BufferCreateElements(ctx context.Context, projectID uuid.UUID, meta ElementBufferMeta, reqs []CreateElementInput) ([]models.WhiteboardElement, error)
 		BufferUpdateElement(ctx context.Context, projectID uuid.UUID, elementID uuid.UUID, meta ElementBufferMeta, fields whiteboard.UpdateElementFields) (*BufferedElement, error)
 		BufferDeleteElement(ctx context.Context, projectID uuid.UUID, elementID uuid.UUID, meta ElementBufferMeta) (*BufferedElement, error)
+		BufferDeleteElements(ctx context.Context, projectID uuid.UUID, elementIDs []uuid.UUID, meta ElementBufferMeta) error
 	}
 
 	whiteboardService struct {

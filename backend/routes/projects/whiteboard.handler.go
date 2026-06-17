@@ -42,6 +42,8 @@ func (h *whiteboardRouteHandler) registerRoutes(g *echo.Group) {
 	g.GET("/:id/whiteboard/elements", h.elementsGETHandle)
 	g.GET("/:id/whiteboard/elements/:elementId", h.elementGETHandle)
 	g.POST("/:id/whiteboard/elements", h.elementPOSTHandle)
+	g.POST("/:id/whiteboard/elements/bulk", h.elementsBulkPOSTHandle)
+	g.POST("/:id/whiteboard/elements/bulk-delete", h.elementsBulkDeletePOSTHandle)
 	g.PATCH("/:id/whiteboard/elements/:elementId", h.elementPATCHHandle)
 	g.DELETE("/:id/whiteboard/elements/:elementId", h.elementDELETEHandle)
 }
@@ -84,7 +86,7 @@ type whiteboardElementDeleteWSUpdate struct {
 type createElementRequest struct {
 	ElementType string         `json:"elementType"`
 	Props       datatypes.JSON `json:"props" swaggertype:"object"`
-	ZIndex      int            `json:"zIndex"`
+	ZIndex      *int           `json:"zIndex"`
 }
 
 type updateElementRequest struct {
@@ -95,6 +97,13 @@ type updateElementRequest struct {
 
 func readWhiteboardRequestMetadata(c *echo.Context) (clientID string, operationID string) {
 	return c.Request().Header.Get("X-Client-Id"), c.Request().Header.Get("X-Operation-Id")
+}
+
+func zIndexFromCreateRequest(req createElementRequest) int {
+	if req.ZIndex == nil {
+		return 0
+	}
+	return *req.ZIndex
 }
 
 func mapWhiteboardElementWSUpdate(element *models.WhiteboardElement) whiteboardElementWSUpdate {
@@ -262,7 +271,7 @@ func (h *whiteboardRouteHandler) elementPOSTHandle(c *echo.Context) error {
 		c.Request().Context(),
 		projectID,
 		whiteboardSvc.ElementBufferMeta{UserID: userID, ClientID: clientID, OperationID: operationID},
-		whiteboardSvc.CreateElementInput{ElementType: req.ElementType, Props: req.Props, ZIndex: req.ZIndex},
+		whiteboardSvc.CreateElementInput{ElementType: req.ElementType, Props: req.Props, ZIndex: zIndexFromCreateRequest(req)},
 	)
 	if err != nil {
 		status, msg := mapServiceErrorWB(err)
@@ -289,6 +298,78 @@ func (h *whiteboardRouteHandler) elementPOSTHandle(c *echo.Context) error {
 	}
 
 	return c.JSON(http.StatusAccepted, &created)
+}
+
+// POST /projects/:id/whiteboard/elements/bulk
+//
+//	@Summary	Create multiple whiteboard elements
+//	@Tags		whiteboard
+//	@Param		id		path		string					true	"Project ID"
+//	@Param		body	body		[]createElementRequest	true	"Element data"
+//	@Success	202		{array}		whiteboardElementResponse
+//	@Failure	400		{object}	routes.ErrorResponse	"invalid request body"
+//	@Failure	401		{object}	routes.ErrorResponse	"unauthorized"
+//	@Failure	403		{object}	routes.ErrorResponse	"forbidden"
+//	@Failure	404		{object}	routes.ErrorResponse	"whiteboard not found"
+//	@Failure	500		{object}	routes.ErrorResponse	"internal server error"
+//	@Security	Auth
+//	@Router		/projects/{id}/whiteboard/elements/bulk [post]
+func (h *whiteboardRouteHandler) elementsBulkPOSTHandle(c *echo.Context) error {
+	userID := h.authService.GetClaims(c).UserID
+	if userID == uuid.Nil {
+		return c.JSON(http.StatusUnauthorized, routes.ErrorResponse{Error: authSvc.ErrUnauthorized.Error()})
+	}
+	clientID, operationID := readWhiteboardRequestMetadata(c)
+
+	projectID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid project id"})
+	}
+
+	var reqs []createElementRequest
+	if err := c.Bind(&reqs); err != nil {
+		return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid request body"})
+	}
+
+	inputs := make([]whiteboardSvc.CreateElementInput, 0, len(reqs))
+	for _, req := range reqs {
+		inputs = append(inputs, whiteboardSvc.CreateElementInput{
+			ElementType: req.ElementType,
+			Props:       req.Props,
+			ZIndex:      zIndexFromCreateRequest(req),
+		})
+	}
+
+	createdElements, err := h.whiteboardService.BufferCreateElements(
+		c.Request().Context(),
+		projectID,
+		whiteboardSvc.ElementBufferMeta{UserID: userID, ClientID: clientID, OperationID: operationID},
+		inputs,
+	)
+	if err != nil {
+		status, msg := mapServiceErrorWB(err)
+		return c.JSON(status, routes.ErrorResponse{Error: msg})
+	}
+
+	meta := &routes.WSMessageMeta{
+		OriginUserID: &userID,
+		ClientID:     clientID,
+		OperationID:  operationID,
+	}
+	for i := range createdElements {
+		if err := routes.SendWSUpdateWithMeta(
+			c.Request().Context(),
+			h.rdb,
+			projectID,
+			routes.WhiteboardElementCreate,
+			meta,
+			mapWhiteboardElementWSUpdate(&createdElements[i]),
+		); err != nil {
+			slog.Error("elementsBulkPOSTHandle: Failed to send ws update", "error", err)
+		}
+	}
+
+	return c.JSON(http.StatusAccepted, createdElements)
 }
 
 // PATCH /projects/:id/whiteboard/elements/:elementId
@@ -428,6 +509,86 @@ func (h *whiteboardRouteHandler) elementDELETEHandle(c *echo.Context) error {
 		},
 	); err != nil {
 		slog.Error("elementDELETEHandle: Failed to send ws update", "error", err)
+	}
+
+	return c.NoContent(http.StatusAccepted)
+}
+
+// POST /projects/:id/whiteboard/elements/bulk-delete
+//
+//	@Summary	Delete multiple whiteboard elements
+//	@Tags		whiteboard
+//	@Param		id		path	string		true	"Project ID"
+//	@Param		body	body	[]string	true	"Element IDs"
+//	@Success	202
+//	@Failure	400	{object}	routes.ErrorResponse	"invalid project id, element id, or request body"
+//	@Failure	401	{object}	routes.ErrorResponse	"unauthorized"
+//	@Failure	403	{object}	routes.ErrorResponse	"forbidden"
+//	@Failure	404	{object}	routes.ErrorResponse	"whiteboard not found"
+//	@Failure	500	{object}	routes.ErrorResponse	"internal server error"
+//	@Security	Auth
+//	@Router		/projects/{id}/whiteboard/elements/bulk-delete [post]
+func (h *whiteboardRouteHandler) elementsBulkDeletePOSTHandle(c *echo.Context) error {
+	userID := h.authService.GetClaims(c).UserID
+	if userID == uuid.Nil {
+		return c.JSON(http.StatusUnauthorized, routes.ErrorResponse{Error: authSvc.ErrUnauthorized.Error()})
+	}
+	clientID, operationID := readWhiteboardRequestMetadata(c)
+
+	projectID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid project id"})
+	}
+
+	var rawElementIDs []string
+	if err := c.Bind(&rawElementIDs); err != nil {
+		return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid request body"})
+	}
+
+	elementIDs := make([]uuid.UUID, 0, len(rawElementIDs))
+	for _, rawElementID := range rawElementIDs {
+		elementID, err := uuid.Parse(rawElementID)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid element id"})
+		}
+		elementIDs = append(elementIDs, elementID)
+	}
+
+	err = h.whiteboardService.BufferDeleteElements(
+		c.Request().Context(),
+		projectID,
+		elementIDs,
+		whiteboardSvc.ElementBufferMeta{UserID: userID, ClientID: clientID, OperationID: operationID},
+	)
+	if err != nil {
+		slog.Error(
+			"elementsBulkDeletePOSTHandle: Failed to buffer whiteboard element delete batch",
+			"elementIDs", elementIDs,
+			"projectID", projectID,
+			"error", err,
+		)
+		status, msg := mapServiceErrorWB(err)
+		return c.JSON(status, routes.ErrorResponse{Error: msg})
+	}
+
+	meta := &routes.WSMessageMeta{
+		OriginUserID: &userID,
+		ClientID:     clientID,
+		OperationID:  operationID,
+	}
+	for _, elementID := range elementIDs {
+		if err := routes.SendWSUpdateWithMeta(
+			c.Request().Context(),
+			h.rdb,
+			projectID,
+			routes.WhiteboardElementDelete,
+			meta,
+			whiteboardElementDeleteWSUpdate{
+				ElementID: elementID,
+			},
+		); err != nil {
+			slog.Error("elementsBulkDeletePOSTHandle: Failed to send ws update", "error", err)
+		}
 	}
 
 	return c.NoContent(http.StatusAccepted)

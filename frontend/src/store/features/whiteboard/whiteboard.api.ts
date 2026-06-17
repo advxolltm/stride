@@ -114,6 +114,43 @@ export const whiteboardApi = baseApi.injectEndpoints({
             },
         }),
 
+        createProjectWhiteboardElementsBulk: builder.mutation<
+            WhiteboardElement[],
+            { projectId: string; body: CreateWhiteboardElementRequest[] }
+        >({
+            query: ({ projectId, body }) => ({
+                url: `/projects/${projectId}/whiteboard/elements/bulk`,
+                method: 'POST',
+                body,
+                headers: createWhiteboardMutationHeaders(),
+            }),
+            transformResponse: (response: unknown) =>
+                ApiWhiteboardElementListSchema.parse(response).map(
+                    transformWhiteboardElement,
+                ),
+            async onQueryStarted({ projectId }, { dispatch, queryFulfilled }) {
+                try {
+                    const { data: createdElements } = await queryFulfilled
+                    dispatch(
+                        whiteboardApi.util.updateQueryData(
+                            'getProjectWhiteboardElements',
+                            projectId,
+                            (draft) => {
+                                createdElements.forEach((createdElement) =>
+                                    applyPersistedElementToCache(
+                                        draft,
+                                        createdElement,
+                                    ),
+                                )
+                            },
+                        ),
+                    )
+                } catch {
+                    return
+                }
+            },
+        }),
+
         updateProjectWhiteboardElement: builder.mutation<
             WhiteboardElement,
             {
@@ -176,6 +213,45 @@ export const whiteboardApi = baseApi.injectEndpoints({
                                     draft,
                                     elementId,
                                 ),
+                        ),
+                    )
+                } catch {
+                    return
+                }
+            },
+        }),
+
+        deleteProjectWhiteboardElementsBulk: builder.mutation<
+            void,
+            { projectId: string; elementIds: string[] }
+        >({
+            query: ({ projectId, elementIds }) => ({
+                url: `/projects/${projectId}/whiteboard/elements/bulk-delete`,
+                method: 'POST',
+                body: elementIds,
+                headers: createWhiteboardMutationHeaders(),
+            }),
+            async onQueryStarted(
+                { projectId, elementIds },
+                { dispatch, queryFulfilled },
+            ) {
+                try {
+                    await queryFulfilled
+                    dispatch(
+                        whiteboardApi.util.updateQueryData(
+                            'getProjectWhiteboardElements',
+                            projectId,
+                            (draft) => {
+                                elementIds.forEach((elementId) => {
+                                    const index = draft.findIndex(
+                                        (element) => element.id === elementId,
+                                    )
+
+                                    if (index !== -1) {
+                                        draft.splice(index, 1)
+                                    }
+                                })
+                            },
                         ),
                     )
                 } catch {
@@ -261,8 +337,10 @@ export const {
     useGetProjectWhiteboardQuery,
     useGetProjectWhiteboardElementsQuery,
     useCreateProjectWhiteboardElementMutation,
+    useCreateProjectWhiteboardElementsBulkMutation,
     useUpdateProjectWhiteboardElementMutation,
     useDeleteProjectWhiteboardElementMutation,
+    useDeleteProjectWhiteboardElementsBulkMutation,
     useWatchWhiteboardCursorQuery,
     useWatchWhiteboardEventsQuery,
 } = whiteboardApi
