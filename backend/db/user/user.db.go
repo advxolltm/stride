@@ -238,7 +238,15 @@ func (s *userStore) UpdateUserProjectSkills(ctx context.Context, userID uuid.UUI
 }
 
 func (s *userStore) SetWorkingHours(ctx context.Context, projID uuid.UUID, workingHors int, userID uuid.UUID) (*models.ProjectMember, error) {
-	member := models.ProjectMember{UserID: userID, ProjectID: projID}
+	var member models.ProjectMember
+	err := s.db.WithContext(ctx).
+		Where("user_id = ? AND project_id = ?", userID, projID).
+		First(&member).Error
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to find project member: %w", err)
+	}
+
 	result := s.db.WithContext(ctx).Preload("User").Model(&member).Where("user_id = ? AND project_id = ?", userID, projID).Update("working_hours", workingHors)
 
 	if result.Error != nil {
@@ -247,6 +255,7 @@ func (s *userStore) SetWorkingHours(ctx context.Context, projID uuid.UUID, worki
 	if result.RowsAffected == 0 {
 		return nil, gorm.ErrRecordNotFound
 	}
+
 	return &member, nil
 }
 
