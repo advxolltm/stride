@@ -56,6 +56,7 @@ describe('scheduler mappers', () => {
             id: 'task-1',
             title: 'Write tests',
             status: 'todo',
+            startDate: null,
             expectedDurationHours: 5,
             statusLabel: 'To Do',
         })
