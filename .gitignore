@@ -23,6 +23,8 @@ frontend/.nuxt/
 frontend/coverage/
 frontend/.eslintcache
 frontend/*.tsbuildinfo
+frontend/playwright-report/
+frontend/test-results/
 
 *.log
 npm-debug.log*
