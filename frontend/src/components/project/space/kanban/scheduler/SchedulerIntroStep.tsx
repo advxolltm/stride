@@ -7,6 +7,7 @@ interface SchedulerIntroStepProps {
     schedulableMemberCount: number
     skippedMemberCount: number
     estimatedTaskCount: number
+    startDateTaskCount: number
     onCancel: () => void
     onRun: () => void
 }
@@ -16,6 +17,7 @@ export function SchedulerIntroStep({
     schedulableMemberCount,
     skippedMemberCount,
     estimatedTaskCount,
+    startDateTaskCount,
     onCancel,
     onRun,
 }: SchedulerIntroStepProps) {
@@ -23,13 +25,20 @@ export function SchedulerIntroStep({
     const hasTasks = taskCount > 0
     const hasSchedulableMembers = schedulableMemberCount > 0
     const hasEstimatedTasks = estimatedTaskCount > 0
-    const canRun = hasTasks && hasSchedulableMembers && hasEstimatedTasks
+    const hasStartDateTasks = startDateTaskCount > 0
+    const canRun =
+        hasTasks &&
+        hasSchedulableMembers &&
+        hasEstimatedTasks &&
+        hasStartDateTasks
     const validationMessage = !hasTasks
         ? t('tasks.scheduler.intro.noTasks')
         : !hasSchedulableMembers
           ? t('tasks.scheduler.intro.noMembers')
           : !hasEstimatedTasks
             ? t('tasks.scheduler.intro.noEstimatedTasks')
+            : !hasStartDateTasks
+              ? t('tasks.scheduler.intro.noStartDates')
           : null
 
     const description = canRun

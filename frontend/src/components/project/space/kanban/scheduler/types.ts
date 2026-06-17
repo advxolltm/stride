@@ -15,6 +15,7 @@ export interface SchedulerTaskOption {
     title: string
     status: TaskStatus
     statusLabel: string
+    startDate: string | null
     expectedDurationHours: number | null
 }
 

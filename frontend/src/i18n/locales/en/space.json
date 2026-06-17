@@ -52,6 +52,7 @@
         "noTasks": "Add at least one open task before running the scheduler.",
         "noMembers": "Add working hours for at least one team member before running the scheduler.",
         "noEstimatedTasks": "Add an estimated time to at least one open task before running the scheduler.",
+        "noStartDates": "Add a start date to at least one open task before running the scheduler.",
         "ready_one": "The scheduler will distribute {{taskCount}} open tasks across {{count}} available team member based on workload. You'll be able to review and adjust before confirming.",
         "ready_other": "The scheduler will distribute {{taskCount}} open tasks across {{count}} available team members based on workload. You'll be able to review and adjust before confirming.",
         "skippedMembers_one": "{{count}} team member has 0 available hours and will be skipped.",

@@ -144,6 +144,10 @@ export function KanbanBoard() {
             ).length,
         [schedulerTasks],
     )
+    const startDatedSchedulerTaskCount = useMemo(
+        () => schedulerTasks.filter((task) => Boolean(task.startDate)).length,
+        [schedulerTasks],
+    )
 
     const schedulerMembers = useMemo<SchedulerMemberOption[]>(
         () => members.map(mapProjectMemberToSchedulerMemberOption),
@@ -170,6 +174,11 @@ export function KanbanBoard() {
 
         if (estimatedSchedulerTaskCount === 0) {
             toast.info(t('tasks.scheduler.intro.noEstimatedTasks'))
+            return []
+        }
+
+        if (startDatedSchedulerTaskCount === 0) {
+            toast.info(t('tasks.scheduler.intro.noStartDates'))
             return []
         }
 
@@ -457,6 +466,7 @@ export function KanbanBoard() {
                 schedulableMemberCount={schedulableSchedulerMembers.length}
                 skippedMemberCount={skippedSchedulerMemberCount}
                 estimatedTaskCount={estimatedSchedulerTaskCount}
+                startDateTaskCount={startDatedSchedulerTaskCount}
                 onRun={handleSchedulerRun}
                 onConfirm={handleSchedulerConfirm}
             />

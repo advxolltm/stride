@@ -21,6 +21,7 @@ export function mapTaskToSchedulerTaskOption(
         id: task.id,
         title: task.title,
         status: task.status,
+        startDate: task.startDate,
         expectedDurationHours: task.expectedDurationHours,
         statusLabel:
             statusOptions.find((option) => option.id === task.status)?.label ??

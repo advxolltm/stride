@@ -53,6 +53,7 @@
         "noTasks": "Fuegen Sie mindestens eine offene Aufgabe hinzu, bevor Sie den Scheduler starten.",
         "noMembers": "Hinterlegen Sie fuer mindestens ein Teammitglied Arbeitsstunden, bevor Sie den Scheduler starten.",
         "noEstimatedTasks": "Fuegen Sie mindestens einer offenen Aufgabe eine geschaetzte Zeit hinzu, bevor Sie den Scheduler starten.",
+        "noStartDates": "Fuegen Sie mindestens einer offenen Aufgabe ein Startdatum hinzu, bevor Sie den Scheduler starten.",
         "ready_one": "Der Scheduler verteilt {{taskCount}} offene Aufgaben anhand der Auslastung auf {{count}} verfuegbares Teammitglied. Sie koennen die Zuweisungen vor dem Bestaetigen noch pruefen und anpassen.",
         "ready_other": "Der Scheduler verteilt {{taskCount}} offene Aufgaben anhand der Auslastung auf {{count}} verfuegbare Teammitglieder. Sie koennen die Zuweisungen vor dem Bestaetigen noch pruefen und anpassen.",
         "skippedMembers_one": "{{count}} Teammitglied hat 0 verfuegbare Stunden und wird uebersprungen.",

@@ -1,5 +1,5 @@
 import { Modal } from '@heroui/react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type {
     SchedulerAssignment,
     SchedulerMemberOption,
@@ -19,6 +19,7 @@ interface SchedulerFlowModalProps {
     schedulableMemberCount: number
     skippedMemberCount: number
     estimatedTaskCount: number
+    startDateTaskCount: number
     onRun: () => Promise<SchedulerAssignment[]>
     onConfirm: (assignments: SchedulerAssignment[]) => Promise<void>
 }
@@ -31,14 +32,27 @@ export function SchedulerFlowModal({
     schedulableMemberCount,
     skippedMemberCount,
     estimatedTaskCount,
+    startDateTaskCount,
     onRun,
     onConfirm,
 }: SchedulerFlowModalProps) {
     const [step, setStep] = useState<SchedulerStep>('intro')
     const [assignments, setAssignments] = useState<SchedulerAssignment[]>([])
     const [isConfirming, setIsConfirming] = useState(false)
+    const hasStartedRunRef = useRef(false)
+    const onRunRef = useRef(onRun)
+    const onOpenChangeRef = useRef(onOpenChange)
+
+    useEffect(() => {
+        onRunRef.current = onRun
+    }, [onRun])
+
+    useEffect(() => {
+        onOpenChangeRef.current = onOpenChange
+    }, [onOpenChange])
 
     function resetFlowState() {
+        hasStartedRunRef.current = false
         setStep('intro')
         setAssignments([])
         setIsConfirming(false)
@@ -53,13 +67,14 @@ export function SchedulerFlowModal({
     }
 
     useEffect(() => {
-        if (step !== 'loading') {
+        if (step !== 'loading' || hasStartedRunRef.current) {
             return
         }
 
+        hasStartedRunRef.current = true
         let isMounted = true
 
-        void onRun()
+        void onRunRef.current()
             .then((nextAssignments) => {
                 if (!isMounted) return
 
@@ -70,13 +85,13 @@ export function SchedulerFlowModal({
                 if (!isMounted) return
 
                 resetFlowState()
-                onOpenChange(false)
+                onOpenChangeRef.current(false)
             })
 
         return () => {
             isMounted = false
         }
-    }, [onOpenChange, onRun, step])
+    }, [step])
 
     function handleAssignmentChange(taskId: string, userId: string) {
         setAssignments((current) =>
@@ -110,6 +125,7 @@ export function SchedulerFlowModal({
                                 schedulableMemberCount={schedulableMemberCount}
                                 skippedMemberCount={skippedMemberCount}
                                 estimatedTaskCount={estimatedTaskCount}
+                                startDateTaskCount={startDateTaskCount}
                                 onCancel={() => handleOpenChange(false)}
                                 onRun={() => setStep('loading')}
                             />
