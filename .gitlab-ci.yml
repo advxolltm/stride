@@ -37,11 +37,7 @@ workflow:
 
 build-backend:
   stage: build
-<<<<<<< HEAD
-  image: golang:1.26.4
-=======
   image: golang:1.26.4-bookworm
->>>>>>> origin/master
   before_script:
     - cd backend
   script:
@@ -86,11 +82,7 @@ build-frontend:
 test-backend:
   stage: test
   # Run the job natively in Go, rather than installing Go inside a DB image
-<<<<<<< HEAD
-  image: golang:1.26.4-alpine
-=======
   image: golang:1.26.4-bookworm
->>>>>>> origin/master
   services:
     # Use the non-root Bitnami image to bypass the CI environment's user restrictions
     - name: bitnami/postgresql:latest

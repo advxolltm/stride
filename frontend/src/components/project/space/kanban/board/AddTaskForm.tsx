@@ -62,7 +62,9 @@ export function AddTaskForm({
                 <Button
                     type="submit"
                     size="sm"
-                    isDisabled={!title.trim() || isCreatingTask}
+                    isDisabled={
+                        !title.trim() || isCreatingTask
+                    }
                 >
                     {t('tasks.actions.createTask')}
                 </Button>

@@ -4,6 +4,7 @@ import type { Task } from '../../../../../../store/features/tasks/task.types'
 import { TaskAssigneeField } from './fields/TaskAssigneeField'
 import { TaskDescriptionField } from './fields/TaskDescriptionField'
 import { TaskDueDateField } from './fields/TaskDueDateField'
+import { TaskExpectedDurationField } from './fields/TaskExpectedDurationField'
 import { TaskSkillsField } from './fields/TaskSkillsField'
 import { TaskStatusField } from './fields/TaskStatusField'
 import { TaskTitleField } from './fields/TaskTitleField'
@@ -40,6 +41,7 @@ export function TaskEditDrawer({
                                 task={task}
                             />
                             <TaskDescriptionField task={task} />
+                            <TaskExpectedDurationField task={task} />
                             <TaskStartDateField
                                 key={`${task.id}:${"startDate"}`}
                                 task={task}
