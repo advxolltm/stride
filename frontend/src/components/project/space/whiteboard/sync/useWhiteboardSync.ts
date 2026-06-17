@@ -31,6 +31,8 @@ type PendingBulkUpdateElement = {
     snapshot: string
 }
 
+const LIVE_UPDATE_THROTTLE_MS = 50
+
 type WhiteboardSyncState = {
     excalidrawToBackendElementId: Map<string, string>
     pendingCreateElementIds: Set<string>
@@ -66,7 +68,8 @@ export const useWhiteboardSync = ({
     liveElementsById,
 }: UseWhiteboardSyncArgs) => {
     const syncStateRef = useRef<WhiteboardSyncState>(createWhiteboardSyncState())
-    const liveFrameRef = useRef<number | null>(null)
+    const liveThrottleTimeoutRef = useRef<number | null>(null)
+    const lastLiveFlushTimeRef = useRef<number>(0)
     const deleteFlushTimeoutRef = useRef<number | null>(null)
     const isDeleteFlushInFlightRef = useRef(false)
     const [createProjectWhiteboardElement] =
@@ -85,7 +88,6 @@ export const useWhiteboardSync = ({
 
     const flushPendingLiveUpdates = () => {
         const syncState = syncStateRef.current
-        liveFrameRef.current = null
         if (!projectId || syncState.pendingLiveElements.size === 0) {
             return
         }
@@ -123,7 +125,7 @@ export const useWhiteboardSync = ({
         const previousSnapshot = pendingLiveElement
             ? serializeElementSnapshot(pendingLiveElement.props)
             : syncState.lastSentLiveSnapshots.get(element.id) ??
-              syncState.persistedElementSnapshots.get(element.id)
+            syncState.persistedElementSnapshots.get(element.id)
 
         if (previousSnapshot === nextSnapshot) {
             return
@@ -137,13 +139,28 @@ export const useWhiteboardSync = ({
         })
         syncState.touchedLiveElementIds.add(element.id)
 
-        if (liveFrameRef.current !== null) {
+        if (liveThrottleTimeoutRef.current !== null) {
             return
         }
 
-        liveFrameRef.current = window.requestAnimationFrame(
-            flushPendingLiveUpdates,
-        )
+        const elapsed = Date.now() - lastLiveFlushTimeRef.current
+        const waitMs =
+            elapsed >= LIVE_UPDATE_THROTTLE_MS
+                ? LIVE_UPDATE_THROTTLE_MS
+                : LIVE_UPDATE_THROTTLE_MS - elapsed
+
+        if (elapsed >= LIVE_UPDATE_THROTTLE_MS) {
+            flushPendingLiveUpdates()
+            lastLiveFlushTimeRef.current = Date.now()
+        }
+
+        liveThrottleTimeoutRef.current = window.setTimeout(() => {
+            if (syncStateRef.current.pendingLiveElements.size > 0) {
+                flushPendingLiveUpdates()
+            }
+            lastLiveFlushTimeRef.current = Date.now()
+            liveThrottleTimeoutRef.current = null
+        }, waitMs)
     }
 
     useEffect(() => {
@@ -233,8 +250,11 @@ export const useWhiteboardSync = ({
     useEffect(() => {
         return () => {
             const syncState = syncStateRef.current
-            if (liveFrameRef.current !== null) {
-                window.cancelAnimationFrame(liveFrameRef.current)
+            if (liveThrottleTimeoutRef.current !== null) {
+                window.clearTimeout(liveThrottleTimeoutRef.current)
+                liveThrottleTimeoutRef.current = null
+                flushPendingLiveUpdates()
+                lastLiveFlushTimeRef.current = Date.now()
             }
             if (deleteFlushTimeoutRef.current !== null) {
                 window.clearTimeout(deleteFlushTimeoutRef.current)
@@ -273,7 +293,8 @@ export const useWhiteboardSync = ({
         }
 
         const syncState = syncStateRef.current
-        const backendElementId = syncState.excalidrawToBackendElementId.get(elementId)
+        const backendElementId =
+            syncState.excalidrawToBackendElementId.get(elementId)
 
         syncState.pendingCreateElementIds.delete(elementId)
         syncState.pendingUpdateElementIds.delete(elementId)
@@ -322,9 +343,11 @@ export const useWhiteboardSync = ({
             return
         }
 
-        if (liveFrameRef.current !== null) {
-            window.cancelAnimationFrame(liveFrameRef.current)
+        if (liveThrottleTimeoutRef.current !== null) {
+            window.clearTimeout(liveThrottleTimeoutRef.current)
+            liveThrottleTimeoutRef.current = null
             flushPendingLiveUpdates()
+            lastLiveFlushTimeRef.current = Date.now()
         }
 
         const updatedElements: PendingBulkUpdateElement[] = []
@@ -378,7 +401,7 @@ export const useWhiteboardSync = ({
             if (
                 syncState.pendingUpdateElementIds.has(element.id) ||
                 syncState.persistedElementSnapshots.get(element.id) ===
-                    nextSnapshot
+                nextSnapshot
             ) {
                 clearLiveElement(element.id)
                 return
