@@ -128,19 +128,22 @@ export const useWhiteboardSync = ({
     const sendSelectionUpdate = useCallback(
         (elementIds: readonly string[]) => {
             if (!projectId || isReadOnly) {
-                return
+                return false
             }
 
             const sortedElementIds = [...elementIds].sort()
             const nextSnapshot = sortedElementIds.join('|')
             if (lastSelectionSnapshotRef.current === nextSnapshot) {
-                return
+                return true
             }
 
-            lastSelectionSnapshotRef.current = nextSnapshot
-            sendWhiteboardSelectionUpdate(projectId, {
+            const sent = sendWhiteboardSelectionUpdate(projectId, {
                 elementIds: sortedElementIds,
             })
+            if (sent) {
+                lastSelectionSnapshotRef.current = nextSnapshot
+            }
+            return sent
         },
         [isReadOnly, projectId],
     )

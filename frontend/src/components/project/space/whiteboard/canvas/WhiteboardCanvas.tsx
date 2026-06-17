@@ -217,8 +217,10 @@ export const WhiteboardCanvas = forwardRef<
         ).sort()
         const nextSelectionSignature = selectedElementIds.join('|')
         if (lastSelectionSignatureRef.current !== nextSelectionSignature) {
-            lastSelectionSignatureRef.current = nextSelectionSignature
-            onSelectionChange?.(selectedElementIds)
+            const sent = onSelectionChange?.(selectedElementIds)
+            if (sent !== false) {
+                lastSelectionSignatureRef.current = nextSelectionSignature
+            }
         }
         onElementsSelectedChanged?.(selectedElements, selectedGroupedElements, Object.keys(appState.selectedGroupIds));
     }

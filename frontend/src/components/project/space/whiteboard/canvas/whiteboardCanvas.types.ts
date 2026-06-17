@@ -25,6 +25,6 @@ export interface WhiteboardCanvasProps {
     onChange?: (elements: readonly OrderedExcalidrawElement[]) => void
     onPointerUp?: (elements: readonly OrderedExcalidrawElement[]) => void
     onCursorChange?: (message: WhiteboardCursorClientMessage) => void
-    onSelectionChange?: (elementIds: readonly string[]) => void
+    onSelectionChange?: (elementIds: readonly string[]) => boolean | void
 	onElementsSelectedChanged?: (elements: readonly Ordered<NonDeletedExcalidrawElement>[], groupedElements: readonly Ordered<NonDeletedExcalidrawElement>[], selectedOuterGroupIds: readonly string[]) => void
 }
