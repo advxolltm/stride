@@ -84,7 +84,8 @@ func isWhiteboardWSEventType(t routes.WSMessageType) bool {
 		routes.WhiteboardElementDelete,
 		routes.WhiteboardElementLiveUpdate,
 		routes.WhiteboardElementLiveClear,
-		routes.WhiteboardElementRollback:
+		routes.WhiteboardElementRollback,
+		routes.WhiteboardElementSelectionUpdate:
 		return true
 	default:
 		return false

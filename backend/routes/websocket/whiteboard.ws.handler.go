@@ -74,6 +74,10 @@ type whiteboardElementLiveClearWSUpdate struct {
 	ElementID string `json:"elementId"`
 }
 
+type whiteboardElementSelectionWSUpdate struct {
+	ElementIDs []string `json:"elementIds"`
+}
+
 // whiteboardLiveCoalesceInterval bounds how often a single connection may
 // publish a LiveUpdate for the same element to Redis. Multiple frames received
 // within one window for the same elementId are collapsed into the most recent
@@ -239,6 +243,19 @@ func parseWhiteboardLiveClientMessage(
 		}
 
 		return message.Type, clientID, operationID, liveClear, true
+	case routes.WhiteboardElementSelectionUpdate:
+		var selectionUpdate whiteboardElementSelectionWSUpdate
+		if err := json.Unmarshal(message.Payload, &selectionUpdate); err != nil {
+			return 0, "", "", nil, false
+		}
+
+		for _, elementID := range selectionUpdate.ElementIDs {
+			if elementID == "" {
+				return 0, "", "", nil, false
+			}
+		}
+
+		return message.Type, clientID, operationID, selectionUpdate, true
 	default:
 		return 0, "", "", nil, false
 	}
@@ -298,6 +315,8 @@ func liveItemElementID(payload any) string {
 		return v.ElementID
 	case whiteboardElementLiveClearWSUpdate:
 		return v.ElementID
+	case whiteboardElementSelectionWSUpdate:
+		return "selection"
 	default:
 		return ""
 	}
@@ -362,7 +381,8 @@ func (h whiteboardWSRouteHandler) coalesceWhiteboardLiveUpdates(
 				}
 				continue
 			}
-			// LiveUpdate: keep only the most recent frame per element.
+			// LiveUpdate and SelectionUpdate: keep only the most recent frame
+			// per coalescing key.
 			if item.elementID == "" {
 				if err := publish(item); err != nil {
 					errCh <- err

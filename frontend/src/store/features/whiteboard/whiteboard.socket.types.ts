@@ -74,6 +74,14 @@ export type WhiteboardLiveClearEventPayload = z.infer<
     typeof WhiteboardLiveClearEventPayloadSchema
 >
 
+export const WhiteboardSelectionEventPayloadSchema = z.object({
+    elementIds: z.array(z.string()),
+})
+
+export type WhiteboardSelectionEventPayload = z.infer<
+    typeof WhiteboardSelectionEventPayloadSchema
+>
+
 export type WhiteboardLiveClientMessageMeta = {
     clientId: string
     operationId?: string
@@ -96,9 +104,16 @@ export type WhiteboardLiveClearClientMessage = {
     payload: WhiteboardLiveClearEventPayload
 }
 
+export type WhiteboardSelectionClientMessage = {
+    type: typeof WSMessageType.WhiteboardElementSelectionUpdate
+    meta: WhiteboardLiveClientMessageMeta
+    payload: WhiteboardSelectionEventPayload
+}
+
 export type WhiteboardLiveClientMessage =
     | WhiteboardLiveUpdateClientMessage
     | WhiteboardLiveClearClientMessage
+    | WhiteboardSelectionClientMessage
 
 export type WhiteboardCreateEventMessage = {
     type: typeof WSMessageType.WhiteboardElementCreate
@@ -130,6 +145,12 @@ export type WhiteboardLiveClearEventMessage = {
     payload: WhiteboardLiveClearEventPayload
 }
 
+export type WhiteboardSelectionEventMessage = {
+    type: typeof WSMessageType.WhiteboardElementSelectionUpdate
+    meta?: WSMessageMeta
+    payload: WhiteboardSelectionEventPayload
+}
+
 export type WhiteboardEventMessage =
     | WhiteboardCreateEventMessage
     | WhiteboardUpdateEventMessage
@@ -138,6 +159,7 @@ export type WhiteboardEventMessage =
 export type WhiteboardLiveEventMessage =
     | WhiteboardLiveUpdateEventMessage
     | WhiteboardLiveClearEventMessage
+    | WhiteboardSelectionEventMessage
 
 export type WhiteboardSocketEventMessage =
     | WhiteboardEventMessage
@@ -168,5 +190,10 @@ export const WhiteboardSocketEventMessageSchema = z.discriminatedUnion('type', [
         type: z.literal(WSMessageType.WhiteboardElementLiveClear),
         meta: WSMessageMetaSchema.optional(),
         payload: WhiteboardLiveClearEventPayloadSchema,
+    }),
+    z.object({
+        type: z.literal(WSMessageType.WhiteboardElementSelectionUpdate),
+        meta: WSMessageMetaSchema.optional(),
+        payload: WhiteboardSelectionEventPayloadSchema,
     }),
 ])

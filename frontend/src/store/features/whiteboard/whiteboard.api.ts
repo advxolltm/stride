@@ -21,6 +21,7 @@ import {
     applyPersistedElementToCache,
     patchWhiteboardElementsCacheFromEvent,
     patchWhiteboardLiveOverlayFromEvent,
+    patchWhiteboardRemoteSelectionsFromEvent,
     removePersistedElementFromCache,
 } from './whiteboard.cache'
 import {
@@ -31,6 +32,7 @@ import {
 import {
     createWhiteboardEventsSocketState,
     sendWhiteboardLiveClear,
+    sendWhiteboardSelectionUpdate,
     sendWhiteboardLiveUpdate,
     watchWhiteboardEventsSocket,
 } from './whiteboard.eventsSocket'
@@ -361,6 +363,10 @@ export const whiteboardApi = baseApi.injectEndpoints({
                                 message,
                                 elementsResult.data,
                             )
+                            patchWhiteboardRemoteSelectionsFromEvent(
+                                draft.remoteSelectionClientIdsByElementId,
+                                message,
+                            )
                         })
                     },
                 })
@@ -372,6 +378,7 @@ export const whiteboardApi = baseApi.injectEndpoints({
 export {
     sendWhiteboardCursor,
     sendWhiteboardLiveClear,
+    sendWhiteboardSelectionUpdate,
     sendWhiteboardLiveUpdate,
 }
 

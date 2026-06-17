@@ -18,11 +18,13 @@ export interface WhiteboardCanvasProps {
     elements: readonly OrderedExcalidrawElement[]
     focusTarget?: WhiteboardFocusTarget | null
     presence?: readonly WhiteboardCursorPresence[]
+    remoteSelectionClientIdsByElementId?: Record<string, string[]>
     viewportStorageKey?: string
     viewModeEnabled?: boolean
 	taskPreviewModeEnabled?: boolean
     onChange?: (elements: readonly OrderedExcalidrawElement[]) => void
     onPointerUp?: (elements: readonly OrderedExcalidrawElement[]) => void
     onCursorChange?: (message: WhiteboardCursorClientMessage) => void
+    onSelectionChange?: (elementIds: readonly string[]) => void
 	onElementsSelectedChanged?: (elements: readonly Ordered<NonDeletedExcalidrawElement>[], groupedElements: readonly Ordered<NonDeletedExcalidrawElement>[], selectedOuterGroupIds: readonly string[]) => void
 }

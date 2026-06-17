@@ -3,6 +3,7 @@ import { isInvisiblySmallElement } from '@excalidraw/excalidraw'
 import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types'
 import {
     sendWhiteboardLiveClear,
+    sendWhiteboardSelectionUpdate,
     sendWhiteboardLiveUpdate,
     useCreateProjectWhiteboardElementMutation,
     useDeleteProjectWhiteboardElementsBulkMutation,
@@ -70,6 +71,7 @@ export const useWhiteboardSync = ({
     const syncStateRef = useRef<WhiteboardSyncState>(createWhiteboardSyncState())
     const liveThrottleTimeoutRef = useRef<number | null>(null)
     const lastLiveFlushTimeRef = useRef<number>(0)
+    const lastSelectionSnapshotRef = useRef('')
     const deleteFlushTimeoutRef = useRef<number | null>(null)
     const isDeleteFlushInFlightRef = useRef(false)
     const [createProjectWhiteboardElement] =
@@ -84,6 +86,7 @@ export const useWhiteboardSync = ({
 
     useEffect(() => {
         syncStateRef.current = createWhiteboardSyncState()
+        lastSelectionSnapshotRef.current = ''
     }, [projectId])
 
     const flushPendingLiveUpdates = () => {
@@ -116,6 +119,26 @@ export const useWhiteboardSync = ({
             syncState.touchedLiveElementIds.delete(elementId)
         },
         [projectId],
+    )
+
+    const sendSelectionUpdate = useCallback(
+        (elementIds: readonly string[]) => {
+            if (!projectId || isReadOnly) {
+                return
+            }
+
+            const sortedElementIds = [...elementIds].sort()
+            const nextSnapshot = sortedElementIds.join('|')
+            if (lastSelectionSnapshotRef.current === nextSnapshot) {
+                return
+            }
+
+            lastSelectionSnapshotRef.current = nextSnapshot
+            sendWhiteboardSelectionUpdate(projectId, {
+                elementIds: sortedElementIds,
+            })
+        },
+        [isReadOnly, projectId],
     )
 
     const queueLiveUpdate = (element: ExcalidrawElement) => {
@@ -263,6 +286,12 @@ export const useWhiteboardSync = ({
             flushPendingDeletes()
 
             if (projectId) {
+                if (!isReadOnly && lastSelectionSnapshotRef.current) {
+                    sendWhiteboardSelectionUpdate(projectId, {
+                        elementIds: [],
+                    })
+                    lastSelectionSnapshotRef.current = ''
+                }
                 Array.from(syncState.touchedLiveElementIds).forEach(
                     (elementId) => {
                         sendWhiteboardLiveClear(projectId, elementId)
@@ -274,7 +303,7 @@ export const useWhiteboardSync = ({
                 clearCursor()
             }
         }
-    }, [clearCursor, flushPendingDeletes, projectId])
+    }, [clearCursor, flushPendingDeletes, isReadOnly, projectId])
 
     const schedulePendingDeleteFlush = () => {
         if (deleteFlushTimeoutRef.current !== null) {
@@ -452,6 +481,7 @@ export const useWhiteboardSync = ({
         excalidrawElements,
         handleCanvasChange,
         handleCanvasPointerUp,
+        sendSelectionUpdate,
         queueCursorUpdate,
     }
 }

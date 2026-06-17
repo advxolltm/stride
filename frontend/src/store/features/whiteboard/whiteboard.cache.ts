@@ -9,6 +9,7 @@ import type {
     WhiteboardLiveUpdateEventPayload,
     WhiteboardSocketEventMessage,
 } from './whiteboard.socket.types'
+import type { WhiteboardEventsSocketState } from './whiteboard.ui.types'
 
 export const applyPersistedElementToCache = (
     draft: WhiteboardElement[],
@@ -57,7 +58,8 @@ export const isPersistedWhiteboardEventMessage = (
     message: WhiteboardSocketEventMessage,
 ): message is WhiteboardEventMessage =>
     message.type !== WSMessageType.WhiteboardElementLiveUpdate &&
-    message.type !== WSMessageType.WhiteboardElementLiveClear
+    message.type !== WSMessageType.WhiteboardElementLiveClear &&
+    message.type !== WSMessageType.WhiteboardElementSelectionUpdate
 
 export const resolveLiveElementIDToClear = (
     message: WhiteboardEventMessage,
@@ -97,6 +99,45 @@ export const patchWhiteboardLiveOverlayFromEvent = (
     applyWhiteboardLiveEventToOverlay(liveElementsById, message)
 }
 
+export const patchWhiteboardRemoteSelectionsFromEvent = (
+    remoteSelectionClientIdsByElementId: WhiteboardEventsSocketState['remoteSelectionClientIdsByElementId'],
+    message: WhiteboardSocketEventMessage,
+) => {
+    if (message.type !== WSMessageType.WhiteboardElementSelectionUpdate) {
+        return
+    }
+
+    const clientId = message.meta?.clientId
+    if (!clientId) {
+        return
+    }
+
+    Object.entries(remoteSelectionClientIdsByElementId).forEach(
+        ([elementId, clientIds]) => {
+            const remainingClientIds = clientIds.filter(
+                (existingClientId) => existingClientId !== clientId,
+            )
+            if (remainingClientIds.length === 0) {
+                delete remoteSelectionClientIdsByElementId[elementId]
+                return
+            }
+            remoteSelectionClientIdsByElementId[elementId] =
+                remainingClientIds
+        },
+    )
+
+    message.payload.elementIds.forEach((elementId) => {
+        const clientIds =
+            remoteSelectionClientIdsByElementId[elementId] ?? []
+        if (!clientIds.includes(clientId)) {
+            remoteSelectionClientIdsByElementId[elementId] = [
+                ...clientIds,
+                clientId,
+            ]
+        }
+    })
+}
+
 const applyWhiteboardLiveEventToOverlay = (
     liveElementsById: Record<string, WhiteboardLiveUpdateEventPayload>,
     message: WhiteboardLiveEventMessage,
@@ -107,6 +148,8 @@ const applyWhiteboardLiveEventToOverlay = (
             return
         case WSMessageType.WhiteboardElementLiveClear:
             delete liveElementsById[message.payload.elementId]
+            return
+        case WSMessageType.WhiteboardElementSelectionUpdate:
             return
         default:
             return

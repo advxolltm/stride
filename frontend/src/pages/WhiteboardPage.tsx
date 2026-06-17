@@ -49,6 +49,7 @@ import { createAndApplyNewLinkTaskGroup, searchSelectedTaskRegionID } from '../s
 
 const emptyLiveElementsById: Record<string, WhiteboardLiveUpdateEventPayload> =
     {}
+const emptyRemoteSelectionClientIdsByElementId: Record<string, string[]> = {}
 
 const DOCK_MEDIA_QUERY = '(min-width: 1280px)'
 
@@ -106,15 +107,21 @@ export function WhiteboardPage() {
         {
             selectFromResult: ({ data }) => ({
                 liveElementsById: data?.liveElementsById ?? emptyLiveElementsById,
+                remoteSelectionClientIdsByElementId:
+                    data?.remoteSelectionClientIdsByElementId ??
+                    emptyRemoteSelectionClientIdsByElementId,
             }),
         },
     )
     const liveElementsById = whiteboardEventsWS.liveElementsById
+    const remoteSelectionClientIdsByElementId =
+        whiteboardEventsWS.remoteSelectionClientIdsByElementId
     const isArchived = isProjectArchived(project)
     const {
         excalidrawElements,
         handleCanvasChange,
         handleCanvasPointerUp,
+        sendSelectionUpdate,
         queueCursorUpdate,
     } = useWhiteboardSync({
         projectId,
@@ -442,6 +449,9 @@ export function WhiteboardPage() {
                         elements={excalidrawElements}
                         focusTarget={focusTarget}
                         presence={remotePresence}
+                        remoteSelectionClientIdsByElementId={
+                            remoteSelectionClientIdsByElementId
+                        }
                         viewportStorageKey={
                             projectId
                                 ? `whiteboard:${projectId}:viewport`
@@ -451,6 +461,7 @@ export function WhiteboardPage() {
                         onChange={handleCanvasChange}
                         onPointerUp={handleCanvasPointerUp}
                         onCursorChange={queueCursorUpdate}
+                        onSelectionChange={sendSelectionUpdate}
                         onElementsSelectedChanged={handleElementsSelected}
                     />
                 </div>
