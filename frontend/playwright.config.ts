@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
+const authFile = 'e2e/.auth/user.json'
+
 export default defineConfig({
     testDir: './e2e',
     fullyParallel: true,
@@ -7,20 +9,31 @@ export default defineConfig({
     retries: process.env.CI ? 2 : 0,
     reporter: process.env.CI ? [['html'], ['github']] : [['list'], ['html']],
     use: {
-        baseURL: 'http://127.0.0.1:3000',
+        baseURL: 'http://localhost:8080',
         trace: 'on-first-retry',
         screenshot: 'only-on-failure',
     },
-    webServer: {
-        command: 'npm run dev -- --host 127.0.0.1 --port 3000',
-        url: 'http://127.0.0.1:3000',
-        reuseExistingServer: !process.env.CI,
-        timeout: 120 * 1000,
-    },
     projects: [
         {
-            name: 'chromium',
+            name: 'setup',
+            testMatch: /auth\.setup\.ts/,
+        },
+        {
+            name: 'chromium-public',
             use: { ...devices['Desktop Chrome'] },
+            testIgnore: [
+                /auth\.setup\.ts/,
+                /project-management\.spec\.ts/,
+            ],
+        },
+        {
+            name: 'chromium-authenticated',
+            dependencies: ['setup'],
+            testMatch: /project-management\.spec\.ts/,
+            use: {
+                ...devices['Desktop Chrome'],
+                storageState: authFile,
+            },
         },
     ],
 })

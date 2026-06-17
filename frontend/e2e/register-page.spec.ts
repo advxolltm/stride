@@ -1,41 +1,8 @@
-import { expect, test, type Page } from '@playwright/test'
-
-const credentials = {
-    username: 'strideuser',
-    email: 'stride@test.com',
-    password: 'StridePass123!',
-}
-
-const signedOutSession = async (page: Page) => {
-    await page.route('**/api/v1/auth/session', async (route) => {
-        await route.fulfill({
-            status: 401,
-            contentType: 'application/json',
-            body: JSON.stringify({ error: 'unauthorized' }),
-        })
-    })
-}
+import { expect, test } from '@playwright/test'
+import { buildUniqueCredentials } from './helpers/auth'
 
 test('creates an account with valid registration data', async ({ page }) => {
-    await signedOutSession(page)
-
-    await page.route('**/api/v1/users', async (route) => {
-        expect(route.request().method()).toBe('POST')
-        expect(route.request().postDataJSON()).toMatchObject(credentials)
-
-        await route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify({
-                id: 'user-1',
-                username: credentials.username,
-                email: credentials.email,
-                full_name: null,
-                avatar_url: null,
-                is_superuser: false,
-            }),
-        })
-    })
+    const credentials = buildUniqueCredentials('register')
 
     await page.goto('/register')
 
@@ -51,13 +18,7 @@ test('creates an account with valid registration data', async ({ page }) => {
 })
 
 test('shows weak-password validation when registering', async ({ page }) => {
-    await signedOutSession(page)
-
-    let createUserCalled = false
-    await page.route('**/api/v1/users', async (route) => {
-        createUserCalled = true
-        await route.abort()
-    })
+    const credentials = buildUniqueCredentials('weak-password')
 
     await page.goto('/register')
 
@@ -69,5 +30,5 @@ test('shows weak-password validation when registering', async ({ page }) => {
     await expect(
         page.getByText('Password must be at least 8 characters.'),
     ).toBeVisible()
-    expect(createUserCalled).toBe(false)
+    await expect(page).toHaveURL('/register')
 })

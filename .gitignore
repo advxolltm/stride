@@ -25,6 +25,7 @@ frontend/.eslintcache
 frontend/*.tsbuildinfo
 frontend/playwright-report/
 frontend/test-results/
+frontend/e2e/.auth/
 
 *.log
 npm-debug.log*
