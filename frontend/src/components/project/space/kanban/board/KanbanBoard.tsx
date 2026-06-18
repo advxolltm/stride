@@ -40,6 +40,7 @@ import {
 } from '../scheduler/scheduler.mappers'
 import type {
     SchedulerMemberOption,
+    SchedulerPreviewResponse,
     SchedulerTaskOption,
 } from '../scheduler/types'
 import { TaskEditDrawer } from '../task/drawer/TaskEditDrawer'
@@ -73,6 +74,11 @@ function taskMatchesSearch(task: Task, query: string) {
         .toLowerCase()
 
     return searchableText.includes(query)
+}
+
+const EMPTY_SCHEDULER_PREVIEW: SchedulerPreviewResponse = {
+    newAssignments: [],
+    changedAssignments: [],
 }
 
 export function KanbanBoard() {
@@ -163,22 +169,22 @@ export function KanbanBoard() {
     async function handleSchedulerRun() {
         if (schedulerTasks.length === 0) {
             toast.info(t('tasks.scheduler.intro.noTasks'))
-            return []
+            return EMPTY_SCHEDULER_PREVIEW
         }
 
         if (schedulableSchedulerMembers.length === 0) {
             toast.info(t('tasks.scheduler.intro.noMembers'))
-            return []
+            return EMPTY_SCHEDULER_PREVIEW
         }
 
         if (estimatedSchedulerTaskCount === 0) {
             toast.info(t('tasks.scheduler.intro.noEstimatedTasks'))
-            return []
+            return EMPTY_SCHEDULER_PREVIEW
         }
 
         if (startDatedSchedulerTaskCount === 0) {
             toast.info(t('tasks.scheduler.intro.noStartDates'))
-            return []
+            return EMPTY_SCHEDULER_PREVIEW
         }
 
         try {
