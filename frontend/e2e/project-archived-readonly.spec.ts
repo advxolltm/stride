@@ -18,9 +18,10 @@ async function addTaskInColumn(
     taskName: string,
 ) {
     await page.getByRole('button', { name: 'Add Task' }).nth(columnIndex).click()
-    await page.getByLabel('Task name').fill(taskName)
-    await page.getByRole('button', { name: 'Create Task' }).click()
-    await expect(page.getByText('Task created.').first()).toBeVisible()
+    const taskNameInput = page.getByLabel('Task name')
+    await taskNameInput.fill(taskName)
+    await taskNameInput.press('Enter')
+    await expect(page.getByText(taskName, { exact: true })).toBeVisible()
 }
 
 async function sendMessage(page: Page, text: string) {
@@ -100,6 +101,25 @@ test('archived project spaces are read-only', async ({ page }) => {
     ).toHaveCount(0)
     await expect(
         page.getByRole('button', { name: 'Edit Estimated Time (hours)' }),
+    ).toHaveCount(0)
+    await page
+        .getByRole('dialog', { name: 'Task Details' })
+        .getByLabel('Close', { exact: true })
+        .click()
+    await page.getByRole('tab', { name: 'List' }).click()
+    await expect(
+        page.getByText('Archived project - read only', { exact: true }),
+    ).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Add' })).toHaveCount(0)
+    await expect(
+        page.getByRole('button', { name: 'Assign Tasks' }),
+    ).toBeDisabled()
+    await page.getByRole('button', { name: taskTitle }).click()
+    await expect(
+        page.getByRole('heading', { name: 'Task Details' }),
+    ).toBeVisible()
+    await expect(
+        page.getByRole('button', { name: 'Edit Task name' }),
     ).toHaveCount(0)
 
     await page.goto(`/project/${projectId}/whiteboard`)
