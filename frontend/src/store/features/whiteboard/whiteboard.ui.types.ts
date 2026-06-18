@@ -24,6 +24,7 @@ export type WhiteboardEventsSocketState = {
     url: string
     status: WhiteboardSocketStatus
     liveElementsById: Record<string, WhiteboardLiveUpdateEventPayload>
+    remoteSelectionClientIdsByElementId: Record<string, string[]>
     lastMessage: WhiteboardSocketEventMessage | null
     lastMessageAt: string | null
     lastError: string | null

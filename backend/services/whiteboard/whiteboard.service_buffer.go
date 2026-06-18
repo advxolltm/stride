@@ -25,6 +25,13 @@ type CreateElementInput struct {
 	ZIndex      int
 }
 
+type UpdateElementInput struct {
+	ElementID   uuid.UUID
+	ElementType *string
+	Props       *datatypes.JSON
+	ZIndex      *int
+}
+
 type BufferedElement struct {
 	Op        *whiteboard.PendingElementOperation
 	Collapsed bool
@@ -183,6 +190,66 @@ func (s *whiteboardService) BufferUpdateElement(
 	}
 
 	return s.bufferAndMark(ctx, projectID, op, now)
+}
+
+func (s *whiteboardService) BufferUpdateElements(
+	ctx context.Context,
+	projectID uuid.UUID,
+	meta ElementBufferMeta,
+	reqs []UpdateElementInput,
+) ([]models.WhiteboardElement, error) {
+	if len(reqs) == 0 {
+		return nil, nil
+	}
+	if err := ValidateUserAccessToProject(ctx, s.projectService, meta.UserID, projectID); err != nil {
+		return nil, err
+	}
+	if err := s.requirePendingStore(); err != nil {
+		return nil, err
+	}
+
+	wbID, err := s.resolveWhiteboardID(ctx, projectID)
+	if err != nil {
+		return nil, err
+	}
+
+	now := time.Now().UTC()
+	ops := make([]whiteboard.PendingElementOperation, 0, len(reqs))
+	for _, req := range reqs {
+		op := whiteboard.PendingElementOperation{
+			ProjectID:    projectID,
+			ElementID:    req.ElementID,
+			WhiteboardID: wbID,
+			Operation:    whiteboard.PendingElementUpdate,
+			ClientID:     meta.ClientID,
+			OperationID:  meta.OperationID,
+			UpdatedAt:    now,
+		}
+		if req.ElementType != nil {
+			op.ElementType = *req.ElementType
+		}
+		if req.Props != nil {
+			op.Props = *req.Props
+		}
+		if req.ZIndex != nil {
+			op.ZIndex = req.ZIndex
+		}
+		ops = append(ops, op)
+	}
+
+	stored, collapsed, err := s.bufferBatchAndMark(ctx, projectID, ops, now)
+	if err != nil {
+		return nil, err
+	}
+
+	elements := make([]models.WhiteboardElement, 0, len(stored))
+	for index, op := range stored {
+		if op == nil || collapsed[index] || op.Operation == whiteboard.PendingElementDelete {
+			continue
+		}
+		elements = append(elements, ElementFromPendingOp(*op))
+	}
+	return elements, nil
 }
 
 func (s *whiteboardService) BufferDeleteElement(

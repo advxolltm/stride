@@ -74,6 +74,10 @@ type whiteboardElementLiveClearWSUpdate struct {
 	ElementID string `json:"elementId"`
 }
 
+type whiteboardElementSelectionWSUpdate struct {
+	ElementIDs []string `json:"elementIds"`
+}
+
 // whiteboardLiveCoalesceInterval bounds how often a single connection may
 // publish a LiveUpdate for the same element to Redis. Multiple frames received
 // within one window for the same elementId are collapsed into the most recent
@@ -166,6 +170,8 @@ func (h whiteboardWSRouteHandler) connectGET(c *echo.Context) error {
 	})
 
 	var writeMu sync.Mutex
+	var selectionMu sync.Mutex
+	selectionClientID := ""
 	connCtx, connCancel := context.WithCancel(context.Background())
 	defer connCancel()
 	errCh := make(chan error, 4)
@@ -181,10 +187,41 @@ func (h whiteboardWSRouteHandler) connectGET(c *echo.Context) error {
 		session.Expiry,
 		liveItems,
 		errCh,
+		func(clientID string) {
+			selectionMu.Lock()
+			selectionClientID = clientID
+			selectionMu.Unlock()
+		},
 	)
 
 	runErr := <-errCh
 	connCancel()
+	selectionMu.Lock()
+	disconnectedClientID := selectionClientID
+	selectionMu.Unlock()
+	if disconnectedClientID != "" {
+		clearCtx, clearCancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer clearCancel()
+		if err := routes.SendWSUpdateWithMeta(
+			clearCtx,
+			h.rdb,
+			session.ProjectID,
+			routes.WhiteboardElementSelectionUpdate,
+			&routes.WSMessageMeta{
+				OriginUserID: &session.UserID,
+				ClientID:     disconnectedClientID,
+			},
+			whiteboardElementSelectionWSUpdate{ElementIDs: []string{}},
+		); err != nil {
+			slog.Debug(
+				"failed to clear whiteboard selection on disconnect",
+				"error", err,
+				"projectID", session.ProjectID,
+				"userID", session.UserID,
+				"clientID", disconnectedClientID,
+			)
+		}
+	}
 	if runErr != nil && !websocket.IsCloseError(runErr, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
 		slog.Debug("whiteboard ws closed", "error", runErr, "user-id", session.UserID)
 	}
@@ -239,6 +276,19 @@ func parseWhiteboardLiveClientMessage(
 		}
 
 		return message.Type, clientID, operationID, liveClear, true
+	case routes.WhiteboardElementSelectionUpdate:
+		var selectionUpdate whiteboardElementSelectionWSUpdate
+		if err := json.Unmarshal(message.Payload, &selectionUpdate); err != nil {
+			return 0, "", "", nil, false
+		}
+
+		for _, elementID := range selectionUpdate.ElementIDs {
+			if elementID == "" {
+				return 0, "", "", nil, false
+			}
+		}
+
+		return message.Type, clientID, operationID, selectionUpdate, true
 	default:
 		return 0, "", "", nil, false
 	}
@@ -251,6 +301,7 @@ func (h whiteboardWSRouteHandler) consumeWhiteboardLiveClientMessages(
 	expiry time.Time,
 	out chan<- whiteboardLiveItem,
 	errCh chan<- error,
+	onSelectionUpdate func(clientID string),
 ) {
 	defer close(out)
 
@@ -270,6 +321,9 @@ func (h whiteboardWSRouteHandler) consumeWhiteboardLiveClientMessages(
 		if !ok {
 			slog.Debug("ignored invalid whiteboard live client payload", "userID", userID)
 			continue
+		}
+		if messageType == routes.WhiteboardElementSelectionUpdate && clientID != "" {
+			onSelectionUpdate(clientID)
 		}
 
 		item := whiteboardLiveItem{
@@ -308,7 +362,8 @@ func liveItemElementID(payload any) string {
 // same elementId into the latest value and flushes at most once per
 // whiteboardLiveCoalesceInterval. LiveClear frames bypass coalescing and also
 // evict any pending LiveUpdate for the same element so the clear is never
-// re-overwritten by a stale frame.
+// re-overwritten by a stale frame. Selection updates also publish immediately
+// so disconnect cleanup cannot be followed by a queued stale selection.
 func (h whiteboardWSRouteHandler) coalesceWhiteboardLiveUpdates(
 	ctx context.Context,
 	projectID uuid.UUID,
@@ -356,6 +411,13 @@ func (h whiteboardWSRouteHandler) coalesceWhiteboardLiveUpdates(
 			}
 			if item.messageType == routes.WhiteboardElementLiveClear {
 				delete(pending, item.elementID)
+				if err := publish(item); err != nil {
+					errCh <- err
+					return
+				}
+				continue
+			}
+			if item.messageType == routes.WhiteboardElementSelectionUpdate {
 				if err := publish(item); err != nil {
 					errCh <- err
 					return

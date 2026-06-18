@@ -57,12 +57,14 @@ export const WhiteboardCanvas = forwardRef<
     elements,
     focusTarget,
     presence = [],
+    remoteSelectionClientIdsByElementId = {},
     viewportStorageKey,
     taskPreviewModeEnabled = false,
     viewModeEnabled = false,
     onChange,
     onPointerUp,
     onCursorChange,
+    onSelectionChange,
     onElementsSelectedChanged,
 }, ref) {
     const containerRef = useRef<HTMLDivElement | null>(null)
@@ -77,6 +79,7 @@ export const WhiteboardCanvas = forwardRef<
         useRef<readonly OrderedExcalidrawElement[]>(elements)
     const isLocallyInteractingRef = useRef(false)
     const externalSceneSignatureRef = useRef<string | null>(null)
+    const lastSelectionSignatureRef = useRef('')
 
     const sceneElements = useMemo(
         () => elements.map((element) => ({ ...element })),
@@ -84,6 +87,34 @@ export const WhiteboardCanvas = forwardRef<
     )
     const { initialAppState, updateViewport, viewport } =
         useWhiteboardViewport(viewportStorageKey)
+
+    const remoteSelectionHighlights = useMemo(
+        () =>
+            elements.flatMap((element) => {
+                if (
+                    element.isDeleted ||
+                    !remoteSelectionClientIdsByElementId[element.id]?.length
+                ) {
+                    return []
+                }
+
+                const topLeft = toViewportCoordinates(
+                    element.x,
+                    element.y,
+                    viewport,
+                )
+                return [
+                    {
+                        element,
+                        left: topLeft.x,
+                        top: topLeft.y,
+                        width: element.width * viewport.zoom,
+                        height: element.height * viewport.zoom,
+                    },
+                ]
+            }),
+        [elements, remoteSelectionClientIdsByElementId, viewport],
+    )
 
     const applyExternalScene = (
         nextSceneElements: readonly OrderedExcalidrawElement[],
@@ -166,6 +197,31 @@ export const WhiteboardCanvas = forwardRef<
     const handleSelectionChange = (nextElements: readonly OrderedExcalidrawElement[], appState: AppState) => {
         const selectedElements = nextElements.filter(el => appState.selectedElementIds[el.id]);
         const selectedGroupedElements = nextElements.filter(el => el.groupIds.some(groupId => appState.selectedGroupIds[groupId]));
+        const editingTextElementIds = appState.editingTextElement
+            ? [
+                  appState.editingTextElement.id,
+                  ...(appState.editingTextElement.type === 'text' &&
+                  appState.editingTextElement.containerId
+                      ? [appState.editingTextElement.containerId]
+                      : []),
+              ]
+            : []
+        const selectedElementIds = Array.from(
+            new Set(
+                [
+                    ...selectedElements.map((element) => element.id),
+                    ...selectedGroupedElements.map((element) => element.id),
+                    ...editingTextElementIds,
+                ],
+            ),
+        ).sort()
+        const nextSelectionSignature = selectedElementIds.join('|')
+        if (lastSelectionSignatureRef.current !== nextSelectionSignature) {
+            const sent = onSelectionChange?.(selectedElementIds)
+            if (sent !== false) {
+                lastSelectionSignatureRef.current = nextSelectionSignature
+            }
+        }
         onElementsSelectedChanged?.(selectedElements, selectedGroupedElements, Object.keys(appState.selectedGroupIds));
     }
 
@@ -228,6 +284,20 @@ export const WhiteboardCanvas = forwardRef<
                 }
             </Excalidraw>
             <div className="pointer-events-none absolute inset-0 z-10">
+                {remoteSelectionHighlights.map((highlight) => (
+                    <div
+                        key={highlight.element.id}
+                        className="absolute rounded-[3px] border-2 border-dashed border-[#f59e0b] shadow-[0_0_0_2px_rgba(245,158,11,0.18)]"
+                        style={{
+                            left: `${highlight.left - 4}px`,
+                            top: `${highlight.top - 4}px`,
+                            width: `${highlight.width + 8}px`,
+                            height: `${highlight.height + 8}px`,
+                            transform: `rotate(${highlight.element.angle}rad)`,
+                            transformOrigin: 'center',
+                        }}
+                    />
+                ))}
                 {presence.map((item) => {
                     if (item.cursor.x === null || item.cursor.y === null) {
                         return null
