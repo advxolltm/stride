@@ -33,9 +33,10 @@ async function addTaskInColumn(
     taskName: string,
 ) {
     await page.getByRole('button', { name: 'Add Task' }).nth(columnIndex).click()
-    await page.getByLabel('Task name').fill(taskName)
-    await page.getByRole('button', { name: 'Create Task' }).click()
-    await expect(page.getByText('Task created.').first()).toBeVisible()
+    const taskNameInput = page.getByLabel('Task name')
+    await taskNameInput.fill(taskName)
+    await taskNameInput.press('Enter')
+    await expect(page.getByText(taskName, { exact: true })).toBeVisible()
 }
 
 /**
@@ -141,6 +142,46 @@ test.describe.serial('Project Tasks', () => {
         ).toBeVisible()
     })
 
+    test('filters tasks with the search input and hides tasks when nothing matches', async ({
+        page,
+    }) => {
+        const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+        const matchingTask = `Search Alpha ${suffix}`
+        const nonMatchingTask = `Search Beta ${suffix}`
+
+        await navigateToTasks(page, projectId)
+        await addTaskInColumn(page, 0, matchingTask)
+        await addTaskInColumn(page, 1, nonMatchingTask)
+
+        const searchInput = page.getByRole('searchbox', {
+            name: 'Search tasks...',
+        })
+
+        await searchInput.fill(`Alpha ${suffix}`)
+        await expect(
+            page.getByText(matchingTask, { exact: true }),
+        ).toBeVisible()
+        await expect(
+            page.getByText(nonMatchingTask, { exact: true }),
+        ).toHaveCount(0)
+
+        await searchInput.fill(`No match ${suffix}`)
+        await expect(
+            page.getByText(matchingTask, { exact: true }),
+        ).toHaveCount(0)
+        await expect(
+            page.getByText(nonMatchingTask, { exact: true }),
+        ).toHaveCount(0)
+
+        await searchInput.fill('')
+        await expect(
+            page.getByText(matchingTask, { exact: true }),
+        ).toBeVisible()
+        await expect(
+            page.getByText(nonMatchingTask, { exact: true }),
+        ).toBeVisible()
+    })
+
     // -------------------------------------------------------------------------
     // Editing task fields (all operate on the shared editTaskTitle task)
     // -------------------------------------------------------------------------
@@ -179,6 +220,20 @@ test.describe.serial('Project Tasks', () => {
         await expect(page.getByText('Task updated.').first()).toBeVisible()
     })
 
+    test('clears task description', async ({ page }) => {
+        await navigateToTasks(page, projectId)
+        await openTaskDrawer(page, editTaskTitle)
+
+        await page.getByRole('button', { name: 'Edit Description' }).click()
+        await page.getByRole('textbox', { name: 'Description' }).fill('')
+        await page.getByRole('button', { name: 'Save Description' }).click()
+
+        await expect(page.getByText('Task updated.').first()).toBeVisible()
+        await expect(
+            page.getByRole('textbox', { name: 'Description' }),
+        ).toHaveValue('')
+    })
+
     test('edits estimated hours', async ({ page }) => {
         await navigateToTasks(page, projectId)
         await openTaskDrawer(page, editTaskTitle)
@@ -192,6 +247,23 @@ test.describe.serial('Project Tasks', () => {
         await input.press('Enter')
 
         await expect(page.getByText('Task updated.').first()).toBeVisible()
+    })
+
+    test('clears estimated hours', async ({ page }) => {
+        await navigateToTasks(page, projectId)
+        await openTaskDrawer(page, editTaskTitle)
+
+        await page
+            .getByRole('button', { name: 'Edit Estimated Time (hours)' })
+            .click()
+        const input = page.getByRole('spinbutton', {
+            name: 'Estimated Time (hours)',
+        })
+        await input.fill('')
+        await input.press('Enter')
+
+        await expect(page.getByText('Task updated.').first()).toBeVisible()
+        await expect(input).toHaveValue('')
     })
 
     test('assigns a skill to a task', async ({ page }) => {
@@ -213,6 +285,23 @@ test.describe.serial('Project Tasks', () => {
         ).toHaveAttribute('aria-selected', 'true')
     })
 
+    test('removes a skill from a task', async ({ page }) => {
+        await navigateToTasks(page, projectId)
+        await openTaskDrawer(page, editTaskTitle)
+
+        const drawer = page.getByRole('dialog', { name: 'Task Details' })
+
+        await drawer
+            .getByText(skillName, { exact: true })
+            .locator('..')
+            .getByRole('button')
+            .click()
+
+        await expect(
+            drawer.getByText('Add skills...', { exact: true }),
+        ).toBeVisible()
+    })
+
     test('assigns a member to a task', async ({ page }) => {
         await navigateToTasks(page, projectId)
         await openTaskDrawer(page, editTaskTitle)
@@ -225,6 +314,34 @@ test.describe.serial('Project Tasks', () => {
             .click()
 
         await expect(page.getByText('Task updated.').first()).toBeVisible()
+    })
+
+    test('removes an assignee from a task', async ({ page }) => {
+        await navigateToTasks(page, projectId)
+        await openTaskDrawer(page, editTaskTitle)
+
+        const drawer = page.getByRole('dialog', { name: 'Task Details' })
+        await drawer.evaluate((dialog, username) => {
+            const groups = Array.from(dialog.querySelectorAll('[role="group"]'))
+            const assigneeGroup = groups.find((group) =>
+                group.textContent?.includes(username as string),
+            )
+            if (!assigneeGroup) {
+                throw new Error('Assignee group not found')
+            }
+
+            const clearButton = assigneeGroup.querySelector('button')
+            if (!(clearButton instanceof HTMLButtonElement)) {
+                throw new Error('Assignee clear button not found')
+            }
+
+            clearButton.click()
+        }, member.username)
+
+        await expect(page.getByText('Task updated.').first()).toBeVisible()
+        await expect(
+            drawer.getByText('No assignee', { exact: true }),
+        ).toBeVisible()
     })
 
     test('sets a start date on a task', async ({ page }) => {

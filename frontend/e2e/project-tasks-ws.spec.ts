@@ -27,9 +27,18 @@ async function addTaskInColumn(
     taskName: string,
 ) {
     await page.getByRole('button', { name: 'Add Task' }).nth(columnIndex).click()
-    await page.getByLabel('Task name').fill(taskName)
-    await page.getByRole('button', { name: 'Create Task' }).click()
-    await expect(page.getByText('Task created.').first()).toBeVisible()
+    const taskNameInput = page.getByLabel('Task name')
+    await taskNameInput.fill(taskName)
+    await taskNameInput.press('Enter')
+    await expect(page.getByText(taskName, { exact: true })).toBeVisible()
+}
+
+async function openTaskMenu(page: Page, taskTitle: string) {
+    await page
+        .getByText(taskTitle, { exact: true })
+        .locator('..')
+        .getByRole('button', { name: 'Task actions' })
+        .click()
 }
 
 /** Drag a task card to a column using pointer events (required for DnD Kit). */
@@ -172,6 +181,40 @@ test.describe.serial('Project Tasks – WebSocket Sync', () => {
                 })
                 .first()
             await expect(inProgressColumn).toBeVisible({ timeout: 10_000 })
+        } finally {
+            await context.close()
+        }
+    })
+
+    test('member sees a task deleted by owner without refreshing', async ({
+        page,
+        browser,
+    }) => {
+        const taskTitle = `WS Delete Task ${suffix}`
+
+        await navigateToTasks(page, projectId)
+        await addTaskInColumn(page, 0, taskTitle)
+
+        const { context, page: memberPage } = await createAuthenticatedPage(
+            browser,
+            member,
+        )
+        try {
+            await memberPage.goto(`/project/${projectId}/tasks`)
+            await expect(
+                memberPage.getByText(taskTitle, { exact: true }),
+            ).toBeVisible()
+
+            await openTaskMenu(page, taskTitle)
+            await page.getByRole('menuitem', { name: 'Delete task' }).click()
+            await page
+                .getByRole('dialog')
+                .getByRole('button', { name: 'Delete task' })
+                .click()
+
+            await expect(
+                memberPage.getByText(taskTitle, { exact: true }),
+            ).not.toBeVisible({ timeout: 10_000 })
         } finally {
             await context.close()
         }
