@@ -13,7 +13,6 @@ import { TasksPage } from './pages/TasksPage'
 import { WhiteboardPage } from './pages/WhiteboardPage'
 import ProtectedRoute from './components/routing/ProtectedRoute'
 import PublicOnlyRoute from './components/routing/PublicOnlyRoute'
-import { WsPlaygroundPage } from './pages/WsPlaygroundPage'
 import ProjectLayout from './layouts/ProjectLayout'
 
 dayjs.extend(customParseFormat)
@@ -39,10 +38,6 @@ function App() {
                     <Route path="tasks" element={<TasksPage />} />
                     <Route path="chat" element={<ChatPage />} />
                     <Route path="whiteboard" element={<WhiteboardPage />} />
-                    <Route
-                        path="ws-playground"
-                        element={<WsPlaygroundPage />}
-                    />
 
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Route>
