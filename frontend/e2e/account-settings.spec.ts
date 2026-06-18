@@ -3,6 +3,7 @@ import {
     authFile,
     buildUniqueCredentials,
     createAuthenticatedPage,
+    e2eBaseUrl,
     loginThroughUi,
     registerUser,
     type TestCredentials,
@@ -42,7 +43,7 @@ test.describe.serial('Account Settings', () => {
         await registerUser(request, projectUser)
 
         const ownerContext = await browser.newContext({
-            baseURL: 'http://localhost:8080',
+            baseURL: e2eBaseUrl,
             storageState: authFile,
         })
         const ownerPage = await ownerContext.newPage()
@@ -122,7 +123,7 @@ test.describe.serial('Account Settings', () => {
         projectUserPassword = newPassword
 
         const loginContext = await browser.newContext({
-            baseURL: 'http://localhost:8080',
+            baseURL: e2eBaseUrl,
             storageState: { cookies: [], origins: [] },
         })
         const loginPage = await loginContext.newPage()

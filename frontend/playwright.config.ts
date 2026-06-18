@@ -9,7 +9,7 @@ export default defineConfig({
     retries: process.env.CI ? 2 : 0,
     reporter: process.env.CI ? [['html'], ['github']] : [['list'], ['html']],
     use: {
-        baseURL: 'http://localhost:8080',
+        baseURL: 'http://127.0.0.1:8080',
         // Pin the UI language to English so every selector matches English
         // strings regardless of the OS locale or any previously saved lang
         // preference.

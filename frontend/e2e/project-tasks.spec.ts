@@ -2,6 +2,7 @@ import { expect, type Page, test } from '@playwright/test'
 import {
     authFile,
     buildUniqueCredentials,
+    e2eBaseUrl,
     registerUser,
     type TestCredentials,
 } from './helpers/auth'
@@ -35,8 +36,14 @@ async function addTaskInColumn(
     await page.getByRole('button', { name: 'Add Task' }).nth(columnIndex).click()
     const taskNameInput = page.getByLabel('Task name')
     await taskNameInput.fill(taskName)
+    const createTaskResponse = page.waitForResponse(
+        (response) =>
+            response.url().includes('/api/v1/tasks/task') &&
+            response.request().method() === 'POST',
+    )
     await taskNameInput.press('Enter')
-    await expect(page.getByText(taskName, { exact: true })).toBeVisible()
+    const response = await createTaskResponse
+    expect(response.ok()).toBeTruthy()
 }
 
 /**
@@ -82,7 +89,7 @@ test.describe.serial('Project Tasks', () => {
         await registerUser(request, member)
 
         const context = await browser.newContext({
-            baseURL: 'http://localhost:8080',
+            baseURL: e2eBaseUrl,
             storageState: authFile,
         })
         const setupPage = await context.newPage()

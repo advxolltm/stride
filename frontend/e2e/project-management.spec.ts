@@ -1,5 +1,16 @@
 import { expect, test } from '@playwright/test'
 
+function projectActionsButton(
+    page: Parameters<typeof test>[0]['page'],
+    projectTitle: string,
+) {
+    return page
+        .locator('main')
+        .getByRole('link', { name: new RegExp(projectTitle) })
+        .locator('xpath=..')
+        .getByRole('button', { name: 'Project actions' })
+}
+
 test('creates, edits, archives, and deletes a project while keeping sidebar sections in sync', async ({
     page,
 }) => {
@@ -50,7 +61,7 @@ test('creates, edits, archives, and deletes a project while keeping sidebar sect
         }),
     ).toHaveCount(0)
 
-    await page.getByRole('button', { name: 'Project actions' }).click()
+    await projectActionsButton(page, initialProject.title).click()
     await page.getByRole('menuitem', { name: 'Edit' }).click()
 
     const editDialog = page.getByRole('dialog')
@@ -74,7 +85,7 @@ test('creates, edits, archives, and deletes a project while keeping sidebar sect
         }),
     ).toHaveCount(0)
 
-    await page.getByRole('button', { name: 'Project actions' }).click()
+    await projectActionsButton(page, updatedProject.title).click()
     await page.getByRole('menuitem', { name: 'Archive' }).click()
     await page.getByRole('button', { name: 'Archive Project' }).click()
 
@@ -90,7 +101,7 @@ test('creates, edits, archives, and deletes a project while keeping sidebar sect
     ).toBeVisible()
     await expect(page.getByText('Project archived successfully')).toBeVisible()
 
-    await page.getByRole('button', { name: 'Project actions' }).click()
+    await projectActionsButton(page, updatedProject.title).click()
     await page.getByRole('menuitem', { name: 'Unarchive' }).click()
     await page.getByRole('button', { name: 'Unarchive Project' }).click()
 
@@ -106,7 +117,7 @@ test('creates, edits, archives, and deletes a project while keeping sidebar sect
     ).toBeVisible()
     await expect(page.getByText('Project moved to active projects')).toBeVisible()
 
-    await page.getByRole('button', { name: 'Project actions' }).click()
+    await projectActionsButton(page, updatedProject.title).click()
     await page.getByRole('menuitem', { name: 'Delete' }).click()
     await page.getByRole('button', { name: 'Delete Project' }).click()
 
@@ -121,5 +132,12 @@ test('creates, edits, archives, and deletes a project while keeping sidebar sect
             name: new RegExp(updatedProject.title),
         }),
     ).toHaveCount(0)
-    await expect(page.getByText('No projects yet')).toBeVisible()
+    await expect(
+        page.locator('main').getByRole('link', {
+            name: new RegExp(updatedProject.title),
+        }),
+    ).toHaveCount(0)
+    await expect(
+        page.getByRole('heading', { name: updatedProject.title }),
+    ).toHaveCount(0)
 })

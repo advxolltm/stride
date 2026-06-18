@@ -7,6 +7,7 @@ import {
 } from '@playwright/test'
 
 export const authFile = 'e2e/.auth/user.json'
+export const e2eBaseUrl = 'http://127.0.0.1:8080'
 
 export interface TestCredentials {
     username: string
@@ -40,6 +41,21 @@ export async function registerUser(
     return response
 }
 
+export async function loginThroughApi(
+    request: APIRequestContext,
+    credentials: TestCredentials,
+) {
+    const response = await request.post('/api/v1/auth/login', {
+        form: {
+            email: credentials.email,
+            password: credentials.password,
+        },
+    })
+
+    expect(response.ok()).toBeTruthy()
+    return response
+}
+
 export async function loginThroughUi(
     page: Page,
     credentials: TestCredentials,
@@ -58,7 +74,7 @@ export async function createAuthenticatedPage(
     credentials: TestCredentials,
 ): Promise<{ context: BrowserContext; page: Page }> {
     const context = await browser.newContext({
-        baseURL: 'http://localhost:8080',
+        baseURL: e2eBaseUrl,
         storageState: { cookies: [], origins: [] },
     })
     const page = await context.newPage()

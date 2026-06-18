@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test'
-import { authFile, buildUniqueCredentials, registerUser } from './helpers/auth'
+import { authFile, buildUniqueCredentials, e2eBaseUrl, registerUser } from './helpers/auth'
 import {
     createProjectFromSidebar,
     openProjectFromActiveSidebar,
@@ -81,7 +81,7 @@ test.describe.serial('Project Tasks – Drag & Drop', () => {
         inProgressTask = `Already moving ${suffix}`
 
         const context = await browser.newContext({
-            baseURL: 'http://localhost:8080',
+            baseURL: e2eBaseUrl,
             storageState: authFile,
         })
         const setupPage = await context.newPage()

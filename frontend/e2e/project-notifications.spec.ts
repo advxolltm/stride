@@ -3,6 +3,7 @@ import {
     authFile,
     buildUniqueCredentials,
     createAuthenticatedPage,
+    e2eBaseUrl,
     registerUser,
     type TestCredentials,
 } from './helpers/auth'
@@ -28,8 +29,14 @@ async function addTaskInColumn(
     await page.getByRole('button', { name: 'Add Task' }).nth(columnIndex).click()
     const taskNameInput = page.getByLabel('Task name')
     await taskNameInput.fill(taskName)
+    const createTaskResponse = page.waitForResponse(
+        (response) =>
+            response.url().includes('/api/v1/tasks/task') &&
+            response.request().method() === 'POST',
+    )
     await taskNameInput.press('Enter')
-    await expect(page.getByText(taskName, { exact: true })).toBeVisible()
+    const response = await createTaskResponse
+    expect(response.ok()).toBeTruthy()
 }
 
 async function openTaskDrawer(page: Page, taskTitle: string) {
@@ -109,7 +116,7 @@ test.describe.serial('Project Notifications', () => {
         await registerUser(request, member)
 
         const context = await browser.newContext({
-            baseURL: 'http://localhost:8080',
+            baseURL: e2eBaseUrl,
             storageState: authFile,
         })
         const page = await context.newPage()

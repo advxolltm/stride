@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test'
-import { authFile, buildUniqueCredentials, createAuthenticatedPage, registerUser, type TestCredentials } from './helpers/auth'
+import { authFile, buildUniqueCredentials, createAuthenticatedPage, e2eBaseUrl, registerUser, type TestCredentials } from './helpers/auth'
 import {
     addMembersFromProjectSpace,
     createProjectFromSidebar,
@@ -63,7 +63,7 @@ test.describe.serial('Project Chat', () => {
         memberId = memberJson.id as string
 
         const context = await browser.newContext({
-            baseURL: 'http://localhost:8080',
+            baseURL: e2eBaseUrl,
             storageState: authFile,
         })
         const setupPage = await context.newPage()

@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test'
-import { authFile } from './helpers/auth'
+import { authFile, e2eBaseUrl } from './helpers/auth'
 import {
     createProjectFromSidebar,
     openProjectFromActiveSidebar,
@@ -38,7 +38,7 @@ test.describe.serial('Project Tasks – List View', () => {
         seedTaskTitle = `List Seed ${suffix}`
 
         const context = await browser.newContext({
-            baseURL: 'http://localhost:8080',
+            baseURL: e2eBaseUrl,
             storageState: authFile,
         })
         const page = await context.newPage()
