@@ -135,6 +135,7 @@ export function WhiteboardPage() {
             isReadOnly: isArchived,
             whiteboardElements,
             refetchWhiteboardElements,
+            getExcalidrawApi: () => excalidrawApiRef.current,
         })
 
     useEffect(() => {
