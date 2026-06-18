@@ -21,6 +21,7 @@ import {
     applyPersistedElementToCache,
     patchWhiteboardElementsCacheFromEvent,
     patchWhiteboardLiveOverlayFromEvent,
+    patchWhiteboardRemoteSelectionsFromEvent,
     removePersistedElementFromCache,
 } from './whiteboard.cache'
 import {
@@ -31,6 +32,7 @@ import {
 import {
     createWhiteboardEventsSocketState,
     sendWhiteboardLiveClear,
+    sendWhiteboardSelectionUpdate,
     sendWhiteboardLiveUpdate,
     watchWhiteboardEventsSocket,
 } from './whiteboard.eventsSocket'
@@ -151,36 +153,40 @@ export const whiteboardApi = baseApi.injectEndpoints({
             },
         }),
 
-        updateProjectWhiteboardElement: builder.mutation<
-            WhiteboardElement,
+        updateProjectWhiteboardElementsBulk: builder.mutation<
+            WhiteboardElement[],
             {
                 projectId: string
-                elementId: string
-                body: UpdateWhiteboardElementRequest
+                body: Array<
+                    UpdateWhiteboardElementRequest & { elementId: string }
+                >
             }
         >({
-            query: ({ projectId, elementId, body }) => ({
-                url: `/projects/${projectId}/whiteboard/elements/${elementId}`,
+            query: ({ projectId, body }) => ({
+                url: `/projects/${projectId}/whiteboard/elements/bulk`,
                 method: 'PATCH',
                 body,
                 headers: createWhiteboardMutationHeaders(),
             }),
             transformResponse: (response: unknown) =>
-                transformWhiteboardElement(
-                    ApiWhiteboardElementSchema.parse(response),
+                ApiWhiteboardElementListSchema.parse(response).map(
+                    transformWhiteboardElement,
                 ),
             async onQueryStarted({ projectId }, { dispatch, queryFulfilled }) {
                 try {
-                    const { data: updatedElement } = await queryFulfilled
+                    const { data: updatedElements } = await queryFulfilled
                     dispatch(
                         whiteboardApi.util.updateQueryData(
                             'getProjectWhiteboardElements',
                             projectId,
-                            (draft) =>
-                                applyPersistedElementToCache(
-                                    draft,
-                                    updatedElement,
-                                ),
+                            (draft) => {
+                                updatedElements.forEach((updatedElement) =>
+                                    applyPersistedElementToCache(
+                                        draft,
+                                        updatedElement,
+                                    ),
+                                )
+                            },
                         ),
                     )
                 } catch {
@@ -319,6 +325,10 @@ export const whiteboardApi = baseApi.injectEndpoints({
                                 message,
                                 elementsResult.data,
                             )
+                            patchWhiteboardRemoteSelectionsFromEvent(
+                                draft.remoteSelectionClientIdsByElementId,
+                                message,
+                            )
                         })
                     },
                 })
@@ -330,6 +340,7 @@ export const whiteboardApi = baseApi.injectEndpoints({
 export {
     sendWhiteboardCursor,
     sendWhiteboardLiveClear,
+    sendWhiteboardSelectionUpdate,
     sendWhiteboardLiveUpdate,
 }
 
@@ -338,7 +349,7 @@ export const {
     useGetProjectWhiteboardElementsQuery,
     useCreateProjectWhiteboardElementMutation,
     useCreateProjectWhiteboardElementsBulkMutation,
-    useUpdateProjectWhiteboardElementMutation,
+    useUpdateProjectWhiteboardElementsBulkMutation,
     useDeleteProjectWhiteboardElementMutation,
     useDeleteProjectWhiteboardElementsBulkMutation,
     useWatchWhiteboardCursorQuery,

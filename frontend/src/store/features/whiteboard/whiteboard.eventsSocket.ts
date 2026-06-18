@@ -9,10 +9,12 @@ import {
     parseWhiteboardEventMessage,
     serializeWhiteboardLiveClientMessage,
 } from './whiteboard.protocol'
+import { isPersistedWhiteboardEventMessage } from './whiteboard.cache'
 import type {
     WhiteboardEventMessage,
     WhiteboardLiveClientMessage,
     WhiteboardLiveUpdateEventPayload,
+    WhiteboardSelectionEventPayload,
     WhiteboardSocketEventMessage,
 } from './whiteboard.socket.types'
 import type { WhiteboardEventsSocketState } from './whiteboard.ui.types'
@@ -43,6 +45,7 @@ export const createWhiteboardEventsSocketState = (
     url: createWhiteboardEventsSocketUrl(projectId),
     status: 'connecting',
     liveElementsById: {},
+    remoteSelectionClientIdsByElementId: {},
     lastMessage: null,
     lastMessageAt: null,
     lastError: null,
@@ -84,9 +87,7 @@ export const watchWhiteboardEventsSocket = async (
                 }
 
                 const isPersistedEvent =
-                    message.type !==
-                        WSMessageType.WhiteboardElementLiveUpdate &&
-                    message.type !== WSMessageType.WhiteboardElementLiveClear
+                    isPersistedWhiteboardEventMessage(message)
                 const isSelfOriginated =
                     isSelfOriginatedWhiteboardEvent(message)
 
@@ -163,4 +164,14 @@ export const sendWhiteboardLiveClear = (projectId: string, elementId: string) =>
         type: WSMessageType.WhiteboardElementLiveClear,
         meta: createWhiteboardLiveClientMessageMeta(),
         payload: { elementId },
+    })
+
+export const sendWhiteboardSelectionUpdate = (
+    projectId: string,
+    payload: WhiteboardSelectionEventPayload,
+) =>
+    sendWhiteboardLiveMessage(projectId, {
+        type: WSMessageType.WhiteboardElementSelectionUpdate,
+        meta: createWhiteboardLiveClientMessageMeta(),
+        payload,
     })

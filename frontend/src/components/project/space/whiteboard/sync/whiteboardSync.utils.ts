@@ -9,11 +9,18 @@ type RenderedWhiteboardElement = {
     fallbackOrder: number
 }
 
-export const serializeElementSnapshot = (element: ExcalidrawElement) =>
-    JSON.stringify({
+export const serializeElementSnapshot = (element: ExcalidrawElement) => {
+    const props = { ...element } as Record<string, unknown>
+    delete props.version
+    delete props.versionNonce
+    delete props.seed
+    delete props.updated
+
+    return JSON.stringify({
         elementType: element.type,
-        props: element,
+        props,
     })
+}
 
 export const filterElementIDSet = (
     elementIDs: Set<string>,

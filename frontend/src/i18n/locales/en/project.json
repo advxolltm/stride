@@ -76,7 +76,9 @@
 		"viewTask": "View Task"
 	},
     "templateImportSuccess": "Template added to the whiteboard",
-    "templateImportError": "Could not add template to the whiteboard"
+    "templateImportError": "Could not add template to the whiteboard",
+    "bulkDeleteError": "Could not delete the selected whiteboard elements",
+    "bulkUpdateError": "Could not update the selected whiteboard elements"
   },
   "spaces": {
     "title": "Spaces",

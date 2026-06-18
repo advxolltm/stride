@@ -13,6 +13,7 @@ backend/cover.out
 backend/coverage.out
 backend/*.test
 backend/media
+backend/.gocache/
 
 frontend/node_modules/
 frontend/dist/

@@ -8,6 +8,8 @@ const emptyCursorMessage: WhiteboardCursorClientMessage = {
     cursor: { x: null, y: null },
 }
 
+const CURSOR_UPDATE_THROTTLE_MS = 50
+
 type UseWhiteboardCursorSyncArgs = {
     projectId?: string
 }
@@ -15,12 +17,12 @@ type UseWhiteboardCursorSyncArgs = {
 export const useWhiteboardCursorSync = ({
     projectId,
 }: UseWhiteboardCursorSyncArgs) => {
-    const cursorFrameRef = useRef<number | null>(null)
+    const cursorThrottleTimeoutRef = useRef<number | null>(null)
+    const lastCursorFlushTimeRef = useRef<number>(0)
     const pendingCursorMessageRef =
         useRef<WhiteboardCursorClientMessage | null>(null)
 
     const flushPendingCursor = useCallback(() => {
-        cursorFrameRef.current = null
         if (!projectId || !pendingCursorMessageRef.current) {
             return
         }
@@ -32,13 +34,28 @@ export const useWhiteboardCursorSync = ({
     const queueCursorUpdate = useCallback((message: WhiteboardCursorClientMessage) => {
         pendingCursorMessageRef.current = message
 
-        if (cursorFrameRef.current !== null) {
+        if (cursorThrottleTimeoutRef.current !== null) {
             return
         }
 
-        cursorFrameRef.current = window.requestAnimationFrame(
-            flushPendingCursor,
-        )
+        const elapsed = Date.now() - lastCursorFlushTimeRef.current
+        const waitMs =
+            elapsed >= CURSOR_UPDATE_THROTTLE_MS
+                ? CURSOR_UPDATE_THROTTLE_MS
+                : CURSOR_UPDATE_THROTTLE_MS - elapsed
+
+        if (elapsed >= CURSOR_UPDATE_THROTTLE_MS) {
+            flushPendingCursor()
+            lastCursorFlushTimeRef.current = Date.now()
+        }
+
+        cursorThrottleTimeoutRef.current = window.setTimeout(() => {
+            if (pendingCursorMessageRef.current) {
+                flushPendingCursor()
+            }
+            lastCursorFlushTimeRef.current = Date.now()
+            cursorThrottleTimeoutRef.current = null
+        }, waitMs)
     }, [flushPendingCursor])
 
     const clearCursor = useCallback(() => {
@@ -46,14 +63,21 @@ export const useWhiteboardCursorSync = ({
             return
         }
 
+        if (cursorThrottleTimeoutRef.current !== null) {
+            window.clearTimeout(cursorThrottleTimeoutRef.current)
+            cursorThrottleTimeoutRef.current = null
+        }
+
         sendWhiteboardCursor(projectId, emptyCursorMessage)
+        lastCursorFlushTimeRef.current = Date.now()
         pendingCursorMessageRef.current = null
     }, [projectId])
 
     useEffect(() => {
         return () => {
-            if (cursorFrameRef.current !== null) {
-                window.cancelAnimationFrame(cursorFrameRef.current)
+            if (cursorThrottleTimeoutRef.current !== null) {
+                window.clearTimeout(cursorThrottleTimeoutRef.current)
+                cursorThrottleTimeoutRef.current = null
             }
 
             if (!projectId) {
@@ -61,6 +85,7 @@ export const useWhiteboardCursorSync = ({
             }
 
             sendWhiteboardCursor(projectId, emptyCursorMessage)
+            lastCursorFlushTimeRef.current = Date.now()
             pendingCursorMessageRef.current = null
         }
     }, [projectId])

@@ -76,7 +76,9 @@
       "viewTask": "Aufgabe anzeigen"
     },
     "templateImportSuccess": "Vorlage dem Whiteboard hinzugefügt",
-    "templateImportError": "Vorlage konnte nicht zum Whiteboard hinzugefügt werden"
+    "templateImportError": "Vorlage konnte nicht zum Whiteboard hinzugefügt werden",
+    "bulkDeleteError": "Die ausgewählten Whiteboard-Elemente konnten nicht gelöscht werden",
+    "bulkUpdateError": "Die ausgewählten Whiteboard-Elemente konnten nicht aktualisiert werden"
   },
   "spaces": {
     "title": "Bereiche",

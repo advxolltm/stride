@@ -5,6 +5,7 @@ import {
     restoreElements,
 } from '@excalidraw/excalidraw'
 import { parseMermaidToExcalidraw } from '@excalidraw/mermaid-to-excalidraw'
+import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
 import { useTranslation } from 'react-i18next'
 import { getApiErrorMessage } from '../../../../../shared/utils/api/errors'
 import { useCreateProjectWhiteboardElementsBulkMutation } from '../../../../../store/features/whiteboard/whiteboard.api'
@@ -17,6 +18,7 @@ type UseWhiteboardTemplateInsertionArgs = {
     isReadOnly?: boolean
     whiteboardElements: WhiteboardElement[]
     refetchWhiteboardElements: () => Promise<unknown> | unknown
+    getExcalidrawApi: () => ExcalidrawImperativeAPI | null
 }
 
 const getTemplateInsertOrigin = (whiteboardElements: WhiteboardElement[]) => {
@@ -46,6 +48,7 @@ export const useWhiteboardTemplateInsertion = ({
     isReadOnly = false,
     whiteboardElements,
     refetchWhiteboardElements,
+    getExcalidrawApi,
 }: UseWhiteboardTemplateInsertionArgs) => {
     const { t } = useTranslation('project')
     const [insertingTemplateId, setInsertingTemplateId] = useState<
@@ -98,11 +101,25 @@ export const useWhiteboardTemplateInsertion = ({
                 null,
                 { repairBindings: true },
             )
-            const newElements = reconciledElements.slice(existingProps.length)
+            const placed = reconciledElements.slice(existingProps.length)
+            const api = getExcalidrawApi()
+
+            if (api) {
+                api.updateScene({
+                    elements: [
+                        ...api.getSceneElementsIncludingDeleted(),
+                        ...placed,
+                    ],
+                })
+                api.scrollToContent(placed, {
+                    fitToContent: true,
+                    animate: true,
+                })
+            }
 
             await createProjectWhiteboardElementsBulk({
                 projectId,
-                body: newElements.map((element) => ({
+                body: placed.map((element) => ({
                     elementType: element.type,
                     props: element,
                     zIndex: 0,

@@ -478,6 +478,7 @@ const (
 	WhiteboardElementLiveUpdate
 	WhiteboardElementLiveClear
 	WhiteboardElementRollback
+	WhiteboardElementSelectionUpdate
 )
 
 type WhiteboardElementRollbackPayload struct {
