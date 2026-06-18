@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import type {
     SchedulerAssignment,
     SchedulerMemberOption,
+    SchedulerPreviewResponse,
     SchedulerTaskOption,
 } from './types'
 import { SchedulerIntroStep } from './SchedulerIntroStep'
@@ -20,8 +21,13 @@ interface SchedulerFlowModalProps {
     skippedMemberCount: number
     estimatedTaskCount: number
     startDateTaskCount: number
-    onRun: () => Promise<SchedulerAssignment[]>
+    onRun: () => Promise<SchedulerPreviewResponse>
     onConfirm: (assignments: SchedulerAssignment[]) => Promise<void>
+}
+
+const EMPTY_SCHEDULER_PREVIEW: SchedulerPreviewResponse = {
+    newAssignments: [],
+    changedAssignments: [],
 }
 
 export function SchedulerFlowModal({
@@ -37,7 +43,9 @@ export function SchedulerFlowModal({
     onConfirm,
 }: SchedulerFlowModalProps) {
     const [step, setStep] = useState<SchedulerStep>('intro')
-    const [assignments, setAssignments] = useState<SchedulerAssignment[]>([])
+    const [preview, setPreview] = useState<SchedulerPreviewResponse>(
+        EMPTY_SCHEDULER_PREVIEW,
+    )
     const [isConfirming, setIsConfirming] = useState(false)
     const hasStartedRunRef = useRef(false)
     const onRunRef = useRef(onRun)
@@ -54,7 +62,7 @@ export function SchedulerFlowModal({
     function resetFlowState() {
         hasStartedRunRef.current = false
         setStep('intro')
-        setAssignments([])
+        setPreview(EMPTY_SCHEDULER_PREVIEW)
         setIsConfirming(false)
     }
 
@@ -75,10 +83,10 @@ export function SchedulerFlowModal({
         let isMounted = true
 
         void onRunRef.current()
-            .then((nextAssignments) => {
+            .then((nextPreview) => {
                 if (!isMounted) return
 
-                setAssignments(nextAssignments)
+                setPreview(nextPreview)
                 setStep('review')
             })
             .catch(() => {
@@ -94,20 +102,28 @@ export function SchedulerFlowModal({
     }, [step])
 
     function handleAssignmentChange(taskId: string, userId: string) {
-        setAssignments((current) =>
-            current.map((assignment) =>
+        function updateAssignments(assignments: SchedulerAssignment[]) {
+            return assignments.map((assignment) =>
                 assignment.taskId === taskId
                     ? { ...assignment, userId }
                     : assignment,
-            ),
-        )
+            )
+        }
+
+        setPreview((current) => ({
+            newAssignments: updateAssignments(current.newAssignments),
+            changedAssignments: updateAssignments(current.changedAssignments),
+        }))
     }
 
     async function handleConfirm() {
         setIsConfirming(true)
 
         try {
-            await onConfirm(assignments)
+            await onConfirm([
+                ...preview.newAssignments,
+                ...preview.changedAssignments,
+            ])
             handleOpenChange(false)
         } finally {
             setIsConfirming(false)
@@ -135,7 +151,7 @@ export function SchedulerFlowModal({
 
                         {step === 'review' ? (
                             <SchedulerReviewStep
-                                assignments={assignments}
+                                preview={preview}
                                 tasks={tasks}
                                 members={members}
                                 isConfirming={isConfirming}
