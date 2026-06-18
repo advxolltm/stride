@@ -23,7 +23,6 @@
       "addTask": "Aufgabe hinzufügen"
     },
     "messages": {
-      "listComingSoon": "Listenansicht kommt bald.",
       "taskUpdateSuccess": "Aufgabe aktualisiert.",
       "taskUpdateError": "Aufgabe konnte nicht aktualisiert werden.",
       "moveSuccess": "Aufgabe verschoben.",
@@ -105,7 +104,8 @@
     "drawer": {
       "detailsTitle": "Aufgabendetails",
       "cancel": "Abbrechen",
-      "save": "Änderungen speichern"
+      "save": "Änderungen speichern",
+      "close": "Schließen"
     },
     "modal": {
       "createTitle": "Neue Aufgabe",

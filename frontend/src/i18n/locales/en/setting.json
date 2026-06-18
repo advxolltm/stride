@@ -1,6 +1,7 @@
 {
   "title": "Settings",
   "description": "Manage your account preferences and project skills",
+  "back": "Back",
   "tabs": {
     "profile": "Profile",
     "security": "Security",
@@ -56,6 +57,7 @@
     "save": "Save changes",
     "reset": "Discard changes",
     "updateSuccess": "Working hours updated successfully",
+    "updateError": "Failed to update working hours. Please try again.",
     "summary": {
       "allocated": "Allocated",
       "remaining": "Remaining"

@@ -51,32 +51,28 @@ export default function LoginPage() {
                 'status' in error &&
                 error.status === 401
             ) {
-                toast.danger(
-                    'Failed to sign in. Please check your credentials and try again.',
-                )
+                toast.danger(t('auth.login.errorInvalidCredentials'))
             } else {
                 console.error('Login error:', error)
-                toast.danger(
-                    'An error occurred while signing in. Please try again later.',
-                )
+                toast.danger(t('auth.login.errorGeneric'))
             }
         }
     }
 
     return (
         <AuthContainer
-            heading="Welcome back"
-            subheading="Sign in to your account to continue"
+            heading={t('auth.login.heading')}
+            subheading={t('auth.login.subheading')}
             footer={
                 isOpenNetworkApplicationMode ? null : (
                     <>
-                        Don&apos;t have an account?{' '}
+                        {t('auth.login.noAccount')}{' '}
                         <button
                             type="button"
                             onClick={() => navigate('/register')}
                             className="font-semibold text-[var(--accent)] transition-opacity hover:opacity-75"
                         >
-                            Create account
+                            {t('auth.login.createAccount')}
                         </button>
                     </>
                 )
@@ -98,16 +94,16 @@ export default function LoginPage() {
                                 value,
                             )
                         ) {
-                            return 'Please enter a valid email address'
+                            return t('auth.login.emailInvalid')
                         }
                         return null
                     }}
                 >
                     <Label className="mb-1 text-sm font-semibold text-[var(--foreground)]">
-                        Email
+                        {t('auth.login.emailLabel')}
                     </Label>
                     <Input
-                        placeholder="Enter your email"
+                        placeholder={t('auth.login.emailPlaceholder')}
                         className="w-full rounded-xl border border-[var(--border)] bg-[var(--field-background)] px-3 py-2.5 pr-10 text-sm text-[var(--field-foreground)] transition-all outline-none placeholder:text-[var(--field-placeholder)] focus:border-[var(--focus)] focus:ring-2 focus:ring-[var(--focus)]/15"
                     />
                     <FieldError />
@@ -123,7 +119,7 @@ export default function LoginPage() {
                             type="button"
                             className="text-xs font-semibold text-[var(--accent)] transition-opacity hover:underline"
                         >
-                            Forgot password?
+                            {t('auth.login.forgotPassword')}
                         </button>
                     </div>
                 </div>
@@ -134,7 +130,7 @@ export default function LoginPage() {
                     isPending={isLoading}
                     className="mt-1 h-11 rounded-md bg-[var(--accent)] text-base text-white transition-opacity hover:opacity-90"
                 >
-                    Sign in
+                    {t('auth.login.submit')}
                 </Button>
             </Form>
         </AuthContainer>
