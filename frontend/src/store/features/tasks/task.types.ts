@@ -1,19 +1,40 @@
 import { z } from 'zod'
 import { UserSchema } from '../../../shared/types'
 import {
-    ApiProjectMemberSchema,
     ApiProjectSkillSchema,
 } from '../project/project.types'
 
 export const TaskStatusSchema = z.enum(['todo', 'in_progress', 'done'])
 export type TaskStatus = z.infer<typeof TaskStatusSchema>
 
+const ApiTaskProjectMemberSchema = z.object({
+    id: z.string(),
+    user_id: z.string(),
+    project_id: z.string(),
+    role: z.string(),
+    joined_at: z.string(),
+    user: z.object({
+        id: z.string(),
+        username: z.string(),
+        email: z.string(),
+        full_name: z.string().nullable(),
+        avatar_url: z
+            .object({
+                300: z.string(),
+                600: z.string(),
+                original: z.string(),
+            })
+            .nullable(),
+        is_superuser: z.boolean().optional(),
+    }),
+})
+
 export const ApiTaskAssigneeSchema = z.object({
     id: z.string(),
     task_id: z.string(),
     project_member_id: z.string(),
     assigned_at: z.string(),
-    project_member: ApiProjectMemberSchema,
+    project_member: ApiTaskProjectMemberSchema,
 })
 
 export type ApiTaskAssignee = z.infer<typeof ApiTaskAssigneeSchema>

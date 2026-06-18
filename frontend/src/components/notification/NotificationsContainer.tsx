@@ -156,14 +156,14 @@ export function NotificationsContainer() {
 
                     return {
                         path: shouldOpenTaskDrawer(notification)
-                            ? `/project/${task.projectId}/tasks?taskID=${task.id}`
-                            : `/project/${task.projectId}/tasks`,
+                            ? `/project/${task.projectId}/tasks?view=kanban&taskID=${task.id}`
+                            : `/project/${task.projectId}/tasks?view=kanban`,
                     }
                 }
                 case 'project':
                     return {
                         path: shouldOpenTaskBoard(notification)
-                            ? `/project/${notification.objectId}/tasks`
+                            ? `/project/${notification.objectId}/tasks?view=kanban`
                             : `/project/${notification.objectId}`,
                     }
                 case 'chat':

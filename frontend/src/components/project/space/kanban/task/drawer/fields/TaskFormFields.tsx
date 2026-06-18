@@ -20,6 +20,7 @@ export interface AssigneeOption {
     initials: string
     color?: string
     avatarUrl?: string | null
+    working_hours?: number
 }
 
 export interface StatusOption {

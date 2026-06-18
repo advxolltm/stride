@@ -81,8 +81,6 @@ export function EditProjectDialog({
         <Modal.Backdrop isOpen={isOpen} onOpenChange={handleOpenChange}>
             <Modal.Container size="lg">
                 <Modal.Dialog>
-                    <Modal.CloseTrigger />
-
                     <Modal.Header>
                         <Modal.Heading>{t('editDialog.title')}</Modal.Heading>
                     </Modal.Header>

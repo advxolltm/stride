@@ -179,7 +179,7 @@ export function MyProjectSkillsSettings({
                         })}
                     />
 
-                    <div className="flex gap-2 pt-1">
+                    <div className="flex items-center justify-end gap-2 pt-1">
                         <Button
                             variant="outline"
                             size="sm"

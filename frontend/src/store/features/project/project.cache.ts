@@ -59,6 +59,13 @@ export const applyProjectMembers = (
     }
 }
 
+export const applyProjectMember = (
+    project: Project,
+    member: ProjectMember,
+) => {
+    applyProjectMembers(project, [member])
+}
+
 // The remove-member endpoint uses the user id in the URL, not the member row id.
 export const removeProjectMemberByUserId = (
     project: Project,

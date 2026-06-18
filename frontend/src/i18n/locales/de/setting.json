@@ -5,6 +5,7 @@
     "profile": "Profil",
     "security": "Sicherheit",
     "skills": "Fähigkeiten",
+    "workingHours": "Arbeitsstunden",
     "users": "Benutzer"
   },
   "profile": {
@@ -48,6 +49,24 @@
     "updateError": "Fähigkeiten konnten nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
     "emptySkills": "Für dieses Projekt sind noch keine Fähigkeiten verfügbar.",
     "emptyProjects": "Sie sind noch kein Mitglied eines Projekts."
+  },
+  "workingHours": {
+    "title": "Ihre wöchentlichen Arbeitsstunden",
+    "description": "Sie haben 40 Stunden pro Woche. Verteilen Sie diese auf Ihre Projekte.",
+    "save": "Änderungen speichern",
+    "reset": "Änderungen verwerfen",
+    "updateSuccess": "Arbeitsstunden erfolgreich aktualisiert",
+    "summary": {
+      "allocated": "Verplant",
+      "remaining": "Verbleibend"
+    },
+    "projectSubtitle": "{{hours}}h / Woche · maximal {{max}}h verfügbar",
+    "inputAriaLabel": "Wöchentliche Stunden für {{project}}",
+    "availability": "Sie können hier bis zu {{max}}h zuweisen.",
+    "validation": {
+      "integer": "Bitte geben Sie eine ganze Zahl ein.",
+      "range": "Geben Sie einen Wert zwischen 0 und {{max}}h ein."
+    }
   },
   "users": {
     "title": "Benutzer",

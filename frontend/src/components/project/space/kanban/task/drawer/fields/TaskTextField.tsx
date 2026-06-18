@@ -15,6 +15,11 @@ interface TaskTextFieldProps {
     value: string
     onSave: (value: string) => void | Promise<void>
     validate?: (value: string) => string
+    inputType?: 'text' | 'number'
+    min?: number
+    step?: number
+    inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode']
+    normalizeValue?: (value: string) => string
     multiline?: boolean
     isSaving?: boolean
     readOnly?: boolean
@@ -30,6 +35,11 @@ export function TaskTextField({
     value,
     onSave,
     validate,
+    inputType = 'text',
+    min,
+    step,
+    inputMode,
+    normalizeValue,
     multiline = false,
     isSaving = false,
     readOnly = false,
@@ -80,7 +90,12 @@ export function TaskTextField({
                 onChange={(nextValue) =>
                     setEditState((previousState) =>
                         previousState
-                            ? { ...previousState, currentValue: nextValue }
+                            ? {
+                                  ...previousState,
+                                  currentValue: normalizeValue
+                                      ? normalizeValue(nextValue)
+                                      : nextValue,
+                              }
                             : previousState,
                     )
                 }
@@ -137,6 +152,10 @@ export function TaskTextField({
                 ) : (
                     <Input
                         ref={inputRef}
+                        type={inputType}
+                        min={min}
+                        step={step}
+                        inputMode={inputMode}
                         variant="secondary"
                         readOnly={!isEditing || isSaving}
                         onKeyDown={(event) => {

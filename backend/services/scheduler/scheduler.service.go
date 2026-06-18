@@ -62,7 +62,7 @@ type InputPayload struct {
 	Users       []SchedProjMem `json:"users"`
 	Tasks       []SchedTask    `json:"tasks"`
 	Assignments []Assignment   `json:"assignments"`
-	Settings Settings `json:"settings"`
+	Settings    Settings       `json:"settings"`
 }
 
 func Map[T any, V any](input []T, f func(T) V) []V {
@@ -151,6 +151,26 @@ func NewSchedulerService(tServe taskService.TaskService, pServe projectService.P
 	return &schedulerService{tServe, pServe}
 }
 
+func filterSchedulableMembers(
+	members []models.ProjectMember,
+) ([]models.ProjectMember, error) {
+	var schedulableMembers []models.ProjectMember
+
+	for _, member := range members {
+		if member.WorkingHours > 0 {
+			schedulableMembers = append(schedulableMembers, member)
+		}
+	}
+
+	if len(schedulableMembers) > 0 {
+		return schedulableMembers, nil
+	}
+
+	return nil, fmt.Errorf(
+		"no selected members have working hours greater than 0, so there is nobody the scheduler can assign tasks to",
+	)
+}
+
 func (s schedulerService) ScheduleTasksToUsers(c context.Context, req SchedulingRequest, settings Settings) (*ReturnStruct, error) {
 	// check if there is anything to schedule
 	if len(req.TaskIDs) == 0 || len(req.UserIDs) == 0 {
@@ -178,6 +198,11 @@ func (s schedulerService) ScheduleTasksToUsers(c context.Context, req Scheduling
 		//The scheduler works with ProjectMember IDs because the tasks use Projectmember IDs, but the frontend works with UserIDs
 		// So here we are...
 		member_user_map[user.ID] = userid
+	}
+
+	schedulableUsers, err := filterSchedulableMembers(raw_users)
+	if err != nil {
+		return nil, err
 	}
 
 	var minStart time.Time
@@ -234,6 +259,14 @@ func (s schedulerService) ScheduleTasksToUsers(c context.Context, req Scheduling
 			})
 		}
 	}
+	for _, task := range raw_tasks {
+		if len(task.Assignees) > 0 {
+			old_assignments = append(old_assignments, Assignment{
+				TaskID: task.ID,
+				UserID: task.Assignees[0].ProjectMemberID,
+			})
+		}
+	}
 
 	if old_assignments == nil {
 		old_assignments = []Assignment{}
@@ -252,7 +285,7 @@ func (s schedulerService) ScheduleTasksToUsers(c context.Context, req Scheduling
 		final_tasks = append(final_tasks, task)
 	}
 
-	users := Map(raw_users, mapToSchedProjMem)
+	users := Map(schedulableUsers, mapToSchedProjMem)
 	tasks := Map(final_tasks, func(mod models.Task) SchedTask { return mapToSchedTask(mod, minStart, maxEnd) })
 
 	// The scheduler returns an assignment of ProjectMemberIDs to TaskIDs, matches your Haskell logic perfectly
@@ -260,6 +293,9 @@ func (s schedulerService) ScheduleTasksToUsers(c context.Context, req Scheduling
 	if err != nil {
 		return nil, err
 	}
+
+	// TODO BUGS: Upadte working hours on project page error, Add some different way of confirming when updating hours, because where there are many projects the button is all the way at the bottom, easy to miss
+	// when a new user joins the project you have to refresh the page to schedule with that user in mind
 
 	var new_assignments []Assignment
 	var changed_assignments []Assignment
@@ -271,20 +307,65 @@ func (s schedulerService) ScheduleTasksToUsers(c context.Context, req Scheduling
 
 	// Split into new assignments and changed assignments of old ones
 	// Swap the ProjectMemberIDs for User IDs when returning the assignments
+	// for _, ass := range assignments {
+	// 	mappedUserID, ok := member_user_map[ass.UserID]
+	// 	if !ok || mappedUserID == uuid.Nil {
+	// 		return nil, fmt.Errorf(
+	// 			"scheduler returned assignment for unknown project member %s on task %s",
+	// 			ass.UserID,
+	// 			ass.TaskID,
+	// 		)
+	// 	}
+	// 	if _, ok := old_map[ass.TaskID]; ok && old_map[ass.TaskID] != ass.UserID {
+	// 		changed_assignments = append(changed_assignments, Assignment{
+	// 			UserID: mappedUserID,
+	// 			TaskID: ass.TaskID,
+	// 		})
+	// 	}
+	// 	if _, ok := old_map[ass.TaskID]; !ok {
+	// 		new_assignments = append(new_assignments, Assignment{
+	// 			UserID: mappedUserID,
+	// 			TaskID: ass.TaskID,
+	// 		})
+	// 	}
+	// }
+
 	for _, ass := range assignments {
-		if _, ok := old_map[ass.TaskID]; ok && old_map[ass.TaskID] != ass.UserID {
-			changed_assignments = append(changed_assignments, Assignment{
-				UserID: member_user_map[ass.UserID],
-				TaskID: ass.TaskID,
-			})
+		mappedUserID, ok := member_user_map[ass.UserID]
+		if !ok || mappedUserID == uuid.Nil {
+			return nil, fmt.Errorf("unknown project member %s", ass.UserID)
 		}
-		if _, ok := old_map[ass.TaskID]; !ok {
+
+		oldUser, exists := old_map[ass.TaskID]
+
+		fmt.Printf("\n--- Evaluating Task: %s ---\n", ass.TaskID)
+		fmt.Printf("Exists in old_map? %v\n", exists)
+
+		if !exists {
+			fmt.Printf("Verdict: NEW ASSIGNMENT\n")
 			new_assignments = append(new_assignments, Assignment{
-				UserID: member_user_map[ass.UserID],
+				UserID: mappedUserID,
 				TaskID: ass.TaskID,
 			})
+		} else {
+			fmt.Printf("Old User (ProjectMemberID): %s\n", oldUser)
+			fmt.Printf("New User (ProjectMemberID): %s\n", ass.UserID)
+
+			if oldUser != ass.UserID {
+				fmt.Printf("Verdict: CHANGED ASSIGNMENT\n")
+				changed_assignments = append(changed_assignments, Assignment{
+					UserID: mappedUserID,
+					TaskID: ass.TaskID,
+				})
+			} else {
+				fmt.Printf("Verdict: UNCHANGED (Ignored)\n")
+			}
 		}
 	}
+
+	fmt.Printf("\nFINAL TALLY - New: %d | Changed: %d\n", len(new_assignments), len(changed_assignments))
+
+	fmt.Printf("NEW: %s, CHANGE: %s, MAP: %s", new_assignments, changed_assignments, old_map)
 
 	return &ReturnStruct{
 		NewAssignments:     new_assignments,
@@ -330,7 +411,7 @@ func sendToScheduler(users []SchedProjMem, tasks []SchedTask, old_assignments []
 		Users:       users,
 		Tasks:       tasks,
 		Assignments: old_assignments,
-		Settings: settings,
+		Settings:    settings,
 	}
 	body, err := json.Marshal(inPayload)
 	if err != nil {

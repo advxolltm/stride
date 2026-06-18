@@ -228,13 +228,37 @@
     "saveSuccess": "Deine Projektfähigkeiten wurden aktualisiert",
     "saveError": "Projektfähigkeiten konnten nicht aktualisiert werden"
   },
+  "myWorkingHoursSettings": {
+    "title": "Meine Arbeitsstunden",
+    "description": "Passe an, wie viele Stunden pro Woche du diesem Projekt widmest. Insgesamt stehen dir ueber alle Projekte hinweg maximal 40h pro Woche zur Verfuegung.",
+    "edit": "Bearbeiten",
+    "cancel": "Abbrechen",
+    "save": "Aenderungen speichern",
+    "saveSuccess": "Arbeitsstunden erfolgreich aktualisiert",
+    "saveError": "Arbeitsstunden konnten nicht aktualisiert werden",
+    "summary": {
+      "allocated": "Insgesamt verplant",
+      "remaining": "Anderswo verfuegbar"
+    },
+    "currentProjectTitle": "Stunden auf {{project}}",
+    "currentProjectSubtitle": "Maximal {{max}}h verfuegbar ({{committed}}h bereits auf andere Projekte verteilt)",
+    "otherProjectsTitle": "Andere Projekte",
+    "inputAriaLabel": "Woechentliche Stunden auf {{project}}",
+    "availability": "Du kannst diesem Projekt bis zu {{max}}h zuweisen.",
+    "validation": {
+      "integer": "Bitte gib eine ganze Zahl ein.",
+      "range": "Bitte gib einen Wert zwischen 0 und {{max}}h ein."
+    }
+  },
   "settingsSidebar": {
     "title": "Projekteinstellungen",
+    "close": "Einstellungen schliessen",
     "tabs": {
       "general": "Allgemein",
       "members": "Team",
       "skills": "Fähigkeiten",
-      "mySkills": "Meine Fähigkeiten"
+      "mySkills": "Meine Fähigkeiten",
+      "myWorkingHours": "Meine Arbeitsstunden"
     }
   }
 }

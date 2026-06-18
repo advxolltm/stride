@@ -1,5 +1,5 @@
 import { Button, Tabs } from '@heroui/react'
-import { ArrowLeft, Shield, User, Users, Wrench } from 'lucide-react'
+import { ArrowLeft, Clock3, Shield, User, Users, Wrench } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 
@@ -7,6 +7,7 @@ import {
     ProfileSection,
     SecuritySection,
     SkillsSection,
+    WorkingHoursSection,
     UsersSection,
 } from '../components/account'
 import { isOpenNetworkApplicationMode } from '../config/applicationMode'
@@ -16,7 +17,7 @@ import { selectUserId } from '../store/userSlice'
 import { AccountPageSkeleton } from './AccountPageSkeleton'
 import { skipToken } from '@reduxjs/toolkit/query'
 
-const baseAccountTabs = ['profile', 'security', 'skills'] as const
+const baseAccountTabs = ['profile', 'security', 'skills', 'working-hours'] as const
 type AccountTab = (typeof baseAccountTabs)[number] | 'users'
 
 const isAccountTab = (
@@ -96,6 +97,13 @@ export function AccountPage() {
                             </div>
                             <Tabs.Indicator />
                         </Tabs.Tab>
+                        <Tabs.Tab id="working-hours">
+                            <div className="flex items-center gap-2 whitespace-nowrap">
+                                <Clock3 size={16} />
+                                {t('tabs.workingHours')}
+                            </div>
+                            <Tabs.Indicator />
+                        </Tabs.Tab>
                         {canManageUsers ? (
                             <Tabs.Tab id="users">
                                 <div className="flex items-center gap-2 whitespace-nowrap">
@@ -115,6 +123,9 @@ export function AccountPage() {
                 </Tabs.Panel>
                 <Tabs.Panel id="skills" className="pt-4 md:pt-6">
                     <SkillsSection />
+                </Tabs.Panel>
+                <Tabs.Panel id="working-hours" className="pt-4 md:pt-6">
+                    <WorkingHoursSection />
                 </Tabs.Panel>
                 {canManageUsers ? (
                     <Tabs.Panel id="users" className="pt-4 md:pt-6">

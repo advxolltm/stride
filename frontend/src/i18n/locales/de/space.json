@@ -35,6 +35,79 @@
       "createError": "Aufgabe konnte nicht erstellt werden.",
       "archivedReadOnly": "Archiviertes Projekt - schreibgeschuetzt"
     },
+    "scheduler": {
+      "actions": {
+        "cancel": "Abbrechen",
+        "close": "Schliessen",
+        "run": "Scheduler starten",
+        "confirm": "Zuweisungen bestaetigen"
+      },
+      "messages": {
+        "generateError": "Scheduler-Zuweisungen konnten nicht erstellt werden.",
+        "confirmSuccess": "Scheduler-Zuweisungen gespeichert.",
+        "confirmError": "Scheduler-Zuweisungen konnten nicht gespeichert werden."
+      },
+      "intro": {
+        "title": "Aufgaben automatisch zuweisen?",
+        "help": "Pruefen Sie die Hinweise unten, bevor Sie den Scheduler starten.",
+        "noTasks": "Fuegen Sie mindestens eine offene Aufgabe hinzu, bevor Sie den Scheduler starten.",
+        "noMembers": "Hinterlegen Sie fuer mindestens ein Teammitglied Arbeitsstunden, bevor Sie den Scheduler starten.",
+        "noEstimatedTasks": "Fuegen Sie mindestens einer offenen Aufgabe eine geschaetzte Zeit hinzu, bevor Sie den Scheduler starten.",
+        "noStartDates": "Fuegen Sie mindestens einer offenen Aufgabe ein Startdatum hinzu, bevor Sie den Scheduler starten.",
+        "ready_one": "Der Scheduler verteilt {{taskCount}} offene Aufgaben anhand der Auslastung auf {{count}} verfuegbares Teammitglied. Sie koennen die Zuweisungen vor dem Bestaetigen noch pruefen und anpassen.",
+        "ready_other": "Der Scheduler verteilt {{taskCount}} offene Aufgaben anhand der Auslastung auf {{count}} verfuegbare Teammitglieder. Sie koennen die Zuweisungen vor dem Bestaetigen noch pruefen und anpassen.",
+        "skippedMembers_one": "{{count}} Teammitglied hat 0 verfuegbare Stunden und wird uebersprungen.",
+        "skippedMembers_other": "{{count}} Teammitglieder haben 0 verfuegbare Stunden und werden uebersprungen."
+      },
+      "loading": {
+        "title": "Aufgaben werden zugewiesen",
+        "description": "Der Scheduler weist Aufgaben zu..."
+      },
+      "review": {
+        "title": "Zuweisungen pruefen",
+        "description_one": "Pruefen Sie die folgende Zuweisung vor dem Speichern. {{count}} Aufgabe ist bereit.",
+        "description_other": "Pruefen Sie die folgenden Zuweisungen vor dem Speichern. {{count}} Aufgaben sind bereit.",
+        "emptyTitle": "Nichts zuzuweisen",
+        "emptyDescription": "Der Scheduler konnte fuer die ausgewaehlten Aufgaben keine neue Zuweisung finden.",
+        "emptyHint": "Passen Sie Aufgabendaten, geschaetzte Zeit, Faehigkeiten oder Teamverfuegbarkeit an und starten Sie den Scheduler erneut.",
+        "newAssignments_one": "Neue Zuweisungen ({{count}})",
+        "newAssignments_other": "Neue Zuweisungen ({{count}})",
+        "newAssignmentsEmpty": "Es wurden keine neuen Zuweisungen vorgeschlagen.",
+        "changedAssignments_one": "Geaenderte Zuweisungen ({{count}})",
+        "changedAssignments_other": "Geaenderte Zuweisungen ({{count}})",
+        "changedAssignmentsEmpty": "Bestehende Zuweisungen mussten nicht geaendert werden.",
+        "invalidAssignments": "Bitte waehlen Sie fuer jede Aufgabe ein gueltiges Teammitglied aus, bevor Sie bestaetigen."
+      },
+      "assignment": {
+        "ariaLabel": "{{taskTitle}} zuweisen",
+        "placeholder": "Zustaendigen auswaehlen",
+        "empty": "Kein Zustaendiger",
+        "search": "Benutzer suchen..."
+      }
+    },
+    "list": {
+      "title": "Alle Aufgaben",
+      "ariaLabel": "Aufgabenliste",
+      "estimatedTimeValue_one": "{{count}} Stunde",
+      "estimatedTimeValue_other": "{{count}} Stunden",
+      "newTaskMeta": "Neue Aufgaben werden in Zu erledigen erstellt.",
+      "columnsButton": "Spalten",
+      "emptyTitle": "Noch keine Aufgaben",
+      "emptyDescription": "Erstellen Sie eine Aufgabe oder passen Sie Ihre Suche an, um passende Aufgaben zu sehen.",
+      "visible": "Sichtbar",
+      "hidden": "Ausgeblendet",
+      "resizeColumn": "Spalte {{column}} groesse aendern",
+      "columns": {
+        "task": "Aufgabe",
+        "description": "Beschreibung",
+        "skills": "Faehigkeiten",
+        "assignee": "Zustaendiger",
+        "status": "Status",
+        "estimatedTime": "Geschaetzte Zeit",
+        "startDate": "Startdatum",
+        "dueDate": "Faelligkeitsdatum"
+      }
+    },
     "drawer": {
       "detailsTitle": "Aufgabendetails",
       "cancel": "Abbrechen",
@@ -58,6 +131,9 @@
       "labelsSearch": "Labels suchen",
       "assignee": "Zuständiger",
       "assigneePlaceholder": "Zuständigen auswählen",
+      "expectedDuration": "Geschaetzte Zeit (Stunden)",
+      "expectedDurationPlaceholder": "Leer lassen oder ganze Stunden eingeben",
+      "expectedDurationInvalid": "Bitte eine positive ganze Stundenzahl eingeben oder das Feld leer lassen.",
       "startDate": "Startdatum",
       "noStartDate": "Kein Startdatum",
       "dueDate": "Fälligkeitsdatum",

@@ -49,3 +49,6 @@ pgdata/
 
 .cache/
 tmp/
+.tmp-go/
+.tmp-go-cache/
+.tmp-go-modcache/

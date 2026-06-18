@@ -1,8 +1,13 @@
 import { Button } from '@heroui/react'
-import { Settings, Target, UserRound, Users } from 'lucide-react'
+import { Clock3, Settings, Target, UserRound, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-type Tab = 'general' | 'members' | 'skills' | 'my-skills'
+type Tab =
+    | 'general'
+    | 'members'
+    | 'skills'
+    | 'my-skills'
+    | 'my-working-hours'
 
 const tabs: { id: Tab; labelKey: string; icon: typeof Settings }[] = [
     {
@@ -24,6 +29,11 @@ const tabs: { id: Tab; labelKey: string; icon: typeof Settings }[] = [
         id: 'my-skills',
         labelKey: 'settingsSidebar.tabs.mySkills',
         icon: UserRound,
+    },
+    {
+        id: 'my-working-hours',
+        labelKey: 'settingsSidebar.tabs.myWorkingHours',
+        icon: Clock3,
     },
 ]
 

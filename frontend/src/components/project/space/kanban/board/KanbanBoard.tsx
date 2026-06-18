@@ -6,17 +6,53 @@ import {
     useSensor,
     useSensors,
 } from '@dnd-kit/core'
-import { Button, SearchField, Tabs } from '@heroui/react'
-import { LayoutGrid, UserPlus } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import {
+    Button,
+    Dropdown,
+    SearchField,
+    Tabs,
+    toast,
+} from '@heroui/react'
+import {
+    Check,
+    LayoutGrid,
+    List,
+    ListPlus,
+    SlidersHorizontal,
+    UserPlus,
+} from 'lucide-react'
+import { type MouseEvent as ReactMouseEvent, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ConfirmDialog } from '../../../../../shared/components'
+import { getApiErrorMessage } from '../../../../../shared/utils/api/errors'
+import {
+    useConfirmScheduledAssignmentsMutation,
+    useScheduleProjectTasksMutation,
+} from '../../../../../store/features/project/project.api'
 import type { Task } from '../../../../../store/features/tasks/task.types'
 import { ArchivedReadOnlyChip } from '../../shared/ArchivedReadOnlyChip'
 import { useTaskBoard } from '../context/useTaskBoard'
+import { SchedulerFlowModal } from '../scheduler/SchedulerFlowModal'
+import {
+    buildSchedulerTriggerRequest,
+    mapProjectMemberToSchedulerMemberOption,
+    mapTaskToSchedulerTaskOption,
+} from '../scheduler/scheduler.mappers'
+import type {
+    SchedulerMemberOption,
+    SchedulerPreviewResponse,
+    SchedulerTaskOption,
+} from '../scheduler/types'
 import { TaskEditDrawer } from '../task/drawer/TaskEditDrawer'
 import { KanbanCard } from './KanbanCard'
 import { KanbanColumn } from './KanbanColumn'
+import {
+    type ListColumnId,
+    TASK_LIST_COLUMN_ORDER,
+} from './taskList.config'
+import { TaskListView } from './TaskListView'
+import { clampTaskListColumnWidth } from './taskList.utils'
+import { useTaskListPreferences } from './useTaskListPreferences'
 import { useKanbanState } from './useKanbanState'
 
 function taskMatchesSearch(task: Task, query: string) {
@@ -40,10 +76,21 @@ function taskMatchesSearch(task: Task, query: string) {
     return searchableText.includes(query)
 }
 
+const EMPTY_SCHEDULER_PREVIEW: SchedulerPreviewResponse = {
+    newAssignments: [],
+    changedAssignments: [],
+}
+
 export function KanbanBoard() {
     const { t } = useTranslation('space')
-    const { isLoading, isArchived } = useTaskBoard()
+    const { isLoading, isArchived, members, projectId, statusOptions } =
+        useTaskBoard()
     const [taskSearch, setTaskSearch] = useState('')
+    const [isSchedulerOpen, setSchedulerOpen] = useState(false)
+    const [isListAddingTask, setListAddingTask] = useState(false)
+    const [scheduleProjectTasks] = useScheduleProjectTasksMutation()
+    const [confirmScheduledAssignments] =
+        useConfirmScheduledAssignmentsMutation()
     const {
         localColumns,
         activeTask,
@@ -62,6 +109,12 @@ export function KanbanBoard() {
         handleDragOver,
         handleDragEnd,
     } = useKanbanState()
+    const {
+        visibleListColumns,
+        listColumnWidths,
+        toggleColumn: toggleListColumn,
+        updateColumnWidth,
+    } = useTaskListPreferences(projectId)
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -78,6 +131,236 @@ export function KanbanBoard() {
         }))
     }, [localColumns, normalizedTaskSearch])
 
+    const schedulerTasks = useMemo<SchedulerTaskOption[]>(
+        () =>
+            localColumns.flatMap((column) =>
+                column.tasks
+                    .filter((task) => task.status !== 'done')
+                    .map((task) =>
+                        mapTaskToSchedulerTaskOption(task, statusOptions),
+                    ),
+            ),
+        [localColumns, statusOptions],
+    )
+    const estimatedSchedulerTaskCount = useMemo(
+        () =>
+            schedulerTasks.filter(
+                (task) => (task.expectedDurationHours ?? 0) > 0,
+            ).length,
+        [schedulerTasks],
+    )
+    const startDatedSchedulerTaskCount = useMemo(
+        () => schedulerTasks.filter((task) => Boolean(task.startDate)).length,
+        [schedulerTasks],
+    )
+
+    const schedulerMembers = useMemo<SchedulerMemberOption[]>(
+        () => members.map(mapProjectMemberToSchedulerMemberOption),
+        [members],
+    )
+    const schedulableSchedulerMembers = useMemo(
+        () =>
+            schedulerMembers.filter((member) => member.workingHours > 0),
+        [schedulerMembers],
+    )
+    const skippedSchedulerMemberCount =
+        schedulerMembers.length - schedulableSchedulerMembers.length
+
+    async function handleSchedulerRun() {
+        if (schedulerTasks.length === 0) {
+            toast.info(t('tasks.scheduler.intro.noTasks'))
+            return EMPTY_SCHEDULER_PREVIEW
+        }
+
+        if (schedulableSchedulerMembers.length === 0) {
+            toast.info(t('tasks.scheduler.intro.noMembers'))
+            return EMPTY_SCHEDULER_PREVIEW
+        }
+
+        if (estimatedSchedulerTaskCount === 0) {
+            toast.info(t('tasks.scheduler.intro.noEstimatedTasks'))
+            return EMPTY_SCHEDULER_PREVIEW
+        }
+
+        if (startDatedSchedulerTaskCount === 0) {
+            toast.info(t('tasks.scheduler.intro.noStartDates'))
+            return EMPTY_SCHEDULER_PREVIEW
+        }
+
+        try {
+            const response = await scheduleProjectTasks({
+                projectId,
+                body: buildSchedulerTriggerRequest(
+                    schedulerTasks,
+                    schedulableSchedulerMembers,
+                ),
+            }).unwrap()
+
+            return response
+        } catch (error: unknown) {
+            toast.danger(
+                getApiErrorMessage(
+                    error,
+                    t('tasks.scheduler.messages.generateError'),
+                ),
+            )
+            throw error
+        }
+    }
+
+    async function handleSchedulerConfirm(assignments: {
+        userId: string
+        taskId: string
+    }[]) {
+        const validAssignments = assignments.filter((assignment) =>
+            schedulerMembers.some((member) => member.id === assignment.userId),
+        )
+
+        if (validAssignments.length !== assignments.length) {
+            toast.danger(t('tasks.scheduler.review.invalidAssignments'))
+            return
+        }
+
+        try {
+            await confirmScheduledAssignments({
+                projectId,
+                body: validAssignments.map((assignment) => ({
+                    user_id: assignment.userId,
+                    task_id: assignment.taskId,
+                })),
+            }).unwrap()
+            toast.success(t('tasks.scheduler.messages.confirmSuccess'))
+        } catch (error: unknown) {
+            toast.danger(
+                getApiErrorMessage(
+                    error,
+                    t('tasks.scheduler.messages.confirmError'),
+                ),
+            )
+            throw error
+        }
+    }
+
+    function handleListColumnResizeStart(
+        columnId: ListColumnId,
+        event: ReactMouseEvent<HTMLButtonElement>,
+    ) {
+        event.preventDefault()
+        event.stopPropagation()
+
+        const startX = event.clientX
+        const startWidth = listColumnWidths[columnId]
+
+        function handlePointerMove(moveEvent: MouseEvent) {
+            const nextWidth = clampTaskListColumnWidth(
+                columnId,
+                startWidth + (moveEvent.clientX - startX),
+            )
+
+            updateColumnWidth(columnId, nextWidth)
+        }
+
+        function handlePointerUp() {
+            window.removeEventListener('mousemove', handlePointerMove)
+            window.removeEventListener('mouseup', handlePointerUp)
+        }
+
+        window.addEventListener('mousemove', handlePointerMove)
+        window.addEventListener('mouseup', handlePointerUp)
+    }
+
+    function renderToolbar(showListActions: boolean) {
+        return (
+            <div className="flex flex-wrap items-center justify-end gap-2">
+                    <SearchField
+                        name="task-search"
+                        value={taskSearch}
+                        onChange={setTaskSearch}
+                        aria-label={t('tasks.actions.searchTasks')}
+                        className="w-80"
+                    >
+                        <SearchField.Group>
+                            <SearchField.SearchIcon />
+                            <SearchField.Input
+                                placeholder={t('tasks.actions.searchTasks')}
+                            />
+                            <SearchField.ClearButton />
+                        </SearchField.Group>
+                    </SearchField>
+
+                    {showListActions && (
+                        <Dropdown>
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                className="gap-2"
+                            >
+                                <SlidersHorizontal size={16} />
+                                {t('tasks.list.columnsButton')}
+                            </Button>
+
+                            <Dropdown.Popover>
+                                <Dropdown.Menu
+                                    aria-label={t('tasks.list.columnsButton')}
+                                    selectionMode="multiple"
+                                    selectedKeys={new Set(visibleListColumns)}
+                                >
+                                    {TASK_LIST_COLUMN_ORDER.map((columnId) => (
+                                        <Dropdown.Item
+                                            key={columnId}
+                                            id={columnId}
+                                            textValue={t(
+                                                `tasks.list.columns.${columnId}`,
+                                            )}
+                                            onAction={() =>
+                                                toggleListColumn(columnId)
+                                            }
+                                        >
+                                            <div className="flex items-center justify-between gap-4">
+                                                <span>
+                                                    {t(
+                                                        `tasks.list.columns.${columnId}`,
+                                                    )}
+                                                </span>
+                                                <span className="text-primary flex h-4 w-4 items-center justify-center">
+                                                    {visibleListColumns.includes(
+                                                        columnId,
+                                                    ) && <Check size={14} />}
+                                                </span>
+                                            </div>
+                                        </Dropdown.Item>
+                                    ))}
+                                </Dropdown.Menu>
+                            </Dropdown.Popover>
+                        </Dropdown>
+                    )}
+
+                    {showListActions && !isArchived && !isListAddingTask && (
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            onPress={() => setListAddingTask(true)}
+                            className="gap-2"
+                        >
+                            <ListPlus size={16} />
+                            {t('tasks.actions.add')}
+                        </Button>
+                    )}
+
+                    {isArchived && <ArchivedReadOnlyChip />}
+                    <Button
+                        size="sm"
+                        variant="primary"
+                        isDisabled={isArchived}
+                        onPress={() => setSchedulerOpen(true)}
+                    >
+                        <UserPlus size={16} />
+                        {t('tasks.actions.assign')}
+                    </Button>
+            </div>
+        )
+    }
+
     if (isLoading) {
         return (
             <div className="flex h-24 items-center justify-center">
@@ -90,65 +373,34 @@ export function KanbanBoard() {
 
     return (
         <div className="flex flex-col gap-4 px-6">
-            <Tabs
-                variant="secondary"
-                className="w-full"
-                selectedKey={view}
-                onSelectionChange={(key) => setView(key as 'kanban' | 'list')}
-            >
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                    <Tabs.ListContainer className="overflow-x-auto">
-                        <Tabs.List
-                            aria-label={t('tasks.tabs.ariaLabel')}
-                            className="flex gap-4"
-                        >
-                            <Tabs.Tab
-                                className="flex flex-row gap-2"
-                                id="kanban"
-                            >
+            <div className="flex flex-wrap items-start justify-between gap-3">
+                <Tabs
+                    variant="secondary"
+                    className="w-auto flex-none"
+                    selectedKey={view}
+                    onSelectionChange={(key) => setView(key as 'kanban' | 'list')}
+                >
+                    <Tabs.ListContainer>
+                        <Tabs.List aria-label={t('tasks.tabs.ariaLabel')}>
+                            <Tabs.Tab className="flex flex-row gap-2" id="kanban">
                                 <LayoutGrid size={16} />
                                 {t('tasks.tabs.board')}
                                 <Tabs.Indicator />
                             </Tabs.Tab>
-                            {/* TODO: implement list view  later if there is time*/}
-                            {/* <Tabs.Tab className="flex flex-row gap-2" id="list">
+                            <Tabs.Tab className="flex flex-row gap-2" id="list">
                                 <List size={16} />
                                 {t('tasks.tabs.list')}
                                 <Tabs.Indicator />
-                            </Tabs.Tab> */}
+                            </Tabs.Tab>
                         </Tabs.List>
                     </Tabs.ListContainer>
+                </Tabs>
 
-                    <div className="flex flex-wrap items-center justify-end gap-2">
-                        <SearchField
-                            name="task-search"
-                            value={taskSearch}
-                            onChange={setTaskSearch}
-                            aria-label={t('tasks.actions.searchTasks')}
-                            className="w-80"
-                        >
-                            <SearchField.Group>
-                                <SearchField.SearchIcon />
-                                <SearchField.Input
-                                    placeholder={t('tasks.actions.searchTasks')}
-                                />
-                                <SearchField.ClearButton />
-                            </SearchField.Group>
-                        </SearchField>
+                {renderToolbar(view === 'list')}
+            </div>
 
-                        {isArchived && <ArchivedReadOnlyChip />}
-                        <Button
-                            size="sm"
-                            variant="primary"
-                            isDisabled={isArchived}
-                        >
-                            <UserPlus size={16} />
-                            {t('tasks.actions.assign')}
-                        </Button>
-                    </div>
-                </div>
-
-                <Tabs.Panel id="kanban" className="pt-4">
+            {view === 'kanban' ? (
+                <div className="pt-1">
                     <DndContext
                         sensors={sensors}
                         collisionDetection={closestCorners}
@@ -176,14 +428,20 @@ export function KanbanBoard() {
                             </DragOverlay>
                         )}
                     </DndContext>
-                </Tabs.Panel>
-
-                <Tabs.Panel id="list" className="pt-4">
-                    <div className="text-default-500 text-sm">
-                        {t('tasks.messages.listComingSoon')}
-                    </div>
-                </Tabs.Panel>
-            </Tabs>
+                </div>
+            ) : (
+                <div className="h-[calc(100vh-320px)] min-h-[420px] pt-1">
+                    <TaskListView
+                        columns={visibleColumns}
+                        onTaskClick={handleTaskClick}
+                        visibleColumns={visibleListColumns}
+                        columnWidths={listColumnWidths}
+                        onResizeStart={handleListColumnResizeStart}
+                        isAddingTask={isListAddingTask}
+                        onAddingTaskChange={setListAddingTask}
+                    />
+                </div>
+            )}
 
             <TaskEditDrawer
                 task={selectedTask}
@@ -203,6 +461,19 @@ export function KanbanBoard() {
                 confirmLabel="Delete task"
                 confirmVariant="danger"
                 onConfirm={confirmDelete}
+            />
+
+            <SchedulerFlowModal
+                isOpen={isSchedulerOpen}
+                onOpenChange={setSchedulerOpen}
+                tasks={schedulerTasks}
+                members={schedulerMembers}
+                schedulableMemberCount={schedulableSchedulerMembers.length}
+                skippedMemberCount={skippedSchedulerMemberCount}
+                estimatedTaskCount={estimatedSchedulerTaskCount}
+                startDateTaskCount={startDatedSchedulerTaskCount}
+                onRun={handleSchedulerRun}
+                onConfirm={handleSchedulerConfirm}
             />
         </div>
     )

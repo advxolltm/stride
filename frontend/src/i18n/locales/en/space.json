@@ -8,7 +8,7 @@
     "actions": {
       "filter": "Filter",
       "searchTasks": "Search tasks...",
-      "assign": "Auto assign",
+      "assign": "Assign Tasks",
       "add": "Add Task",
       "menuAria": "Task actions",
       "edit": "Edit task",
@@ -23,7 +23,6 @@
       "addTask": "Add Task"
     },
     "messages": {
-      "listComingSoon": "List view is coming soon.",
       "loading": "Loading tasks...",
       "taskUpdateSuccess": "Task updated.",
       "taskUpdateError": "Could not update task.",
@@ -34,6 +33,79 @@
       "createSuccess": "Task created.",
       "createError": "Could not create task.",
       "archivedReadOnly": "Archived project - read only"
+    },
+    "scheduler": {
+      "actions": {
+        "cancel": "Cancel",
+        "close": "Close",
+        "run": "Run scheduler",
+        "confirm": "Confirm assignments"
+      },
+      "messages": {
+        "generateError": "Could not generate scheduler assignments.",
+        "confirmSuccess": "Scheduler assignments saved.",
+        "confirmError": "Could not save scheduler assignments."
+      },
+      "intro": {
+        "title": "Auto-assign tasks?",
+        "help": "Check the requirements below before running the scheduler.",
+        "noTasks": "Add at least one open task before running the scheduler.",
+        "noMembers": "Add working hours for at least one team member before running the scheduler.",
+        "noEstimatedTasks": "Add an estimated time to at least one open task before running the scheduler.",
+        "noStartDates": "Add a start date to at least one open task before running the scheduler.",
+        "ready_one": "The scheduler will distribute {{taskCount}} open tasks across {{count}} available team member based on workload. You'll be able to review and adjust before confirming.",
+        "ready_other": "The scheduler will distribute {{taskCount}} open tasks across {{count}} available team members based on workload. You'll be able to review and adjust before confirming.",
+        "skippedMembers_one": "{{count}} team member has 0 available hours and will be skipped.",
+        "skippedMembers_other": "{{count}} team members have 0 available hours and will be skipped."
+      },
+      "loading": {
+        "title": "Assigning tasks",
+        "description": "Scheduler is assigning tasks..."
+      },
+      "review": {
+        "title": "Review assignments",
+        "description_one": "Check the assignment below before saving. {{count}} task is ready.",
+        "description_other": "Check the assignments below before saving. {{count}} tasks are ready.",
+        "emptyTitle": "Nothing to assign",
+        "emptyDescription": "The scheduler could not find a new assignment for the selected tasks.",
+        "emptyHint": "Try updating task dates, estimated time, skills, or team availability, then run the scheduler again.",
+        "newAssignments_one": "New assignments ({{count}})",
+        "newAssignments_other": "New assignments ({{count}})",
+        "newAssignmentsEmpty": "No new assignments were suggested.",
+        "changedAssignments_one": "Changed assignments ({{count}})",
+        "changedAssignments_other": "Changed assignments ({{count}})",
+        "changedAssignmentsEmpty": "No existing assignments needed to be changed.",
+        "invalidAssignments": "Please choose a valid team member for every task before confirming."
+      },
+      "assignment": {
+        "ariaLabel": "Assign {{taskTitle}}",
+        "placeholder": "Select assignee",
+        "empty": "No assignee",
+        "search": "Search users..."
+      }
+    },
+    "list": {
+      "title": "All tasks",
+      "ariaLabel": "Task list",
+      "estimatedTimeValue_one": "{{count}} hour",
+      "estimatedTimeValue_other": "{{count}} hours",
+      "newTaskMeta": "New tasks are created in To Do.",
+      "columnsButton": "Columns",
+      "emptyTitle": "No tasks yet",
+      "emptyDescription": "Create a task to get started, or adjust your search to see matching tasks.",
+      "visible": "Visible",
+      "hidden": "Hidden",
+      "resizeColumn": "Resize {{column}} column",
+      "columns": {
+        "task": "Task",
+        "description": "Description",
+        "skills": "Skills",
+        "assignee": "Assignee",
+        "status": "Status",
+        "estimatedTime": "Estimated Time",
+        "startDate": "Start Date",
+        "dueDate": "Due Date"
+      }
     },
     "drawer": {
       "detailsTitle": "Task Details",
@@ -59,6 +131,9 @@
       "labelsSearch": "Search labels",
       "assignee": "Assignee",
       "assigneePlaceholder": "Select assignee",
+      "expectedDuration": "Estimated Time (hours)",
+      "expectedDurationPlaceholder": "Leave empty or enter whole hours",
+      "expectedDurationInvalid": "Use a positive whole number of hours or leave the field empty.",
       "startDate": "Start Date",
       "noStartDate": "No start date",
       "dueDate": "Due Date",
