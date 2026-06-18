@@ -69,6 +69,12 @@
         "emptyTitle": "Nothing to assign",
         "emptyDescription": "The scheduler could not find a new assignment for the selected tasks.",
         "emptyHint": "Try updating task dates, estimated time, skills, or team availability, then run the scheduler again.",
+        "newAssignments_one": "New assignments ({{count}})",
+        "newAssignments_other": "New assignments ({{count}})",
+        "newAssignmentsEmpty": "No new assignments were suggested.",
+        "changedAssignments_one": "Changed assignments ({{count}})",
+        "changedAssignments_other": "Changed assignments ({{count}})",
+        "changedAssignmentsEmpty": "No existing assignments needed to be changed.",
         "invalidAssignments": "Please choose a valid team member for every task before confirming."
       },
       "assignment": {

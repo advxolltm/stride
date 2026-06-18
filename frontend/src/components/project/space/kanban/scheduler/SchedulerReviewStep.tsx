@@ -1,10 +1,15 @@
 import { Button, Modal } from '@heroui/react'
 import { useTranslation } from 'react-i18next'
-import type { SchedulerAssignment, SchedulerMemberOption, SchedulerTaskOption } from './types'
+import type {
+    SchedulerAssignment,
+    SchedulerMemberOption,
+    SchedulerPreviewResponse,
+    SchedulerTaskOption,
+} from './types'
 import { SchedulerAssignmentRow } from './SchedulerAssignmentRow'
 
 interface SchedulerReviewStepProps {
-    assignments: SchedulerAssignment[]
+    preview: SchedulerPreviewResponse
     tasks: SchedulerTaskOption[]
     members: SchedulerMemberOption[]
     isConfirming: boolean
@@ -14,7 +19,7 @@ interface SchedulerReviewStepProps {
 }
 
 export function SchedulerReviewStep({
-    assignments,
+    preview,
     tasks,
     members,
     isConfirming,
@@ -23,11 +28,53 @@ export function SchedulerReviewStep({
     onConfirm,
 }: SchedulerReviewStepProps) {
     const { t } = useTranslation('space')
+    const assignments = [
+        ...preview.newAssignments,
+        ...preview.changedAssignments,
+    ]
     const hasAssignments = assignments.length > 0
     const hasUnknownAssignee = assignments.some(
         (assignment) =>
             !members.some((member) => member.id === assignment.userId),
     )
+
+    function renderAssignmentSection(
+        titleKey: string,
+        emptyKey: string,
+        sectionAssignments: SchedulerAssignment[],
+    ) {
+        return (
+            <section className="space-y-3">
+                <div className="space-y-1">
+                    <h3 className="text-sm font-semibold text-foreground">
+                        {t(titleKey, { count: sectionAssignments.length })}
+                    </h3>
+                    {sectionAssignments.length === 0 ? (
+                        <p className="text-sm text-default-500">
+                            {t(emptyKey)}
+                        </p>
+                    ) : null}
+                </div>
+                {sectionAssignments.map((assignment) => {
+                    const task = tasks.find((item) => item.id === assignment.taskId)
+
+                    if (!task) {
+                        return null
+                    }
+
+                    return (
+                        <SchedulerAssignmentRow
+                            key={assignment.taskId}
+                            assignment={assignment}
+                            task={task}
+                            members={members}
+                            onChange={onAssignmentChange}
+                        />
+                    )
+                })}
+            </section>
+        )
+    }
 
     return (
         <>
@@ -49,25 +96,18 @@ export function SchedulerReviewStep({
             </Modal.Header>
             <Modal.Body className="flex flex-col gap-2">
                 {hasAssignments ? (
-                    assignments.map((assignment) => {
-                        const task = tasks.find(
-                            (item) => item.id === assignment.taskId,
-                        )
-
-                        if (!task) {
-                            return null
-                        }
-
-                        return (
-                            <SchedulerAssignmentRow
-                                key={assignment.taskId}
-                                assignment={assignment}
-                                task={task}
-                                members={members}
-                                onChange={onAssignmentChange}
-                            />
-                        )
-                    })
+                    <>
+                        {renderAssignmentSection(
+                            'tasks.scheduler.review.newAssignments',
+                            'tasks.scheduler.review.newAssignmentsEmpty',
+                            preview.newAssignments,
+                        )}
+                        {renderAssignmentSection(
+                            'tasks.scheduler.review.changedAssignments',
+                            'tasks.scheduler.review.changedAssignmentsEmpty',
+                            preview.changedAssignments,
+                        )}
+                    </>
                 ) : (
                     <div className="border-default-200 bg-content1 rounded-xl border p-4 text-sm text-default-600">
                         {t('tasks.scheduler.review.emptyHint')}

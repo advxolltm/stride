@@ -1,5 +1,8 @@
 import type { TaskStatus } from '../../../../../store/features/tasks/task.types'
-import type { SchedulerAssignment } from '../../../../../store/features/project/project.types'
+import type {
+    SchedulerAssignment,
+    SchedulerPreviewResponse,
+} from '../../../../../store/features/project/project.types'
 
 export interface SchedulerMemberOption {
     id: string
@@ -19,4 +22,4 @@ export interface SchedulerTaskOption {
     expectedDurationHours: number | null
 }
 
-export type { SchedulerAssignment }
+export type { SchedulerAssignment, SchedulerPreviewResponse }

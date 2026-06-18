@@ -35,7 +35,6 @@ import { useTaskBoard } from '../context/useTaskBoard'
 import { SchedulerFlowModal } from '../scheduler/SchedulerFlowModal'
 import {
     buildSchedulerTriggerRequest,
-    flattenSchedulerAssignments,
     mapProjectMemberToSchedulerMemberOption,
     mapTaskToSchedulerTaskOption,
 } from '../scheduler/scheduler.mappers'
@@ -191,7 +190,7 @@ export function KanbanBoard() {
                 ),
             }).unwrap()
 
-            return flattenSchedulerAssignments(response)
+            return response
         } catch (error: unknown) {
             toast.danger(
                 getApiErrorMessage(

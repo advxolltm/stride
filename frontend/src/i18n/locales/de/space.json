@@ -70,6 +70,12 @@
         "emptyTitle": "Nichts zuzuweisen",
         "emptyDescription": "Der Scheduler konnte fuer die ausgewaehlten Aufgaben keine neue Zuweisung finden.",
         "emptyHint": "Passen Sie Aufgabendaten, geschaetzte Zeit, Faehigkeiten oder Teamverfuegbarkeit an und starten Sie den Scheduler erneut.",
+        "newAssignments_one": "Neue Zuweisungen ({{count}})",
+        "newAssignments_other": "Neue Zuweisungen ({{count}})",
+        "newAssignmentsEmpty": "Es wurden keine neuen Zuweisungen vorgeschlagen.",
+        "changedAssignments_one": "Geaenderte Zuweisungen ({{count}})",
+        "changedAssignments_other": "Geaenderte Zuweisungen ({{count}})",
+        "changedAssignmentsEmpty": "Bestehende Zuweisungen mussten nicht geaendert werden.",
         "invalidAssignments": "Bitte waehlen Sie fuer jede Aufgabe ein gueltiges Teammitglied aus, bevor Sie bestaetigen."
       },
       "assignment": {
