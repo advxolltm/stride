@@ -9,5 +9,9 @@ setup('authenticate project test user', async ({ page, request }) => {
     await registerUser(request, credentials)
     await loginThroughUi(page, credentials)
 
+    // Explicitly lock the app language to English so the saved auth state
+    // always carries lang=en, regardless of who ran setup last.
+    await page.evaluate(() => localStorage.setItem('lang', 'en'))
+
     await page.context().storageState({ path: authFile })
 })

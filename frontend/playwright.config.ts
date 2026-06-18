@@ -10,6 +10,10 @@ export default defineConfig({
     reporter: process.env.CI ? [['html'], ['github']] : [['list'], ['html']],
     use: {
         baseURL: 'http://localhost:8080',
+        // Pin the UI language to English so every selector matches English
+        // strings regardless of the OS locale or any previously saved lang
+        // preference.
+        locale: 'en-US',
         trace: 'on-first-retry',
         screenshot: 'only-on-failure',
     },
@@ -21,15 +25,12 @@ export default defineConfig({
         {
             name: 'chromium-public',
             use: { ...devices['Desktop Chrome'] },
-            testIgnore: [
-                /auth\.setup\.ts/,
-                /project-management\.spec\.ts/,
-            ],
+            testIgnore: [/auth\.setup\.ts/, /project-.*\.spec\.ts/],
         },
         {
             name: 'chromium-authenticated',
             dependencies: ['setup'],
-            testMatch: /project-management\.spec\.ts/,
+            testMatch: /project-.*\.spec\.ts/,
             use: {
                 ...devices['Desktop Chrome'],
                 storageState: authFile,

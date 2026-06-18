@@ -1,4 +1,10 @@
-import { expect, type APIRequestContext, type Page } from '@playwright/test'
+import {
+    expect,
+    type APIRequestContext,
+    type Browser,
+    type BrowserContext,
+    type Page,
+} from '@playwright/test'
 
 export const authFile = 'e2e/.auth/user.json'
 
@@ -45,4 +51,23 @@ export async function loginThroughUi(
     )
     await page.getByRole('button', { name: 'Sign in' }).click()
     await expect(page).toHaveURL('/')
+}
+
+export async function createAuthenticatedPage(
+    browser: Browser,
+    credentials: TestCredentials,
+): Promise<{ context: BrowserContext; page: Page }> {
+    const context = await browser.newContext({
+        baseURL: 'http://localhost:8080',
+        storageState: { cookies: [], origins: [] },
+    })
+    const page = await context.newPage()
+
+    await loginThroughUi(page, credentials)
+
+    // Keep the language pinned to English so selectors in member-context tests
+    // match the same strings as the owner context.
+    await page.evaluate(() => localStorage.setItem('lang', 'en'))
+
+    return { context, page }
 }
