@@ -37,10 +37,13 @@ async function openMessageMenu(page: Page, messageText: string) {
 test.describe.serial('Project Chat', () => {
     let projectId: string
     let member: TestCredentials
+    let memberId: string
 
     // Unique per test-run so messages don't bleed across runs.
     let ownerMessage: string
     let memberMessage: string
+    let memberEditedMessage: string
+    let deletedUserMessage: string
     let editedMessage: string
     let notificationMessage: string
 
@@ -49,11 +52,15 @@ test.describe.serial('Project Chat', () => {
 
         ownerMessage = `Hello from owner ${suffix}`
         memberMessage = `Hello back from member ${suffix}`
+        memberEditedMessage = `Edited by member ${suffix}`
+        deletedUserMessage = `Message from deleted user ${suffix}`
         editedMessage = `Edited: Hello from owner ${suffix}`
         notificationMessage = `Ping ${suffix}`
 
         member = buildUniqueCredentials('chat-member')
-        await registerUser(request, member)
+        const memberResponse = await registerUser(request, member)
+        const memberJson = await memberResponse.json()
+        memberId = memberJson.id as string
 
         const context = await browser.newContext({
             baseURL: 'http://localhost:8080',
@@ -103,6 +110,31 @@ test.describe.serial('Project Chat', () => {
         }
     })
 
+    test('member cannot edit or delete the owner message', async ({
+        browser,
+    }) => {
+        const { context, page: memberPage } = await createAuthenticatedPage(
+            browser,
+            member,
+        )
+        try {
+            await memberPage.goto(`/project/${projectId}/chat`)
+            await openMessageMenu(memberPage, ownerMessage)
+
+            await expect(
+                memberPage.getByRole('menuitem', { name: 'Copy message' }),
+            ).toBeVisible()
+            await expect(
+                memberPage.getByRole('menuitem', { name: 'Edit' }),
+            ).toHaveCount(0)
+            await expect(
+                memberPage.getByRole('menuitem', { name: 'Delete' }),
+            ).toHaveCount(0)
+        } finally {
+            await context.close()
+        }
+    })
+
     test('member can send a reply and the owner sees it', async ({
         page,
         browser,
@@ -124,6 +156,70 @@ test.describe.serial('Project Chat', () => {
 
         await page.goto(`/project/${projectId}/chat`)
         await expect(page.getByText(memberMessage, { exact: true })).toBeVisible()
+    })
+
+    test('member can edit their own message and the owner sees the change without refreshing', async ({
+        page,
+        browser,
+    }) => {
+        await page.goto(`/project/${projectId}/chat`)
+
+        const { context, page: memberPage } = await createAuthenticatedPage(
+            browser,
+            member,
+        )
+        try {
+            await memberPage.goto(`/project/${projectId}/chat`)
+            await openMessageMenu(memberPage, memberMessage)
+            await memberPage.getByRole('menuitem', { name: 'Edit' }).click()
+
+            await memberPage.locator('textarea').fill(memberEditedMessage)
+            await memberPage.locator('textarea').press('Control+Enter')
+
+            await expect(
+                memberPage.getByText(memberEditedMessage, { exact: true }),
+            ).toBeVisible()
+            await expect(
+                memberPage.getByText('Edited', { exact: true }),
+            ).toBeVisible()
+        } finally {
+            await context.close()
+        }
+
+        await expect(
+            page.getByText(memberEditedMessage, { exact: true }),
+        ).toBeVisible({ timeout: 10_000 })
+    })
+
+    test('member can delete their own message and the owner sees it removed without refreshing', async ({
+        page,
+        browser,
+    }) => {
+        await page.goto(`/project/${projectId}/chat`)
+
+        const { context, page: memberPage } = await createAuthenticatedPage(
+            browser,
+            member,
+        )
+        try {
+            await memberPage.goto(`/project/${projectId}/chat`)
+            await openMessageMenu(memberPage, memberEditedMessage)
+            await memberPage.getByRole('menuitem', { name: 'Delete' }).click()
+            await memberPage
+                .getByRole('dialog')
+                .getByRole('button', { name: 'Delete' })
+                .click()
+
+            await expect(
+                memberPage.getByText(memberEditedMessage, { exact: true }),
+            ).toHaveCount(0)
+        } finally {
+            await context.close()
+        }
+
+        await expect(
+            page.getByText(memberEditedMessage, { exact: true }),
+        ).toHaveCount(0, { timeout: 10_000 })
     })
 
     // -------------------------------------------------------------------------
@@ -203,5 +299,85 @@ test.describe.serial('Project Chat', () => {
         } finally {
             await context.close()
         }
+    })
+
+    test('member can open the chat directly from a notification', async ({
+        page,
+        browser,
+    }) => {
+        const openFromNotificationMessage = `${notificationMessage} open`
+
+        const { context, page: memberPage } = await createAuthenticatedPage(
+            browser,
+            member,
+        )
+        try {
+            await memberPage.goto('/')
+
+            await page.goto(`/project/${projectId}/chat`)
+            await sendMessage(page, openFromNotificationMessage)
+
+            const notifBell = memberPage.getByLabel('Notifications')
+            await expect(notifBell.locator('span')).toBeVisible({
+                timeout: 10_000,
+            })
+
+            await notifBell.click()
+            await memberPage.getByText(openFromNotificationMessage).click()
+
+            await expect(memberPage).toHaveURL(`/project/${projectId}/chat`)
+            await expect(
+                memberPage.getByText(openFromNotificationMessage, {
+                    exact: true,
+                }),
+            ).toBeVisible()
+        } finally {
+            await context.close()
+        }
+    })
+
+    test('owner still sees a message when its sender account was deleted', async ({
+        page,
+        browser,
+    }) => {
+        const { context, page: memberPage } = await createAuthenticatedPage(
+            browser,
+            member,
+        )
+        try {
+            await memberPage.goto(`/project/${projectId}/chat`)
+            await sendMessage(memberPage, deletedUserMessage)
+            await expect(
+                memberPage.getByText(deletedUserMessage, { exact: true }),
+            ).toBeVisible()
+
+            const deleteResponse = await memberPage.evaluate(
+                async ({ userId }) => {
+                    const response = await fetch(`/api/v1/users/${userId}`, {
+                        method: 'DELETE',
+                        credentials: 'include',
+                    })
+
+                    return {
+                        ok: response.ok,
+                        status: response.status,
+                    }
+                },
+                { userId: memberId },
+            )
+
+            expect(deleteResponse.ok).toBeTruthy()
+            expect(deleteResponse.status).toBe(204)
+        } finally {
+            await context.close()
+        }
+
+        await page.goto(`/project/${projectId}/chat`)
+        await expect(
+            page.getByText('user deleted', { exact: true }),
+        ).toBeVisible()
+        await expect(
+            page.getByText(deletedUserMessage, { exact: true }),
+        ).toBeVisible()
     })
 })
