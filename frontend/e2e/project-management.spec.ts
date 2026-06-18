@@ -1,14 +1,17 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 
-function projectActionsButton(
-    page: Parameters<typeof test>[0]['page'],
-    projectTitle: string,
-) {
+function projectActionsButton(page: Page, projectTitle: string) {
     return page
         .locator('main')
         .getByRole('link', { name: new RegExp(projectTitle) })
         .locator('xpath=..')
         .getByRole('button', { name: 'Project actions' })
+}
+
+function projectDescription(page: Page, description: string) {
+    return page
+        .locator('main')
+        .locator('p[data-slot="card-description"]', { hasText: description })
 }
 
 test('creates, edits, archives, and deletes a project while keeping sidebar sections in sync', async ({
@@ -49,7 +52,9 @@ test('creates, edits, archives, and deletes a project while keeping sidebar sect
     await expect(
         page.getByRole('heading', { name: initialProject.title }),
     ).toBeVisible()
-    await expect(page.getByText(initialProject.description)).toBeVisible()
+    await expect(
+        projectDescription(page, initialProject.description),
+    ).toBeVisible()
     await expect(
         activeProjectsSection.getByRole('link', {
             name: new RegExp(initialProject.title),
@@ -73,7 +78,9 @@ test('creates, edits, archives, and deletes a project while keeping sidebar sect
     await expect(
         page.getByRole('heading', { name: updatedProject.title }),
     ).toBeVisible()
-    await expect(page.getByText(updatedProject.description)).toBeVisible()
+    await expect(
+        projectDescription(page, updatedProject.description),
+    ).toBeVisible()
     await expect(
         activeProjectsSection.getByRole('link', {
             name: new RegExp(updatedProject.title),

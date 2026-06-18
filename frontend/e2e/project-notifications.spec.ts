@@ -63,34 +63,6 @@ async function assignTaskToMember(
     }).click()
 }
 
-async function unassignTaskFromMember(
-    page: Page,
-    taskTitle: string,
-    member: TestCredentials,
-) {
-    await openTaskDrawer(page, taskTitle)
-
-    const drawer = page.getByRole('dialog', { name: 'Task Details' })
-    await drawer.evaluate((dialog, username) => {
-        const groups = Array.from(dialog.querySelectorAll('[role="group"]'))
-        const assigneeGroup = groups.find((group) =>
-            group.textContent?.includes(username as string),
-        )
-        if (!assigneeGroup) {
-            throw new Error('Assignee group not found')
-        }
-
-        const clearButton = assigneeGroup.querySelector('button')
-        if (!(clearButton instanceof HTMLButtonElement)) {
-            throw new Error('Assignee clear button not found')
-        }
-
-        clearButton.click()
-    }, member.username)
-
-    await expect(page.getByText('Task updated.').first()).toBeVisible()
-}
-
 async function openTaskMenu(page: Page, taskTitle: string) {
     await page
         .getByText(taskTitle, { exact: true })

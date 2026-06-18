@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test'
-import { authFile, buildUniqueCredentials, e2eBaseUrl, registerUser } from './helpers/auth'
+import { authFile, e2eBaseUrl } from './helpers/auth'
 import {
     createProjectFromSidebar,
     openProjectFromActiveSidebar,
@@ -12,17 +12,6 @@ import {
 async function navigateToTasks(page: Page, projectId: string) {
     await page.goto(`/project/${projectId}/tasks`)
     await expect(page.getByText('To Do', { exact: true })).toBeVisible()
-}
-
-async function addTaskInColumn(
-    page: Page,
-    columnIndex: 0 | 1 | 2,
-    taskName: string,
-) {
-    await page.getByRole('button', { name: 'Add Task' }).nth(columnIndex).click()
-    await page.getByLabel('Task name').fill(taskName)
-    await page.getByRole('button', { name: 'Create Task' }).click()
-    await expect(page.getByText('Task created.').first()).toBeVisible()
 }
 
 /**
@@ -75,7 +64,7 @@ test.describe.serial('Project Tasks – Drag & Drop', () => {
     let todoTask: string
     let inProgressTask: string
 
-    test.beforeAll(async ({ browser, request }) => {
+    test.beforeAll(async ({ browser }) => {
         const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
         todoTask = `Drag me ${suffix}`
         inProgressTask = `Already moving ${suffix}`

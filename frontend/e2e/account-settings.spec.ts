@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 import {
     authFile,
     buildUniqueCredentials,
@@ -17,7 +17,7 @@ import {
     openProjectSettingsTab,
 } from './helpers/project'
 
-async function openSettingsFromUserMenu(page: Parameters<typeof test>[0]['page']) {
+async function openSettingsFromUserMenu(page: Page) {
     await page.getByRole('button', { name: 'Menu' }).click()
     await page.getByRole('menuitem', { name: 'Profile' }).click()
     await expect(page).toHaveURL(/\/settings\/profile$/)
