@@ -38,6 +38,19 @@ async function addTaskInColumn(
     await expect(page.getByText('Task created.').first()).toBeVisible()
 }
 
+/**
+ * Open the three-dots menu on a specific kanban card.
+ * The task title <p> and the menu button share a flex-row div — going up one
+ * level from the title lands on that row, which contains the button.
+ */
+async function openTaskMenu(page: Page, taskTitle: string) {
+    await page
+        .getByText(taskTitle, { exact: true })
+        .locator('..')
+        .getByRole('button', { name: 'Task actions' })
+        .click()
+}
+
 /** Click the task card to open the edit drawer and wait for it to appear. */
 async function openTaskDrawer(page: Page, taskTitle: string) {
     // The kanban card is the first (and only) element showing the task title before
@@ -261,5 +274,49 @@ test.describe.serial('Project Tasks', () => {
         await page.getByRole('option', { name: 'In Progress' }).click()
 
         await expect(page.getByText('Task updated.').first()).toBeVisible()
+    })
+
+    // -------------------------------------------------------------------------
+    // Three-dots card menu
+    // -------------------------------------------------------------------------
+
+    test('opens task edit drawer via three-dots menu', async ({ page }) => {
+        const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+        const taskName = `Menu Edit ${suffix}`
+
+        await navigateToTasks(page, projectId)
+        await addTaskInColumn(page, 0, taskName)
+
+        // Open the ⋯ dropdown on the specific card
+        await openTaskMenu(page, taskName)
+        // "Edit task" opens the same drawer as clicking the card
+        await page.getByRole('menuitem', { name: 'Edit task' }).click()
+
+        await expect(
+            page.getByRole('heading', { name: 'Task Details' }),
+        ).toBeVisible()
+    })
+
+    test('deletes a task via three-dots menu', async ({ page }) => {
+        const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+        const taskName = `To Delete ${suffix}`
+
+        await navigateToTasks(page, projectId)
+        await addTaskInColumn(page, 0, taskName)
+
+        // Open the ⋯ dropdown and choose Delete
+        await openTaskMenu(page, taskName)
+        await page.getByRole('menuitem', { name: 'Delete task' }).click()
+
+        // ConfirmDialog — HeroUI Modal renders role="dialog". Confirm button text = "Delete task".
+        // useTaskDelete has no toast on success; assert the card disappears instead.
+        await page
+            .getByRole('dialog')
+            .getByRole('button', { name: 'Delete task' })
+            .click()
+
+        await expect(
+            page.getByText(taskName, { exact: true }),
+        ).not.toBeVisible()
     })
 })
