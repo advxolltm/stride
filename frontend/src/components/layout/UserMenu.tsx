@@ -1,6 +1,7 @@
 import { Button, Dropdown, Label, Separator } from '@heroui/react'
 import { ChevronDown, User } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import {
     LogoutButton,
@@ -14,6 +15,7 @@ import { selectUserId } from '../../store/userSlice'
 import { skipToken } from '@reduxjs/toolkit/query'
 
 export function UserMenu() {
+    const { t } = useTranslation('common')
     const { data: user } = useGetSessionQuery()
     const userId = useAppSelector(selectUserId)
     const { data: userData } = useGetUserByIdQuery(userId ?? skipToken)
@@ -29,7 +31,7 @@ export function UserMenu() {
         <>
             <Dropdown>
                 <Button
-                    aria-label="Menu"
+                    aria-label={t('userMenu.ariaLabel')}
                     variant="ghost"
                     className="rounded-lg"
                 >
@@ -44,17 +46,17 @@ export function UserMenu() {
                 </Button>
 
                 <Dropdown.Popover>
-                    <Dropdown.Menu aria-label="User menu">
+                    <Dropdown.Menu aria-label={t('userMenu.ariaLabel')}>
                         <Dropdown.Item
                             id="profile"
-                            textValue="Profile"
+                            textValue={t('userMenu.profile')}
                             onClick={() => {
                                 navigate('/settings/profile')
                             }}
                         >
                             <div className="flex items-center gap-2">
                                 <User size={16} />
-                                <Label>Profile</Label>
+                                <Label>{t('userMenu.profile')}</Label>
                             </div>
                         </Dropdown.Item>
 

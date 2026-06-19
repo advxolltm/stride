@@ -70,24 +70,24 @@ export default function RegisterPage() {
             navigate('/login')
         } catch (error: unknown) {
             toast.danger(
-                getApiErrorMessage(error) || 'Failed to create account',
+                getApiErrorMessage(error) || t('auth.register.errorGeneric'),
             )
         }
     }
 
     return (
         <AuthContainer
-            heading="Create an account"
-            subheading="Get started with STRIDE today"
+            heading={t('auth.register.heading')}
+            subheading={t('auth.register.subheading')}
             footer={
                 <>
-                    Already have an account?{' '}
+                    {t('auth.register.haveAccount')}{' '}
                     <button
                         type="button"
                         onClick={() => navigate('/login')}
                         className="font-semibold text-[var(--accent)] transition-opacity hover:opacity-75"
                     >
-                        Sign in
+                        {t('auth.register.signIn')}
                     </button>
                 </>
             }
@@ -103,12 +103,12 @@ export default function RegisterPage() {
                     autoComplete="username"
                 >
                     <Label className="mb-1 text-sm font-semibold text-[var(--foreground)]">
-                        Username
+                        {t('auth.register.usernameLabel')}
                     </Label>
                     <Input
                         minLength={validationPolicy.usernameMinLength}
                         maxLength={validationPolicy.usernameMaxLength}
-                        placeholder="Choose a username"
+                        placeholder={t('auth.register.usernamePlaceholder')}
                         className="w-full rounded-xl border border-[var(--border)] bg-[var(--field-background)] px-3 py-2.5 pr-10 text-sm text-[var(--field-foreground)] transition-all outline-none placeholder:text-[var(--field-placeholder)] focus:border-[var(--focus)] focus:ring-2 focus:ring-[var(--focus)]/15"
                     />
                     <FieldError />
@@ -126,16 +126,16 @@ export default function RegisterPage() {
                                 value,
                             )
                         ) {
-                            return 'Please enter a valid email address'
+                            return t('auth.register.emailInvalid')
                         }
                         return null
                     }}
                 >
                     <Label className="mb-1 text-sm font-semibold text-[var(--foreground)]">
-                        Email
+                        {t('auth.register.emailLabel')}
                     </Label>
                     <Input
-                        placeholder="Enter your email"
+                        placeholder={t('auth.register.emailPlaceholder')}
                         className="w-full rounded-xl border border-[var(--border)] bg-[var(--field-background)] px-3 py-2.5 pr-10 text-sm text-[var(--field-foreground)] transition-all outline-none placeholder:text-[var(--field-placeholder)] focus:border-[var(--focus)] focus:ring-2 focus:ring-[var(--focus)]/15"
                     />
                     <FieldError />
@@ -152,7 +152,7 @@ export default function RegisterPage() {
                     isPending={isLoading}
                     className="mt-1 h-11 rounded-xl bg-[var(--accent)] text-base text-white transition-opacity hover:opacity-90"
                 >
-                    Create account
+                    {t('auth.register.submit')}
                 </Button>
             </Form>
         </AuthContainer>

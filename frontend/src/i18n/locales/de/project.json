@@ -57,23 +57,26 @@
     },
     "panel": {
       "title": "Board Hub",
-      "open": "Panel Ã¶ffnen",
-      "openAriaLabel": "Whiteboard-Panel Ã¶ffnen",
-      "close": "Panel schlieÃŸen",
+      "open": "Panel öffnen",
+      "openAriaLabel": "Whiteboard-Panel öffnen",
+      "close": "Panel schließen",
       "pin": "Panel anheften",
-      "unpin": "Panel lÃ¶sen",
+      "unpin": "Panel lösen",
       "tabsAriaLabel": "Whiteboard-Panel-Tabs",
       "tabs": {
         "chat": "Chats",
         "templates": "Vorlagen"
       },
       "templatesTitle": "Vorlagen",
-      "templatesComingSoon": "DemnÃ¤chst verfÃ¼gbar"
+      "templatesComingSoon": "Demnächst verfügbar",
+      "useTemplate": "Vorlage verwenden"
     },
-	"region": {
-		"linkTask": "Aufgabe verknüpfen",
-		"viewTask": "Aufgabe anzeigen"
-	},
+    "region": {
+      "linkTask": "Aufgabe verknüpfen",
+      "viewTask": "Aufgabe anzeigen"
+    },
+    "templateImportSuccess": "Vorlage dem Whiteboard hinzugefügt",
+    "templateImportError": "Vorlage konnte nicht zum Whiteboard hinzugefügt werden",
     "bulkDeleteError": "Die ausgewählten Whiteboard-Elemente konnten nicht gelöscht werden",
     "bulkUpdateError": "Die ausgewählten Whiteboard-Elemente konnten nicht aktualisiert werden"
   },

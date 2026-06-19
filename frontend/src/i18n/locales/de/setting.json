@@ -1,6 +1,7 @@
 {
   "title": "Einstellungen",
   "description": "Verwalten Sie Ihre Kontoeinstellungen und Projektfähigkeiten",
+  "back": "Zurück",
   "tabs": {
     "profile": "Profil",
     "security": "Sicherheit",
@@ -56,6 +57,7 @@
     "save": "Änderungen speichern",
     "reset": "Änderungen verwerfen",
     "updateSuccess": "Arbeitsstunden erfolgreich aktualisiert",
+    "updateError": "Arbeitsstunden konnten nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
     "summary": {
       "allocated": "Verplant",
       "remaining": "Verbleibend"

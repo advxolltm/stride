@@ -1,20 +1,16 @@
 import { configureStore } from '@reduxjs/toolkit'
 import { setupListeners } from '@reduxjs/toolkit/query'
 import { baseApi } from './api/base.api'
-import chatReducer from './chatSlice'
 import {
     themeListener,
     syncThemeWithDocument,
 } from './middleware/themeListener'
 import themeReducer from './themeSlice'
-import taskReducer from './taskSlice'
 import userReducer from './userSlice'
 
 export const store = configureStore({
     reducer: {
         [baseApi.reducerPath]: baseApi.reducer,
-        chat: chatReducer,
-        tasks: taskReducer,
         theme: themeReducer,
         user: userReducer,
     },

@@ -79,5 +79,37 @@
   },
   "primary": "Primaer",
   "danger": "Gefahr",
-  "tailwindMessage": "Tailwind + Theme funktioniert"
+  "tailwindMessage": "Tailwind + Theme funktioniert",
+  "auth": {
+    "login": {
+      "heading": "Willkommen zurück",
+      "subheading": "Melden Sie sich an, um fortzufahren",
+      "emailLabel": "E-Mail",
+      "emailPlaceholder": "E-Mail-Adresse eingeben",
+      "emailInvalid": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
+      "forgotPassword": "Passwort vergessen?",
+      "submit": "Anmelden",
+      "noAccount": "Noch kein Konto?",
+      "createAccount": "Konto erstellen",
+      "errorInvalidCredentials": "Anmeldung fehlgeschlagen. Bitte überprüfen Sie Ihre Zugangsdaten und versuchen Sie es erneut.",
+      "errorGeneric": "Bei der Anmeldung ist ein Fehler aufgetreten. Bitte versuchen Sie es später erneut."
+    },
+    "register": {
+      "heading": "Konto erstellen",
+      "subheading": "Jetzt mit STRIDE loslegen",
+      "usernameLabel": "Benutzername",
+      "usernamePlaceholder": "Benutzernamen wählen",
+      "emailLabel": "E-Mail",
+      "emailPlaceholder": "E-Mail-Adresse eingeben",
+      "emailInvalid": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
+      "submit": "Konto erstellen",
+      "haveAccount": "Bereits ein Konto?",
+      "signIn": "Anmelden",
+      "errorGeneric": "Konto konnte nicht erstellt werden"
+    }
+  },
+  "userMenu": {
+    "ariaLabel": "Menü",
+    "profile": "Profil"
+  }
 }

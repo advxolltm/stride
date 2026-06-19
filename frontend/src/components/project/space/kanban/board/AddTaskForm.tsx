@@ -27,7 +27,7 @@ export function AddTaskForm({
                 project_id: projectId,
                 title: trimmed,
                 status: columnId,
-                position: 0,
+                position: null,
                 description: null,
                 start_date: null,
                 due_date: null,

@@ -79,5 +79,37 @@
   },
   "primary": "Primary",
   "danger": "Danger",
-  "tailwindMessage": "Tailwind + theme working"
+  "tailwindMessage": "Tailwind + theme working",
+  "auth": {
+    "login": {
+      "heading": "Welcome back",
+      "subheading": "Sign in to your account to continue",
+      "emailLabel": "Email",
+      "emailPlaceholder": "Enter your email",
+      "emailInvalid": "Please enter a valid email address",
+      "forgotPassword": "Forgot password?",
+      "submit": "Sign in",
+      "noAccount": "Don't have an account?",
+      "createAccount": "Create account",
+      "errorInvalidCredentials": "Failed to sign in. Please check your credentials and try again.",
+      "errorGeneric": "An error occurred while signing in. Please try again later."
+    },
+    "register": {
+      "heading": "Create an account",
+      "subheading": "Get started with STRIDE today",
+      "usernameLabel": "Username",
+      "usernamePlaceholder": "Choose a username",
+      "emailLabel": "Email",
+      "emailPlaceholder": "Enter your email",
+      "emailInvalid": "Please enter a valid email address",
+      "submit": "Create account",
+      "haveAccount": "Already have an account?",
+      "signIn": "Sign in",
+      "errorGeneric": "Failed to create account"
+    }
+  },
+  "userMenu": {
+    "ariaLabel": "Menu",
+    "profile": "Profile"
+  }
 }

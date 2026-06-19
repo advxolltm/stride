@@ -101,7 +101,7 @@ export function TaskListView({
                 project_id: projectId,
                 title: trimmed,
                 status: 'todo' satisfies TaskStatus,
-                position: 0,
+                position: null,
                 description: null,
                 start_date: null,
                 due_date: null,
