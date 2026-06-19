@@ -359,7 +359,7 @@ export function ChatSpace({
         >
             <div
                 className={[
-                    'min-h-0 flex-1 py-4',
+                    'app-scrollbar min-h-0 flex-1 py-4',
                     uniqueMessages.length === 0
                         ? 'overflow-hidden'
                         : 'overflow-y-auto',

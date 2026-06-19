@@ -96,3 +96,63 @@ body {
   flex-direction: column;
   min-width: 320px;
 }
+
+.app-scrollbar {
+  --app-scrollbar-size: 0.625rem;
+  --app-scrollbar-track: transparent;
+  --app-scrollbar-thumb: color-mix(
+    in oklch,
+    var(--scrollbar) 82%,
+    var(--foreground) 18%
+  );
+  --app-scrollbar-thumb-hover: color-mix(
+    in oklch,
+    var(--scrollbar) 58%,
+    var(--accent) 42%
+  );
+  --app-scrollbar-thumb-active: color-mix(
+    in oklch,
+    var(--accent) 72%,
+    var(--foreground) 28%
+  );
+
+  overscroll-behavior: contain;
+  scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+
+.app-scrollbar::-webkit-scrollbar {
+  width: var(--app-scrollbar-size);
+  height: var(--app-scrollbar-size);
+}
+
+.app-scrollbar::-webkit-scrollbar-track {
+  background: var(--app-scrollbar-track);
+}
+
+.app-scrollbar::-webkit-scrollbar-thumb {
+  min-height: 2.5rem;
+  border: 0.1875rem solid transparent;
+  border-radius: 999px;
+  background: var(--app-scrollbar-thumb);
+  background-clip: content-box;
+}
+
+.app-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--app-scrollbar-thumb-hover);
+  background-clip: content-box;
+}
+
+.app-scrollbar::-webkit-scrollbar-thumb:active {
+  background: var(--app-scrollbar-thumb-active);
+  background-clip: content-box;
+}
+
+.app-scrollbar::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.app-scrollbar-compact {
+  --app-scrollbar-size: 0.5rem;
+}
