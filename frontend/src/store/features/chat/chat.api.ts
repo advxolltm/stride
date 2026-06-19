@@ -1,8 +1,13 @@
+import { z } from 'zod'
+
 import { baseApi } from '../../api/base.api'
 import {
+    ChatMemberCursorSchema,
     createPaginatedSchema,
     MessageSchema,
+    type ChatMemberCursor,
     type EditMessageRequest,
+    type MarkChatCursorRequest,
     type Message,
     type Paginated,
     type SendMessageRequest,
@@ -81,12 +86,50 @@ export const chatApi = baseApi.injectEndpoints({
                 { type: 'Messages', id: arg.projectId },
             ],
         }),
+        getChatMemberCursors: builder.query<
+            ChatMemberCursor[],
+            { projectId: string }
+        >({
+            query: ({ projectId }) => `/projects/${projectId}/chat/cursors`,
+            transformResponse: (response: unknown) =>
+                z.array(ChatMemberCursorSchema).parse(response),
+            providesTags: (_result, _error, arg) => [
+                { type: 'ChatMemberCursor', id: arg.projectId },
+            ],
+        }),
+        markMessageDelivered: builder.mutation<
+            ChatMemberCursor,
+            { projectId: string; body: MarkChatCursorRequest }
+        >({
+            query: ({ projectId, body }) => ({
+                url: `/projects/${projectId}/chat/cursors/delivered`,
+                method: 'PATCH',
+                body,
+            }),
+            transformResponse: (response: unknown) =>
+                ChatMemberCursorSchema.parse(response),
+        }),
+        markMessageRead: builder.mutation<
+            ChatMemberCursor,
+            { projectId: string; body: MarkChatCursorRequest }
+        >({
+            query: ({ projectId, body }) => ({
+                url: `/projects/${projectId}/chat/cursors/read`,
+                method: 'PATCH',
+                body,
+            }),
+            transformResponse: (response: unknown) =>
+                ChatMemberCursorSchema.parse(response),
+        }),
     }),
 })
 
 export const {
     useGetMessagesInfiniteQuery,
+    useGetChatMemberCursorsQuery,
     useSendMessageMutation,
     useEditMessageMutation,
     useDeleteMessageMutation,
+    useMarkMessageDeliveredMutation,
+    useMarkMessageReadMutation,
 } = chatApi
