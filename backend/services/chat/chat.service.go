@@ -57,6 +57,9 @@ func (s *chatService) CreateMessage(ctx context.Context, content string, sentBy 
 func (s *chatService) DeleteMessage(ctx context.Context, messageID uuid.UUID) error {
 	err := s.chatStore.DeleteMessage(ctx, messageID)
 	if err != nil {
+		if errors.Is(err, dbChat.ErrMessageNotFound) {
+			return fmt.Errorf("%w: %w", ErrMessageNotFound, err)
+		}
 		return fmt.Errorf("failed to delete message %s: %w", messageID, err)
 	}
 	return nil

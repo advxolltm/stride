@@ -46,6 +46,10 @@ func (h *chatRouteHandler) mapServiceError(err error) (int, string) {
 	switch {
 	case errors.Is(err, projectService.ErrProjectNotFound):
 		return http.StatusNotFound, err.Error()
+	case errors.Is(err, chatService.ErrMessageNotFound):
+		return http.StatusNotFound, err.Error()
+	case errors.Is(err, projectService.ErrProjectMemberNotFound):
+		return http.StatusUnauthorized, "unauthorized"
 	default:
 		slog.Error("unexpected error in chat route handler", "error", err.Error())
 		return http.StatusInternalServerError, "internal server error"
@@ -245,7 +249,7 @@ func (h *chatRouteHandler) messagePOST(c *echo.Context) error {
 		if err != nil {
 			slog.Error("messagePOST: Failed to get project members for notification", "error", err)
 			return
-		} 
+		}
 
 		err = h.notificationService.SendBulkNotification(
 			ctx,
@@ -413,7 +417,6 @@ func (h *chatRouteHandler) messageDELETE(c *echo.Context) error {
 	return c.NoContent(http.StatusOK)
 }
 
-
 // @Summary Gets chat member cursors
 // @Tags chat
 // @Param project-id path string true "Project ID"
@@ -454,13 +457,9 @@ func (h *chatRouteHandler) chatCursorsGET(c *echo.Context) error {
 	return c.JSON(http.StatusOK, routes.Map(cursors, routes.MapChatMemberCursor))
 }
 
-
-
 type markCursorRequest struct {
 	MessageID uuid.UUID `json:"messageId"`
 } // @name MarkChatCursorRequest
-
-
 
 // @Summary Marks a chat message as delivered
 // @Tags chat
