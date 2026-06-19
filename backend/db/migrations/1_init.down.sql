@@ -8,3 +8,4 @@ DROP TABLE IF EXISTS project_skills;
 DROP TABLE IF EXISTS project_members;
 DROP TABLE IF EXISTS projects;
 DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS chat_member_cursors;
