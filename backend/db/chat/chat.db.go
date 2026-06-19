@@ -41,16 +41,16 @@ func (s *chatStore) CreateMessage(ctx context.Context, message *models.Message) 
 
 // DeleteMessage implements [ChatStore].
 func (s *chatStore) DeleteMessage(ctx context.Context, messageID uuid.UUID) error {
-	return s.db.
+	result := s.db.
 		WithContext(ctx).
-		Model(&models.Message{}).
-		Where("id = ?", messageID).
-		Updates(map[string]any{
-			"content":    "",
-			"is_deleted": true,
-			"deleted_at": time.Now(),
-		}).
-		Error
+		Delete(&models.Message{}, "id = ?", messageID)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return ErrMessageNotFound
+	}
+	return nil
 }
 
 // GetMessageCount implements [ChatStore].
