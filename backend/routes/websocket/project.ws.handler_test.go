@@ -169,7 +169,7 @@ func TestProjectTasksWSEndpoint(t *testing.T) {
 		}()
 		waitForSubCount(t, project.ID.String(), 1)
 
-		chatMessage := fmt.Sprintf(`{"type":%d,"payload":{"id":"%s"}}`, routes.ChatMessageCreate, uuid.NewString())
+		chatMessage := fmt.Sprintf(`{"type":%d,"payload":{"id":"%s"}}`, routes.ChatMemberCursorUpdate, uuid.NewString())
 		whiteboardMessage := fmt.Sprintf(`{"type":%d,"payload":{"id":"%s"}}`, routes.WhiteboardElementCreate, uuid.NewString())
 		taskMessage := fmt.Sprintf(`{"type":%d,"payload":{"id":"%s"}}`, routes.TaskUpdate, uuid.NewString())
 		require.NoError(t, rdb.Publish(ctx, project.ID.String(), chatMessage).Err())
@@ -234,7 +234,7 @@ func TestProjectChatWSEndpoint(t *testing.T) {
 		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 	})
 
-	runTest(t, "forwards chat and project events to chat websocket", func(t *testing.T, tx *gorm.DB, deps wsTestDeps) {
+	runTest(t, "forwards chat cursor and project events to chat websocket", func(t *testing.T, tx *gorm.DB, deps wsTestDeps) {
 		ctx := context.Background()
 		user, err := deps.userService.CreateUser(ctx, "chat-forward-"+uuid.NewString(), "chat-forward-"+uuid.NewString()+"@test.com", "Password123!")
 		require.NoError(t, err)
@@ -253,11 +253,14 @@ func TestProjectChatWSEndpoint(t *testing.T) {
 		waitForSubCount(t, project.ID.String(), 1)
 
 		chatMessage := fmt.Sprintf(`{"type":%d,"payload":{"id":"%s"}}`, routes.ChatMessageCreate, uuid.NewString())
+		cursorMessage := fmt.Sprintf(`{"type":%d,"payload":{"id":"%s"}}`, routes.ChatMemberCursorUpdate, uuid.NewString())
 		projectMessage := fmt.Sprintf(`{"type":%d,"payload":{"id":"%s"}}`, routes.ProjectMemberAdd, uuid.NewString())
 		require.NoError(t, rdb.Publish(ctx, project.ID.String(), chatMessage).Err())
+		require.NoError(t, rdb.Publish(ctx, project.ID.String(), cursorMessage).Err())
 		require.NoError(t, rdb.Publish(ctx, project.ID.String(), projectMessage).Err())
 
 		assert.Equal(t, routes.ChatMessageCreate, readWSEnvelope(t, conn, 3*time.Second).Type)
+		assert.Equal(t, routes.ChatMemberCursorUpdate, readWSEnvelope(t, conn, 3*time.Second).Type)
 		assert.Equal(t, routes.ProjectMemberAdd, readWSEnvelope(t, conn, 3*time.Second).Type)
 	})
 

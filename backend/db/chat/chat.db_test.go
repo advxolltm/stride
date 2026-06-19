@@ -115,10 +115,9 @@ func TestChatStore(t *testing.T) {
 		err = cs.DeleteMessage(ctx, message.ID)
 		require.NoError(t, err)
 		var msg models.Message
-		get_err := db.First(&msg, "id = ?", message.ID)
-		require.NoError(t, get_err.Error)
-		assert.True(t, msg.IsDeleted)
-		assert.Equal(t, "", msg.Content)
+		getErr := db.First(&msg, "id = ?", message.ID)
+		require.Error(t, getErr.Error)
+		assert.True(t, errors.Is(getErr.Error, gorm.ErrRecordNotFound))
 	})
 	runTest(t, db, "EditChat", func(t *testing.T, db *gorm.DB, cs chat.ChatStore) {
 		proj := testutils.SelectRandomProject(t, db)
@@ -245,6 +244,35 @@ func TestChatStore(t *testing.T) {
 		message := createTestMessage(t, cs, ctx, projects[1].ID, &projects[1].Members[0].ID, time.Now())
 
 		_, err := cs.MarkDelivered(ctx, projects[0].ID, projects[0].Members[0].ID, message.ID)
+
+		require.Error(t, err)
+		assert.True(t, errors.Is(err, chat.ErrMessageNotFound))
+	})
+	runTest(t, db, "MarkDeliveredReturnsErrMessageNotFoundForDeletedMessage", func(t *testing.T, db *gorm.DB, cs chat.ChatStore) {
+		proj := testutils.SelectRandomProject(t, db)
+		message := createTestMessage(t, cs, ctx, proj.ID, &proj.Members[0].ID, time.Now())
+		require.NoError(t, cs.DeleteMessage(ctx, message.ID))
+
+		_, err := cs.MarkDelivered(ctx, proj.ID, proj.Members[1].ID, message.ID)
+
+		require.Error(t, err)
+		assert.True(t, errors.Is(err, chat.ErrMessageNotFound))
+	})
+	runTest(t, db, "MarkReadReturnsErrMessageNotFoundForMessageFromAnotherProject", func(t *testing.T, db *gorm.DB, cs chat.ChatStore) {
+		projects := testutils.SelectRandomProjects(t, db, 2)
+		message := createTestMessage(t, cs, ctx, projects[1].ID, &projects[1].Members[0].ID, time.Now())
+
+		_, err := cs.MarkRead(ctx, projects[0].ID, projects[0].Members[0].ID, message.ID)
+
+		require.Error(t, err)
+		assert.True(t, errors.Is(err, chat.ErrMessageNotFound))
+	})
+	runTest(t, db, "MarkReadReturnsErrMessageNotFoundForDeletedMessage", func(t *testing.T, db *gorm.DB, cs chat.ChatStore) {
+		proj := testutils.SelectRandomProject(t, db)
+		message := createTestMessage(t, cs, ctx, proj.ID, &proj.Members[0].ID, time.Now())
+		require.NoError(t, cs.DeleteMessage(ctx, message.ID))
+
+		_, err := cs.MarkRead(ctx, proj.ID, proj.Members[1].ID, message.ID)
 
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, chat.ErrMessageNotFound))
