@@ -37,6 +37,9 @@ func (h *chatRouteHandler) registerRoutes(api *echo.Group) {
 	g.POST("", h.messagePOST)
 	g.PATCH("/message/:message-id", h.messagePATCH)
 	g.DELETE("/message/:message-id", h.messageDELETE)
+	g.GET("/cursors", h.chatCursorsGET)
+	g.PATCH("/cursors/delivered", h.chatCursorDeliveredPATCH)
+	g.PATCH("/cursors/read", h.chatCursorReadPATCH)
 }
 
 func (h *chatRouteHandler) mapServiceError(err error) (int, string) {
@@ -408,4 +411,159 @@ func (h *chatRouteHandler) messageDELETE(c *echo.Context) error {
 	// NOTE: I don't think we should send a notification message when a chat message was deleted...
 
 	return c.NoContent(http.StatusOK)
+}
+
+
+// @Summary Gets chat member cursors
+// @Tags chat
+// @Param project-id path string true "Project ID"
+// @Success 200 {array} routes.ChatMemberCursor "Chat member cursors"
+// @Failure 400 {object} routes.ErrorResponse "invalid project id"
+// @Failure 401 {object} routes.ErrorResponse "unauthorized"
+// @Failure 404 {object} routes.ErrorResponse "project not found"
+// @Router /projects/{project-id}/chat/cursors [get]
+func (h *chatRouteHandler) chatCursorsGET(c *echo.Context) error {
+	ctx := c.Request().Context()
+
+	type reqFields struct {
+		ProjectID uuid.UUID `param:"project-id"`
+	}
+
+	var req reqFields
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, routes.BadRequestErrResponse(err))
+	}
+
+	userID := h.authService.GetClaims(c).UserID
+	isMember, err := h.projectService.IsProjectMember(ctx, userID, req.ProjectID)
+	if err != nil {
+		status, msg := h.mapServiceError(err)
+		return c.JSON(status, routes.ErrorResponse{Error: msg})
+	}
+
+	if !isMember {
+		return c.JSON(http.StatusUnauthorized, routes.ErrorResponse{Error: "unauthorized"})
+	}
+
+	cursors, err := h.chatService.GetProjectChatCursors(ctx, req.ProjectID)
+	if err != nil {
+		status, msg := h.mapServiceError(err)
+		return c.JSON(status, routes.ErrorResponse{Error: msg})
+	}
+
+	return c.JSON(http.StatusOK, routes.Map(cursors, routes.MapChatMemberCursor))
+}
+
+
+
+type markCursorRequest struct {
+	MessageID uuid.UUID `json:"messageId"`
+} // @name MarkChatCursorRequest
+
+
+
+// @Summary Marks a chat message as delivered
+// @Tags chat
+// @Param project-id path string true "Project ID"
+// @Param data body markCursorRequest true "Message cursor data"
+// @Success 200 {object} routes.ChatMemberCursor "Updated chat member cursor"
+// @Failure 400 {object} routes.ErrorResponse "invalid project id or message id"
+// @Failure 401 {object} routes.ErrorResponse "unauthorized"
+// @Failure 404 {object} routes.ErrorResponse "project not found or message not found"
+// @Router /projects/{project-id}/chat/cursors/delivered [patch]
+func (h *chatRouteHandler) chatCursorDeliveredPATCH(c *echo.Context) error {
+	ctx := c.Request().Context()
+
+	type reqFields struct {
+		ProjectID uuid.UUID `param:"project-id"`
+		markCursorRequest
+	}
+
+	var req reqFields
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, routes.BadRequestErrResponse(err))
+	}
+
+	userID := h.authService.GetClaims(c).UserID
+	isMember, err := h.projectService.IsProjectMember(ctx, userID, req.ProjectID)
+	if err != nil {
+		status, msg := h.mapServiceError(err)
+		return c.JSON(status, routes.ErrorResponse{Error: msg})
+	}
+
+	if !isMember {
+		return c.JSON(http.StatusUnauthorized, routes.ErrorResponse{Error: "unauthorized"})
+	}
+
+	member, err := h.projectService.GetProjectMember(ctx, req.ProjectID, userID)
+	if err != nil {
+		status, msg := h.mapServiceError(err)
+		return c.JSON(status, routes.ErrorResponse{Error: msg})
+	}
+
+	cursor, err := h.chatService.MarkDelivered(ctx, req.ProjectID, member.ID, req.MessageID)
+	if err != nil {
+		status, msg := h.mapServiceError(err)
+		return c.JSON(status, routes.ErrorResponse{Error: msg})
+	}
+
+	cursorResp := routes.MapChatMemberCursor(cursor)
+	if err := routes.SendWSUpdate(ctx, h.rdb, req.ProjectID, routes.ChatMemberCursorUpdate, cursorResp); err != nil {
+		slog.Error("chatCursorDeliveredPATCH: Failed to send ws update", "error", err)
+	}
+
+	return c.JSON(http.StatusOK, cursorResp)
+}
+
+// @Summary Marks a chat message as read
+// @Tags chat
+// @Param project-id path string true "Project ID"
+// @Param data body markCursorRequest true "Message cursor data"
+// @Success 200 {object} routes.ChatMemberCursor "Updated chat member cursor"
+// @Failure 400 {object} routes.ErrorResponse "invalid project id or message id"
+// @Failure 401 {object} routes.ErrorResponse "unauthorized"
+// @Failure 404 {object} routes.ErrorResponse "project not found or message not found"
+// @Router /projects/{project-id}/chat/cursors/read [patch]
+func (h *chatRouteHandler) chatCursorReadPATCH(c *echo.Context) error {
+	ctx := c.Request().Context()
+
+	type reqFields struct {
+		ProjectID uuid.UUID `param:"project-id"`
+		markCursorRequest
+	}
+
+	var req reqFields
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, routes.BadRequestErrResponse(err))
+	}
+
+	userID := h.authService.GetClaims(c).UserID
+	isMember, err := h.projectService.IsProjectMember(ctx, userID, req.ProjectID)
+	if err != nil {
+		status, msg := h.mapServiceError(err)
+		return c.JSON(status, routes.ErrorResponse{Error: msg})
+	}
+
+	if !isMember {
+		return c.JSON(http.StatusUnauthorized, routes.ErrorResponse{Error: "unauthorized"})
+	}
+
+	member, err := h.projectService.GetProjectMember(ctx, req.ProjectID, userID)
+	if err != nil {
+		status, msg := h.mapServiceError(err)
+		return c.JSON(status, routes.ErrorResponse{Error: msg})
+	}
+
+	cursor, err := h.chatService.MarkRead(ctx, req.ProjectID, member.ID, req.MessageID)
+	if err != nil {
+		status, msg := h.mapServiceError(err)
+		return c.JSON(status, routes.ErrorResponse{Error: msg})
+	}
+
+	cursorResp := routes.MapChatMemberCursor(cursor)
+	if err := routes.SendWSUpdate(ctx, h.rdb, req.ProjectID, routes.ChatMemberCursorUpdate, cursorResp); err != nil {
+		slog.Error("chatCursorReadPATCH: Failed to send ws update", "error", err)
+	}
+
+	return c.JSON(http.StatusOK, cursorResp)
 }

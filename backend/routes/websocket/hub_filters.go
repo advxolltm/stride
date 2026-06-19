@@ -56,7 +56,8 @@ func isChatWSEventType(t routes.WSMessageType) bool {
 	switch t {
 	case routes.ChatMessageCreate,
 		routes.ChatMessageUpdate,
-		routes.ChatMessageDelete:
+		routes.ChatMessageDelete,
+		routes.ChatMemberCursorUpdate:
 		return true
 	default:
 		return false
