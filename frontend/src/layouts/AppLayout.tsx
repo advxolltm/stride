@@ -54,9 +54,13 @@ const patchProjectStatusInCaches = (
         }),
     )
     dispatch(
-        projectApi.util.updateQueryData('getProjectById', projectId, (draft) => {
-            draft.status = status
-        }),
+        projectApi.util.updateQueryData(
+            'getProjectById',
+            projectId,
+            (draft) => {
+                draft.status = status
+            },
+        ),
     )
 }
 
@@ -79,9 +83,7 @@ export function AppLayout() {
         getInitialSidebarCollapsed,
     )
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
-    const processedLifecycleNotificationIdsRef = useRef<Set<string>>(
-        new Set(),
-    )
+    const processedLifecycleNotificationIdsRef = useRef<Set<string>>(new Set())
     const { t } = useTranslation('common')
     const { data: notifications = [] } = useGetNotificationsQuery()
     useWatchNotificationsQuery()
@@ -99,7 +101,9 @@ export function AppLayout() {
     }, [notifications])
 
     const activeProjectLifecycleKind = activeProjectLifecycleNotification
-        ? getProjectLifecycleNotificationKind(activeProjectLifecycleNotification)
+        ? getProjectLifecycleNotificationKind(
+              activeProjectLifecycleNotification,
+          )
         : null
 
     const isViewingAffectedProject =
@@ -169,7 +173,11 @@ export function AppLayout() {
             dispatch,
             activeProjectLifecycleNotification.objectId,
         )
-    }, [activeProjectLifecycleKind, activeProjectLifecycleNotification, dispatch])
+    }, [
+        activeProjectLifecycleKind,
+        activeProjectLifecycleNotification,
+        dispatch,
+    ])
 
     const handleProjectLifecycleAcknowledge = async (
         notification: Notification,
@@ -196,25 +204,25 @@ export function AppLayout() {
             ? 'projectArchived.title'
             : activeProjectLifecycleKind === 'unarchived'
               ? 'projectUnarchived.title'
-            : activeProjectLifecycleKind === 'deleted'
-              ? 'projectDeleted.title'
-              : 'projectRemoval.title'
+              : activeProjectLifecycleKind === 'deleted'
+                ? 'projectDeleted.title'
+                : 'projectRemoval.title'
     const lifecycleDialogMessageKey =
         activeProjectLifecycleKind === 'archived'
             ? 'projectArchived.message'
             : activeProjectLifecycleKind === 'unarchived'
               ? 'projectUnarchived.message'
-            : activeProjectLifecycleKind === 'deleted'
-              ? 'projectDeleted.message'
-              : 'projectRemoval.message'
+              : activeProjectLifecycleKind === 'deleted'
+                ? 'projectDeleted.message'
+                : 'projectRemoval.message'
     const lifecycleDialogConfirmKey =
         activeProjectLifecycleKind === 'archived'
             ? 'projectArchived.confirm'
             : activeProjectLifecycleKind === 'unarchived'
               ? 'projectUnarchived.confirm'
-            : activeProjectLifecycleKind === 'deleted'
-              ? 'projectDeleted.confirm'
-              : 'projectRemoval.confirm'
+              : activeProjectLifecycleKind === 'deleted'
+                ? 'projectDeleted.confirm'
+                : 'projectRemoval.confirm'
 
     return (
         <div className="flex min-h-screen flex-col">
@@ -231,10 +239,11 @@ export function AppLayout() {
                         collapsed={sidebarCollapsed}
                         onToggle={handleToggleSidebar}
                         onCreateProject={handleOpenCreateProjectDialog}
+                        className="hidden sm:flex"
                     />
                 )}
 
-                <div className="flex min-w-0 flex-1 flex-col overflow-auto bg-background">
+                <div className="bg-background flex min-w-0 flex-1 flex-col overflow-auto">
                     {!isWhiteboardRoute && <AppBreadcrumb />}
                     <Outlet
                         context={{

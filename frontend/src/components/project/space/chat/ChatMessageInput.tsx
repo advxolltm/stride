@@ -24,11 +24,11 @@ export function ChatMessageInput({
     return (
         <div
             className={[
-                'shrink-0 border-t-2 p-3',
+                'shrink-0 border-t-2 p-1',
                 isEmbedded
                     ? 'border-border bg-surface-secondary'
                     : 'border-default-200 bg-background',
-                isDrawer ? 'px-4 pt-4' : 'px-6',
+                isDrawer ? 'px-4 pt-2' : 'px-6',
             ].join(' ')}
         >
             <Form className="w-full" onSubmit={onSubmit}>
@@ -49,9 +49,7 @@ export function ChatMessageInput({
                             onChange={(event) =>
                                 readOnly
                                     ? undefined
-                                    : onMessageContentChange(
-                                          event.target.value,
-                                      )
+                                    : onMessageContentChange(event.target.value)
                             }
                             value={messageContent}
                         />
