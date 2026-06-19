@@ -1,10 +1,13 @@
-import { Alert, Button, toast } from '@heroui/react'
+import { toast } from '@heroui/react'
 import { Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
-import { ConfirmDialog } from '../../../shared/components'
+import {
+    ConfirmDialog,
+    ProjectSettingsActionAlert,
+} from '../../../shared/components'
 import { useDeleteProjectMutation } from '../../../store/features/project/project.api'
 import type { Project } from '../../../store/features/project/project.types'
 
@@ -33,28 +36,15 @@ export function ProjectGeneralSettingsDelete({
 
     return (
         <>
-            <div>
-                <Alert className="flex items-center rounded-xl border" status="danger">
-                    <Alert.Indicator />
-                    <Alert.Content>
-                        <Alert.Title>
-                            {t('generalSettings.deleteTitle')}
-                        </Alert.Title>
-                        <Alert.Description>
-                            {t('generalSettings.deleteDescription')}
-                        </Alert.Description>
-                    </Alert.Content>
-                    <Button
-                        variant="danger-soft"
-                        size="sm"
-                        onPress={() => setIsDeleteDialogOpen(true)}
-                        className="ml-auto shrink-0"
-                    >
-                        <Trash2 size={14} />
-                        {t('generalSettings.delete')}
-                    </Button>
-                </Alert>
-            </div>
+            <ProjectSettingsActionAlert
+                title={t('generalSettings.deleteTitle')}
+                description={t('generalSettings.deleteDescription')}
+                actionLabel={t('generalSettings.delete')}
+                actionIcon={<Trash2 size={14} />}
+                alertStatus="danger"
+                buttonVariant="danger-soft"
+                onAction={() => setIsDeleteDialogOpen(true)}
+            />
 
             <ConfirmDialog
                 isOpen={isDeleteDialogOpen}
