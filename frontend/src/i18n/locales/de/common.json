@@ -110,6 +110,7 @@
   },
   "userMenu": {
     "ariaLabel": "Menü",
+    "preferences": "Einstellungen",
     "profile": "Profil"
   }
 }
