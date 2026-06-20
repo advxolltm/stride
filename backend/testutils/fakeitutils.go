@@ -418,6 +418,9 @@ func fillDBWithRandomData(db *gorm.DB) {
 func generateTaskAssignments(projects []models.Project) {
 	for pidx := range projects {
 		for tidx := range projects[pidx].Tasks {
+			if rand.Intn(100) <= 30 { //only generate task assignment 70% of the time
+				continue
+			}
 			assignedMembers := ChoiceSubset(projects[pidx].Members)
 			assignees := Map(assignedMembers, func(mem models.ProjectMember) models.TaskAssignee {
 				return models.TaskAssignee{

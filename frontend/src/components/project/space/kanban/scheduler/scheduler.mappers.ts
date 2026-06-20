@@ -10,7 +10,7 @@ import type { StatusOption } from '../context/taskBoard.types'
 import type { SchedulerMemberOption, SchedulerTaskOption } from './types'
 
 const DEFAULT_SCHEDULER_SETTINGS: SchedulerScheduleRequest['settings'] = {
-    optimization_goals: ['max-hours-scheduled', 'distribute-evenly'],
+    optimization_goals: ['max-hours-scheduled', 'distribute-evenly', 'max-tasks-scheduled'],
 }
 
 export function mapTaskToSchedulerTaskOption(
