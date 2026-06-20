@@ -4,6 +4,7 @@ import (
 	"backend/models"
 	"fmt"
 	"log"
+	"log/slog"
 	"math/rand"
 	"testing"
 	"time"
@@ -203,9 +204,17 @@ func fakeMessageWithProjects(projects []models.Project) func(int) models.Message
 func fakeTaskWithProjects(projects []models.Project) func(int) models.Task {
 	return func(idx int) models.Task {
 		desc := f.ProductDescription()
-		startDate := f.PastDate()
-		dueDate := f.FutureDate()
+		daysAgo := f.Number(1, 20)
+		startDate := time.Now().AddDate(0, 0, -daysAgo)
+		daysAhead := f.Number(1, 20)
+		dueDate := time.Now().AddDate(0, 0, daysAhead)
 		expHours := f.Hour()
+
+		slog.Info("StartDate: %s, DueDate: %s", startDate.String(), dueDate.String())
+
+		if dueDate.Sub(startDate).Hours() < 72 {
+			dueDate = dueDate.Add(time.Hour * 72)
+		}
 
 		project := Choice(&projects)
 		taskCreator := Choice(&project.Members)
@@ -216,7 +225,8 @@ func fakeTaskWithProjects(projects []models.Project) func(int) models.Task {
 		status := f.RandomString([]string{"todo", "in_progress", "done"})
 		var completedAt *time.Time
 		if status == "done" {
-			completedAt = new(startDate.AddDate(0, 0, f.Day()))
+			ca := startDate.AddDate(0, 0, f.Day())
+			completedAt = &ca
 		}
 
 		return models.Task{
@@ -332,25 +342,28 @@ func generateProjectMembers(users []models.User, projects []models.Project) {
 		members := make([]models.ProjectMember, 0, membersCount)
 		for _, memberUser := range memberUsers {
 			role := "member"
+			workingHours := f.Number(0, 15)
 			if memberUser.ID == *projects[pidx].CreatedBy {
 				isOwnerInMembers = true
 				role = "owner"
 			}
 			pm := models.ProjectMember{
-				JoinedAt: f.PastDate(),
-				User:     memberUser,
-				Project:  projects[pidx],
-				Role:     role,
+				JoinedAt:     f.PastDate(),
+				User:         memberUser,
+				Project:      projects[pidx],
+				Role:         role,
+				WorkingHours: workingHours,
 			}
 
 			members = append(members, pm)
 		}
-
+		workingHours := f.Number(0, 15)
 		powner := models.ProjectMember{
-			JoinedAt: f.PastDate(),
-			User:     *projects[pidx].Creator,
-			Project:  projects[pidx],
-			Role:     "owner",
+			JoinedAt:     f.PastDate(),
+			User:         *projects[pidx].Creator,
+			Project:      projects[pidx],
+			Role:         "owner",
+			WorkingHours: workingHours,
 		}
 		if !isOwnerInMembers {
 			members = append(members, powner)
