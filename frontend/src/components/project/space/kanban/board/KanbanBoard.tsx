@@ -649,7 +649,7 @@ export function KanbanBoard() {
                         onDragOver={handleDragOver}
                         onDragEnd={handleDragEnd}
                     >
-                        <div className="h-[calc(100vh-320px)] min-h-[420px] overflow-x-auto">
+                        <div className="h-[calc(100vh-320px)] min-h-105 overflow-x-auto">
                             <div className="flex h-full min-h-0 gap-6">
                                 {visibleColumns.map((col) => (
                                     <KanbanColumn
@@ -671,7 +671,7 @@ export function KanbanBoard() {
                     </DndContext>
                 </div>
             ) : isXlOrLess ? (
-                <div className="h-[calc(100vh-320px)] min-h-[420px] overflow-y-auto pt-1">
+                <div className="h-[calc(100vh-340px)] min-h-105 overflow-y-auto pt-1 sm:h-[calc(100vh-320px)]">
                     <TaskCardList
                         tasks={flatFilteredTasks}
                         columns={visibleColumns}
@@ -682,7 +682,7 @@ export function KanbanBoard() {
                     />
                 </div>
             ) : (
-                <div className="h-[calc(100vh-320px)] min-h-[420px] pt-1">
+                <div className="h-[calc(100vh-340px)] min-h-105 pt-1 sm:h-[calc(100vh-320px)]">
                     <TaskListView
                         columns={filteredColumns}
                         onTaskClick={handleTaskClick}
