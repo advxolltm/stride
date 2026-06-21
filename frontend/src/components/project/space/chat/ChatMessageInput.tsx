@@ -53,6 +53,13 @@ export function ChatMessageInput({
             return
         }
 
+        if (
+            typeof window !== 'undefined' &&
+            window.matchMedia('(pointer: coarse)').matches
+        ) {
+            return
+        }
+
         event.preventDefault()
 
         if (event.currentTarget.value.trim()) {
@@ -63,7 +70,7 @@ export function ChatMessageInput({
     return (
         <div
             className={[
-                'shrink-0 pb-1',
+                'shrink-0 touch-manipulation pb-1',
                 isEmbedded
                     ? 'border-border bg-surface-secondary'
                     : 'border-default-200 bg-background',
@@ -86,7 +93,9 @@ export function ChatMessageInput({
                             )}
                             rows={1}
                             disabled={readOnly}
-                            className="app-scrollbar app-scrollbar-compact min-h-9 resize-none text-sm leading-5"
+                            enterKeyHint="enter"
+                            className="app-scrollbar app-scrollbar-compact min-h-9 resize-none text-base leading-5"
+                            style={{ fontSize: 16 }}
                             onKeyDown={handleInputKeyDown}
                             onChange={(event) => {
                                 if (readOnly) {
@@ -102,7 +111,7 @@ export function ChatMessageInput({
                                 isIconOnly
                                 type="submit"
                                 variant="primary"
-                                className="rounded-xl"
+                                className="touch-manipulation rounded-xl"
                                 isDisabled={readOnly || !messageContent.trim()}
                             >
                                 <SendHorizontal size={18} />

@@ -1,3 +1,4 @@
+import clsx from 'clsx'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
@@ -89,6 +90,7 @@ export function AppLayout() {
     useWatchNotificationsQuery()
     const [markNotificationRead] = useMarkNotificationReadMutation()
     const isWhiteboardRoute = location.pathname.endsWith('/whiteboard')
+    const isChatRoute = location.pathname.endsWith('/chat')
 
     const activeProjectLifecycleNotification = useMemo(() => {
         return notifications
@@ -225,14 +227,14 @@ export function AppLayout() {
                 : 'projectRemoval.confirm'
 
     return (
-        <div className="flex min-h-screen flex-col">
+        <div className="flex h-dvh min-h-0 flex-col overflow-hidden">
             {!isWhiteboardRoute && <AppHeader />}
 
             <main
-                className={[
-                    'flex h-screen overflow-hidden',
+                className={clsx(
+                    'flex min-h-0 flex-1 overflow-hidden',
                     isWhiteboardRoute ? 'pt-0' : 'pt-14',
-                ].join(' ')}
+                )}
             >
                 {!isWhiteboardRoute && (
                     <Sidebar
@@ -243,7 +245,12 @@ export function AppLayout() {
                     />
                 )}
 
-                <div className="bg-background flex min-w-0 flex-1 flex-col overflow-auto">
+                <div
+                    className={clsx(
+                        'bg-background flex h-full min-w-0 flex-1 flex-col',
+                        isChatRoute ? 'overflow-hidden' : 'overflow-auto',
+                    )}
+                >
                     {!isWhiteboardRoute && <AppBreadcrumb />}
                     <Outlet
                         context={{

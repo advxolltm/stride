@@ -16,7 +16,7 @@ export function ChatPage() {
     const isArchived = isProjectArchived(project)
 
     return (
-        <div className="flex h-[calc(100dvh-7rem)] min-h-0 flex-col overflow-hidden">
+        <div className="flex h-full min-h-0 flex-col overflow-hidden touch-manipulation">
             <ProjectSpaceHeader
                 title={t('spaces.chat')}
                 description={t('spaces.chatDescription')}
