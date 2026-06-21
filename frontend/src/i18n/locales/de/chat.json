@@ -10,6 +10,13 @@
 			"delete": "Löschen",
 			"copy": "Nachricht kopieren"
 		},
+		"readReceipts": {
+			"delivered": "Zugestellt",
+			"deliveredToOne": "Zugestellt an {{name}}",
+			"deliveredToMany": "Zugestellt an {{count}} Mitglieder",
+			"readByOne": "Gelesen von {{name}}",
+			"readByMany": "Gelesen von {{count}} Mitgliedern"
+		},
 		"copy": {
 			"success": "Nachricht kopiert",
 			"error": "Nachricht konnte nicht kopiert werden"
