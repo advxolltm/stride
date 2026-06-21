@@ -6,13 +6,7 @@ import {
     TextField,
     toast,
 } from '@heroui/react'
-import {
-    CalendarDays,
-    CheckCircle2,
-    Circle,
-    Clock3,
-    Inbox,
-} from 'lucide-react'
+import { CalendarDays, CheckCircle2, Circle, Clock3, Inbox } from 'lucide-react'
 import {
     type MouseEvent as ReactMouseEvent,
     type SyntheticEvent,
@@ -81,7 +75,9 @@ export function TaskListView({
     const statusLabelMap = useMemo(
         () =>
             new Map(
-                statusOptions.map((option) => [option.id, option.label] as const),
+                statusOptions.map(
+                    (option) => [option.id, option.label] as const,
+                ),
             ),
         [statusOptions],
     )
@@ -140,9 +136,9 @@ export function TaskListView({
         switch (columnId) {
             case 'description':
                 return task.description ? (
-                    <div className="w-full min-w-0 max-w-full overflow-hidden">
+                    <div className="w-full max-w-full min-w-0 overflow-hidden">
                         <span
-                            className="block max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-sm"
+                            className="block max-w-full overflow-hidden text-sm text-ellipsis whitespace-nowrap"
                             title={task.description}
                         >
                             {task.description}
@@ -274,8 +270,7 @@ export function TaskListView({
                                 type="submit"
                                 size="sm"
                                 isDisabled={
-                                    !newTaskTitle.trim() ||
-                                    isCreatingTask
+                                    !newTaskTitle.trim() || isCreatingTask
                                 }
                             >
                                 {t('tasks.actions.createTask')}
@@ -315,15 +310,20 @@ export function TaskListView({
                                 {lastResizableColumnId !== 'task' && (
                                     <button
                                         type="button"
-                                        aria-label={t('tasks.list.resizeColumn', {
-                                            column: t('tasks.list.columns.task'),
-                                        })}
+                                        aria-label={t(
+                                            'tasks.list.resizeColumn',
+                                            {
+                                                column: t(
+                                                    'tasks.list.columns.task',
+                                                ),
+                                            },
+                                        )}
                                         className="absolute top-1/2 right-0 h-8 w-3 -translate-y-1/2 cursor-col-resize"
                                         onMouseDown={(event) =>
                                             onResizeStart('task', event)
                                         }
                                     >
-                                        <span className="absolute top-1/2 right-1 h-5 w-1 -translate-y-1/2 rounded-full bg-[var(--border)] opacity-0 transition-all group-hover:opacity-100 group-focus-within:opacity-100" />
+                                        <span className="bg-border absolute top-1/2 right-1 h-5 w-1 -translate-y-1/2 rounded-full opacity-0 transition-all group-focus-within:opacity-100 group-hover:opacity-100" />
                                     </button>
                                 )}
                             </div>
@@ -338,17 +338,20 @@ export function TaskListView({
                                     {lastResizableColumnId !== columnId && (
                                         <button
                                             type="button"
-                                            aria-label={t('tasks.list.resizeColumn', {
-                                                column: t(
-                                                    `tasks.list.columns.${columnId}`,
-                                                ),
-                                            })}
+                                            aria-label={t(
+                                                'tasks.list.resizeColumn',
+                                                {
+                                                    column: t(
+                                                        `tasks.list.columns.${columnId}`,
+                                                    ),
+                                                },
+                                            )}
                                             className="absolute top-1/2 right-0 h-8 w-3 -translate-y-1/2 cursor-col-resize"
                                             onMouseDown={(event) =>
                                                 onResizeStart(columnId, event)
                                             }
                                         >
-                                            <span className="absolute top-1/2 right-1 h-5 w-1 -translate-y-1/2 rounded-full bg-[var(--border)] opacity-0 transition-all group-hover:opacity-100 group-focus-within:opacity-100" />
+                                            <span className="bg-border absolute top-1/2 right-1 h-5 w-1 -translate-y-1/2 rounded-full opacity-0 transition-all group-focus-within:opacity-100 group-hover:opacity-100" />
                                         </button>
                                     )}
                                 </div>
@@ -357,8 +360,8 @@ export function TaskListView({
 
                         <div>
                             {tasks.length === 0 ? (
-                                <div className="flex min-h-[280px] flex-col items-center justify-center gap-3 px-6 py-12 text-center">
-                                    <div className="text-muted-foreground flex h-12 w-12 items-center justify-center rounded-full bg-[var(--surface-secondary)]">
+                                <div className="flex min-h-70 flex-col items-center justify-center gap-3 px-6 py-12 text-center">
+                                    <div className="text-muted-foreground bg-surface-secondary flex h-12 w-12 items-center justify-center rounded-full">
                                         <Inbox size={22} />
                                     </div>
                                     <div className="space-y-1">
@@ -376,7 +379,7 @@ export function TaskListView({
                                         <button
                                             key={task.id}
                                             type="button"
-                                            className="group relative grid w-full cursor-pointer items-center gap-4 border-b border-[var(--border)] px-5 py-4 text-left transition-colors duration-150 last:border-b-0 hover:bg-[var(--surface-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]/40"
+                                            className="group bg-border hover:bg-surface-secondary relative grid w-full cursor-pointer items-center gap-4 border-b px-5 py-4 text-left transition-colors duration-150 last:border-b-0 focus-visible:ring-2 focus-visible:ring-(--focus)/40 focus-visible:outline-none"
                                             style={{
                                                 gridTemplateColumns,
                                             }}
@@ -394,7 +397,7 @@ export function TaskListView({
                                                     className={
                                                         columnId ===
                                                         'description'
-                                                            ? 'w-full min-w-0 max-w-full overflow-hidden'
+                                                            ? 'w-full max-w-full min-w-0 overflow-hidden'
                                                             : 'w-full min-w-0 overflow-hidden'
                                                     }
                                                 >
