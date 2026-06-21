@@ -18,6 +18,10 @@ import {
 } from '../../../../store/features/chat/chat.api'
 import { useWatchProjectChatSocketQuery } from '../../../../store/features/chat/chat.socket'
 import type { Message } from '../../../../store/features/chat/chat.types'
+import {
+    useGetNotificationsQuery,
+    useMarkNotificationReadMutation,
+} from '../../../../store/features/notification/notification.api'
 import { useGetProjectByIdQuery } from '../../../../store/features/project/project.api'
 import { useGetUserByIdQuery } from '../../../../store/features/user/user.api'
 import { ChatMessageInput } from './ChatMessageInput'
@@ -27,11 +31,13 @@ import { ChatSpaceSkeleton } from './ChatSpaceSkeleton'
 interface ChatSpaceProps {
     projectId?: string
     variant?: 'page' | 'embedded' | 'drawer'
+    isActive?: boolean
 }
 
 export function ChatSpace({
     projectId: projectIdProp,
     variant = 'page',
+    isActive = true,
 }: ChatSpaceProps) {
     const { t, i18n } = useTranslation('chat')
     const { projectId: routeProjectId } = useParams()
@@ -59,6 +65,7 @@ export function ChatSpace({
     const { data: chatCursors = [] } = useGetChatMemberCursorsQuery(
         projectId ? { projectId } : skipToken,
     )
+    const { data: notifications = [] } = useGetNotificationsQuery()
     const isArchived = isProjectArchived(project)
 
     const userMap = useMemo(
@@ -100,10 +107,46 @@ export function ChatSpace({
             return undefined
         }
 
-        return uniqueMessages.findLast(
-            (message) => message.senderId !== currentMember.id,
-        )
+        for (let index = uniqueMessages.length - 1; index >= 0; index -= 1) {
+            const message = uniqueMessages[index]
+            if (message.senderId !== currentMember.id) {
+                return message
+            }
+        }
+
+        return undefined
     }, [currentMember, uniqueMessages])
+
+    const isLatestNonOwnMessageRead = useMemo(() => {
+        if (!currentMember || !latestNonOwnMessage) {
+            return false
+        }
+
+        const localCursor = cursorByMemberId.get(currentMember.id)
+        if (!localCursor?.lastReadMessageCreatedAt) {
+            return false
+        }
+
+        return (
+            new Date(localCursor.lastReadMessageCreatedAt).getTime() >=
+            new Date(latestNonOwnMessage.createdAt).getTime()
+        )
+    }, [currentMember, cursorByMemberId, latestNonOwnMessage])
+
+    const unreadChatNotificationIds = useMemo(() => {
+        if (!projectId) {
+            return []
+        }
+
+        return notifications
+            .filter(
+                (notification) =>
+                    !notification.read &&
+                    notification.objectType === 'chat' &&
+                    notification.objectId === projectId,
+            )
+            .map((notification) => notification.id)
+    }, [notifications, projectId])
 
     const messageReceiptsById = useMemo(() => {
         const receipts = new Map<
@@ -166,6 +209,7 @@ export function ChatSpace({
     const [deleteMessage] = useDeleteMessageMutation()
     const [markMessageDelivered] = useMarkMessageDeliveredMutation()
     const [markMessageRead] = useMarkMessageReadMutation()
+    const [markNotificationRead] = useMarkNotificationReadMutation()
 
     const [messageContent, setMessageContent] = useState('')
 
@@ -181,6 +225,7 @@ export function ChatSpace({
 
     const prevTopScrollHeight = useRef<number | null>(null)
     const prevBottomDistance = useRef<number | null>(null)
+    const pendingAutoReadNotificationIdsRef = useRef<Set<string>>(new Set())
 
     useEffect(() => {
         const root = scrollRef.current
@@ -301,7 +346,7 @@ export function ChatSpace({
     }, [isFetchingNextPage, isFetchingPreviousPage, bottomElement, topElement])
 
     useEffect(() => {
-        if (!projectId || !currentMember || !latestNonOwnMessage) {
+        if (!isActive || !projectId || !currentMember || !latestNonOwnMessage) {
             return
         }
 
@@ -328,13 +373,20 @@ export function ChatSpace({
     }, [
         currentMember,
         cursorByMemberId,
+        isActive,
         latestNonOwnMessage,
         markMessageDelivered,
         projectId,
     ])
 
     useEffect(() => {
-        if (isArchived || !projectId || !currentMember || !latestNonOwnMessage) {
+        if (
+            !isActive ||
+            isArchived ||
+            !projectId ||
+            !currentMember ||
+            !latestNonOwnMessage
+        ) {
             return
         }
 
@@ -361,10 +413,42 @@ export function ChatSpace({
     }, [
         currentMember,
         cursorByMemberId,
+        isActive,
         isArchived,
         latestNonOwnMessage,
         markMessageRead,
         projectId,
+    ])
+
+    useEffect(() => {
+        if (
+            !isActive ||
+            !isLatestNonOwnMessageRead ||
+            unreadChatNotificationIds.length === 0
+        ) {
+            return
+        }
+
+        for (const notificationId of unreadChatNotificationIds) {
+            if (pendingAutoReadNotificationIdsRef.current.has(notificationId)) {
+                continue
+            }
+
+            pendingAutoReadNotificationIdsRef.current.add(notificationId)
+            void markNotificationRead(notificationId)
+                .unwrap()
+                .catch(() => undefined)
+                .finally(() => {
+                    pendingAutoReadNotificationIdsRef.current.delete(
+                        notificationId,
+                    )
+                })
+        }
+    }, [
+        isActive,
+        isLatestNonOwnMessageRead,
+        markNotificationRead,
+        unreadChatNotificationIds,
     ])
 
     if (isMessagesLoading || isProjectLoading || isUserLoading) {

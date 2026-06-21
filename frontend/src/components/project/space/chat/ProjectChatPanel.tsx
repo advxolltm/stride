@@ -46,6 +46,7 @@ export function ProjectChatPanel({ projectId }: ProjectChatPanelProps) {
                         projectId={projectId}
                         isPinned={false}
                         canDock
+                        isChatActive={showFloatingPanel}
                         onTogglePin={handleTogglePin}
                         onClose={handleClose}
                         surfaceClassName="bg-surface"
@@ -63,6 +64,7 @@ export function ProjectChatPanel({ projectId }: ProjectChatPanelProps) {
                     projectId={projectId}
                     isPinned
                     canDock
+                    isChatActive={showDockedPanel}
                     onTogglePin={handleTogglePin}
                     onClose={handleClose}
                     surfaceClassName="bg-surface"

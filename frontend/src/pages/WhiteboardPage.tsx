@@ -486,6 +486,7 @@ export function WhiteboardPage() {
                         chromeClassName=""
                         bodyClassName="bg-background"
                         chatVariant="drawer"
+                        isChatActive={showDockedPanel}
                         templates={whiteboardTemplates}
                         onInsertTemplate={handleInsertTemplate}
                         insertingTemplateId={insertingTemplateId}
@@ -516,6 +517,7 @@ export function WhiteboardPage() {
                         chromeClassName=""
                         bodyClassName="bg-background"
                         chatVariant="drawer"
+                        isChatActive={showDrawerPanel}
                         templates={whiteboardTemplates}
                         onInsertTemplate={handleInsertTemplate}
                         insertingTemplateId={insertingTemplateId}

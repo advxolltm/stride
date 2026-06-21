@@ -16,6 +16,22 @@ import {
 export const MESSAGE_PAGE_SIZE = 10
 const PaginatedMessageSchema = createPaginatedSchema(MessageSchema)
 
+const upsertChatMemberCursor = (
+    draft: ChatMemberCursor[],
+    cursor: ChatMemberCursor,
+) => {
+    const index = draft.findIndex(
+        (item) => item.projectMemberId === cursor.projectMemberId,
+    )
+
+    if (index === -1) {
+        draft.push(cursor)
+        return
+    }
+
+    draft[index] = cursor
+}
+
 export const chatApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
         sendMessage: builder.mutation<
@@ -108,6 +124,25 @@ export const chatApi = baseApi.injectEndpoints({
             }),
             transformResponse: (response: unknown) =>
                 ChatMemberCursorSchema.parse(response),
+            invalidatesTags: (_result, _error, arg) => [
+                { type: 'ChatMemberCursor', id: arg.projectId },
+            ],
+            async onQueryStarted({ projectId }, { dispatch, queryFulfilled }) {
+                try {
+                    const { data: cursor } = await queryFulfilled
+                    dispatch(
+                        chatApi.util.updateQueryData(
+                            'getChatMemberCursors',
+                            { projectId },
+                            (draft) => {
+                                upsertChatMemberCursor(draft, cursor)
+                            },
+                        ),
+                    )
+                } catch {
+                    // Tag invalidation/refetch handles failed optimistic paths.
+                }
+            },
         }),
         markMessageRead: builder.mutation<
             ChatMemberCursor,
@@ -120,6 +155,25 @@ export const chatApi = baseApi.injectEndpoints({
             }),
             transformResponse: (response: unknown) =>
                 ChatMemberCursorSchema.parse(response),
+            invalidatesTags: (_result, _error, arg) => [
+                { type: 'ChatMemberCursor', id: arg.projectId },
+            ],
+            async onQueryStarted({ projectId }, { dispatch, queryFulfilled }) {
+                try {
+                    const { data: cursor } = await queryFulfilled
+                    dispatch(
+                        chatApi.util.updateQueryData(
+                            'getChatMemberCursors',
+                            { projectId },
+                            (draft) => {
+                                upsertChatMemberCursor(draft, cursor)
+                            },
+                        ),
+                    )
+                } catch {
+                    // Tag invalidation/refetch handles failed optimistic paths.
+                }
+            },
         }),
     }),
 })
