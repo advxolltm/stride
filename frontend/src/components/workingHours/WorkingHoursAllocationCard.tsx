@@ -57,12 +57,14 @@ export function WorkingHoursAllocationCard({
 
     return (
         <div className="border-border bg-surface rounded-2xl border p-5">
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
                 <div className="flex min-w-0 items-center gap-3">
                     {initials ? (
                         <div
                             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-semibold text-white"
-                            style={{ backgroundColor: color ?? 'var(--accent)' }}
+                            style={{
+                                backgroundColor: color ?? 'var(--accent)',
+                            }}
                         >
                             {initials}
                         </div>

@@ -17,7 +17,7 @@ export function ProfileDetailsForm({
         <div className="border-border bg-surface rounded-xl border p-6">
             <h2 className="mb-4 font-semibold">{t('profile.title')}</h2>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <TextField
                     value={form.fullName}
                     onChange={(value) => onChange({ ...form, fullName: value })}
