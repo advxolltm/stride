@@ -11,6 +11,7 @@ import { SchedulerLoadingStep } from './SchedulerLoadingStep'
 import { SchedulerReviewStep } from './SchedulerReviewStep'
 
 type SchedulerStep = 'intro' | 'loading' | 'review'
+type OptimizationStrategy = 'distribute-evenly' | 'min-makespan'
 
 interface SchedulerFlowModalProps {
     isOpen: boolean
@@ -21,7 +22,7 @@ interface SchedulerFlowModalProps {
     skippedMemberCount: number
     estimatedTaskCount: number
     startDateTaskCount: number
-    onRun: () => Promise<SchedulerPreviewResponse>
+    onRun: (optimStrat : string) => Promise<SchedulerPreviewResponse>
     onConfirm: (assignments: SchedulerAssignment[]) => Promise<void>
 }
 
@@ -50,6 +51,7 @@ export function SchedulerFlowModal({
     const hasStartedRunRef = useRef(false)
     const onRunRef = useRef(onRun)
     const onOpenChangeRef = useRef(onOpenChange)
+    const [strategy, setStrategy] = useState<OptimizationStrategy>('min-makespan')
 
     useEffect(() => {
         onRunRef.current = onRun
@@ -82,7 +84,7 @@ export function SchedulerFlowModal({
         hasStartedRunRef.current = true
         let isMounted = true
 
-        void onRunRef.current()
+        void onRunRef.current(strategy)
             .then((nextPreview) => {
                 if (!isMounted) return
 
@@ -144,6 +146,8 @@ export function SchedulerFlowModal({
                                 startDateTaskCount={startDateTaskCount}
                                 onCancel={() => handleOpenChange(false)}
                                 onRun={() => setStep('loading')}
+                                onStrategyChange={(val) => setStrategy(val as OptimizationStrategy)}
+                                strategy={strategy}
                             />
                         ) : null}
 

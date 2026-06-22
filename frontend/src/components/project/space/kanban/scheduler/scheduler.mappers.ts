@@ -46,12 +46,13 @@ export function mapProjectMemberToSchedulerMemberOption(
 export function buildSchedulerTriggerRequest(
     tasks: SchedulerTaskOption[],
     members: SchedulerMemberOption[],
+    settings : string[]
     //settings: SchedulerScheduleRequest['settings']
 ): SchedulerScheduleRequest {
     return {
         task_ids: tasks.map((task) => task.id),
         user_ids: members.map((member) => member.id),
-        settings: DEFAULT_SCHEDULER_SETTINGS,
+        settings: {optimization_goals: settings},
     }
 }
 

@@ -166,7 +166,7 @@ export function KanbanBoard() {
     const skippedSchedulerMemberCount =
         schedulerMembers.length - schedulableSchedulerMembers.length
 
-    async function handleSchedulerRun() {
+    async function handleSchedulerRun(strat : string) {
         if (schedulerTasks.length === 0) {
             toast.info(t('tasks.scheduler.intro.noTasks'))
             return EMPTY_SCHEDULER_PREVIEW
@@ -193,7 +193,7 @@ export function KanbanBoard() {
                 body: buildSchedulerTriggerRequest(
                     schedulerTasks,
                     schedulableSchedulerMembers,
-                    //settings
+                    ['max-hours-scheduled', strat, 'max-tasks-scheduled']
                 ),
             }).unwrap()
 

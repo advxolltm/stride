@@ -10,6 +10,8 @@ interface SchedulerIntroStepProps {
     startDateTaskCount: number
     onCancel: () => void
     onRun: () => void
+    strategy: string
+    onStrategyChange: (strategy: string) => void
 }
 
 export function SchedulerIntroStep({
@@ -20,6 +22,8 @@ export function SchedulerIntroStep({
     startDateTaskCount,
     onCancel,
     onRun,
+    strategy,
+    onStrategyChange,
 }: SchedulerIntroStepProps) {
     const { t } = useTranslation('space')
     const hasTasks = taskCount > 0
@@ -75,6 +79,57 @@ export function SchedulerIntroStep({
                     </div>
                 </div>
             </Modal.Header>
+            <Modal.Body>
+    {canRun ? (
+        <div className="flex flex-col gap-3 py-4">
+            <span className="text-foreground text-sm font-medium">
+                {t('tasks.scheduler.settings.strategy', 'Optimization Strategy')}
+            </span>
+            
+            <div className="flex flex-col gap-4">
+                {/* Option 1: Distribute Evenly */}
+                <label className="flex cursor-pointer items-start gap-3">
+                    <input
+                        type="radio"
+                        name="optimization-strategy"
+                        value="distribute-evenly"
+                        checked={strategy === 'distribute-evenly'}
+                        onChange={(e) => onStrategyChange(e.target.value)}
+                        className="mt-1 h-4 w-4 cursor-pointer accent-primary"
+                    />
+                    <div className="flex flex-col">
+                        <span className="text-foreground text-sm">
+                            {t('tasks.scheduler.settings.distributeEvenly', 'Distribute Evenly')}
+                        </span>
+                        <span className="text-default-500 text-xs">
+                            {t('tasks.scheduler.settings.distributeEvenlyDesc', 'Balance the workload across all available members.')}
+                        </span>
+                    </div>
+                </label>
+
+                {/* Option 2: Minimize Duration */}
+                <label className="flex cursor-pointer items-start gap-3">
+                    <input
+                        type="radio"
+                        name="optimization-strategy"
+                        value="min-makespan"
+                        checked={strategy === 'min-makespan'}
+                        onChange={(e) => onStrategyChange(e.target.value)}
+                        className="mt-1 h-4 w-4 cursor-pointer accent-primary"
+                    />
+                    <div className="flex flex-col">
+                        <span className="text-foreground text-sm">
+                            {t('tasks.scheduler.settings.minMakespan', 'Minimize Duration')}
+                        </span>
+                        <span className="text-default-500 text-xs">
+                            {t('tasks.scheduler.settings.minMakespanDesc', 'Complete all tasks as quickly as possible.')}
+                        </span>
+                    </div>
+                </label>
+            </div>
+        </div>
+    ) : null}
+</Modal.Body>
             <Modal.Footer>
                 <Button variant="ghost" onPress={onCancel}>
                     {t('tasks.scheduler.actions.cancel')}
