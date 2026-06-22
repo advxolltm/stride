@@ -4,8 +4,16 @@ import type {
     TaskAssignee,
     TaskSkill,
 } from '../../../../../store/features/tasks/task.types'
+import type {
+    ProjectMember,
+    ProjectSkill,
+} from '../../../../../store/features/project/project.types'
 
-export function useTaskListFilters(tasks: Task[]) {
+export function useTaskListFilters(
+    tasks: Task[],
+    members?: ProjectMember[],
+    skills?: ProjectSkill[],
+) {
     const [selectedStatuses, setSelectedStatuses] = useState<Set<string>>(
         new Set(),
     )
@@ -18,6 +26,17 @@ export function useTaskListFilters(tasks: Task[]) {
 
     const uniqueAssignees = useMemo(() => {
         const seen = new Map<string, TaskAssignee>()
+        for (const member of members ?? []) {
+            if (!seen.has(member.user.id)) {
+                seen.set(member.user.id, {
+                    id: member.id,
+                    taskId: '',
+                    projectMemberId: member.id,
+                    assignedAt: '',
+                    user: { ...member.user, isSuperuser: false },
+                })
+            }
+        }
         for (const task of tasks) {
             for (const assignee of task.assignees ?? []) {
                 if (!seen.has(assignee.user.id)) {
@@ -26,10 +45,21 @@ export function useTaskListFilters(tasks: Task[]) {
             }
         }
         return Array.from(seen.values())
-    }, [tasks])
+    }, [tasks, members])
 
     const uniqueSkills = useMemo(() => {
         const seen = new Map<string, TaskSkill>()
+        for (const skill of skills ?? []) {
+            if (!seen.has(skill.id)) {
+                seen.set(skill.id, {
+                    id: skill.id,
+                    taskId: '',
+                    projectSkillId: skill.id,
+                    name: skill.name,
+                    description: skill.description,
+                })
+            }
+        }
         for (const task of tasks) {
             for (const skill of task.skills ?? []) {
                 if (!seen.has(skill.id)) {
@@ -38,7 +68,7 @@ export function useTaskListFilters(tasks: Task[]) {
             }
         }
         return Array.from(seen.values())
-    }, [tasks])
+    }, [tasks, skills])
 
     const filteredTasks = useMemo(() => {
         let result = tasks

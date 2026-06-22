@@ -110,7 +110,9 @@
         "status": "Status",
         "assignee": "Assignee",
         "skill": "Skill",
-        "clear": "Clear"
+        "clear": "Clear",
+        "emptyAssignee": "No assignees available",
+        "emptySkill": "No skills available"
       }
     },
     "drawer": {

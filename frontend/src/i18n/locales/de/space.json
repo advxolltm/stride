@@ -110,7 +110,9 @@
         "status": "Status",
         "assignee": "Zuständiger",
         "skill": "Fähigkeit",
-        "clear": "Löschen"
+        "clear": "Löschen",
+        "emptyAssignee": "Keine Zuständigen verfügbar",
+        "emptySkill": "Keine Fähigkeiten verfügbar"
       }
     },
     "drawer": {

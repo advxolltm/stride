@@ -79,7 +79,7 @@ const EMPTY_SCHEDULER_PREVIEW: SchedulerPreviewResponse = {
 
 export function KanbanBoard() {
     const { t } = useTranslation('space')
-    const { isLoading, isArchived, members, projectId, statusOptions } =
+    const { isLoading, isArchived, members, skills, projectId, statusOptions } =
         useTaskBoard()
     const [taskSearch, setTaskSearch] = useState('')
     const [isSchedulerOpen, setSchedulerOpen] = useState(false)
@@ -147,7 +147,7 @@ export function KanbanBoard() {
         handleStatusFilterChange,
         handleAssigneeFilterChange,
         handleSkillFilterChange,
-    } = useTaskListFilters(flatTasks)
+    } = useTaskListFilters(flatTasks, members, skills)
 
     const filteredColumns = useMemo(() => {
         if (!hasActiveFilters) return visibleColumns
@@ -410,44 +410,66 @@ export function KanbanBoard() {
                             selectionMode="multiple"
                             selectedKeys={selectedAssigneeIds}
                         >
-                            {uniqueAssignees.map((assignee) => {
-                                const isSelected = selectedAssigneeIds.has(
-                                    assignee.user.id,
-                                )
+                            {uniqueAssignees.length === 0
+                                ? [
+                                      <Dropdown.Item
+                                          key="no-assignees"
+                                          textValue={t(
+                                              'tasks.list.filter.emptyAssignee',
+                                          )}
+                                          isReadOnly
+                                      >
+                                          <span className="text-default-400">
+                                              {t(
+                                                  'tasks.list.filter.emptyAssignee',
+                                              )}
+                                          </span>
+                                      </Dropdown.Item>,
+                                  ]
+                                : uniqueAssignees.map((assignee) => {
+                                      const isSelected =
+                                          selectedAssigneeIds.has(
+                                              assignee.user.id,
+                                          )
 
-                                return (
-                                    <Dropdown.Item
-                                        key={assignee.user.id}
-                                        textValue={
-                                            assignee.user.fullName ??
-                                            assignee.user.username
-                                        }
-                                        onAction={() => {
-                                            const next = new Set(
-                                                selectedAssigneeIds,
-                                            )
-                                            if (isSelected) {
-                                                next.delete(assignee.user.id)
-                                            } else {
-                                                next.add(assignee.user.id)
-                                            }
-                                            handleAssigneeFilterChange(next)
-                                        }}
-                                    >
-                                        <div className="flex items-center justify-between gap-4">
-                                            <span className="line-clamp-1 max-w-[160px]">
-                                                {assignee.user.fullName ??
-                                                    assignee.user.username}
-                                            </span>
-                                            <span className="text-primary flex h-4 w-4 items-center justify-center">
-                                                {isSelected && (
-                                                    <Check size={14} />
-                                                )}
-                                            </span>
-                                        </div>
-                                    </Dropdown.Item>
-                                )
-                            })}
+                                      return (
+                                          <Dropdown.Item
+                                              key={assignee.user.id}
+                                              textValue={
+                                                  assignee.user.fullName ??
+                                                  assignee.user.username
+                                              }
+                                              onAction={() => {
+                                                  const next = new Set(
+                                                      selectedAssigneeIds,
+                                                  )
+                                                  if (isSelected) {
+                                                      next.delete(
+                                                          assignee.user.id,
+                                                      )
+                                                  } else {
+                                                      next.add(assignee.user.id)
+                                                  }
+                                                  handleAssigneeFilterChange(
+                                                      next,
+                                                  )
+                                              }}
+                                          >
+                                              <div className="flex items-center justify-between gap-4">
+                                                  <span className="line-clamp-1 max-w-[160px]">
+                                                      {assignee.user.fullName ??
+                                                          assignee.user
+                                                              .username}
+                                                  </span>
+                                                  <span className="text-primary flex h-4 w-4 items-center justify-center">
+                                                      {isSelected && (
+                                                          <Check size={14} />
+                                                      )}
+                                                  </span>
+                                              </div>
+                                          </Dropdown.Item>
+                                      )
+                                  })}
                         </Dropdown.Menu>
                     </Dropdown.Popover>
                 </Dropdown>
@@ -469,40 +491,56 @@ export function KanbanBoard() {
                             selectionMode="multiple"
                             selectedKeys={selectedSkillIds}
                         >
-                            {uniqueSkills.map((skill) => {
-                                const isSelected = selectedSkillIds.has(
-                                    skill.id,
-                                )
+                            {uniqueSkills.length === 0
+                                ? [
+                                      <Dropdown.Item
+                                          key="no-skills"
+                                          textValue={t(
+                                              'tasks.list.filter.emptySkill',
+                                          )}
+                                          isReadOnly
+                                      >
+                                          <span className="text-default-400">
+                                              {t(
+                                                  'tasks.list.filter.emptySkill',
+                                              )}
+                                          </span>
+                                      </Dropdown.Item>,
+                                  ]
+                                : uniqueSkills.map((skill) => {
+                                      const isSelected = selectedSkillIds.has(
+                                          skill.id,
+                                      )
 
-                                return (
-                                    <Dropdown.Item
-                                        key={skill.id}
-                                        textValue={skill.name}
-                                        onAction={() => {
-                                            const next = new Set(
-                                                selectedSkillIds,
-                                            )
-                                            if (isSelected) {
-                                                next.delete(skill.id)
-                                            } else {
-                                                next.add(skill.id)
-                                            }
-                                            handleSkillFilterChange(next)
-                                        }}
-                                    >
-                                        <div className="flex items-center justify-between gap-4">
-                                            <span className="line-clamp-1 max-w-[160px]">
-                                                {skill.name}
-                                            </span>
-                                            <span className="text-primary flex h-4 w-4 items-center justify-center">
-                                                {isSelected && (
-                                                    <Check size={14} />
-                                                )}
-                                            </span>
-                                        </div>
-                                    </Dropdown.Item>
-                                )
-                            })}
+                                      return (
+                                          <Dropdown.Item
+                                              key={skill.id}
+                                              textValue={skill.name}
+                                              onAction={() => {
+                                                  const next = new Set(
+                                                      selectedSkillIds,
+                                                  )
+                                                  if (isSelected) {
+                                                      next.delete(skill.id)
+                                                  } else {
+                                                      next.add(skill.id)
+                                                  }
+                                                  handleSkillFilterChange(next)
+                                              }}
+                                          >
+                                              <div className="flex items-center justify-between gap-4">
+                                                  <span className="line-clamp-1 max-w-[160px]">
+                                                      {skill.name}
+                                                  </span>
+                                                  <span className="text-primary flex h-4 w-4 items-center justify-center">
+                                                      {isSelected && (
+                                                          <Check size={14} />
+                                                      )}
+                                                  </span>
+                                              </div>
+                                          </Dropdown.Item>
+                                      )
+                                  })}
                         </Dropdown.Menu>
                     </Dropdown.Popover>
                 </Dropdown>
