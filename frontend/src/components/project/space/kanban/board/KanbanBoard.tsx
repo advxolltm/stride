@@ -6,16 +6,14 @@ import {
     useSensor,
     useSensors,
 } from '@dnd-kit/core'
-import { Button, Chip, Dropdown, SearchField, Tabs, toast } from '@heroui/react'
+import { Button, Dropdown, SearchField, Tabs, toast } from '@heroui/react'
 import {
     Check,
-    Filter,
     LayoutGrid,
     List,
     ListPlus,
     SlidersHorizontal,
     UserPlus,
-    X,
 } from 'lucide-react'
 import { type MouseEvent as ReactMouseEvent, useMemo, useState } from 'react'
 import useMediaQuery from '../../../../../shared/hooks/useMediaQuery'
@@ -50,6 +48,7 @@ import { clampTaskListColumnWidth } from './taskList.utils'
 import { useTaskListFilters } from './useTaskListFilters'
 import { useTaskListPreferences } from './useTaskListPreferences'
 import { useKanbanState } from './useKanbanState'
+import { TaskFilters } from './TaskFilters'
 
 function taskMatchesSearch(task: Task, query: string) {
     const searchableText = [
@@ -336,226 +335,20 @@ export function KanbanBoard() {
                     </SearchField.Group>
                 </SearchField>
 
-                {showStatusFilter && (
-                    <Dropdown>
-                        <Button variant="secondary" size="sm" className="gap-2">
-                            <Filter size={14} />
-                            {t('tasks.list.filter.status')}
-                            {selectedStatuses.size > 0 && (
-                                <Chip size="sm" variant="soft">
-                                    {selectedStatuses.size}
-                                </Chip>
-                            )}
-                        </Button>
-                        <Dropdown.Popover>
-                            <Dropdown.Menu
-                                aria-label={t('tasks.list.filter.status')}
-                                className="w-[200px]"
-                                selectionMode="multiple"
-                                selectedKeys={selectedStatuses}
-                            >
-                                {statusOptions.map((option) => {
-                                    const isSelected = selectedStatuses.has(
-                                        option.id,
-                                    )
-
-                                    return (
-                                        <Dropdown.Item
-                                            key={option.id}
-                                            textValue={option.label}
-                                            onAction={() => {
-                                                const next = new Set(
-                                                    selectedStatuses,
-                                                )
-                                                if (isSelected) {
-                                                    next.delete(option.id)
-                                                } else {
-                                                    next.add(option.id)
-                                                }
-                                                handleStatusFilterChange(next)
-                                            }}
-                                        >
-                                            <div className="flex items-center justify-between gap-4">
-                                                <span className="line-clamp-1 max-w-[160px]">
-                                                    {option.label}
-                                                </span>
-                                                <span className="text-primary flex h-4 w-4 items-center justify-center">
-                                                    {isSelected && (
-                                                        <Check size={14} />
-                                                    )}
-                                                </span>
-                                            </div>
-                                        </Dropdown.Item>
-                                    )
-                                })}
-                            </Dropdown.Menu>
-                        </Dropdown.Popover>
-                    </Dropdown>
-                )}
-
-                <Dropdown>
-                    <Button variant="secondary" size="sm" className="gap-2">
-                        <Filter size={14} />
-                        {t('tasks.list.filter.assignee')}
-                        {selectedAssigneeIds.size > 0 && (
-                            <Chip size="sm" variant="soft">
-                                {selectedAssigneeIds.size}
-                            </Chip>
-                        )}
-                    </Button>
-                    <Dropdown.Popover>
-                        <Dropdown.Menu
-                            aria-label={t('tasks.list.filter.assignee')}
-                            className="w-[200px]"
-                            selectionMode="multiple"
-                            selectedKeys={selectedAssigneeIds}
-                        >
-                            {uniqueAssignees.length === 0
-                                ? [
-                                      <Dropdown.Item
-                                          key="no-assignees"
-                                          textValue={t(
-                                              'tasks.list.filter.emptyAssignee',
-                                          )}
-                                          isReadOnly
-                                      >
-                                          <span className="text-default-400">
-                                              {t(
-                                                  'tasks.list.filter.emptyAssignee',
-                                              )}
-                                          </span>
-                                      </Dropdown.Item>,
-                                  ]
-                                : uniqueAssignees.map((assignee) => {
-                                      const isSelected =
-                                          selectedAssigneeIds.has(
-                                              assignee.user.id,
-                                          )
-
-                                      return (
-                                          <Dropdown.Item
-                                              key={assignee.user.id}
-                                              textValue={
-                                                  assignee.user.fullName ??
-                                                  assignee.user.username
-                                              }
-                                              onAction={() => {
-                                                  const next = new Set(
-                                                      selectedAssigneeIds,
-                                                  )
-                                                  if (isSelected) {
-                                                      next.delete(
-                                                          assignee.user.id,
-                                                      )
-                                                  } else {
-                                                      next.add(assignee.user.id)
-                                                  }
-                                                  handleAssigneeFilterChange(
-                                                      next,
-                                                  )
-                                              }}
-                                          >
-                                              <div className="flex items-center justify-between gap-4">
-                                                  <span className="line-clamp-1 max-w-[160px]">
-                                                      {assignee.user.fullName ??
-                                                          assignee.user
-                                                              .username}
-                                                  </span>
-                                                  <span className="text-primary flex h-4 w-4 items-center justify-center">
-                                                      {isSelected && (
-                                                          <Check size={14} />
-                                                      )}
-                                                  </span>
-                                              </div>
-                                          </Dropdown.Item>
-                                      )
-                                  })}
-                        </Dropdown.Menu>
-                    </Dropdown.Popover>
-                </Dropdown>
-
-                <Dropdown>
-                    <Button variant="secondary" size="sm" className="gap-2">
-                        <Filter size={14} />
-                        {t('tasks.list.filter.skill')}
-                        {selectedSkillIds.size > 0 && (
-                            <Chip size="sm" variant="soft">
-                                {selectedSkillIds.size}
-                            </Chip>
-                        )}
-                    </Button>
-                    <Dropdown.Popover>
-                        <Dropdown.Menu
-                            aria-label={t('tasks.list.filter.skill')}
-                            className="w-[200px]"
-                            selectionMode="multiple"
-                            selectedKeys={selectedSkillIds}
-                        >
-                            {uniqueSkills.length === 0
-                                ? [
-                                      <Dropdown.Item
-                                          key="no-skills"
-                                          textValue={t(
-                                              'tasks.list.filter.emptySkill',
-                                          )}
-                                          isReadOnly
-                                      >
-                                          <span className="text-default-400">
-                                              {t(
-                                                  'tasks.list.filter.emptySkill',
-                                              )}
-                                          </span>
-                                      </Dropdown.Item>,
-                                  ]
-                                : uniqueSkills.map((skill) => {
-                                      const isSelected = selectedSkillIds.has(
-                                          skill.id,
-                                      )
-
-                                      return (
-                                          <Dropdown.Item
-                                              key={skill.id}
-                                              textValue={skill.name}
-                                              onAction={() => {
-                                                  const next = new Set(
-                                                      selectedSkillIds,
-                                                  )
-                                                  if (isSelected) {
-                                                      next.delete(skill.id)
-                                                  } else {
-                                                      next.add(skill.id)
-                                                  }
-                                                  handleSkillFilterChange(next)
-                                              }}
-                                          >
-                                              <div className="flex items-center justify-between gap-4">
-                                                  <span className="line-clamp-1 max-w-[160px]">
-                                                      {skill.name}
-                                                  </span>
-                                                  <span className="text-primary flex h-4 w-4 items-center justify-center">
-                                                      {isSelected && (
-                                                          <Check size={14} />
-                                                      )}
-                                                  </span>
-                                              </div>
-                                          </Dropdown.Item>
-                                      )
-                                  })}
-                        </Dropdown.Menu>
-                    </Dropdown.Popover>
-                </Dropdown>
-
-                {hasActiveFilters && (
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="gap-1"
-                        onPress={clearAllFilters}
-                    >
-                        <X size={14} />
-                        {t('tasks.list.filter.clear')}
-                    </Button>
-                )}
+                <TaskFilters
+                    showStatusFilter={showStatusFilter}
+                    statusOptions={statusOptions}
+                    uniqueAssignees={uniqueAssignees}
+                    uniqueSkills={uniqueSkills}
+                    selectedStatuses={selectedStatuses}
+                    selectedAssigneeIds={selectedAssigneeIds}
+                    selectedSkillIds={selectedSkillIds}
+                    hasActiveFilters={hasActiveFilters}
+                    onStatusFilterChange={handleStatusFilterChange}
+                    onAssigneeFilterChange={handleAssigneeFilterChange}
+                    onSkillFilterChange={handleSkillFilterChange}
+                    onClearAllFilters={clearAllFilters}
+                />
 
                 {showListActions && showColumnSelector && (
                     <Dropdown>
