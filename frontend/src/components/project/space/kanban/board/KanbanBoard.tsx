@@ -651,7 +651,7 @@ export function KanbanBoard() {
                     >
                         <div className="h-[calc(100vh-320px)] min-h-105 overflow-x-auto">
                             <div className="flex h-full min-h-0 gap-6">
-                                {visibleColumns.map((col) => (
+                                {filteredColumns.map((col) => (
                                     <KanbanColumn
                                         key={col.id}
                                         column={col}
