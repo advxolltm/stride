@@ -475,7 +475,7 @@ def testing():
     )
 
 
-class CustomHandler(http.server.SimpleHTTPRequestHandler):
+class CustomHandler(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
         content_length = int(self.headers["Content-Length"])
 
@@ -509,8 +509,6 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    Handler = http.server.SimpleHTTPRequestHandler
-
     with socketserver.TCPServer(("", PORT), CustomHandler) as httpd:
         LOGGER.info(f"Serving at port {PORT}")
         httpd.serve_forever()

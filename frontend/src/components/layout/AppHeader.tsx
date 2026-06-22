@@ -4,12 +4,18 @@ import { Logo } from './AppLogo'
 import { LanguageSwitcher } from './LanguageSwitcher'
 import { ThemeSwitcher } from './ThemeSwitcher'
 import { UserMenu } from './UserMenu'
+import { InfoIcon } from '../info/InfoIcon'
+import { useState } from 'react'
+import { InfoModal } from '../info/InfoModal'
+
 import useMediaQuery from '../../shared/hooks/useMediaQuery'
 
 export function AppHeader() {
     const shouldMoveControlsToUserMenu = useMediaQuery('(max-width: 634px)')
+	const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
 
     return (
+		<>
         <header className="bg-surface fixed inset-x-0 top-0 z-50 flex h-14 items-center justify-between border-b px-4 sm:px-6">
             <Link className="cursor-pointer select-none" to={'/'}>
                 <Logo />
@@ -18,6 +24,8 @@ export function AppHeader() {
                 {!shouldMoveControlsToUserMenu ? (
                     <>
                         <LanguageSwitcher />
+						<div className="bg-border h-5 w-px" />
+						<InfoIcon onPress={() => setIsInfoModalOpen(true)}/>
                         <div className="bg-border h-5 w-px" />
                         <ThemeSwitcher />
                         <div className="bg-border h-5 w-px" />
@@ -30,5 +38,7 @@ export function AppHeader() {
                 />
             </div>
         </header>
+			<InfoModal isOpen={isInfoModalOpen} onOpenChange={setIsInfoModalOpen} />
+		</>
     )
 }

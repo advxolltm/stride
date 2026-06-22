@@ -52,6 +52,8 @@ import {
     createAndApplyNewLinkTaskGroup,
     searchSelectedTaskRegionID,
 } from '../shared/utils/whiteboardTaskLinking/whiteboardTaskLinking'
+import { InfoIcon } from '../components/info/InfoIcon'
+import { InfoModal } from '../components/info/InfoModal'
 
 const emptyLiveElementsById: Record<string, WhiteboardLiveUpdateEventPayload> =
     {}
@@ -60,6 +62,8 @@ const emptyRemoteSelectionClientIdsByElementId: Record<string, string[]> = {}
 const DOCK_MEDIA_QUERY = '(min-width: 1280px)'
 
 export function WhiteboardPage() {
+    const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+
     const { projectId } = useParams()
     const [searchParams, setSearchParams] = useSearchParams()
     const { t } = useTranslation('project')
@@ -390,6 +394,11 @@ export function WhiteboardPage() {
                     currentUserId={currentUserId}
                     onParticipantSelect={handleParticipantSelect}
                 />
+                <div
+                    className="h-10 w-10 min-w-10 rounded-full border border-[var(--border)] bg-[color-mix(in_oklch,var(--surface)_94%,transparent)] text-[var(--foreground)] shadow-lg backdrop-blur-xl hover:bg-[var(--surface-secondary)]"
+                >
+                    <InfoIcon onPress={setIsInfoModalOpen}/>
+                </div>
                 <Tooltip delay={0}>
                     <Tooltip.Trigger className="inline-flex">
                         <Button
@@ -562,6 +571,8 @@ export function WhiteboardPage() {
                     />
                 </div>
             </div>
+
+			<InfoModal isOpen={isInfoModalOpen} onOpenChange={setIsInfoModalOpen} />
         </div>
     )
 }
