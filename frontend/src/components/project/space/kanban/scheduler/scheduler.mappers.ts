@@ -46,6 +46,7 @@ export function mapProjectMemberToSchedulerMemberOption(
 export function buildSchedulerTriggerRequest(
     tasks: SchedulerTaskOption[],
     members: SchedulerMemberOption[],
+    //settings: SchedulerScheduleRequest['settings']
 ): SchedulerScheduleRequest {
     return {
         task_ids: tasks.map((task) => task.id),

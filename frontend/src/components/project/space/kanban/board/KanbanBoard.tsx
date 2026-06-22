@@ -193,6 +193,7 @@ export function KanbanBoard() {
                 body: buildSchedulerTriggerRequest(
                     schedulerTasks,
                     schedulableSchedulerMembers,
+                    //settings
                 ),
             }).unwrap()
 
