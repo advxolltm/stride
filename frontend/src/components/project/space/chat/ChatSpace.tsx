@@ -1,7 +1,7 @@
 import { toast, type Key } from '@heroui/react'
 import { skipToken } from '@reduxjs/toolkit/query'
 import { MessageCircle } from 'lucide-react'
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
 import { getApiErrorMessage } from '../../../../shared/utils/api/errors'
@@ -10,11 +10,18 @@ import { useGetSessionQuery } from '../../../../store/features/auth/auth.api'
 import {
     useDeleteMessageMutation,
     useEditMessageMutation,
+    useGetChatMemberCursorsQuery,
     useGetMessagesInfiniteQuery,
+    useMarkMessageDeliveredMutation,
+    useMarkMessageReadMutation,
     useSendMessageMutation,
 } from '../../../../store/features/chat/chat.api'
 import { useWatchProjectChatSocketQuery } from '../../../../store/features/chat/chat.socket'
 import type { Message } from '../../../../store/features/chat/chat.types'
+import {
+    useGetNotificationsQuery,
+    useMarkNotificationReadMutation,
+} from '../../../../store/features/notification/notification.api'
 import { useGetProjectByIdQuery } from '../../../../store/features/project/project.api'
 import { useGetUserByIdQuery } from '../../../../store/features/user/user.api'
 import { ChatMessageInput } from './ChatMessageInput'
@@ -24,11 +31,13 @@ import { ChatSpaceSkeleton } from './ChatSpaceSkeleton'
 interface ChatSpaceProps {
     projectId?: string
     variant?: 'page' | 'embedded' | 'drawer'
+    isActive?: boolean
 }
 
 export function ChatSpace({
     projectId: projectIdProp,
     variant = 'page',
+    isActive = true,
 }: ChatSpaceProps) {
     const { t, i18n } = useTranslation('chat')
     const { projectId: routeProjectId } = useParams()
@@ -53,23 +62,154 @@ export function ChatSpace({
     )
     const { data: project, isLoading: isProjectLoading } =
         useGetProjectByIdQuery(projectId!)
+    const { data: chatCursors = [] } = useGetChatMemberCursorsQuery(
+        projectId ? { projectId } : skipToken,
+    )
+    const { data: notifications = [] } = useGetNotificationsQuery()
     const isArchived = isProjectArchived(project)
 
-    const userMap = new Map(project?.members.map((pm) => [pm.id, pm]))
-    const messages = data?.pages.flatMap((page) => page.items) ?? []
-    const uniqueMessages = Array.from(
-        new Map(messages.map((message) => [message.id, message])).values(),
+    const userMap = useMemo(
+        () => new Map(project?.members.map((pm) => [pm.id, pm]) ?? []),
+        [project?.members],
+    )
+    const uniqueMessages = useMemo(() => {
+        const messages = data?.pages.flatMap((page) => page.items) ?? []
+        return Array.from(
+            new Map(messages.map((message) => [message.id, message])).values(),
+        ).sort(
+            (first, second) =>
+                new Date(first.createdAt).getTime() -
+                new Date(second.createdAt).getTime(),
+        )
+    }, [data?.pages])
+
+    const cursorByMemberId = useMemo(
+        () =>
+            new Map(
+                chatCursors.map((cursor) => [
+                    cursor.projectMemberId,
+                    cursor,
+                ]),
+            ),
+        [chatCursors],
     )
 
-    uniqueMessages.sort(
-        (first, second) =>
-            new Date(first.createdAt).getTime() -
-            new Date(second.createdAt).getTime(),
-    )
+    const currentMember = useMemo(() => {
+        if (!project || !user) {
+            return undefined
+        }
+
+        return project.members.find((member) => member.userId === user.id)
+    }, [project, user])
+
+    const latestNonOwnMessage = useMemo(() => {
+        if (!currentMember) {
+            return undefined
+        }
+
+        for (let index = uniqueMessages.length - 1; index >= 0; index -= 1) {
+            const message = uniqueMessages[index]
+            if (message.senderId !== currentMember.id) {
+                return message
+            }
+        }
+
+        return undefined
+    }, [currentMember, uniqueMessages])
+
+    const isLatestNonOwnMessageRead = useMemo(() => {
+        if (!currentMember || !latestNonOwnMessage) {
+            return false
+        }
+
+        const localCursor = cursorByMemberId.get(currentMember.id)
+        if (!localCursor?.lastReadMessageCreatedAt) {
+            return false
+        }
+
+        return (
+            new Date(localCursor.lastReadMessageCreatedAt).getTime() >=
+            new Date(latestNonOwnMessage.createdAt).getTime()
+        )
+    }, [currentMember, cursorByMemberId, latestNonOwnMessage])
+
+    const unreadChatNotificationIds = useMemo(() => {
+        if (!projectId) {
+            return []
+        }
+
+        return notifications
+            .filter(
+                (notification) =>
+                    !notification.read &&
+                    notification.objectType === 'chat' &&
+                    notification.objectId === projectId,
+            )
+            .map((notification) => notification.id)
+    }, [notifications, projectId])
+
+    const messageReceiptsById = useMemo(() => {
+        const receipts = new Map<
+            string,
+            {
+                deliveredTo: NonNullable<typeof project>['members']
+                readBy: NonNullable<typeof project>['members']
+            }
+        >()
+
+        if (!project) {
+            return receipts
+        }
+
+        for (const message of uniqueMessages) {
+            if (!message.senderId) {
+                continue
+            }
+
+            const deliveredTo = project.members.filter((member) => {
+                if (member.id === message.senderId) {
+                    return false
+                }
+
+                const cursor = cursorByMemberId.get(member.id)
+                if (!cursor) {
+                    return false
+                }
+
+                return (
+                    new Date(cursor.lastDeliveredMessageCreatedAt).getTime() >=
+                    new Date(message.createdAt).getTime()
+                )
+            })
+
+            const readBy = project.members.filter((member) => {
+                if (member.id === message.senderId) {
+                    return false
+                }
+
+                const cursor = cursorByMemberId.get(member.id)
+                if (!cursor?.lastReadMessageCreatedAt) {
+                    return false
+                }
+
+                return (
+                    new Date(cursor.lastReadMessageCreatedAt).getTime() >=
+                    new Date(message.createdAt).getTime()
+                )
+            })
+
+            receipts.set(message.id, { deliveredTo, readBy })
+        }
+
+        return receipts
+    }, [cursorByMemberId, project, uniqueMessages])
 
     const [sendMessage] = useSendMessageMutation()
     const [editMessage] = useEditMessageMutation()
     const [deleteMessage] = useDeleteMessageMutation()
+    const [markMessageDelivered] = useMarkMessageDeliveredMutation()
+    const [markMessageRead] = useMarkMessageReadMutation()
+    const [markNotificationRead] = useMarkNotificationReadMutation()
 
     const [messageContent, setMessageContent] = useState('')
 
@@ -85,6 +225,7 @@ export function ChatSpace({
 
     const prevTopScrollHeight = useRef<number | null>(null)
     const prevBottomDistance = useRef<number | null>(null)
+    const pendingAutoReadNotificationIdsRef = useRef<Set<string>>(new Set())
 
     useEffect(() => {
         const root = scrollRef.current
@@ -203,6 +344,112 @@ export function ChatSpace({
         setTopElement(null)
         setBottomElement(null)
     }, [isFetchingNextPage, isFetchingPreviousPage, bottomElement, topElement])
+
+    useEffect(() => {
+        if (!isActive || !projectId || !currentMember || !latestNonOwnMessage) {
+            return
+        }
+
+        const localCursor = cursorByMemberId.get(currentMember.id)
+        const latestCreatedAt = new Date(latestNonOwnMessage.createdAt).getTime()
+        const deliveredCreatedAt = localCursor
+            ? new Date(localCursor.lastDeliveredMessageCreatedAt).getTime()
+            : 0
+
+        if (deliveredCreatedAt >= latestCreatedAt) {
+            return
+        }
+
+        const timeout = window.setTimeout(() => {
+            void markMessageDelivered({
+                projectId,
+                body: { messageId: latestNonOwnMessage.id },
+            })
+                .unwrap()
+                .catch(() => undefined)
+        }, 500)
+
+        return () => window.clearTimeout(timeout)
+    }, [
+        currentMember,
+        cursorByMemberId,
+        isActive,
+        latestNonOwnMessage,
+        markMessageDelivered,
+        projectId,
+    ])
+
+    useEffect(() => {
+        if (
+            !isActive ||
+            isArchived ||
+            !projectId ||
+            !currentMember ||
+            !latestNonOwnMessage
+        ) {
+            return
+        }
+
+        const localCursor = cursorByMemberId.get(currentMember.id)
+        const latestCreatedAt = new Date(latestNonOwnMessage.createdAt).getTime()
+        const readCreatedAt = localCursor?.lastReadMessageCreatedAt
+            ? new Date(localCursor.lastReadMessageCreatedAt).getTime()
+            : 0
+
+        if (readCreatedAt >= latestCreatedAt) {
+            return
+        }
+
+        const timeout = window.setTimeout(() => {
+            void markMessageRead({
+                projectId,
+                body: { messageId: latestNonOwnMessage.id },
+            })
+                .unwrap()
+                .catch(() => undefined)
+        }, 500)
+
+        return () => window.clearTimeout(timeout)
+    }, [
+        currentMember,
+        cursorByMemberId,
+        isActive,
+        isArchived,
+        latestNonOwnMessage,
+        markMessageRead,
+        projectId,
+    ])
+
+    useEffect(() => {
+        if (
+            !isActive ||
+            !isLatestNonOwnMessageRead ||
+            unreadChatNotificationIds.length === 0
+        ) {
+            return
+        }
+
+        for (const notificationId of unreadChatNotificationIds) {
+            if (pendingAutoReadNotificationIdsRef.current.has(notificationId)) {
+                continue
+            }
+
+            pendingAutoReadNotificationIdsRef.current.add(notificationId)
+            void markNotificationRead(notificationId)
+                .unwrap()
+                .catch(() => undefined)
+                .finally(() => {
+                    pendingAutoReadNotificationIdsRef.current.delete(
+                        notificationId,
+                    )
+                })
+        }
+    }, [
+        isActive,
+        isLatestNonOwnMessageRead,
+        markNotificationRead,
+        unreadChatNotificationIds,
+    ])
 
     if (isMessagesLoading || isProjectLoading || isUserLoading) {
         return <ChatSpaceSkeleton variant={variant} />
@@ -389,6 +636,7 @@ export function ChatSpace({
                             const sender = message.senderId
                                 ? userMap.get(message.senderId)
                                 : undefined
+                            const receipts = messageReceiptsById.get(message.id)
                             const shouldRenderDateGroup =
                                 !previousMessage ||
                                 !isSameCalendarDay(
@@ -425,6 +673,8 @@ export function ChatSpace({
                                         editedLabel={messageEditedLabel(
                                             message,
                                         )}
+                                        deliveredTo={receipts?.deliveredTo}
+                                        readBy={receipts?.readBy}
                                         onEditMessage={handleEditMessage}
                                         onMessageAction={handleMessageAction}
                                     />

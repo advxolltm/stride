@@ -10,6 +10,13 @@
 			"delete": "Delete",
 			"copy": "Copy message"
 		},
+		"readReceipts": {
+			"delivered": "Delivered",
+			"deliveredToOne": "Delivered to {{name}}",
+			"deliveredToMany": "Delivered to {{count}} members",
+			"readByOne": "Read by {{name}}",
+			"readByMany": "Read by {{count}} members"
+		},
 		"copy": {
 			"success": "Message copied",
 			"error": "Could not copy message"

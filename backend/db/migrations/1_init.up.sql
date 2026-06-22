@@ -44,6 +44,24 @@ CREATE TABLE messages (
     deleted_at TIMESTAMPTZ DEFAULT NULL
 );
 
+
+CREATE TABLE chat_member_cursors (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    project_member_id UUID NOT NULL REFERENCES project_members(id) ON DELETE CASCADE,
+    last_delivered_message_id UUID NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+    last_delivered_message_created_at TIMESTAMPTZ NOT NULL,
+    delivered_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_read_message_id UUID REFERENCES messages(id) ON DELETE CASCADE,
+    last_read_message_created_at TIMESTAMPTZ,
+    read_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (project_id, project_member_id)
+);
+
+CREATE INDEX idx_chat_member_cursors_project_id ON chat_member_cursors(project_id);
+CREATE INDEX idx_chat_member_cursors_project_member_id ON chat_member_cursors(project_member_id);
+
 CREATE TABLE tasks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,

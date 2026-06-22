@@ -6,10 +6,12 @@ import (
 	chatService "backend/services/chat"
 	"backend/testutils"
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -87,11 +89,9 @@ func TestChatStore(t *testing.T) {
 		err = cs.DeleteMessage(ctx, msg.ID)
 		require.NoError(t, err)
 
-		del_msg, del_err := cs.GetMessage(ctx, msg.ID)
-		require.NoError(t, del_err)
-		assert.Equal(t, del_msg.DeletedAt.Second(), time.Now().Second())
-		assert.True(t, del_msg.IsDeleted)
-		assert.Empty(t, del_msg.Content)
+		_, delErr := cs.GetMessage(ctx, msg.ID)
+		require.Error(t, delErr)
+		assert.True(t, errors.Is(delErr, chatService.ErrMessageNotFound))
 	})
 
 	runTest(t, db, "GetMessageCount expected behaviour", func(t *testing.T, db *gorm.DB, cs chatService.ChatService) {
@@ -136,5 +136,55 @@ func TestChatStore(t *testing.T) {
 			}
 		}
 		assert.True(t, found, "Expected newly created message to be in the paginated results")
+	})
+	runTest(t, db, "MarkDelivered returns created cursor", func(t *testing.T, db *gorm.DB, cs chatService.ChatService) {
+		proj := testutils.SelectRandomProject(t, db)
+		msg, err := cs.CreateMessage(ctx, content, proj.Members[0])
+		require.NoError(t, err)
+		projectID := proj.ID
+		projectMemberID := proj.Members[1].ID
+		messageID := msg.ID
+
+		cursor, err := cs.MarkDelivered(ctx, projectID, projectMemberID, messageID)
+
+		require.NoError(t, err)
+		assert.Equal(t, projectID, cursor.ProjectID)
+		assert.Equal(t, projectMemberID, cursor.ProjectMemberID)
+		assert.Equal(t, messageID, cursor.LastDeliveredMessageID)
+		assert.Equal(t, proj.ID, projectID)
+		assert.Equal(t, proj.Members[1].ID, projectMemberID)
+		assert.Equal(t, msg.ID, messageID)
+	})
+	runTest(t, db, "MarkRead returns created cursor", func(t *testing.T, db *gorm.DB, cs chatService.ChatService) {
+		proj := testutils.SelectRandomProject(t, db)
+		msg, err := cs.CreateMessage(ctx, content, proj.Members[0])
+		require.NoError(t, err)
+
+		cursor, err := cs.MarkRead(ctx, proj.ID, proj.Members[1].ID, msg.ID)
+
+		require.NoError(t, err)
+		require.NotNil(t, cursor.LastReadMessageID)
+		assert.Equal(t, msg.ID, *cursor.LastReadMessageID)
+		assert.Equal(t, msg.ID, cursor.LastDeliveredMessageID)
+	})
+	runTest(t, db, "GetProjectChatCursors returns project cursors", func(t *testing.T, db *gorm.DB, cs chatService.ChatService) {
+		proj := testutils.SelectRandomProject(t, db)
+		msg, err := cs.CreateMessage(ctx, content, proj.Members[0])
+		require.NoError(t, err)
+		_, err = cs.MarkDelivered(ctx, proj.ID, proj.Members[1].ID, msg.ID)
+		require.NoError(t, err)
+
+		cursors, err := cs.GetProjectChatCursors(ctx, proj.ID)
+
+		require.NoError(t, err)
+		require.NotEmpty(t, cursors)
+	})
+	runTest(t, db, "MarkRead preserves ErrMessageNotFound", func(t *testing.T, db *gorm.DB, cs chatService.ChatService) {
+		proj := testutils.SelectRandomProject(t, db)
+
+		_, err := cs.MarkRead(ctx, proj.ID, proj.Members[0].ID, uuid.New())
+
+		require.Error(t, err)
+		assert.True(t, errors.Is(err, chatService.ErrMessageNotFound))
 	})
 }
