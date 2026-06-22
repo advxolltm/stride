@@ -13,8 +13,16 @@ import { useGetSessionQuery } from '../../store/features/auth/auth.api'
 import { useGetUserByIdQuery } from '../../store/features/user/user.api'
 import { selectUserId } from '../../store/userSlice'
 import { skipToken } from '@reduxjs/toolkit/query'
+import { LanguageSwitcher } from './LanguageSwitcher'
+import { ThemeSwitcher } from './ThemeSwitcher'
 
-export function UserMenu() {
+interface UserMenuProps {
+    showMobilePreferences?: boolean
+}
+
+export function UserMenu({
+    showMobilePreferences = false,
+}: Readonly<UserMenuProps>) {
     const { t } = useTranslation('common')
     const { data: user } = useGetSessionQuery()
     const userId = useAppSelector(selectUserId)
@@ -35,17 +43,27 @@ export function UserMenu() {
                     variant="ghost"
                     className="rounded-lg"
                 >
-                    <UserAvatar
-                        name={displayName || 'User'}
-                        src={avatarSrc}
-                    />
+                    <UserAvatar name={displayName || 'User'} src={avatarSrc} />
 
-                    <span className="text-sm font-medium">{displayName}</span>
+                    <span className="hidden text-sm font-medium sm:block">
+                        {displayName}
+                    </span>
 
                     <ChevronDown size={16} className="text-foreground/60" />
                 </Button>
 
                 <Dropdown.Popover>
+                    {showMobilePreferences ? (
+                        <div className="border-border flex flex-col gap-3 border-b p-3 sm:hidden">
+                            <p className="text-muted px-1 text-xs font-medium">
+                                {t('userMenu.preferences')}
+                            </p>
+                            <div className="flex items-center justify-between gap-3">
+                                <LanguageSwitcher />
+                                <ThemeSwitcher />
+                            </div>
+                        </div>
+                    ) : null}
                     <Dropdown.Menu aria-label={t('userMenu.ariaLabel')}>
                         <Dropdown.Item
                             id="profile"

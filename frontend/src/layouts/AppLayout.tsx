@@ -1,3 +1,4 @@
+import clsx from 'clsx'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
@@ -54,9 +55,13 @@ const patchProjectStatusInCaches = (
         }),
     )
     dispatch(
-        projectApi.util.updateQueryData('getProjectById', projectId, (draft) => {
-            draft.status = status
-        }),
+        projectApi.util.updateQueryData(
+            'getProjectById',
+            projectId,
+            (draft) => {
+                draft.status = status
+            },
+        ),
     )
 }
 
@@ -79,14 +84,13 @@ export function AppLayout() {
         getInitialSidebarCollapsed,
     )
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
-    const processedLifecycleNotificationIdsRef = useRef<Set<string>>(
-        new Set(),
-    )
+    const processedLifecycleNotificationIdsRef = useRef<Set<string>>(new Set())
     const { t } = useTranslation('common')
     const { data: notifications = [] } = useGetNotificationsQuery()
     useWatchNotificationsQuery()
     const [markNotificationRead] = useMarkNotificationReadMutation()
     const isWhiteboardRoute = location.pathname.endsWith('/whiteboard')
+    const isChatRoute = location.pathname.endsWith('/chat')
 
     const activeProjectLifecycleNotification = useMemo(() => {
         return notifications
@@ -99,7 +103,9 @@ export function AppLayout() {
     }, [notifications])
 
     const activeProjectLifecycleKind = activeProjectLifecycleNotification
-        ? getProjectLifecycleNotificationKind(activeProjectLifecycleNotification)
+        ? getProjectLifecycleNotificationKind(
+              activeProjectLifecycleNotification,
+          )
         : null
 
     const isViewingAffectedProject =
@@ -169,7 +175,11 @@ export function AppLayout() {
             dispatch,
             activeProjectLifecycleNotification.objectId,
         )
-    }, [activeProjectLifecycleKind, activeProjectLifecycleNotification, dispatch])
+    }, [
+        activeProjectLifecycleKind,
+        activeProjectLifecycleNotification,
+        dispatch,
+    ])
 
     const handleProjectLifecycleAcknowledge = async (
         notification: Notification,
@@ -196,45 +206,51 @@ export function AppLayout() {
             ? 'projectArchived.title'
             : activeProjectLifecycleKind === 'unarchived'
               ? 'projectUnarchived.title'
-            : activeProjectLifecycleKind === 'deleted'
-              ? 'projectDeleted.title'
-              : 'projectRemoval.title'
+              : activeProjectLifecycleKind === 'deleted'
+                ? 'projectDeleted.title'
+                : 'projectRemoval.title'
     const lifecycleDialogMessageKey =
         activeProjectLifecycleKind === 'archived'
             ? 'projectArchived.message'
             : activeProjectLifecycleKind === 'unarchived'
               ? 'projectUnarchived.message'
-            : activeProjectLifecycleKind === 'deleted'
-              ? 'projectDeleted.message'
-              : 'projectRemoval.message'
+              : activeProjectLifecycleKind === 'deleted'
+                ? 'projectDeleted.message'
+                : 'projectRemoval.message'
     const lifecycleDialogConfirmKey =
         activeProjectLifecycleKind === 'archived'
             ? 'projectArchived.confirm'
             : activeProjectLifecycleKind === 'unarchived'
               ? 'projectUnarchived.confirm'
-            : activeProjectLifecycleKind === 'deleted'
-              ? 'projectDeleted.confirm'
-              : 'projectRemoval.confirm'
+              : activeProjectLifecycleKind === 'deleted'
+                ? 'projectDeleted.confirm'
+                : 'projectRemoval.confirm'
 
     return (
-        <div className="flex min-h-screen flex-col">
+        <div className="flex h-dvh min-h-0 flex-col overflow-hidden">
             {!isWhiteboardRoute && <AppHeader />}
 
             <main
-                className={[
-                    'flex h-screen overflow-hidden',
+                className={clsx(
+                    'flex min-h-0 flex-1 overflow-hidden',
                     isWhiteboardRoute ? 'pt-0' : 'pt-14',
-                ].join(' ')}
+                )}
             >
                 {!isWhiteboardRoute && (
                     <Sidebar
                         collapsed={sidebarCollapsed}
                         onToggle={handleToggleSidebar}
                         onCreateProject={handleOpenCreateProjectDialog}
+                        className="hidden sm:flex"
                     />
                 )}
 
-                <div className="flex min-w-0 flex-1 flex-col overflow-auto bg-background">
+                <div
+                    className={clsx(
+                        'bg-background flex h-full min-w-0 flex-1 flex-col',
+                        isChatRoute ? 'overflow-hidden' : 'overflow-auto',
+                    )}
+                >
                     {!isWhiteboardRoute && <AppBreadcrumb />}
                     <Outlet
                         context={{

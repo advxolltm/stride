@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChatPanelFrame } from './panel/ChatPanelFrame'
 import { FloatingChatLauncher } from './panel/FloatingChatLauncher'
+import { useMediaQuery } from '@heroui/react'
 
 interface ProjectChatPanelProps {
     projectId: string
@@ -12,7 +13,7 @@ export function ProjectChatPanel({ projectId }: ProjectChatPanelProps) {
 
     const [isOpen, setIsOpen] = useState(false)
     const [isPinned, setIsPinned] = useState(false)
-
+    const isLG = useMediaQuery('(max-width: 1024px)')
     const showDockedPanel = isOpen && isPinned
     const showFloatingPanel = isOpen && !isPinned
 
@@ -30,6 +31,7 @@ export function ProjectChatPanel({ projectId }: ProjectChatPanelProps) {
         setIsOpen(true)
         setIsPinned((current) => !current)
     }
+    if (isLG) return undefined
 
     return (
         <>
@@ -57,7 +59,9 @@ export function ProjectChatPanel({ projectId }: ProjectChatPanelProps) {
             <div
                 className={[
                     'border-border bg-surface hidden min-h-0 w-[24rem] shrink-0 border-l-2 xl:flex xl:flex-col',
-                    showDockedPanel ? 'xl:translate-x-0 xl:opacity-100' : 'xl:hidden',
+                    showDockedPanel
+                        ? 'xl:translate-x-0 xl:opacity-100'
+                        : 'xl:hidden',
                 ].join(' ')}
             >
                 <ChatPanelFrame

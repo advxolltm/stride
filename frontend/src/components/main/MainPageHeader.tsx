@@ -16,7 +16,7 @@ export function MainPageHeader({
     const { t } = useTranslation('common')
 
     return (
-        <div className="mb-6 flex items-start justify-between gap-4">
+        <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row">
             <div>
                 <h1 className="text-[20px] font-bold text-[var(--foreground)]">
                     {title}

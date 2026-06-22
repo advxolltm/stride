@@ -28,7 +28,7 @@ export function ProjectOverviewHeader({
     return (
         <>
             <div className="border-b">
-                <div className="mb-6 flex items-end justify-between gap-4">
+                <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
                     <div className="min-w-0 flex-1">
                         <span className="text-muted">
                             {t('header.projects')}
