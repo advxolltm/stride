@@ -54,7 +54,7 @@ import { TaskListView } from './TaskListView'
 import { clampTaskListColumnWidth } from './taskList.utils'
 import { useTaskListPreferences } from './useTaskListPreferences'
 import { useKanbanState } from './useKanbanState'
-import { OptimizationStrategy } from '../scheduler/SchedulerFlowModal'
+import type { OptimizationStrategy } from '../scheduler/SchedulerFlowModal'
 
 function taskMatchesSearch(task: Task, query: string) {
     const searchableText = [

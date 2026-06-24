@@ -52,7 +52,7 @@ export function buildSchedulerTriggerRequest(
     return {
         task_ids: tasks.map((task) => task.id),
         user_ids: members.map((member) => member.id),
-        settings: {optimization_goals: settings},
+        settings: {optimization_goals: settings} as SchedulerScheduleRequest['settings'],
     }
 }
 

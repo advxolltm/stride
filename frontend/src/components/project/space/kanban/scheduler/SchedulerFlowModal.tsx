@@ -22,7 +22,7 @@ interface SchedulerFlowModalProps {
     skippedMemberCount: number
     estimatedTaskCount: number
     startDateTaskCount: number
-    onRun: (optimStrat : string) => Promise<SchedulerPreviewResponse>
+    onRun: (optimStrat : OptimizationStrategy) => Promise<SchedulerPreviewResponse>
     onConfirm: (assignments: SchedulerAssignment[]) => Promise<void>
 }
 
