@@ -46,7 +46,7 @@ export function mapProjectMemberToSchedulerMemberOption(
 export function buildSchedulerTriggerRequest(
     tasks: SchedulerTaskOption[],
     members: SchedulerMemberOption[],
-    settings : ("distribute-evenly" | "max-hours-scheduled" | "max-tasks-scheduled")[]
+    settings : string[]
     //settings: SchedulerScheduleRequest['settings']
 ): SchedulerScheduleRequest {
     return {

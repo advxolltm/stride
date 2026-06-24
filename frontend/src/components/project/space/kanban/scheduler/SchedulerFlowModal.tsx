@@ -11,7 +11,7 @@ import { SchedulerLoadingStep } from './SchedulerLoadingStep'
 import { SchedulerReviewStep } from './SchedulerReviewStep'
 
 type SchedulerStep = 'intro' | 'loading' | 'review'
-type OptimizationStrategy = 'distribute-evenly' | 'min-makespan'
+export type OptimizationStrategy = 'distribute-evenly' | 'min-makespan'
 
 interface SchedulerFlowModalProps {
     isOpen: boolean
