@@ -148,6 +148,7 @@ func TestSchedulerRouteHandler_Integration(t *testing.T) {
 		expHours := 20
 
 		task1 := testutils.GenerateRandomTask([]models.Project{*proj})
+		task1.Status = "todo"
 		task1.StartDate = &startDate
 		task1.DueDate = &dueDate
 		task1.ExpectedDurationHours = &expHours
@@ -155,6 +156,7 @@ func TestSchedulerRouteHandler_Integration(t *testing.T) {
 		require.NoError(t, ts.CreateTask(ctx, &task1))
 
 		task2 := testutils.GenerateRandomTask([]models.Project{*proj})
+		task2.Status = "todo"
 		task2.StartDate = &startDate
 		task2.DueDate = &dueDate
 		task2.ExpectedDurationHours = &expHours
@@ -193,6 +195,7 @@ func TestSchedulerRouteHandler_Integration(t *testing.T) {
 		expHours := 20
 
 		task1 := testutils.GenerateRandomTask([]models.Project{*proj})
+		task1.Status = "todo"
 		task1.StartDate = &startDate
 		task1.DueDate = &dueDate
 		task1.ExpectedDurationHours = &expHours
@@ -203,6 +206,7 @@ func TestSchedulerRouteHandler_Integration(t *testing.T) {
 		require.NoError(t, err)
 
 		task2 := testutils.GenerateRandomTask([]models.Project{*proj})
+		task2.Status = "todo"
 		task2.StartDate = &startDate
 		task2.DueDate = &dueDate
 		task2.ExpectedDurationHours = &expHours
@@ -238,6 +242,7 @@ func TestSchedulerRouteHandler_Integration(t *testing.T) {
 
 		task1 := testutils.GenerateRandomTask([]models.Project{*proj})
 		task1.StartDate = nil
+		task1.Status = "todo"
 		require.NoError(t, ts.CreateTask(ctx, &task1))
 
 		reqBody := SchedulingRequest{
@@ -269,12 +274,14 @@ func TestSchedulerRouteHandler_Integration(t *testing.T) {
 		exp := 10
 
 		taskA := testutils.GenerateRandomTask([]models.Project{*projA})
+		taskA.Status = "todo"
 		taskA.StartDate = &now
 		taskA.DueDate = &due
 		taskA.ExpectedDurationHours = &exp
 		require.NoError(t, ts.CreateTask(ctx, &taskA))
 
 		taskB := testutils.GenerateRandomTask([]models.Project{*projB})
+		taskB.Status = "todo"
 		taskB.StartDate = &now
 		taskB.DueDate = &due
 		taskB.ExpectedDurationHours = &exp
@@ -308,6 +315,7 @@ func TestSchedulerRouteHandler_Integration(t *testing.T) {
 		exp := 10
 
 		task1 := testutils.GenerateRandomTask([]models.Project{*proj})
+		task1.Status = "todo"
 		task1.StartDate = &now
 		task1.DueDate = &due
 		task1.ExpectedDurationHours = &exp
@@ -341,6 +349,7 @@ func TestSchedulerRouteHandler_Integration(t *testing.T) {
 		expHours := 20
 
 		task1 := testutils.GenerateRandomTask([]models.Project{*proj})
+		task1.Status = "todo"
 		task1.StartDate = &startDate
 		task1.DueDate = &dueDate
 		task1.ExpectedDurationHours = &expHours
@@ -348,6 +357,7 @@ func TestSchedulerRouteHandler_Integration(t *testing.T) {
 		require.NoError(t, ts.CreateTask(ctx, &task1))
 
 		task2 := testutils.GenerateRandomTask([]models.Project{*proj})
+		task2.Status = "todo"
 		task2.StartDate = &startDate
 		task2.DueDate = &dueDate
 		task2.ExpectedDurationHours = &expHours
@@ -384,6 +394,7 @@ func TestSchedulerRouteHandler_Integration(t *testing.T) {
 		expHours := 20
 
 		task1 := testutils.GenerateRandomTask([]models.Project{*proj})
+		task1.Status = "todo"
 		task1.StartDate = &startDate
 		task1.DueDate = &dueDate
 		task1.ExpectedDurationHours = &expHours
@@ -433,6 +444,7 @@ func TestSchedulerRouteHandler_Integration(t *testing.T) {
 
 		expHours1 := 30
 		task1 := testutils.GenerateRandomTask([]models.Project{*proj})
+		task1.Status = "todo"
 		task1.StartDate = &startDate
 		task1.DueDate = &dueDate
 		task1.ExpectedDurationHours = &expHours1
@@ -444,6 +456,7 @@ func TestSchedulerRouteHandler_Integration(t *testing.T) {
 
 		expHours2 := 20
 		task2 := testutils.GenerateRandomTask([]models.Project{*proj})
+		task2.Status = "todo"
 		task2.StartDate = &startDate
 		task2.DueDate = &dueDate
 		task2.ExpectedDurationHours = &expHours2

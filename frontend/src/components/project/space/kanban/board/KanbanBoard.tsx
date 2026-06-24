@@ -48,6 +48,7 @@ import { clampTaskListColumnWidth } from './taskList.utils'
 import { useTaskListFilters } from './useTaskListFilters'
 import { useTaskListPreferences } from './useTaskListPreferences'
 import { useKanbanState } from './useKanbanState'
+import type { OptimizationStrategy } from '../scheduler/SchedulerFlowModal'
 import { TaskFilters } from './TaskFilters'
 
 function taskMatchesSearch(task: Task, query: string) {
@@ -207,7 +208,7 @@ export function KanbanBoard() {
     const skippedSchedulerMemberCount =
         schedulerMembers.length - schedulableSchedulerMembers.length
 
-    async function handleSchedulerRun() {
+    async function handleSchedulerRun(strat : OptimizationStrategy) {
         if (schedulerTasks.length === 0) {
             toast.info(t('tasks.scheduler.intro.noTasks'))
             return EMPTY_SCHEDULER_PREVIEW
@@ -234,6 +235,7 @@ export function KanbanBoard() {
                 body: buildSchedulerTriggerRequest(
                     schedulerTasks,
                     schedulableSchedulerMembers,
+                    ['max-hours-scheduled', strat as string, 'max-tasks-scheduled']
                 ),
             }).unwrap()
 
