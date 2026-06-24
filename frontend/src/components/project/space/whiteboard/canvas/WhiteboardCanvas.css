@@ -56,11 +56,19 @@
   background-color: color-mix(in oklch, var(--surface) 94%, transparent);
   box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1),
     0 4px 6px -4px rgb(0 0 0 / 0.1);
-  backdrop-filter: blur(24px);
+  /* backdrop-filter: blur(24px); */
   transition:
     color 150ms ease,
     background-color 150ms ease,
     border-color 150ms ease;
+}
+
+.whiteboard-excalidraw canvas {
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+    transform: translateZ(0); /* Forces Firefox to keep WebGL/Canvas buffers inside VRAM */
+    backface-visibility: hidden;
+    perspective: 1000;
 }
 
 .whiteboard-excalidraw .excalidraw .main-menu-trigger:hover {

@@ -220,7 +220,9 @@ func (s schedulerService) ScheduleTasksToUsers(c context.Context, req Scheduling
 		if task.ProjectID != req.ProjID {
 			return nil, fmt.Errorf("%s", "the tasks all have to belong to the specified project.")
 		}
-		raw_tasks = append(raw_tasks, *task)
+		if task.Status != "done" {
+			raw_tasks = append(raw_tasks, *task)
+		} //  can be "todo" "in_progress" or "done"
 
 		// Find the boundaries of the task to be scheduled
 		if task.DueDate == nil && task.StartDate == nil {
@@ -255,7 +257,7 @@ func (s schedulerService) ScheduleTasksToUsers(c context.Context, req Scheduling
 
 	var old_assignments []Assignment
 	for _, task := range relevantTasks {
-		if len(task.Assignees) > 0 {
+		if len(task.Assignees) > 0 && task.Status != "done" {
 			old_assignments = append(old_assignments, Assignment{
 				TaskID: task.ID,
 				UserID: task.Assignees[0].ProjectMemberID,
@@ -281,7 +283,9 @@ func (s schedulerService) ScheduleTasksToUsers(c context.Context, req Scheduling
 		uniqueTasksMap[task.ID] = task
 	}
 	for _, task := range relevantTasks {
-		uniqueTasksMap[task.ID] = task
+		if task.Status != "done" {
+			uniqueTasksMap[task.ID] = task
+		}
 	}
 	var final_tasks []models.Task
 	for _, task := range uniqueTasksMap {
@@ -296,9 +300,6 @@ func (s schedulerService) ScheduleTasksToUsers(c context.Context, req Scheduling
 	if err != nil {
 		return nil, err
 	}
-
-	// TODO BUGS: Upadte working hours on project page error, Add some different way of confirming when updating hours, because where there are many projects the button is all the way at the bottom, easy to miss
-	// when a new user joins the project you have to refresh the page to schedule with that user in mind
 
 	var new_assignments []Assignment
 	var changed_assignments []Assignment
