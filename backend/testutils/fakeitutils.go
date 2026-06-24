@@ -4,7 +4,6 @@ import (
 	"backend/models"
 	"fmt"
 	"log"
-	"log/slog"
 	"math/rand"
 	"testing"
 	"time"
@@ -210,7 +209,7 @@ func fakeTaskWithProjects(projects []models.Project) func(int) models.Task {
 		dueDate := time.Now().AddDate(0, 0, daysAhead)
 		expHours := f.Hour()
 
-		slog.Info("StartDate: %s, DueDate: %s", startDate.String(), dueDate.String())
+		//slog.Info("StartDate: %s, DueDate: %s", startDate.String(), dueDate.String())
 
 		if dueDate.Sub(startDate).Hours() < 72 {
 			dueDate = dueDate.Add(time.Hour * 72)

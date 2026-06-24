@@ -116,6 +116,7 @@ func TestProjectService(t *testing.T) {
 		expHours := 20
 
 		task1 := testutils.GenerateRandomTask([]models.Project{*proj})
+		task1.Status = "todo"
 		task1.StartDate = &startDate
 		task1.DueDate = &dueDate
 		task1.ExpectedDurationHours = &expHours
@@ -124,6 +125,7 @@ func TestProjectService(t *testing.T) {
 		require.NoError(t, err)
 
 		task2 := testutils.GenerateRandomTask([]models.Project{*proj})
+		task2.Status = "todo"
 		task2.StartDate = &startDate
 		task2.DueDate = &dueDate
 		task2.ExpectedDurationHours = &expHours
@@ -164,6 +166,7 @@ func TestProjectService(t *testing.T) {
 		expHours := 20
 
 		task1 := testutils.GenerateRandomTask([]models.Project{*proj})
+		task1.Status = "todo"
 		task1.StartDate = &startDate
 		task1.DueDate = &dueDate
 		task1.ExpectedDurationHours = &expHours
@@ -175,6 +178,7 @@ func TestProjectService(t *testing.T) {
 		require.NoError(t, err)
 
 		task2 := testutils.GenerateRandomTask([]models.Project{*proj})
+		task2.Status = "todo"
 		task2.StartDate = &startDate
 		task2.DueDate = &dueDate
 		task2.ExpectedDurationHours = &expHours
@@ -211,6 +215,7 @@ func TestProjectService(t *testing.T) {
 		proj, users, _, _ := setupTestingProject(ctx, db, pServe, uServ, t)
 
 		task1 := testutils.GenerateRandomTask([]models.Project{*proj})
+
 		task1.StartDate = nil
 		err := tServe.CreateTask(ctx, &task1)
 		require.NoError(t, err)
@@ -224,7 +229,7 @@ func TestProjectService(t *testing.T) {
 		_, err_s := sServe.ScheduleTasksToUsers(ctx, req, schedulerSettings)
 
 		//require.Error(t, err_s, "some tasks are missing a start/due date.")
-		assert.Error(t, err_s, "some tasks are missing a start/due date.")
+		assert.Error(t, err_s, "at least one task needs to have a start date for the scheduler to work.")
 	})
 
 	runTest(t, db, "Cross-Project Tasks Not Allowed", func(t *testing.T, db *gorm.DB, pServe projectService.ProjectService, uServ userService.UserService, tServe taskService.TaskService, sServe scheduler.SchedulerService) {
@@ -236,6 +241,7 @@ func TestProjectService(t *testing.T) {
 		exp := 10
 
 		taskA := testutils.GenerateRandomTask([]models.Project{*projA})
+		taskA.Status = "todo"
 		taskA.StartDate = &now
 		taskA.DueDate = &due
 		taskA.ExpectedDurationHours = &exp
@@ -243,6 +249,7 @@ func TestProjectService(t *testing.T) {
 		require.NoError(t, err)
 
 		taskB := testutils.GenerateRandomTask([]models.Project{*projB})
+		taskB.Status = "todo"
 		taskB.StartDate = &now
 		taskB.DueDate = &due
 		taskB.ExpectedDurationHours = &exp
@@ -267,6 +274,7 @@ func TestProjectService(t *testing.T) {
 		exp := 10
 
 		task1 := testutils.GenerateRandomTask([]models.Project{*proj})
+		task1.Status = "todo"
 		task1.StartDate = &now
 		task1.DueDate = &due
 		task1.ExpectedDurationHours = &exp
@@ -293,6 +301,7 @@ func TestProjectService(t *testing.T) {
 		expHours := 20
 
 		task1 := testutils.GenerateRandomTask([]models.Project{*proj})
+		task1.Status = "todo"
 		task1.StartDate = &startDate
 		task1.DueDate = &dueDate
 		task1.ExpectedDurationHours = &expHours
@@ -301,6 +310,7 @@ func TestProjectService(t *testing.T) {
 		require.NoError(t, err)
 
 		task2 := testutils.GenerateRandomTask([]models.Project{*proj})
+		task2.Status = "todo"
 		task2.StartDate = &startDate
 		task2.DueDate = &dueDate
 		task2.ExpectedDurationHours = &expHours
@@ -331,6 +341,7 @@ func TestProjectService(t *testing.T) {
 		expHours := 20
 
 		task1 := testutils.GenerateRandomTask([]models.Project{*proj})
+		task1.Status = "todo"
 		task1.StartDate = &startDate
 		task1.DueDate = &dueDate
 		task1.ExpectedDurationHours = &expHours
@@ -363,6 +374,7 @@ func TestProjectService(t *testing.T) {
 
 		expHours1 := 30
 		task1 := testutils.GenerateRandomTask([]models.Project{*proj})
+		task1.Status = "todo"
 		task1.StartDate = &startDate
 		task1.DueDate = &dueDate
 		task1.ExpectedDurationHours = &expHours1
@@ -375,6 +387,7 @@ func TestProjectService(t *testing.T) {
 
 		expHours2 := 20
 		task2 := testutils.GenerateRandomTask([]models.Project{*proj})
+		task2.Status = "todo"
 		task2.StartDate = &startDate
 		task2.DueDate = &dueDate
 		task2.ExpectedDurationHours = &expHours2
