@@ -57,7 +57,9 @@ export function SchedulerReviewStep({
                 </div>
                 {sectionAssignments.map((assignment) => {
                     const task = tasks.find((item) => item.id === assignment.taskId)
-
+                    console.log(assignment)
+                    console.log(task)
+                    console.log(tasks)
                     if (!task) {
                         return null
                     }

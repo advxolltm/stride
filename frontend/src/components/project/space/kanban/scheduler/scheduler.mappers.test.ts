@@ -83,6 +83,7 @@ describe('scheduler mappers', () => {
             buildSchedulerTriggerRequest(
                 [mapTaskToSchedulerTaskOption(task, statusOptions)],
                 [mapProjectMemberToSchedulerMemberOption(member)],
+                ['max-hours-scheduled', 'min-makespan', 'max-tasks-scheduled']
             ),
         ).toEqual({
             task_ids: ['task-1'],
@@ -90,7 +91,8 @@ describe('scheduler mappers', () => {
             settings: {
                 optimization_goals: [
                     'max-hours-scheduled',
-                    'distribute-evenly',
+                    'min-makespan',
+                    'max-tasks-scheduled',
                 ],
             },
         })
