@@ -105,6 +105,14 @@
         "estimatedTime": "Estimated Time",
         "startDate": "Start Date",
         "dueDate": "Due Date"
+      },
+      "filter": {
+        "status": "Status",
+        "assignee": "Assignee",
+        "skill": "Skill",
+        "clear": "Clear",
+        "emptyAssignee": "No assignees available",
+        "emptySkill": "No skills available"
       }
     },
     "drawer": {

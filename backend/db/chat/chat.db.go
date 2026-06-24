@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type (
@@ -19,6 +20,9 @@ type (
 		GetProjectMessages(ctx context.Context, projectID uuid.UUID, page, pageSize int) (db.Paginated[models.Message], error)
 		GetMessage(ctx context.Context, messageID uuid.UUID) (models.Message, error)
 		GetMessageCount(ctx context.Context, projectID uuid.UUID) (int, error)
+		GetProjectChatCursors(ctx context.Context, projectID uuid.UUID) ([]models.ChatMemberCursor, error)
+		MarkDelivered(ctx context.Context, projectID uuid.UUID, projectMemberID uuid.UUID, messageID uuid.UUID) (models.ChatMemberCursor, error)
+		MarkRead(ctx context.Context, projectID uuid.UUID, projectMemberID uuid.UUID, messageID uuid.UUID) (models.ChatMemberCursor, error)
 	}
 
 	chatStore struct {
@@ -37,16 +41,16 @@ func (s *chatStore) CreateMessage(ctx context.Context, message *models.Message) 
 
 // DeleteMessage implements [ChatStore].
 func (s *chatStore) DeleteMessage(ctx context.Context, messageID uuid.UUID) error {
-	return s.db.
+	result := s.db.
 		WithContext(ctx).
-		Model(&models.Message{}).
-		Where("id = ?", messageID).
-		Updates(map[string]any{
-			"content":    "",
-			"is_deleted": true,
-			"deleted_at": time.Now(),
-		}).
-		Error
+		Delete(&models.Message{}, "id = ?", messageID)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return ErrMessageNotFound
+	}
+	return nil
 }
 
 // GetMessageCount implements [ChatStore].
@@ -64,6 +68,116 @@ func (s *chatStore) GetMessageCount(ctx context.Context, projectID uuid.UUID) (i
 
 	// we happily assume that a project chat contains less than 2 billion messages :)
 	return int(count), nil
+}
+
+// GetProjectChatCursors implements [ChatStore].
+func (s *chatStore) GetProjectChatCursors(ctx context.Context, projectID uuid.UUID) ([]models.ChatMemberCursor, error) {
+	var cursors []models.ChatMemberCursor
+	err := s.db.
+		WithContext(ctx).
+		Where("project_id = ?", projectID).
+		Order("updated_at ASC").
+		Find(&cursors).
+		Error
+	if err != nil {
+		return nil, err
+	}
+
+	return cursors, nil
+}
+
+// MarkDelivered implements [ChatStore].
+func (s *chatStore) MarkDelivered(ctx context.Context, projectID uuid.UUID, projectMemberID uuid.UUID, messageID uuid.UUID) (models.ChatMemberCursor, error) {
+	message, err := s.getProjectCursorMessage(ctx, projectID, messageID)
+	if err != nil {
+		return models.ChatMemberCursor{}, err
+	}
+
+	now := time.Now()
+	cursor := models.ChatMemberCursor{
+		ProjectID:                     projectID,
+		ProjectMemberID:               projectMemberID,
+		LastDeliveredMessageID:        message.ID,
+		LastDeliveredMessageCreatedAt: message.CreatedAt,
+		DeliveredAt:                   now,
+		UpdatedAt:                     now,
+	}
+
+	err = s.db.WithContext(ctx).Clauses(clause.OnConflict{
+		Columns: []clause.Column{
+			{Name: "project_id"},
+			{Name: "project_member_id"},
+		},
+		DoUpdates: clause.Assignments(map[string]any{
+			"last_delivered_message_id":         cursor.LastDeliveredMessageID,
+			"last_delivered_message_created_at": cursor.LastDeliveredMessageCreatedAt,
+			"delivered_at":                      cursor.DeliveredAt,
+			"updated_at":                        cursor.UpdatedAt,
+		}),
+		Where: clause.Where{Exprs: []clause.Expression{
+			clause.Expr{
+				SQL: "chat_member_cursors.last_delivered_message_created_at < EXCLUDED.last_delivered_message_created_at",
+			},
+		}},
+	}).Create(&cursor).Error
+	if err != nil {
+		return models.ChatMemberCursor{}, err
+	}
+
+	return s.getProjectMemberCursor(ctx, projectID, projectMemberID)
+}
+
+// MarkRead implements [ChatStore].
+func (s *chatStore) MarkRead(ctx context.Context, projectID uuid.UUID, projectMemberID uuid.UUID, messageID uuid.UUID) (models.ChatMemberCursor, error) {
+	message, err := s.getProjectCursorMessage(ctx, projectID, messageID)
+	if err != nil {
+		return models.ChatMemberCursor{}, err
+	}
+
+	now := time.Now()
+	cursor := models.ChatMemberCursor{
+		ProjectID:                     projectID,
+		ProjectMemberID:               projectMemberID,
+		LastDeliveredMessageID:        message.ID,
+		LastDeliveredMessageCreatedAt: message.CreatedAt,
+		DeliveredAt:                   now,
+		LastReadMessageID:             &message.ID,
+		LastReadMessageCreatedAt:      &message.CreatedAt,
+		ReadAt:                        &now,
+		UpdatedAt:                     now,
+	}
+
+	err = s.db.WithContext(ctx).Clauses(clause.OnConflict{
+		Columns: []clause.Column{
+			{Name: "project_id"},
+			{Name: "project_member_id"},
+		},
+		DoUpdates: clause.Assignments(map[string]any{
+			"last_delivered_message_id": gorm.Expr(
+				"CASE WHEN chat_member_cursors.last_delivered_message_created_at < EXCLUDED.last_delivered_message_created_at THEN EXCLUDED.last_delivered_message_id ELSE chat_member_cursors.last_delivered_message_id END",
+			),
+			"last_delivered_message_created_at": gorm.Expr(
+				"CASE WHEN chat_member_cursors.last_delivered_message_created_at < EXCLUDED.last_delivered_message_created_at THEN EXCLUDED.last_delivered_message_created_at ELSE chat_member_cursors.last_delivered_message_created_at END",
+			),
+			"delivered_at": gorm.Expr(
+				"CASE WHEN chat_member_cursors.last_delivered_message_created_at < EXCLUDED.last_delivered_message_created_at THEN EXCLUDED.delivered_at ELSE chat_member_cursors.delivered_at END",
+			),
+			"last_read_message_id":         cursor.LastReadMessageID,
+			"last_read_message_created_at": cursor.LastReadMessageCreatedAt,
+			"read_at":                      cursor.ReadAt,
+			"updated_at":                   cursor.UpdatedAt,
+		}),
+		Where: clause.Where{Exprs: []clause.Expression{
+			clause.Expr{
+				SQL: "chat_member_cursors.last_read_message_created_at IS NULL OR chat_member_cursors.last_read_message_created_at < EXCLUDED.last_read_message_created_at",
+			},
+		}},
+	}).Create(&cursor).Error
+	if err != nil {
+		return models.ChatMemberCursor{}, err
+	}
+
+	return s.getProjectMemberCursor(ctx, projectID, projectMemberID)
 }
 
 // GetProjectMessages implements [ChatStore].
@@ -146,4 +260,33 @@ func (s *chatStore) UpdateMessage(ctx context.Context, messageID uuid.UUID, newC
 	}
 
 	return msg, nil
+}
+
+func (s *chatStore) getProjectCursorMessage(ctx context.Context, projectID uuid.UUID, messageID uuid.UUID) (models.Message, error) {
+	var message models.Message
+	err := s.db.
+		WithContext(ctx).
+		First(&message, "id = ? AND project_id = ? AND is_deleted = false", messageID, projectID).
+		Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return models.Message{}, ErrMessageNotFound
+		}
+		return models.Message{}, err
+	}
+
+	return message, nil
+}
+
+func (s *chatStore) getProjectMemberCursor(ctx context.Context, projectID uuid.UUID, projectMemberID uuid.UUID) (models.ChatMemberCursor, error) {
+	var cursor models.ChatMemberCursor
+	err := s.db.
+		WithContext(ctx).
+		First(&cursor, "project_id = ? AND project_member_id = ?", projectID, projectMemberID).
+		Error
+	if err != nil {
+		return models.ChatMemberCursor{}, err
+	}
+
+	return cursor, nil
 }

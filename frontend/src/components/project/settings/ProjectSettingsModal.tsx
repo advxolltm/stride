@@ -4,16 +4,12 @@ import type { Project } from '../../../store/features/project/project.types'
 import { ProjectGeneralSettings } from './ProjectGeneralSettings'
 import { MyProjectSkillsSettings } from './mySkills/MyProjectSkillsSettings'
 import { ProjectMembersSettings } from './projectMembers/ProjectMembersSettings'
-import { ProjectSettingsSidebar } from './ProjectSettingsSidebar'
+import {
+    ProjectSettingsSidebar,
+    type ProjectSettingsTab,
+} from './ProjectSettingsSidebar'
 import { ProjectSkillsSettings } from './projectSkills/ProjectSkillsSettings'
 import { MyProjectWorkingHoursSettings } from './workingHours/MyProjectWorkingHoursSettings'
-
-type Tab =
-    | 'general'
-    | 'members'
-    | 'skills'
-    | 'my-skills'
-    | 'my-working-hours'
 
 interface ProjectSettingsModalProps {
     isOpen: boolean
@@ -28,7 +24,7 @@ export function ProjectSettingsModal({
     setIsOpen,
     project,
 }: ProjectSettingsModalProps) {
-    const [activeTab, setActiveTab] = useState<Tab>('general')
+    const [activeTab, setActiveTab] = useState<ProjectSettingsTab>('general')
 
     const handleOpenChange = (open: boolean) => {
         setIsOpen(open)
@@ -42,15 +38,15 @@ export function ProjectSettingsModal({
         <Modal isOpen={isOpen} onOpenChange={handleOpenChange}>
             <Modal.Backdrop>
                 <Modal.Container size="cover">
-                    <Modal.Dialog className="pl-2">
+                    <Modal.Dialog className="overflow-hidden px-2 py-4 sm:p-6 xl:pl-2">
                         <Modal.CloseTrigger />
-                        <div className="flex h-full">
+                        <div className="flex h-full min-h-0 flex-col xl:flex-row">
                             <ProjectSettingsSidebar
                                 activeTab={activeTab}
                                 onTabChange={setActiveTab}
                             />
 
-                            <div className="min-h-0 flex-1 overflow-hidden p-8">
+                            <div className="min-h-0 flex-1 overflow-hidden p-4 sm:p-6 xl:p-8">
                                 {activeTab === 'general' && (
                                     <ProjectGeneralSettings
                                         isOwner={isOwner}
@@ -70,7 +66,9 @@ export function ProjectSettingsModal({
                                     />
                                 )}
                                 {activeTab === 'my-skills' && (
-                                    <MyProjectSkillsSettings project={project} />
+                                    <MyProjectSkillsSettings
+                                        project={project}
+                                    />
                                 )}
                                 {activeTab === 'my-working-hours' && (
                                     <MyProjectWorkingHoursSettings

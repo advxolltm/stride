@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS chat_member_cursors;
 DROP TABLE IF EXISTS whiteboard_elements;
 DROP TABLE IF EXISTS whiteboards;
 DROP TABLE IF EXISTS task_assignees;

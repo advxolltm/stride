@@ -21,6 +21,7 @@ interface WhiteboardWorkspacePanelProps {
     chromeClassName?: string
     bodyClassName?: string
     chatVariant?: 'page' | 'embedded' | 'drawer'
+    isChatActive?: boolean
     templates?: WhiteboardTemplateDefinition[]
     onInsertTemplate?: (template: WhiteboardTemplateDefinition) => void
     insertingTemplateId?: string | null
@@ -40,6 +41,7 @@ export function WhiteboardWorkspacePanel({
     chromeClassName,
     bodyClassName,
     chatVariant = 'page',
+    isChatActive = true,
     templates = [],
     onInsertTemplate,
     insertingTemplateId,
@@ -118,7 +120,11 @@ export function WhiteboardWorkspacePanel({
                 </div>
 
                 <Tabs.Panel id="chat" className="flex min-h-0 flex-1 flex-col p-0">
-                    <ChatSpace projectId={projectId} variant={chatVariant} />
+                    <ChatSpace
+                        projectId={projectId}
+                        variant={chatVariant}
+                        isActive={isChatActive && selectedTab === 'chat'}
+                    />
                 </Tabs.Panel>
 
                 <Tabs.Panel

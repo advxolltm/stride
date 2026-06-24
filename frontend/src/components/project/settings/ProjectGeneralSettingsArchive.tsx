@@ -1,8 +1,11 @@
-import { Alert, Button, toast } from '@heroui/react'
+import { toast } from '@heroui/react'
 import { Archive, ArchiveRestore } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ConfirmDialog } from '../../../shared/components'
+import {
+    ConfirmDialog,
+    ProjectSettingsActionAlert,
+} from '../../../shared/components'
 import { useUpdateProjectMutation } from '../../../store/features/project/project.api'
 import type { Project } from '../../../store/features/project/project.types'
 
@@ -83,28 +86,19 @@ export function ProjectGeneralSettingsArchive({
 
     return (
         <>
-            <div className="border-t pt-6">
-                <Alert className="flex items-center rounded-xl border">
-                    <Alert.Indicator />
-                    <Alert.Content>
-                        <Alert.Title>{title}</Alert.Title>
-                        <Alert.Description>{description}</Alert.Description>
-                    </Alert.Content>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onPress={() => setIsArchiveDialogOpen(true)}
-                        className="ml-auto shrink-0"
-                    >
-                        {isArchived ? (
-                            <ArchiveRestore size={14} />
-                        ) : (
-                            <Archive size={14} />
-                        )}
-                        {actionLabel}
-                    </Button>
-                </Alert>
-            </div>
+            <ProjectSettingsActionAlert
+                title={title}
+                description={description}
+                actionLabel={actionLabel}
+                actionIcon={
+                    isArchived ? (
+                        <ArchiveRestore size={14} />
+                    ) : (
+                        <Archive size={14} />
+                    )
+                }
+                onAction={() => setIsArchiveDialogOpen(true)}
+            />
 
             <ConfirmDialog
                 isOpen={isArchiveDialogOpen}

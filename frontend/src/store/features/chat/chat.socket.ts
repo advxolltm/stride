@@ -8,6 +8,8 @@ import {
     type RealtimeSocketStatus,
     type WSMessage,
 } from '../realtime/realtime.types'
+import { chatApi } from './chat.api'
+import { ChatMemberCursorSchema, type ChatMemberCursor } from './chat.types'
 
 export type ChatSocketState = {
     projectId: string
@@ -41,6 +43,42 @@ export const invalidateProjectMessages = (
     )
 }
 
+const upsertProjectChatCursor = (
+    api: Pick<WsListenerApi, 'dispatch'>,
+    projectId: string,
+    cursor: ChatMemberCursor,
+) => {
+    api.dispatch(
+        chatApi.util.updateQueryData(
+            'getChatMemberCursors',
+            { projectId },
+            (draft) => {
+                const index = draft.findIndex(
+                    (item) => item.projectMemberId === cursor.projectMemberId,
+                )
+
+                if (index === -1) {
+                    draft.push(cursor)
+                    return
+                }
+
+                draft[index] = cursor
+            },
+        ),
+    )
+}
+
+const invalidateProjectChatCursors = (
+    api: Pick<WsListenerApi, 'dispatch'>,
+    projectId: string,
+) => {
+    api.dispatch(
+        baseApi.util.invalidateTags([
+            { type: 'ChatMemberCursor', id: projectId },
+        ]),
+    )
+}
+
 const isChatWsMessageType = (type: number) =>
     type === WSMessageType.ChatMessageCreate ||
     type === WSMessageType.ChatMessageUpdate ||
@@ -52,6 +90,19 @@ export const handleChatWsMessage = (
     projectId: string,
     api: Pick<WsListenerApi, 'dispatch'>,
 ) => {
+    if (type === WSMessageType.ChatMemberCursorUpdate) {
+        const parsedPayload = ChatMemberCursorSchema.safeParse(_payload)
+
+        if (parsedPayload.success) {
+            upsertProjectChatCursor(api, projectId, parsedPayload.data)
+            invalidateProjectChatCursors(api, projectId)
+        } else {
+            invalidateProjectChatCursors(api, projectId)
+        }
+
+        return true
+    }
+
     if (!isChatWsMessageType(type)) {
         return false
     }

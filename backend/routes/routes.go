@@ -173,6 +173,18 @@ type (
 	MessageCount struct {
 		Count int `json:"count" example:"42"`
 	} // @name MessageCount
+
+	ChatMemberCursor struct {
+		ProjectID                     uuid.UUID  `json:"projectId"`
+		ProjectMemberID               uuid.UUID  `json:"projectMemberId"`
+		LastDeliveredMessageID        uuid.UUID  `json:"lastDeliveredMessageId"`
+		LastDeliveredMessageCreatedAt time.Time  `json:"lastDeliveredMessageCreatedAt"`
+		DeliveredAt                   time.Time  `json:"deliveredAt"`
+		LastReadMessageID             *uuid.UUID `json:"lastReadMessageId"`
+		LastReadMessageCreatedAt      *time.Time `json:"lastReadMessageCreatedAt"`
+		ReadAt                        *time.Time `json:"readAt"`
+		UpdatedAt                     time.Time  `json:"updatedAt"`
+	} // @name ChatMemberCursor
 )
 
 func MapProjectSkillToUserSkill(ps models.ProjectSkill, uid uuid.UUID) UserSkill {
@@ -195,6 +207,20 @@ func MapMessage(msg models.Message) Message {
 		CreatedAt: msg.CreatedAt,
 		EditedAt:  msg.EditedAt,
 		DeletedAt: msg.DeletedAt,
+	}
+}
+
+func MapChatMemberCursor(cursor models.ChatMemberCursor) ChatMemberCursor {
+	return ChatMemberCursor{
+		ProjectID:                     cursor.ProjectID,
+		ProjectMemberID:               cursor.ProjectMemberID,
+		LastDeliveredMessageID:        cursor.LastDeliveredMessageID,
+		LastDeliveredMessageCreatedAt: cursor.LastDeliveredMessageCreatedAt,
+		DeliveredAt:                   cursor.DeliveredAt,
+		LastReadMessageID:             cursor.LastReadMessageID,
+		LastReadMessageCreatedAt:      cursor.LastReadMessageCreatedAt,
+		ReadAt:                        cursor.ReadAt,
+		UpdatedAt:                     cursor.UpdatedAt,
 	}
 }
 
@@ -479,6 +505,8 @@ const (
 	WhiteboardElementLiveClear
 	WhiteboardElementRollback
 	WhiteboardElementSelectionUpdate
+
+	ChatMemberCursorUpdate
 )
 
 type WhiteboardElementRollbackPayload struct {

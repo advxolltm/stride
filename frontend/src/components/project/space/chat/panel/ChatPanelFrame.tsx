@@ -8,6 +8,7 @@ interface ChatPanelFrameProps {
     projectId: string
     isPinned: boolean
     canDock: boolean
+    isChatActive?: boolean
     onTogglePin: () => void
     onClose: () => void
     surfaceClassName?: string
@@ -17,6 +18,7 @@ export function ChatPanelFrame({
     projectId,
     isPinned,
     canDock,
+    isChatActive = true,
     onTogglePin,
     onClose,
     surfaceClassName,
@@ -68,7 +70,11 @@ export function ChatPanelFrame({
                 </div>
             </div>
 
-            <ChatSpace projectId={projectId} variant="embedded" />
+            <ChatSpace
+                projectId={projectId}
+                variant="embedded"
+                isActive={isChatActive}
+            />
         </div>
     )
 }

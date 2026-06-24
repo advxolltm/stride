@@ -53,7 +53,8 @@ export const baseApi = createApi({
         'Whiteboard',
         'WhiteboardElement',
         'Notification',
-		'Messages',
+        'Messages',
+        'ChatMemberCursor',
     ],
     baseQuery: fetchBaseQuery({
         baseUrl: apiBasePath,

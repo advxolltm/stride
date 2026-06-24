@@ -25,6 +25,7 @@ export const WSMessageType = {
     WhiteboardElementLiveClear: 21,
     WhiteboardElementRollback: 22,
     WhiteboardElementSelectionUpdate: 23,
+    ChatMemberCursorUpdate: 24,
 } as const
 
 export type WSMessageType = (typeof WSMessageType)[keyof typeof WSMessageType]
@@ -54,6 +55,7 @@ export const WSMessageTypeSchema = z.union([
     z.literal(WSMessageType.WhiteboardElementLiveClear),
     z.literal(WSMessageType.WhiteboardElementRollback),
     z.literal(WSMessageType.WhiteboardElementSelectionUpdate),
+    z.literal(WSMessageType.ChatMemberCursorUpdate),
 ])
 
 export const WSMessageMetaSchema = z.object({

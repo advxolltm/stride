@@ -1,6 +1,7 @@
 import { Button, Tooltip } from '@heroui/react'
 import { skipToken } from '@reduxjs/toolkit/query'
 import {
+    ChevronLeft,
     ChevronRight,
     Home,
     Moon,
@@ -17,14 +18,13 @@ import { WhiteboardCanvas } from '../components/project/space/whiteboard/canvas/
 import type { WhiteboardFocusTarget } from '../components/project/space/whiteboard/canvas/whiteboardCanvas.types'
 import { useWhiteboardSync } from '../components/project/space/whiteboard/sync/useWhiteboardSync'
 import { useWhiteboardTemplateInsertion } from '../components/project/space/whiteboard/sync/useWhiteboardTemplateInsertion'
-import {
-    whiteboardTemplates,
-} from '../components/project/space/whiteboard/whiteboardTemplates'
+import { whiteboardTemplates } from '../components/project/space/whiteboard/whiteboardTemplates'
 import {
     WhiteboardWorkspacePanel,
     type WhiteboardPanelTab,
 } from '../components/project/space/whiteboard/WhiteboardWorkspacePanel'
 import { useAppDispatch, useAppSelector } from '../shared/hooks/redux'
+import useMediaQuery from '../shared/hooks/useMediaQuery'
 import { getApiErrorMessage } from '../shared/utils/api/errors'
 import { isProjectArchived } from '../shared/utils/projectStatus'
 import { useGetProjectByIdQuery } from '../store/features/project/project.api'
@@ -41,11 +41,17 @@ import type {
 import { toggleTheme } from '../store/themeSlice'
 import { selectUserId } from '../store/userSlice'
 import { LinkTaskButton } from '../components/project/space/whiteboard/LinkTaskButton'
-import type { NonDeletedExcalidrawElement, Ordered } from '@excalidraw/excalidraw/element/types'
+import type {
+    NonDeletedExcalidrawElement,
+    Ordered,
+} from '@excalidraw/excalidraw/element/types'
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
 import type { Task } from '../store/features/tasks/task.types'
 import { ViewTaskButton } from '../components/project/space/whiteboard/ViewTaskButton'
-import { createAndApplyNewLinkTaskGroup, searchSelectedTaskRegionID } from '../shared/utils/whiteboardTaskLinking/whiteboardTaskLinking'
+import {
+    createAndApplyNewLinkTaskGroup,
+    searchSelectedTaskRegionID,
+} from '../shared/utils/whiteboardTaskLinking/whiteboardTaskLinking'
 
 const emptyLiveElementsById: Record<string, WhiteboardLiveUpdateEventPayload> =
     {}
@@ -55,7 +61,7 @@ const DOCK_MEDIA_QUERY = '(min-width: 1280px)'
 
 export function WhiteboardPage() {
     const { projectId } = useParams()
-    const [searchParams, setSearchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams()
     const { t } = useTranslation('project')
     const dispatch = useAppDispatch()
     const currentUserId = useAppSelector(selectUserId)
@@ -73,8 +79,11 @@ export function WhiteboardPage() {
             ? window.matchMedia(DOCK_MEDIA_QUERY).matches
             : false,
     )
-    const [isLinkTaskButtonVisible, setIsLinkTaskButtonVisible] = useState(false);
-    const [viewTaskRegionTask, setViewTaskRegionTask] = useState<string | null>(null);
+    const [isLinkTaskButtonVisible, setIsLinkTaskButtonVisible] =
+        useState(false)
+    const [viewTaskRegionTask, setViewTaskRegionTask] = useState<string | null>(
+        null,
+    )
     const whiteboardCursorWS = useWatchWhiteboardCursorQuery(
         projectId ?? skipToken,
     )
@@ -106,7 +115,8 @@ export function WhiteboardPage() {
         projectId && isElementsReady ? projectId : skipToken,
         {
             selectFromResult: ({ data }) => ({
-                liveElementsById: data?.liveElementsById ?? emptyLiveElementsById,
+                liveElementsById:
+                    data?.liveElementsById ?? emptyLiveElementsById,
                 remoteSelectionClientIdsByElementId:
                     data?.remoteSelectionClientIdsByElementId ??
                     emptyRemoteSelectionClientIdsByElementId,
@@ -117,6 +127,8 @@ export function WhiteboardPage() {
     const remoteSelectionClientIdsByElementId =
         whiteboardEventsWS.remoteSelectionClientIdsByElementId
     const isArchived = isProjectArchived(project)
+    const isXlOrLess = useMediaQuery('(max-width: 1279px)')
+    const isReadOnly = isArchived || isXlOrLess
     const {
         excalidrawElements,
         handleCanvasChange,
@@ -125,14 +137,14 @@ export function WhiteboardPage() {
         queueCursorUpdate,
     } = useWhiteboardSync({
         projectId,
-        isReadOnly: isArchived,
+        isReadOnly,
         whiteboardElements,
         liveElementsById,
     })
     const { insertTemplate, insertingTemplateId, isInsertingTemplate } =
         useWhiteboardTemplateInsertion({
             projectId,
-            isReadOnly: isArchived,
+            isReadOnly,
             whiteboardElements,
             refetchWhiteboardElements,
             getExcalidrawApi: () => excalidrawApiRef.current,
@@ -163,31 +175,34 @@ export function WhiteboardPage() {
 
     function handleLinkTaskSelect(task: Task) {
         if (excalidrawApiRef.current) {
-            createAndApplyNewLinkTaskGroup(excalidrawApiRef.current, task);
+            createAndApplyNewLinkTaskGroup(excalidrawApiRef.current, task)
         }
     }
 
     function handleElementsSelected(
-		elements: readonly Ordered<NonDeletedExcalidrawElement>[], 
-		groupedElements: readonly Ordered<NonDeletedExcalidrawElement>[],
-		selectedOuterGroupIds: readonly string[]
-	): void {
-		if(elements.length === 0) {
-			setViewTaskRegionTask(null);
-			setIsLinkTaskButtonVisible(false);
-			return;
-		}
+        elements: readonly Ordered<NonDeletedExcalidrawElement>[],
+        groupedElements: readonly Ordered<NonDeletedExcalidrawElement>[],
+        selectedOuterGroupIds: readonly string[],
+    ): void {
+        if (elements.length === 0) {
+            setViewTaskRegionTask(null)
+            setIsLinkTaskButtonVisible(false)
+            return
+        }
 
-		const taskRegionID = searchSelectedTaskRegionID(elements, groupedElements, selectedOuterGroupIds);
-		if(taskRegionID) {
-			setViewTaskRegionTask(taskRegionID);
-			setIsLinkTaskButtonVisible(false);
-		} else {
-			setViewTaskRegionTask(null);
-			setIsLinkTaskButtonVisible(true);
-		}
+        const taskRegionID = searchSelectedTaskRegionID(
+            elements,
+            groupedElements,
+            selectedOuterGroupIds,
+        )
+        if (taskRegionID) {
+            setViewTaskRegionTask(taskRegionID)
+            setIsLinkTaskButtonVisible(false)
+        } else {
+            setViewTaskRegionTask(null)
+            setIsLinkTaskButtonVisible(true)
+        }
     }
-
 
     function handleOpenPanel() {
         setIsPanelOpen(true)
@@ -299,52 +314,63 @@ export function WhiteboardPage() {
 
     return (
         <div className="relative h-screen w-full overflow-hidden bg-[var(--background)]">
-            <nav
-                className={[
-                    'fixed top-3 z-40 flex h-10 -translate-x-1/2 items-center gap-1 overflow-hidden rounded-full border border-[var(--border)] bg-[color-mix(in_oklch,var(--surface)_94%,transparent)] px-2 text-sm shadow-lg backdrop-blur-xl',
-                    navPositionClass,
-                ].join(' ')}
-            >
-                <Link
-                    to="/"
-                    className="flex h-8 shrink-0 items-center gap-2 rounded-full pr-2 font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--surface-secondary)]"
-                    aria-label="Stride overview"
+            {isXlOrLess ? (
+                <nav className="fixed top-3 left-2 z-40 flex h-10 items-center rounded-full border border-[var(--border)] bg-[color-mix(in_oklch,var(--surface)_94%,transparent)] px-3 text-sm shadow-lg backdrop-blur-xl">
+                    <Link
+                        to={`/project/${projectId}`}
+                        className="rounded-fullfont-medium flex h-8 shrink-0 items-center gap-1 text-[var(--foreground)] transition-colors hover:bg-[var(--surface-secondary)]"
+                    >
+                        <ChevronLeft size={16} />
+                    </Link>
+                </nav>
+            ) : (
+                <nav
+                    className={[
+                        'fixed top-3 z-40 flex h-10 -translate-x-1/2 items-center gap-1 overflow-hidden rounded-full border border-[var(--border)] bg-[color-mix(in_oklch,var(--surface)_94%,transparent)] px-2 text-sm shadow-lg backdrop-blur-xl',
+                        navPositionClass,
+                    ].join(' ')}
                 >
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--accent)] text-[var(--accent-foreground)]">
-                        <Zap size={18} strokeWidth={2.3} />
+                    <Link
+                        to="/"
+                        className="flex h-8 shrink-0 items-center gap-2 rounded-full pr-2 font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--surface-secondary)]"
+                        aria-label="Stride overview"
+                    >
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--accent)] text-[var(--accent-foreground)]">
+                            <Zap size={18} strokeWidth={2.3} />
+                        </span>
+                        <span>Stride</span>
+                    </Link>
+                    <ChevronRight
+                        size={14}
+                        className="shrink-0 text-[var(--muted)]"
+                    />
+                    <Link
+                        to="/"
+                        className="flex h-8 shrink-0 items-center gap-1.5 rounded-full px-2 font-medium text-[var(--muted)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]"
+                        aria-label={t('whiteboardPage.overviewAriaLabel')}
+                    >
+                        <Home size={15} />
+                        <span>{t('common:navigation.overview')}</span>
+                    </Link>
+                    <ChevronRight
+                        size={14}
+                        className="shrink-0 text-[var(--muted)]"
+                    />
+                    <Link
+                        to={`/project/${projectId}`}
+                        className="max-w-[160px] truncate rounded-full px-2 py-1 font-medium text-[var(--muted)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]"
+                    >
+                        {projectName}
+                    </Link>
+                    <ChevronRight
+                        size={14}
+                        className="shrink-0 text-[var(--muted)]"
+                    />
+                    <span className="rounded-full px-2 py-1 font-semibold text-[var(--foreground)]">
+                        {t('spaces.whiteboard')}
                     </span>
-                    <span>Stride</span>
-                </Link>
-                <ChevronRight
-                    size={14}
-                    className="shrink-0 text-[var(--muted)]"
-                />
-                <Link
-                    to="/"
-                    className="flex h-8 shrink-0 items-center gap-1.5 rounded-full px-2 font-medium text-[var(--muted)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]"
-                    aria-label={t('whiteboardPage.overviewAriaLabel')}
-                >
-                    <Home size={15} />
-                    <span>{t('common:navigation.overview')}</span>
-                </Link>
-                <ChevronRight
-                    size={14}
-                    className="shrink-0 text-[var(--muted)]"
-                />
-                <Link
-                    to={`/project/${projectId}`}
-                    className="max-w-[160px] truncate rounded-full px-2 py-1 font-medium text-[var(--muted)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]"
-                >
-                    {projectName}
-                </Link>
-                <ChevronRight
-                    size={14}
-                    className="shrink-0 text-[var(--muted)]"
-                />
-                <span className="rounded-full px-2 py-1 font-semibold text-[var(--foreground)]">
-                    {t('spaces.whiteboard')}
-                </span>
-            </nav>
+                </nav>
+            )}
 
             <div
                 className={[
@@ -353,8 +379,12 @@ export function WhiteboardPage() {
                 ].join(' ')}
             >
                 {isArchived && <ArchivedReadOnlyChip />}
-                {isLinkTaskButtonVisible && <LinkTaskButton onSelect={handleLinkTaskSelect} />}
-                {viewTaskRegionTask && <ViewTaskButton taskId={viewTaskRegionTask} />}
+                {isLinkTaskButtonVisible && (
+                    <LinkTaskButton onSelect={handleLinkTaskSelect} />
+                )}
+                {viewTaskRegionTask && (
+                    <ViewTaskButton taskId={viewTaskRegionTask} />
+                )}
                 <CollaboratorsButton
                     participants={presence}
                     currentUserId={currentUserId}
@@ -397,7 +427,9 @@ export function WhiteboardPage() {
                                 variant="ghost"
                                 className="h-10 w-10 min-w-10 rounded-full border border-[var(--border)] bg-[color-mix(in_oklch,var(--surface)_94%,transparent)] text-[var(--foreground)] shadow-lg backdrop-blur-xl hover:bg-[var(--surface-secondary)]"
                                 onPress={handleOpenPanel}
-                                aria-label={t('whiteboardPage.panel.openAriaLabel')}
+                                aria-label={t(
+                                    'whiteboardPage.panel.openAriaLabel',
+                                )}
                             >
                                 <PanelRightOpen size={16} />
                             </Button>
@@ -417,34 +449,37 @@ export function WhiteboardPage() {
             <div className="flex h-full min-h-0">
                 <div className="min-w-0 flex-1">
                     <WhiteboardCanvas
-                        ref={excalidrawApi => {
-                            excalidrawApiRef.current = excalidrawApi;
+                        ref={(excalidrawApi) => {
+                            excalidrawApiRef.current = excalidrawApi
                             if (!excalidrawApiRef.current) {
-                                return;
+                                return
                             }
 
-                            const focusTaskId = searchParams.get("focusTaskId");
+                            const focusTaskId = searchParams.get('focusTaskId')
                             if (!focusTaskId) {
-                                return;
+                                return
                             }
 
-                            // NOTE: both the rectangle and the title above the rectangle have this id 
-                            // providing both to the scrollToContent(..., { fitToContent: true }) ensures 
+                            // NOTE: both the rectangle and the title above the rectangle have this id
+                            // providing both to the scrollToContent(..., { fitToContent: true }) ensures
                             // that both (and by extension the actual content of the link) are properly in view
                             const targets = excalidrawElements.filter(
-                                e => e.customData?.taskLinkId === focusTaskId
-                            );
+                                (e) => e.customData?.taskLinkId === focusTaskId,
+                            )
 
                             if (targets.length > 0) {
-                                excalidrawApiRef.current.scrollToContent(targets, {
-                                    fitToViewport: true,
-                                    viewportZoomFactor: 0.95,
-                                });
+                                excalidrawApiRef.current.scrollToContent(
+                                    targets,
+                                    {
+                                        fitToViewport: true,
+                                        viewportZoomFactor: 0.95,
+                                    },
+                                )
                             }
 
-                            const nextParams = new URLSearchParams(searchParams);
-                            nextParams.delete("focusTaskId");
-                            setSearchParams(nextParams, { replace: true });
+                            const nextParams = new URLSearchParams(searchParams)
+                            nextParams.delete('focusTaskId')
+                            setSearchParams(nextParams, { replace: true })
                         }}
                         key={projectId}
                         elements={excalidrawElements}
@@ -458,7 +493,7 @@ export function WhiteboardPage() {
                                 ? `whiteboard:${projectId}:viewport`
                                 : undefined
                         }
-                        viewModeEnabled={isArchived}
+                        viewModeEnabled={isReadOnly}
                         onChange={handleCanvasChange}
                         onPointerUp={handleCanvasPointerUp}
                         onCursorChange={queueCursorUpdate}
@@ -470,14 +505,16 @@ export function WhiteboardPage() {
                 <div
                     className={[
                         'border-border bg-background hidden min-h-0 w-[26rem] shrink-0 border-l-2 xl:flex xl:flex-col',
-                        showDockedPanel ? 'xl:translate-x-0 xl:opacity-100' : 'xl:hidden',
+                        showDockedPanel
+                            ? 'xl:translate-x-0 xl:opacity-100'
+                            : 'xl:hidden',
                     ].join(' ')}
                 >
                     <WhiteboardWorkspacePanel
                         projectId={projectId}
                         isPinned
                         canDock={canDockPanel}
-                        isReadOnly={isArchived}
+                        isReadOnly={isReadOnly}
                         selectedTab={selectedPanelTab}
                         onTabChange={setSelectedPanelTab}
                         onTogglePin={handleTogglePanelPin}
@@ -486,6 +523,7 @@ export function WhiteboardPage() {
                         chromeClassName=""
                         bodyClassName="bg-background"
                         chatVariant="drawer"
+                        isChatActive={showDockedPanel}
                         templates={whiteboardTemplates}
                         onInsertTemplate={handleInsertTemplate}
                         insertingTemplateId={insertingTemplateId}
@@ -507,7 +545,7 @@ export function WhiteboardPage() {
                         projectId={projectId}
                         isPinned={false}
                         canDock={canDockPanel}
-                        isReadOnly={isArchived}
+                        isReadOnly={isReadOnly}
                         selectedTab={selectedPanelTab}
                         onTabChange={setSelectedPanelTab}
                         onTogglePin={handleTogglePanelPin}
@@ -516,6 +554,7 @@ export function WhiteboardPage() {
                         chromeClassName=""
                         bodyClassName="bg-background"
                         chatVariant="drawer"
+                        isChatActive={showDrawerPanel}
                         templates={whiteboardTemplates}
                         onInsertTemplate={handleInsertTemplate}
                         insertingTemplateId={insertingTemplateId}

@@ -2,9 +2,10 @@ package chat
 
 import (
 	"backend/db"
-	"backend/db/chat"
+	dbChat "backend/db/chat"
 	"backend/models"
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -19,15 +20,17 @@ type (
 		GetProjectMessages(ctx context.Context, projectID uuid.UUID, page, pageSize int) (db.Paginated[models.Message], error)
 		GetMessage(ctx context.Context, messageID uuid.UUID) (models.Message, error)
 		GetMessageCount(ctx context.Context, projectID uuid.UUID) (int, error)
+		GetProjectChatCursors(ctx context.Context, projectID uuid.UUID) ([]models.ChatMemberCursor, error)
+		MarkDelivered(ctx context.Context, projectID uuid.UUID, projectMemberID uuid.UUID, messageID uuid.UUID) (models.ChatMemberCursor, error)
+		MarkRead(ctx context.Context, projectID uuid.UUID, projectMemberID uuid.UUID, messageID uuid.UUID) (models.ChatMemberCursor, error)
 	}
 
 	chatService struct {
-		chatStore chat.ChatStore
+		chatStore dbChat.ChatStore
 	}
 )
 
-
-func NewChatService(chatStore chat.ChatStore) ChatService {
+func NewChatService(chatStore dbChat.ChatStore) ChatService {
 	return &chatService{chatStore}
 }
 
@@ -54,6 +57,9 @@ func (s *chatService) CreateMessage(ctx context.Context, content string, sentBy 
 func (s *chatService) DeleteMessage(ctx context.Context, messageID uuid.UUID) error {
 	err := s.chatStore.DeleteMessage(ctx, messageID)
 	if err != nil {
+		if errors.Is(err, dbChat.ErrMessageNotFound) {
+			return fmt.Errorf("%w: %w", ErrMessageNotFound, err)
+		}
 		return fmt.Errorf("failed to delete message %s: %w", messageID, err)
 	}
 	return nil
@@ -81,6 +87,9 @@ func (s *chatService) GetProjectMessages(ctx context.Context, projectID uuid.UUI
 func (s *chatService) GetMessage(ctx context.Context, messageID uuid.UUID) (models.Message, error) {
 	msg, err := s.chatStore.GetMessage(ctx, messageID)
 	if err != nil {
+		if errors.Is(err, dbChat.ErrMessageNotFound) {
+			return models.Message{}, fmt.Errorf("%w: %w", ErrMessageNotFound, err)
+		}
 		return models.Message{}, fmt.Errorf("failed to get message %s: %w", messageID, err)
 	}
 	return msg, nil
@@ -95,3 +104,36 @@ func (s *chatService) UpdateMessage(ctx context.Context, messageID uuid.UUID, ne
 	return msg, nil
 }
 
+// GetProjectChatCursors implements [ChatService].
+func (s *chatService) GetProjectChatCursors(ctx context.Context, projectID uuid.UUID) ([]models.ChatMemberCursor, error) {
+	cursor, err := s.chatStore.GetProjectChatCursors(ctx, projectID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get chat cursors for project %s: %w", projectID, err)
+	}
+
+	return cursor, nil
+}
+
+// MarkDelivered implements [ChatService].
+func (s *chatService) MarkDelivered(ctx context.Context, projectID uuid.UUID, projectMemberID uuid.UUID, messageID uuid.UUID) (models.ChatMemberCursor, error) {
+	cursor, err := s.chatStore.MarkDelivered(ctx, projectID, projectMemberID, messageID)
+	if err != nil {
+		if errors.Is(err, dbChat.ErrMessageNotFound) {
+			return models.ChatMemberCursor{}, fmt.Errorf("%w: %w", ErrMessageNotFound, err)
+		}
+		return models.ChatMemberCursor{}, fmt.Errorf("failed to mark message %s as delivered for project member %s: %w", messageID, projectMemberID, err)
+	}
+	return cursor, nil
+}
+
+// MarkRead implements [ChatService].
+func (s *chatService) MarkRead(ctx context.Context, projectID uuid.UUID, projectMemberID uuid.UUID, messageID uuid.UUID) (models.ChatMemberCursor, error) {
+	cursor, err := s.chatStore.MarkRead(ctx, projectID, projectMemberID, messageID)
+	if err != nil {
+		if errors.Is(err, dbChat.ErrMessageNotFound) {
+			return models.ChatMemberCursor{}, fmt.Errorf("%w: %w", ErrMessageNotFound, err)
+		}
+		return models.ChatMemberCursor{}, fmt.Errorf("failed to mark message %s as read for project member %s: %w", messageID, projectMemberID, err)
+	}
+	return cursor, nil
+}

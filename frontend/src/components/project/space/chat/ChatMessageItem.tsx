@@ -21,6 +21,8 @@ interface ChatMessageItemProps {
     readOnly?: boolean
     timeLabel: string
     editedLabel?: string | null
+    deliveredTo?: ProjectMember[]
+    readBy?: ProjectMember[]
     onEditMessage: (message: Message, content: string) => Promise<void>
     onMessageAction: (key: Key, message: Message) => Promise<void>
 }
@@ -40,6 +42,69 @@ function SenderAvatar({ sender }: Readonly<{ sender?: ProjectMember }>) {
                 undefined
             }
         />
+    )
+}
+
+function memberDisplayName(member: ProjectMember) {
+    return member.user.fullName || member.user.username
+}
+
+function ReceiptStatusIndicator({
+    deliveredTo,
+    readBy,
+}: Readonly<{
+    deliveredTo: ProjectMember[]
+    readBy: ProjectMember[]
+}>) {
+    const { t } = useTranslation('chat')
+    const hasReadReceipts = readBy.length > 0
+    const allDeliveredMembersRead =
+        deliveredTo.length > 0 && readBy.length === deliveredTo.length
+
+    const tooltipLabel =
+        readBy.length === 1
+            ? t('chat.readReceipts.readByOne', {
+                  name: memberDisplayName(readBy[0]),
+              })
+            : readBy.length > 1
+              ? t('chat.readReceipts.readByMany', { count: readBy.length })
+              : deliveredTo.length === 1
+                ? t('chat.readReceipts.deliveredToOne', {
+                      name: memberDisplayName(deliveredTo[0]),
+                  })
+                : deliveredTo.length > 1
+                  ? t('chat.readReceipts.deliveredToMany', {
+                        count: deliveredTo.length,
+                    })
+                  : t('chat.readReceipts.delivered')
+
+    return (
+        <Tooltip delay={0}>
+            <Tooltip.Trigger className="inline-flex">
+                <span
+                    aria-label={tooltipLabel}
+                    className={[
+                        'inline-flex cursor-help items-center rounded-full p-0.5 transition-colors',
+                        allDeliveredMembersRead
+                            ? 'text-primary hover:text-primary'
+                            : 'text-default-500 hover:text-default-700',
+                    ].join(' ')}
+                >
+                    {hasReadReceipts ? (
+                        <span className="inline-flex items-center">
+                            <Check size={14} />
+                            <Check size={14} className="-ml-2" />
+                        </span>
+                    ) : (
+                        <Check size={14} />
+                    )}
+                </span>
+            </Tooltip.Trigger>
+            <Tooltip.Content showArrow placement="top">
+                <Tooltip.Arrow />
+                {tooltipLabel}
+            </Tooltip.Content>
+        </Tooltip>
     )
 }
 
@@ -125,6 +190,8 @@ export function ChatMessageItem({
     readOnly = false,
     timeLabel,
     editedLabel,
+    deliveredTo = [],
+    readBy = [],
     onEditMessage,
     onMessageAction,
 }: Readonly<ChatMessageItemProps>) {
@@ -336,6 +403,10 @@ export function ChatMessageItem({
                         {editedLabel ? (
                             <EditedIndicator editedLabel={editedLabel} />
                         ) : null}
+                        <ReceiptStatusIndicator
+                            deliveredTo={deliveredTo}
+                            readBy={readBy}
+                        />
                         <span className="text-default-500">{timeLabel}</span>
                         <span className="text-default-400">&bull;</span>
                         <span className="text-foreground font-semibold">
@@ -405,32 +476,34 @@ export function ChatMessageItem({
                             </div>
                         </Form>
                     ) : (
-                        <div className="ml-auto flex max-w-full items-start gap-2">
-                            <div className="flex h-full w-8 shrink-0 items-start justify-center pt-2">
+                        <>
+                            <div className="ml-auto flex max-w-full items-start gap-2">
+                                <div className="flex h-full w-8 shrink-0 items-start justify-center pt-2">
+                                    <div
+                                        className={[
+                                            'pointer-events-none transition-opacity',
+                                            isMenuOpen
+                                                ? 'opacity-100'
+                                                : 'opacity-0 group-hover:opacity-100',
+                                        ].join(' ')}
+                                    >
+                                        <MessageMenu
+                                            ownMessage={!readOnly}
+                                            onAction={handleOwnMessageAction}
+                                            buttonClassName="pointer-events-auto text-default-500 hover:text-default-700 bg-default-50/90 hover:bg-default-100 border border-default-200/80"
+                                            onOpenChange={setIsMenuOpen}
+                                        />
+                                    </div>
+                                </div>
                                 <div
-                                    className={[
-                                        'pointer-events-none transition-opacity',
-                                        isMenuOpen
-                                            ? 'opacity-100'
-                                            : 'opacity-0 group-hover:opacity-100',
-                                    ].join(' ')}
+                                    className={`bg-accent min-w-0 rounded-2xl rounded-br-md px-4 py-3 text-sm font-medium text-white shadow-sm ${MESSAGE_BUBBLE_MAX_WIDTH}`}
                                 >
-                                    <MessageMenu
-                                        ownMessage={!readOnly}
-                                        onAction={handleOwnMessageAction}
-                                        buttonClassName="pointer-events-auto text-default-500 hover:text-default-700 bg-default-50/90 hover:bg-default-100 border border-default-200/80"
-                                        onOpenChange={setIsMenuOpen}
-                                    />
+                                    <p className="break-all whitespace-pre-wrap">
+                                        {message.content}
+                                    </p>
                                 </div>
                             </div>
-                            <div
-                                className={`bg-accent min-w-0 rounded-2xl rounded-br-md px-4 py-3 text-sm font-medium text-white shadow-sm ${MESSAGE_BUBBLE_MAX_WIDTH}`}
-                            >
-                                <p className="break-all whitespace-pre-wrap">
-                                    {message.content}
-                                </p>
-                            </div>
-                        </div>
+                        </>
                     )}
                 </div>
             </div>

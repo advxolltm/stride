@@ -33,7 +33,7 @@ export function HomePage() {
 
     return (
         <MainPageLayout>
-            <div className="flex-1 overflow-y-auto px-8 py-8">
+            <div className="app-scrollbar flex-1 overflow-y-auto px-8 py-8">
                 <MainPageHeader
                     title={t('home.title')}
                     description={t('home.description')}

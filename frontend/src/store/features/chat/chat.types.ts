@@ -32,6 +32,28 @@ export const EditMessageRequestSchema = z.object({
 
 export type EditMessageRequest = z.infer<typeof EditMessageRequestSchema>
 
+export const ChatMemberCursorSchema = z.object({
+    projectId: z.string(),
+    projectMemberId: z.string(),
+    lastDeliveredMessageId: z.string(),
+    lastDeliveredMessageCreatedAt: z.string(),
+    deliveredAt: z.string(),
+    lastReadMessageId: z.string().nullable(),
+    lastReadMessageCreatedAt: z.string().nullable(),
+    readAt: z.string().nullable(),
+    updatedAt: z.string(),
+})
+
+export type ChatMemberCursor = z.infer<typeof ChatMemberCursorSchema>
+
+export const MarkChatCursorRequestSchema = z.object({
+    messageId: z.string(),
+})
+
+export type MarkChatCursorRequest = z.infer<
+    typeof MarkChatCursorRequestSchema
+>
+
 export const createPaginatedSchema = <
     TItemSchema extends z.ZodTypeAny,
 >(itemSchema: TItemSchema) =>
@@ -50,4 +72,3 @@ export type Paginated<T> = {
     pageCount: number
     totalItemCount: number
 }
-

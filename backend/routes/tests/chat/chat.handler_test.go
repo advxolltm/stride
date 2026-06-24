@@ -20,9 +20,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
@@ -44,6 +42,9 @@ type createMessageRequest struct {
 type updateMessageRequest struct {
 	Content string `json:"content" example:"You should play Deltarune!"`
 }
+type markCursorRequest struct {
+	MessageID uuid.UUID `json:"messageId"`
+}
 
 func getCookie(t *testing.T, authServ authService.AuthService, email string, password string) *http.Cookie {
 	jwt, _, err := authServ.AuthenticateUser(context.Background(), email, password)
@@ -60,7 +61,7 @@ func runTest(t *testing.T, name string, f func(t *testing.T, tx *gorm.DB, as aut
 			uStore := userStore.NewUserStore(tx)
 			uServ := userService.NewUserService(uStore)
 			aServ := authService.NewAuthenticationService(uServ)
-			cServ := chatService.NewChatService(chatStore.NewChatStore(db))
+			cServ := chatService.NewChatService(chatStore.NewChatStore(tx))
 			nStore := notificationStore.NewNotificationStreamStore(rdb)
 			nServ := notificationService.NewNotificationService(nStore)
 			handler := projectsHandler.NewProjectsGroup(pServ, nil, cServ, nServ, aServ, rdb, nil, nil)
@@ -93,6 +94,22 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 		err := json.Unmarshal(rec.Body.Bytes(), &m)
 		require.NoError(t, err)
 		return m
+	}
+	markCursorViaAPI := func(t *testing.T, e *echo.Echo, method string, projectID uuid.UUID, cookie *http.Cookie, messageID uuid.UUID) (int, routes.ChatMemberCursor) {
+		body := markCursorRequest{MessageID: messageID}
+		b, _ := json.Marshal(body)
+		req := httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/api/projects/%s/chat/cursors/%s", projectID.String(), method), bytes.NewReader(b))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		req.AddCookie(cookie)
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+
+		var cursor routes.ChatMemberCursor
+		if rec.Code == http.StatusOK {
+			err := json.Unmarshal(rec.Body.Bytes(), &cursor)
+			require.NoError(t, err)
+		}
+		return rec.Code, cursor
 	}
 
 	runTest(t, "POST /chat returns 200 on valid create", func(t *testing.T, tx *gorm.DB, as authService.AuthService, ps projectService.ProjectService, us userService.UserService, e *echo.Echo, cookie *http.Cookie, loginUser models.User) {
@@ -243,8 +260,7 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 		req.AddCookie(cookie)
 		rec := httptest.NewRecorder()
 		e.ServeHTTP(rec, req)
-		fmt.Printf("Response body: %s\n", strconv.Itoa(rec.Code))
-		require.Equal(t, http.StatusInternalServerError, rec.Code)
+		require.Equal(t, http.StatusNotFound, rec.Code)
 	})
 
 	runTest(t, "PATCH /chat/message/:id updates message and returns 200", func(t *testing.T, tx *gorm.DB, as authService.AuthService, ps projectService.ProjectService, us userService.UserService, e *echo.Echo, cookie *http.Cookie, loginUser models.User) {
@@ -289,13 +305,99 @@ func TestProjectRouteHandler_Integration(t *testing.T) {
 		recVerify := httptest.NewRecorder()
 		e.ServeHTTP(recVerify, reqVerify)
 
-		var msg_res models.Message
-		err = json.Unmarshal(recVerify.Body.Bytes(), &msg_res)
+		require.Equal(t, http.StatusNotFound, recVerify.Code)
+	})
+
+	runTest(t, "GET /chat/cursors returns 200 for project member", func(t *testing.T, tx *gorm.DB, as authService.AuthService, ps projectService.ProjectService, us userService.UserService, e *echo.Echo, cookie *http.Cookie, loginUser models.User) {
+		project := testutils.SelectRandomProject(t, tx)
+		_, err := ps.AddUsersToProject(context.Background(), []projectService.AddMemberRequest{{UserId: loginUser.ID, Role: "member"}}, project.ID)
 		require.NoError(t, err)
 
-		require.Equal(t, msg_res.Content, "")
-		require.Equal(t, msg_res.IsDeleted, true)
-		require.Equal(t, msg_res.DeletedAt.Second(), time.Now().Second())
+		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/projects/%s/chat/cursors", project.ID.String()), nil)
+		req.AddCookie(cookie)
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+
+		require.Equal(t, http.StatusOK, rec.Code)
+		var cursors []routes.ChatMemberCursor
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &cursors))
+	})
+
+	runTest(t, "GET /chat/cursors returns 401 for non-member", func(t *testing.T, tx *gorm.DB, as authService.AuthService, ps projectService.ProjectService, us userService.UserService, e *echo.Echo, cookie *http.Cookie, loginUser models.User) {
+		project := testutils.SelectRandomProject(t, tx)
+
+		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/projects/%s/chat/cursors", project.ID.String()), nil)
+		req.AddCookie(cookie)
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+
+		require.Equal(t, http.StatusUnauthorized, rec.Code)
+	})
+
+	runTest(t, "PATCH /chat/cursors/delivered creates cursor and returns 200", func(t *testing.T, tx *gorm.DB, as authService.AuthService, ps projectService.ProjectService, us userService.UserService, e *echo.Echo, cookie *http.Cookie, loginUser models.User) {
+		project := testutils.SelectRandomProject(t, tx)
+		_, err := ps.AddUsersToProject(context.Background(), []projectService.AddMemberRequest{{UserId: loginUser.ID, Role: "member"}}, project.ID)
+		require.NoError(t, err)
+		member, err := ps.GetProjectMember(context.Background(), project.ID, loginUser.ID)
+		require.NoError(t, err)
+		msg := createMessageViaAPI(t, e, project.ID, cookie, "Delivered message")
+
+		status, cursor := markCursorViaAPI(t, e, "delivered", project.ID, cookie, msg.ID)
+
+		require.Equal(t, http.StatusOK, status)
+		require.Equal(t, project.ID, cursor.ProjectID)
+		require.Equal(t, member.ID, cursor.ProjectMemberID)
+		require.Equal(t, msg.ID, cursor.LastDeliveredMessageID)
+	})
+
+	runTest(t, "PATCH /chat/cursors/delivered returns 401 for non-member", func(t *testing.T, tx *gorm.DB, as authService.AuthService, ps projectService.ProjectService, us userService.UserService, e *echo.Echo, cookie *http.Cookie, loginUser models.User) {
+		project := testutils.SelectRandomProject(t, tx)
+
+		status, _ := markCursorViaAPI(t, e, "delivered", project.ID, cookie, uuid.New())
+
+		require.Equal(t, http.StatusUnauthorized, status)
+	})
+
+	runTest(t, "PATCH /chat/cursors/delivered returns 404 for missing message", func(t *testing.T, tx *gorm.DB, as authService.AuthService, ps projectService.ProjectService, us userService.UserService, e *echo.Echo, cookie *http.Cookie, loginUser models.User) {
+		project := testutils.SelectRandomProject(t, tx)
+		_, err := ps.AddUsersToProject(context.Background(), []projectService.AddMemberRequest{{UserId: loginUser.ID, Role: "member"}}, project.ID)
+		require.NoError(t, err)
+
+		status, _ := markCursorViaAPI(t, e, "delivered", project.ID, cookie, uuid.New())
+
+		require.Equal(t, http.StatusNotFound, status)
+	})
+
+	runTest(t, "PATCH /chat/cursors/read updates cursor and returns 200", func(t *testing.T, tx *gorm.DB, as authService.AuthService, ps projectService.ProjectService, us userService.UserService, e *echo.Echo, cookie *http.Cookie, loginUser models.User) {
+		project := testutils.SelectRandomProject(t, tx)
+		_, err := ps.AddUsersToProject(context.Background(), []projectService.AddMemberRequest{{UserId: loginUser.ID, Role: "member"}}, project.ID)
+		require.NoError(t, err)
+		msg := createMessageViaAPI(t, e, project.ID, cookie, "Read message")
+
+		status, cursor := markCursorViaAPI(t, e, "read", project.ID, cookie, msg.ID)
+
+		require.Equal(t, http.StatusOK, status)
+		require.NotNil(t, cursor.LastReadMessageID)
+		require.Equal(t, msg.ID, *cursor.LastReadMessageID)
+		require.Equal(t, msg.ID, cursor.LastDeliveredMessageID)
+	})
+
+	runTest(t, "PATCH /chat/cursors/read returns 401 for non-member", func(t *testing.T, tx *gorm.DB, as authService.AuthService, ps projectService.ProjectService, us userService.UserService, e *echo.Echo, cookie *http.Cookie, loginUser models.User) {
+		project := testutils.SelectRandomProject(t, tx)
+
+		status, _ := markCursorViaAPI(t, e, "read", project.ID, cookie, uuid.New())
+
+		require.Equal(t, http.StatusUnauthorized, status)
+	})
+
+	runTest(t, "PATCH /chat/cursors/read returns 404 for missing message", func(t *testing.T, tx *gorm.DB, as authService.AuthService, ps projectService.ProjectService, us userService.UserService, e *echo.Echo, cookie *http.Cookie, loginUser models.User) {
+		project := testutils.SelectRandomProject(t, tx)
+		_, err := ps.AddUsersToProject(context.Background(), []projectService.AddMemberRequest{{UserId: loginUser.ID, Role: "member"}}, project.ID)
+		require.NoError(t, err)
+
+		status, _ := markCursorViaAPI(t, e, "read", project.ID, cookie, uuid.New())
+
+		require.Equal(t, http.StatusNotFound, status)
 	})
 
 }
