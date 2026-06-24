@@ -9,9 +9,9 @@ import type { Task } from '../../../../../store/features/tasks/task.types'
 import type { StatusOption } from '../context/taskBoard.types'
 import type { SchedulerMemberOption, SchedulerTaskOption } from './types'
 
-const DEFAULT_SCHEDULER_SETTINGS: SchedulerScheduleRequest['settings'] = {
-    optimization_goals: ['max-hours-scheduled', 'distribute-evenly', 'max-tasks-scheduled'],
-}
+// const DEFAULT_SCHEDULER_SETTINGS: SchedulerScheduleRequest['settings'] = {
+//     optimization_goals: ['max-hours-scheduled', 'distribute-evenly', 'max-tasks-scheduled'],
+// }
 
 export function mapTaskToSchedulerTaskOption(
     task: Task,
@@ -46,7 +46,7 @@ export function mapProjectMemberToSchedulerMemberOption(
 export function buildSchedulerTriggerRequest(
     tasks: SchedulerTaskOption[],
     members: SchedulerMemberOption[],
-    settings : string[]
+    settings : ("distribute-evenly" | "max-hours-scheduled" | "max-tasks-scheduled")[]
     //settings: SchedulerScheduleRequest['settings']
 ): SchedulerScheduleRequest {
     return {
