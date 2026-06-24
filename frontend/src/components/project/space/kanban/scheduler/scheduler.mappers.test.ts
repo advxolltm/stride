@@ -91,7 +91,8 @@ describe('scheduler mappers', () => {
             settings: {
                 optimization_goals: [
                     'max-hours-scheduled',
-                    'distribute-evenly',
+                    'min-makespan',
+                    'max-tasks-scheduled',
                 ],
             },
         })
