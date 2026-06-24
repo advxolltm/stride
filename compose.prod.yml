@@ -61,6 +61,7 @@ services:
       USERNAME_MAX_LENGTH: ${USERNAME_MAX_LENGTH:-255}
       SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET is required}
       SESSION_EXPIRY_HOURS: ${SESSION_EXPIRY_HOURS:-24}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
     volumes:
       - ./data/media:/app/media
     expose:

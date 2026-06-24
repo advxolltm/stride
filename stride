@@ -166,6 +166,7 @@ ensure_base_env() {
     ensure_env_default USERNAME_MIN_LENGTH 3
     ensure_env_default USERNAME_MAX_LENGTH 255
     ensure_env_default SESSION_EXPIRY_HOURS 24
+    ensure_env_default SESSION_COOKIE_SECURE false
     ensure_env_default SITE_DOMAIN ""
     ensure_secret_env POSTGRES_PASSWORD
     ensure_secret_env SESSION_SECRET
@@ -582,6 +583,7 @@ issue_auto_certificate() {
     hook_path=$(write_renewal_hook "$domain")
     install_renewal_cron "$hook_path"
     set_env_var SITE_DOMAIN "$domain"
+    set_env_var SESSION_COOKIE_SECURE true
     log "Certificate installed for $domain."
 }
 
@@ -594,6 +596,7 @@ install_manual_certificate() {
 
     install_certificate_files "$fullchain_path" "$privkey_path"
     set_env_var SITE_DOMAIN "$domain"
+    set_env_var SESSION_COOKIE_SECURE true
     log "Manual certificate installed for $domain."
 }
 
@@ -610,6 +613,7 @@ setup_certificate_interactive() {
             ;;
         no)
             set_env_var SITE_DOMAIN ""
+            set_env_var SESSION_COOKIE_SECURE false
             log "SITE_DOMAIN cleared; nginx will listen without TLS certificate statements."
             ;;
     esac

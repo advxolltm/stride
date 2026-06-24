@@ -157,6 +157,46 @@ func TestAuthHandler(t *testing.T) {
 				}
 			})
 
+			runTest(t, db, "should only mark the session cookie secure when configured", func(t *testing.T, db *gorm.DB, sut authRouteHandler) {
+				realUser := testutils.SelectRandomUser(t, db)
+
+				tests := []struct {
+					name       string
+					envValue   string
+					wantSecure bool
+				}{
+					{name: "secure cookie disabled", envValue: "false", wantSecure: false},
+					{name: "secure cookie enabled", envValue: "true", wantSecure: true},
+				}
+
+				for _, tt := range tests {
+					t.Run(tt.name, func(t *testing.T) {
+						t.Setenv("SESSION_COOKIE_SECURE", tt.envValue)
+
+						e := echo.New()
+						form := make(url.Values)
+						form.Set("email", realUser.Email)
+						form.Set("password", "pwd")
+						req := httptest.NewRequest(http.MethodPost, "/auth/login", strings.NewReader(form.Encode()))
+						req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationForm)
+
+						rec := httptest.NewRecorder()
+						c := e.NewContext(req, rec)
+
+						err := sut.loginPOST(c)
+						testutils.TAssertNoError(t, err)
+
+						cookies := rec.Result().Cookies()
+						if len(cookies) != 1 {
+							t.Fatalf("expected one session cookie, got %d", len(cookies))
+						}
+						if cookies[0].Secure != tt.wantSecure {
+							t.Fatalf("expected Secure=%v, got %v", tt.wantSecure, cookies[0].Secure)
+						}
+					})
+				}
+			})
+
 			runTest(t, db, "logout should return a cookie with expiry set in the past", func(t *testing.T, db *gorm.DB, sut authRouteHandler) {
 				e := echo.New()
 				req := httptest.NewRequest(http.MethodPost, "/auth/logout", nil)

@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"backend/config"
 	"backend/services/auth"
 	"backend/services/user"
 	"errors"
@@ -10,6 +11,8 @@ import (
 
 	"github.com/labstack/echo/v5"
 )
+
+const sessionCookieSecureEnv = "SESSION_COOKIE_SECURE"
 
 type authRouteHandler struct {
 	authService auth.AuthService
@@ -69,7 +72,7 @@ func (h authRouteHandler) loginPOST(c *echo.Context) error {
 		Name:     auth.SessionTokenName,
 		Value:    string(jwtTokenString),
 		Expires:  jwtExpiry,
-		Secure:   true,
+		Secure:   isSessionCookieSecure(),
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
 		Path:     "/",
@@ -88,13 +91,17 @@ func (h authRouteHandler) logoutPOST(c *echo.Context) error {
 		Name:     auth.SessionTokenName,
 		Value:    "",
 		Expires:  time.Unix(0, 0), // set past date to immediately remove cookie
-		Secure:   true,
+		Secure:   isSessionCookieSecure(),
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
 		Path:     "/",
 	}
 	c.SetCookie(&cookie)
 	return c.NoContent(http.StatusOK)
+}
+
+func isSessionCookieSecure() bool {
+	return config.EnvBool(sessionCookieSecureEnv, false)
 }
 
 // @Summary	Get the currently logged-in user
