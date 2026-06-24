@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Superseded by [ADR-0009](0009-gorilla-websocket-and-redis-project-hub.md)
 
 ## Context
 
@@ -12,4 +12,5 @@ but its surrounding project history is less attractive for a greenfield 2026 cod
 
 ## Decision
 
-Adopt coder/websocket for the planned real-time transport layer.
+Do not use this decision for new implementation work. The current backend uses
+gorilla/websocket and the active WebSocket architecture is documented in ADR-0009.
