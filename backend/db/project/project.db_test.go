@@ -109,8 +109,9 @@ func TestProjectStore(t *testing.T) {
 	})
 
 	runTest(t, db, "Updating project with duplicate slug returns ErrDuplicateSlug", func(t *testing.T, db *gorm.DB, store project.ProjectStore) {
-		proj1 := testutils.SelectRandomProject(t, db)
-		proj2 := testutils.SelectRandomProject(t, db)
+		projects := testutils.SelectRandomProjects(t, db, 2)
+		proj1 := projects[0]
+		proj2 := projects[1]
 
 		slug := "duplicate-slug"
 
