@@ -11,6 +11,9 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+
+	f "backend/testutils"
+	fu "github.com/brianvoe/gofakeit/v7"
 )
 
 // Create some test data from CLI
@@ -30,10 +33,15 @@ func main() {
 	service := userService.NewUserService(store)
 
 	//testutils.SeedDB(dbConn)
+	// for deterministic setup
+	// but different from generic db setup, since this would otherwise just fill with the exact same data
+	fu.Seed(1337)
 
 	seedSkillScenario(dbConn, service)
 
 	seedStrategyScenario(dbConn, service)
+
+	seedLargeScenario(dbConn, service)
 
 	fmt.Println("Demo data generated successfully!")
 }
@@ -118,4 +126,44 @@ func seedStrategyScenario(dbConn *gorm.DB, service userService.UserService) {
 
 	dbConn.Create(&models.Task{Title: "Build UI component", Project: project, Status: "todo", ExpectedDurationHours: &hoursBeeg, CreatedBy: fastMember.ID, StartDate: &now, DueDate: &twoWeeksLater, NeededSkills: []models.ProjectSkill{reactSkill}})
 	dbConn.Create(&models.Task{Title: "Setup Database schema", Project: project, Status: "todo", ExpectedDurationHours: &hoursSmol, CreatedBy: slowMember.ID, StartDate: &now, DueDate: &oneWeekLater, NeededSkills: []models.ProjectSkill{goSkill}})
+}
+
+func seedLargeScenario(dbConn *gorm.DB, service userService.UserService) {
+	ctx := context.Background()
+	batchsize := 25
+
+	users := f.GenerateRandomUsers(50)
+	f.AssertNoError(gorm.G[models.User](dbConn).CreateInBatches(ctx, &users, batchsize))
+
+	project := f.GenerateRandomProject(users)
+	project.Name = "Everything but the kitchen sink"
+	f.AssertNoError(gorm.G[models.Project](dbConn).Create(ctx, &project))
+	projects := []models.Project{project}
+
+	f.GenerateNProjectMembers(users, projects)
+	f.GenerateNProjectSkills(10, projects)
+
+	f.UpdateProjects(dbConn, projects)
+
+	f.GenerateNTasksForProject(200, projects)
+
+	f.UpdateProjects(dbConn, projects)
+
+	f.GenerateProjectTaskSkills(projects)
+	f.GenerateProjectMemberSkills(projects)
+	f.GenerateNTaskAssignments(20, projects)
+
+	f.UpdateProjects(dbConn, projects)
+
+	fmt.Println("=== Generated large task-user scheduling scenario ===")
+	fmt.Printf("Project: %s\n", project.Name)
+	fmt.Printf("Project-Skills:")
+	for _, s := range projects[0].Skills {
+		fmt.Printf("\n\t> %s", s.Name)
+	}
+	fmt.Printf("\nUsers:")
+	for _, mem := range projects[0].Members[:5] {
+		fmt.Printf("\n\t> %s, %s (skill-count: %d, working-hours: %d)", mem.User.Email, "pwd", len(mem.Skills), mem.WorkingHours)
+	}
+	fmt.Println("\n=============================================")
 }

@@ -272,7 +272,18 @@ func GenerateRandomMessages(count int, projects []models.Project) []models.Messa
 	return generateNOfType(count, fakeMessageWithProjects(projects))
 }
 
-func generateProjectSkills(maxSkills int, projects []models.Project) {
+func GenerateNProjectSkills(skillsCount int, projects []models.Project) {
+	for pidx := range projects {
+		skills := generateNOfType(skillsCount, fakeProjectSkill)
+		for sidx := range skills {
+			skills[sidx].ProjectID = projects[pidx].ID
+		}
+
+		projects[pidx].Skills = skills
+	}
+}
+
+func GenerateProjectSkills(maxSkills int, projects []models.Project) {
 	for pidx := range projects {
 		skillsCount := rng.Intn(maxSkills) + 1
 		skills := generateNOfType(skillsCount, fakeProjectSkill)
@@ -333,7 +344,45 @@ func RandomUUID(t *testing.T) uuid.UUID {
 	return id
 }
 
-func generateProjectMembers(users []models.User, projects []models.Project) {
+func GenerateNProjectMembers(users []models.User, projects []models.Project) {
+	for pidx := range projects {
+		membersCount := rng.Intn(len(users)) + 1
+		isOwnerInMembers := false
+		members := make([]models.ProjectMember, 0, membersCount)
+		for _, memberUser := range users {
+			role := "member"
+			workingHours := f.Number(0, 15)
+			if memberUser.ID == *projects[pidx].CreatedBy {
+				isOwnerInMembers = true
+				role = "owner"
+			}
+			pm := models.ProjectMember{
+				JoinedAt:     f.PastDate(),
+				User:         memberUser,
+				Project:      projects[pidx],
+				Role:         role,
+				WorkingHours: workingHours,
+			}
+
+			members = append(members, pm)
+		}
+		workingHours := f.Number(0, 15)
+		powner := models.ProjectMember{
+			JoinedAt:     f.PastDate(),
+			User:         *projects[pidx].Creator,
+			Project:      projects[pidx],
+			Role:         "owner",
+			WorkingHours: workingHours,
+		}
+		if !isOwnerInMembers {
+			members = append(members, powner)
+		}
+
+		projects[pidx].Members = members
+	}
+}
+
+func GenerateProjectMembers(users []models.User, projects []models.Project) {
 	for pidx := range projects {
 		membersCount := rng.Intn(len(users)) + 1
 		memberUsers := ChoiceN(users, membersCount-1)
@@ -376,7 +425,7 @@ func Faker() *f.Faker {
 	return f.GlobalFaker
 }
 
-func updateProjects(db *gorm.DB, projects []models.Project) {
+func UpdateProjects(db *gorm.DB, projects []models.Project) {
 	for pidx := range projects {
 		_, err := gorm.G[models.Project](db).Updates(ctx, projects[pidx])
 		AssertNoError(err)
@@ -397,43 +446,62 @@ func fillDBWithRandomData(db *gorm.DB) {
 	projects := GenerateRandomProjects(20, users)
 	AssertNoError(gorm.G[models.Project](db).CreateInBatches(ctx, &projects, batchsize))
 
-	generateProjectMembers(users, projects)
-	generateProjectSkills(10, projects)
+	GenerateProjectMembers(users, projects)
+	GenerateProjectSkills(10, projects)
 
-	updateProjects(db, projects)
+	UpdateProjects(db, projects)
 
-	generateTasksForProject(30, projects)
+	GenerateTasksForProject(30, projects)
 	generateMessagesForProject(100, projects)
 
-	updateProjects(db, projects)
+	UpdateProjects(db, projects)
 
-	generateProjectTaskSkills(projects)
-	generateProjectMemberSkills(projects)
-	generateTaskAssignments(projects)
+	GenerateProjectTaskSkills(projects)
+	GenerateProjectMemberSkills(projects)
+	GenerateTaskAssignments(projects)
 
-	updateProjects(db, projects)
+	UpdateProjects(db, projects)
 }
 
-func generateTaskAssignments(projects []models.Project) {
+func GenerateNTaskAssignments(taskAssignmentCount int, projects []models.Project) {
+	for pidx := range projects {
+		tasksToAssign := ChoiceN(projects[pidx].Tasks, taskAssignmentCount)
+		for _, t := range tasksToAssign {
+			assignedMember := Choice(&projects[pidx].Members)
+			assignee := models.TaskAssignee{
+				TaskID:          t.ID,
+				ProjectMemberID: assignedMember.ID,
+				AssignedAt:      f.PastDate(),
+			}
+
+			for tidx := range projects[pidx].Tasks {
+				if projects[pidx].Tasks[tidx].ID == t.ID {
+					projects[pidx].Tasks[tidx].Assignees = []models.TaskAssignee{assignee}
+					break
+				}
+			}
+		}
+	}
+}
+
+func GenerateTaskAssignments(projects []models.Project) {
 	for pidx := range projects {
 		for tidx := range projects[pidx].Tasks {
 			if rand.Intn(100) <= 30 { //only generate task assignment 70% of the time
 				continue
 			}
-			assignedMembers := ChoiceSubset(projects[pidx].Members)
-			assignees := Map(assignedMembers, func(mem models.ProjectMember) models.TaskAssignee {
-				return models.TaskAssignee{
-					TaskID:          projects[pidx].Tasks[tidx].ID,
-					ProjectMemberID: mem.ID,
-					AssignedAt:      f.PastDate(),
-				}
-			})
-			projects[pidx].Tasks[tidx].Assignees = assignees
+			assignedMember := Choice(&projects[pidx].Members)
+			assignee := models.TaskAssignee{
+				TaskID:          projects[pidx].Tasks[tidx].ID,
+				ProjectMemberID: assignedMember.ID,
+				AssignedAt:      f.PastDate(),
+			}
+			projects[pidx].Tasks[tidx].Assignees = []models.TaskAssignee{assignee}
 		}
 	}
 }
 
-func generateProjectTaskSkills(projects []models.Project) {
+func GenerateProjectTaskSkills(projects []models.Project) {
 	for pidx := range projects {
 		for tidx := range projects[pidx].Tasks {
 			requiredSkills := ChoiceSubsetNonEmpty(projects[pidx].Skills)
@@ -442,7 +510,7 @@ func generateProjectTaskSkills(projects []models.Project) {
 	}
 }
 
-func generateProjectMemberSkills(projects []models.Project) {
+func GenerateProjectMemberSkills(projects []models.Project) {
 	for pidx := range projects {
 		for midx := range projects[pidx].Members {
 			requiredSkills := ChoiceSubsetNonEmpty(projects[pidx].Skills)
@@ -454,7 +522,18 @@ func generateProjectMemberSkills(projects []models.Project) {
 	}
 }
 
-func generateTasksForProject(maxTasksPerProject int, projects []models.Project) {
+
+func GenerateNTasksForProject(tasksPerProject int, projects []models.Project) {
+	for pidx := range projects {
+		p := []models.Project{
+			projects[pidx],
+		}
+		tasks := GenerateRandomTasks(tasksPerProject, p)
+		projects[pidx].Tasks = tasks
+	}
+}
+
+func GenerateTasksForProject(maxTasksPerProject int, projects []models.Project) {
 	for pidx := range projects {
 		taskCount := rng.Intn(maxTasksPerProject)
 		p := []models.Project{
