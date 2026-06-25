@@ -47,6 +47,8 @@ func main() {
 
 	seedLargeScenario(dbConn, service)
 
+	SeedIncompatibleScenario(dbConn, service)
+
 	fmt.Println("Demo data generated successfully!")
 }
 
@@ -91,7 +93,7 @@ func seedSkillScenario(dbConn *gorm.DB, service userService.UserService) {
 
 func seedStrategyScenario(dbConn *gorm.DB, service userService.UserService) {
 	// Scenario where min makespan and divide evenly provide different results
-	fastUser, err := service.CreateUser(context.Background(), "James-SkillData", "james@demo.com", "Password1!")
+	fastUser, err := service.CreateUser(context.Background(), "Otto-SkillData", "otto@demo.com", "Password1!")
 	if err != nil {
 		fmt.Println(fmt.Errorf("%s", err.Error()))
 	}
@@ -130,6 +132,43 @@ func seedStrategyScenario(dbConn *gorm.DB, service userService.UserService) {
 
 	dbConn.Create(&models.Task{Title: "Build UI component", Project: project, Status: "todo", ExpectedDurationHours: &hoursBeeg, CreatedBy: fastMember.ID, StartDate: &now, DueDate: &twoWeeksLater, NeededSkills: []models.ProjectSkill{reactSkill}})
 	dbConn.Create(&models.Task{Title: "Setup Database schema", Project: project, Status: "todo", ExpectedDurationHours: &hoursSmol, CreatedBy: slowMember.ID, StartDate: &now, DueDate: &oneWeekLater, NeededSkills: []models.ProjectSkill{goSkill}})
+}
+
+func SeedIncompatibleScenario(dbConn *gorm.DB, service userService.UserService) {
+	// Scenario where min makespan and divide evenly provide different results
+	fastUser, err := service.CreateUser(context.Background(), "Mark", "mark@demo.com", "Password1!")
+	if err != nil {
+		fmt.Println(fmt.Errorf("%s", err.Error()))
+	}
+	SlowUser, err := service.CreateUser(context.Background(), "Ann", "ann@demo.com", "Password1!")
+	if err != nil {
+		fmt.Println(fmt.Errorf("%s", err.Error()))
+	}
+
+	project := models.Project{Name: "Incompatibility Demo Project", Slug: "incomp-demo", Status: "active", Creator: fastUser}
+	dbConn.Create(&project)
+
+	reactSkill := models.ProjectSkill{Name: "React", ProjectID: project.ID}
+	goSkill := models.ProjectSkill{Name: "Golang", ProjectID: project.ID}
+
+	dbConn.Create(&reactSkill)
+	dbConn.Create(&goSkill)
+
+	fastMember := models.ProjectMember{User: *fastUser, Project: project, Role: "owner", WorkingHours: 30, Skills: []models.ProjectSkill{reactSkill}}
+	slowMember := models.ProjectMember{User: *SlowUser, Project: project, Role: "member", WorkingHours: 18, Skills: []models.ProjectSkill{reactSkill}}
+
+	dbConn.Create(&fastMember)
+	dbConn.Create(&slowMember)
+
+	hoursBeeg := 20
+	hoursSmol := 10
+
+	now := time.Date(2026, 6, 22, 0, 0, 0, 0, time.Local)
+	oneWeekLater := now.AddDate(0, 0, 5)
+	twoWeeksLater := now.AddDate(0, 0, 12)
+
+	dbConn.Create(&models.Task{Title: "REACT TASK", Project: project, Status: "todo", ExpectedDurationHours: &hoursBeeg, CreatedBy: fastMember.ID, StartDate: &now, DueDate: &twoWeeksLater, NeededSkills: []models.ProjectSkill{reactSkill}})
+	dbConn.Create(&models.Task{Title: "GOlang TASK", Project: project, Status: "todo", ExpectedDurationHours: &hoursSmol, CreatedBy: slowMember.ID, StartDate: &now, DueDate: &oneWeekLater, NeededSkills: []models.ProjectSkill{goSkill}})
 }
 
 func seedLargeScenario(dbConn *gorm.DB, service userService.UserService) {

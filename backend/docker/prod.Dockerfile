@@ -10,6 +10,7 @@ RUN go mod download
 COPY . .
 RUN go build -trimpath -ldflags="-s -w" -o /out/stride-server ./cmd/server.go
 RUN go build -trimpath -ldflags="-s -w" -o /out/stride-create-user ./cmd/create-user
+RUN go build -trimpath -ldflags="-s -w" -o /out/stride-seed-demo ./cmd/seed-demo
 
 FROM alpine:3.22 AS production
 
@@ -19,7 +20,7 @@ WORKDIR /app
 
 COPY --from=builder /out/stride-server /app/stride-server
 COPY --from=builder /out/stride-create-user /app/stride-create-user
-COPY --from=builder /app/seed-demo /app/seed-demo
+COPY --from=builder /out/stride-seed-demo /app/stride-seed-demo
 
 RUN mkdir -p /app/media
 
