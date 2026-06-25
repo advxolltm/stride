@@ -1,4 +1,4 @@
-import { Button, Modal } from '@heroui/react'
+import { Button } from '@heroui/react'
 import { CircleQuestionMark } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 

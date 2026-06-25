@@ -15,21 +15,9 @@ export function InfoModal({
     onOpenChange,
     isOpen
 }: MyModalProps) {
-    const { t, i18n } = useTranslation('common')
+    const { i18n } = useTranslation();
     const isGerman = i18n.language.startsWith("de");
     const location = useLocation();
-
-    interface GuideImgProps {
-        name: string;
-    }
-
-    function GuideImg({ name }: GuideImgProps) {
-        return (
-            <div className="flex justify-center">
-                <img src={`/infoguide/${isGerman ? "de" : "en"}/${name}`} />
-            </div>
-        )
-    }
 
     const overviewRef = useRef<HTMLDivElement>(null);
     const basicsRef = useRef<HTMLDivElement>(null);
@@ -48,28 +36,72 @@ export function InfoModal({
     const skillsRef = useRef<HTMLDivElement>(null);
     const workinghoursRef = useRef<HTMLDivElement>(null);
     const taskSchedulerRef = useRef<HTMLDivElement>(null);
-    const taskWhiteboardLinking = useRef<HTMLDivElement>(null);
+    const taskWhiteboardLinkingRef = useRef<HTMLDivElement>(null);
 
     const [activeSection, setActiveSection] = useState("overview");
 
-    const pageToSection: Record<string, RefObject<HTMLDivElement | null>> = {
-        "tasks": taskRef,
-        "chat": chatRef,
-        "whiteboard": whiteboardRef,
-        "project": projectRef,
-        "profile": profileRef,
-    };
+    useEffect(() => {
+        if (!isOpen) return;
 
-    interface AsideButtonProps {
-        refObj: RefObject<HTMLDivElement | null>;
-        section: string;
-        text: string;
-        activeSection: string;
-        scrollToSection: (ref: React.RefObject<HTMLDivElement | null>) => void;
-    };
+        const sections = [
+            { id: "overview", ref: overviewRef },
+            { id: "basics", ref: basicsRef },
+            { id: "profile", ref: profileRef },
+            { id: "project", ref: projectRef },
+            { id: "task", ref: taskRef },
+            { id: "createTask", ref: createTaskRef },
+            { id: "assignTask", ref: assignTaskRef },
+            { id: "chat", ref: chatRef },
+            { id: "chatEverywhere", ref: chatEverywhereRef },
+            { id: "whiteboard", ref: whiteboardRef },
+            { id: "whiteboardTemplates", ref: whiteboardTemplatesRef },
+            { id: "advanced", ref: advancedRef },
+            { id: "automaticTaskAssignment", ref: automaticTaskAssignmentRef },
+            { id: "skills", ref: skillsRef },
+            { id: "workinghours", ref: workinghoursRef },
+            { id: "taskScheduler", ref: taskSchedulerRef },
+            { id: "taskWhiteboardLinking", ref: taskWhiteboardLinkingRef },
+        ];
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                const visibleSections = entries
+                    .filter((entry) => entry.isIntersecting)
+                    .sort(
+                        (a, b) =>
+                            b.intersectionRatio - a.intersectionRatio
+                    );
+
+                if (visibleSections.length > 0) {
+                    setActiveSection(
+                        visibleSections[0].target.id
+                    );
+                }
+            },
+            {
+                threshold: 0,
+            }
+        );
+
+        sections.forEach(({ ref }) => {
+            if (ref.current) {
+                observer.observe(ref.current);
+            }
+        });
+
+        return () => observer.disconnect();
+    }, [isOpen]);
 
     useEffect(() => {
         if (!isOpen) return;
+
+        const pageToSection: Record<string, RefObject<HTMLDivElement | null>> = {
+            "tasks": taskRef,
+            "chat": chatRef,
+            "whiteboard": whiteboardRef,
+            "project": projectRef,
+            "profile": profileRef,
+        };
 
         let section = overviewRef;
         for (const s of Object.keys(pageToSection)) {
@@ -86,21 +118,6 @@ export function InfoModal({
         });
     }, [isOpen, location.pathname]);
 
-    function AsideButton({ refObj, section, text, activeSection, scrollToSection }: AsideButtonProps) {
-        return (
-            <Button
-                variant='ghost'
-                className={cn(
-                    "w-full justify-start px-3 py-2",
-                    activeSection === section && "bg-default-200 font-medium"
-                )}
-                onClick={() => scrollToSection(refObj)}
-            >
-                {text}
-            </Button>
-        )
-    }
-
     const scrollToSection = (
         ref: React.RefObject<HTMLDivElement | null>
     ) => {
@@ -109,6 +126,8 @@ export function InfoModal({
             block: "start",
         });
     };
+
+
 
     const germanVersion = (
         <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
@@ -195,7 +214,7 @@ export function InfoModal({
                                             <div className="ml-4 border-l mt-1 flex flex-col gap-1">
                                                 <AsideButton
                                                     refObj={chatEverywhereRef}
-                                                    section="chat-everywhere"
+                                                    section="chatEverywhere"
                                                     text="Überall chatten"
                                                     activeSection={activeSection}
                                                     scrollToSection={scrollToSection}
@@ -214,7 +233,7 @@ export function InfoModal({
                                             <div className="ml-4 border-l mt-1 flex flex-col gap-1">
                                                 <AsideButton
                                                     refObj={whiteboardTemplatesRef}
-                                                    section="whiteboard-templates"
+                                                    section="whiteboardTemplates"
                                                     text="Whiteboard-Vorlagen"
                                                     activeSection={activeSection}
                                                     scrollToSection={scrollToSection}
@@ -234,7 +253,7 @@ export function InfoModal({
                                     <div className="ml-4 border-l pl-3 flex flex-col gap-1">
                                         <AsideButton
                                             refObj={automaticTaskAssignmentRef}
-                                            section="automatic-task-assignment"
+                                            section="automaticTaskAssignment"
                                             text="Automatische Aufgabenzuweisung"
                                             activeSection={activeSection}
                                             scrollToSection={scrollToSection}
@@ -251,7 +270,7 @@ export function InfoModal({
 
                                             <AsideButton
                                                 refObj={workinghoursRef}
-                                                section="working-hours"
+                                                section="workinghours"
                                                 text="Arbeitsstunden"
                                                 activeSection={activeSection}
                                                 scrollToSection={scrollToSection}
@@ -259,7 +278,7 @@ export function InfoModal({
 
                                             <AsideButton
                                                 refObj={taskSchedulerRef}
-                                                section="task-scheduler"
+                                                section="taskScheduler"
                                                 text="Scheduler ausführen!"
                                                 activeSection={activeSection}
                                                 scrollToSection={scrollToSection}
@@ -269,8 +288,8 @@ export function InfoModal({
 
                                     <div className="ml-4 border-l pl-3 flex flex-col gap-1">
                                         <AsideButton
-                                            refObj={taskWhiteboardLinking}
-                                            section="task-whiteboard-linking"
+                                            refObj={taskWhiteboardLinkingRef}
+                                            section="taskWhiteboardLinking"
                                             text="Aufgaben-Whiteboard-Verknüpfung"
                                             activeSection={activeSection}
                                             scrollToSection={scrollToSection}
@@ -282,8 +301,9 @@ export function InfoModal({
                                 <main
                                     className="flex-1 overflow-y-auto p-6"
                                 >
-                                    <section id="overview" className="mb-12">
+                                    <section className="mb-12">
                                         <div
+                                            id="overview"
                                             ref={overviewRef}
                                             className="mb-16"
                                         >
@@ -356,6 +376,7 @@ export function InfoModal({
 
                                     <section className="mb-12">
                                         <div
+                                            id="basics"
                                             ref={basicsRef}
                                             className="mb-16"
                                         >
@@ -364,6 +385,7 @@ export function InfoModal({
                                             </h1>
 
                                             <div
+                                                id="profile"
                                                 ref={profileRef}
                                                 className="my-8"
                                             >
@@ -377,7 +399,7 @@ export function InfoModal({
                                                     (das Profilbild kannst du ignorieren!).
                                                 </p>
 
-                                                <GuideImg name='profile1.png' />
+                                                <GuideImg name='profile1.png' isGerman={isGerman} />
 
                                                 <p>
                                                     Die ersten beiden Tabs sind ziemlich standardmäßig und erlauben dir,
@@ -388,6 +410,7 @@ export function InfoModal({
                                             </div>
 
                                             <div
+                                                id="project"
                                                 ref={projectRef}
                                                 className="my-8"
                                             >
@@ -401,7 +424,7 @@ export function InfoModal({
                                                     (Hinweis: Du kannst den Namen natürlich frei wählen.)
                                                 </p>
 
-                                                <GuideImg name='project-create.gif' />
+                                                <GuideImg name='project-create.gif' isGerman={isGerman} />
                                                 <br />
 
                                                 <p>
@@ -411,7 +434,7 @@ export function InfoModal({
                                                     (falls sich jemand danebenbenimmt).
                                                 </p>
 
-                                                <GuideImg name='project-addmembers.gif' />
+                                                <GuideImg name='project-addmembers.gif' isGerman={isGerman} />
                                                 <br />
 
                                                 <p>
@@ -424,10 +447,11 @@ export function InfoModal({
                                                     können jederzeit wieder aus dem Archiv geholt werden.
                                                 </p>
 
-                                                <GuideImg name="project-archive.gif" />
+                                                <GuideImg name="project-archive.gif" isGerman={isGerman} />
                                             </div>
 
                                             <div
+                                                id="task"
                                                 ref={taskRef}
                                                 className="my-8"
                                             >
@@ -451,6 +475,7 @@ export function InfoModal({
                                                 </p>
 
                                                 <div
+                                                    id="createTask"
                                                     ref={createTaskRef}
                                                     className="my-8 border-l pl-4"
                                                 >
@@ -473,10 +498,11 @@ export function InfoModal({
                                                         </i>
                                                     </p>
 
-                                                    <GuideImg name="task-create-and-edit.gif" />
+                                                    <GuideImg name="task-create-and-edit.gif" isGerman={isGerman} />
                                                 </div>
 
                                                 <div
+                                                    id="assignTask"
                                                     ref={assignTaskRef}
                                                     className="my-8 border-l pl-4"
                                                 >
@@ -486,18 +512,19 @@ export function InfoModal({
 
                                                     <p>
                                                         Du kannst jedes Teammitglied jeder Aufgabe zuweisen und so verwalten,
-                                                        wer für welche Aufgabe verantwortlich ist.<br/>
+                                                        wer für welche Aufgabe verantwortlich ist.<br />
                                                         <i>
                                                             Im Abschnitt „Erweitert“ schauen wir uns später an,
                                                             wie dieser Prozess automatisiert und optimiert werden kann!
                                                         </i>
                                                     </p>
 
-                                                    <GuideImg name="task-assign.gif" />
+                                                    <GuideImg name="task-assign.gif" isGerman={isGerman} />
                                                 </div>
                                             </div>
 
                                             <div
+                                                id="chat"
                                                 ref={chatRef}
                                                 className="my-8"
                                             >
@@ -511,9 +538,10 @@ export function InfoModal({
                                                     falls du bereust, was du geschrieben hast.
                                                 </p>
 
-                                                <GuideImg name="chat.gif" />
+                                                <GuideImg name="chat.gif" isGerman={isGerman} />
 
                                                 <div
+                                                    id="chatEverywhere"
                                                     ref={chatEverywhereRef}
                                                     className="my-8"
                                                 >
@@ -526,15 +554,16 @@ export function InfoModal({
                                                         Du kannst ihn auch direkt auf der Aufgaben- oder Whiteboard-Seite verwenden.
                                                     </p>
 
-                                                    <GuideImg name="chat-everywhere-task.gif" />
+                                                    <GuideImg name="chat-everywhere-task.gif" isGerman={isGerman} />
                                                     <br />
                                                     <hr />
                                                     <br />
-                                                    <GuideImg name="chat-everywhere-whiteboard.gif" />
+                                                    <GuideImg name="chat-everywhere-whiteboard.gif" isGerman={isGerman} />
                                                 </div>
                                             </div>
 
                                             <div
+                                                id="whiteboard"
                                                 ref={whiteboardRef}
                                                 className="my-8"
                                             >
@@ -548,9 +577,10 @@ export function InfoModal({
                                                     Das Whiteboard basiert auf <a href="https://excalidraw.com/">Excalidraw</a>.
                                                 </p>
 
-                                                <GuideImg name="whiteboard.gif" />
+                                                <GuideImg name="whiteboard.gif" isGerman={isGerman} />
 
                                                 <div
+                                                    id="whiteboardTemplates"
                                                     ref={whiteboardTemplatesRef}
                                                     className="my-8"
                                                 >
@@ -567,7 +597,7 @@ export function InfoModal({
                                                         Position eingefügt.
                                                     </p>
 
-                                                    <GuideImg name="whiteboard-templates.gif" />
+                                                    <GuideImg name="whiteboard-templates.gif" isGerman={isGerman} />
                                                 </div>
                                             </div>
                                         </div>
@@ -575,6 +605,7 @@ export function InfoModal({
 
                                     <section id="settings" className="mb-12">
                                         <div
+                                            id="advanced"
                                             ref={advancedRef}
                                             className="mb-16"
                                         >
@@ -583,6 +614,7 @@ export function InfoModal({
                                             </h1>
 
                                             <div
+                                                id="automaticTaskAssignment"
                                                 ref={automaticTaskAssignmentRef}
                                                 className="my-8"
                                             >
@@ -633,6 +665,7 @@ export function InfoModal({
                                                 </p>
 
                                                 <div
+                                                    id="skills"
                                                     ref={skillsRef}
                                                     className="my-8"
                                                 >
@@ -649,7 +682,7 @@ export function InfoModal({
                                                         Fähigkeiten eines Projekts verwalten kann.
                                                     </p>
 
-                                                    <GuideImg name="creating-skills.gif" />
+                                                    <GuideImg name="creating-skills.gif" isGerman={isGerman} />
                                                     <br />
 
                                                     <p>
@@ -657,7 +690,7 @@ export function InfoModal({
                                                         zutreffen.
                                                     </p>
 
-                                                    <GuideImg name="choosing-skills.gif" />
+                                                    <GuideImg name="choosing-skills.gif" isGerman={isGerman} />
                                                     <br />
 
                                                     <p>
@@ -665,10 +698,11 @@ export function InfoModal({
                                                         bestimmte Aufgabe erforderlich sind.
                                                     </p>
 
-                                                    <GuideImg name="assigning-skills.gif" />
+                                                    <GuideImg name="assigning-skills.gif" isGerman={isGerman} />
                                                 </div>
 
                                                 <div
+                                                    id="workinghours"
                                                     ref={workinghoursRef}
                                                     className="my-8"
                                                 >
@@ -690,14 +724,14 @@ export function InfoModal({
                                                         dieses Projekt aufwenden möchtest.
                                                     </p>
 
-                                                    <GuideImg name="choose-working-hours.gif" />
+                                                    <GuideImg name="choose-working-hours.gif" isGerman={isGerman} />
                                                     <br />
 
                                                     <p>
                                                         Gib anschließend eine Schätzung an, wie lange eine Aufgabe dauern
                                                         wird. Der Aufgaben-Scheduler überprüft dann, ob die Zuweisung dieser
                                                         Aufgabe deine verfügbare Arbeitszeit in einer bestimmten Woche
-                                                        überschreiten würde.<br/>
+                                                        überschreiten würde.<br />
 
                                                         <i>
                                                             Hinweis: Es ist trotzdem möglich, Aufgaben zugewiesen zu
@@ -707,10 +741,11 @@ export function InfoModal({
                                                         </i>
                                                     </p>
 
-                                                    <GuideImg name="choose-estimation.gif" />
+                                                    <GuideImg name="choose-estimation.gif" isGerman={isGerman} />
                                                 </div>
 
                                                 <div
+                                                    id="taskScheduler"
                                                     ref={taskSchedulerRef}
                                                     className="my-8"
                                                 >
@@ -724,12 +759,13 @@ export function InfoModal({
                                                         während er die optimale Liste von Aufgabenzuweisungen berechnet.
                                                     </p>
 
-                                                    <GuideImg name="scheduler-run.gif" />
+                                                    <GuideImg name="scheduler-run.gif" isGerman={isGerman} />
                                                 </div>
                                             </div>
 
                                             <div
-                                                ref={taskWhiteboardLinking}
+                                                id="taskWhiteboardLinking"
+                                                ref={taskWhiteboardLinkingRef}
                                                 className="my-8"
                                             >
                                                 <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -759,7 +795,7 @@ export function InfoModal({
                                                     „Aufgabe verknüpfen“ und wählst anschließend die gewünschte Aufgabe aus.
                                                 </p>
 
-                                                <GuideImg name="whiteboard-linking.gif" />
+                                                <GuideImg name="whiteboard-linking.gif" isGerman={isGerman} />
                                                 <br />
 
                                                 <p>
@@ -784,7 +820,7 @@ export function InfoModal({
                                                     Vorschau bringt dich direkt zurück zu dieser Stelle auf dem Whiteboard.
                                                 </p>
 
-                                                <GuideImg name="view-linked-task.gif" />
+                                                <GuideImg name="view-linked-task.gif" isGerman={isGerman} />
                                                 <br />
                                             </div>
                                         </div>
@@ -891,7 +927,7 @@ export function InfoModal({
                                             <div className="ml-4 border-l mt-1 flex flex-col gap-1">
                                                 <AsideButton
                                                     refObj={chatEverywhereRef}
-                                                    section="chat-everywhere"
+                                                    section="chatEverywhere"
                                                     text="Chat everywhere"
                                                     activeSection={activeSection}
                                                     scrollToSection={scrollToSection}
@@ -910,7 +946,7 @@ export function InfoModal({
                                             <div className="ml-4 border-l mt-1 flex flex-col gap-1">
                                                 <AsideButton
                                                     refObj={whiteboardTemplatesRef}
-                                                    section="whiteboard-templates"
+                                                    section="whiteboardTemplates"
                                                     text="Whiteboard Templates"
                                                     activeSection={activeSection}
                                                     scrollToSection={scrollToSection}
@@ -929,7 +965,7 @@ export function InfoModal({
                                     <div className="ml-4 border-l pl-3 flex flex-col gap-1">
                                         <AsideButton
                                             refObj={automaticTaskAssignmentRef}
-                                            section="automatic-task-assignment"
+                                            section="automaticTaskAssignment"
                                             text="Automatic Task Assignment"
                                             activeSection={activeSection}
                                             scrollToSection={scrollToSection}
@@ -945,7 +981,7 @@ export function InfoModal({
 
                                             <AsideButton
                                                 refObj={workinghoursRef}
-                                                section="working-hours"
+                                                section="workinghours"
                                                 text="Working-hours"
                                                 activeSection={activeSection}
                                                 scrollToSection={scrollToSection}
@@ -953,7 +989,7 @@ export function InfoModal({
 
                                             <AsideButton
                                                 refObj={taskSchedulerRef}
-                                                section="task-scheduler"
+                                                section="taskScheduler"
                                                 text="Running the Scheduler!"
                                                 activeSection={activeSection}
                                                 scrollToSection={scrollToSection}
@@ -962,8 +998,8 @@ export function InfoModal({
                                     </div>
                                     <div className="ml-4 border-l pl-3 flex flex-col gap-1">
                                         <AsideButton
-                                            refObj={taskWhiteboardLinking}
-                                            section="task-whiteboard-linking"
+                                            refObj={taskWhiteboardLinkingRef}
+                                            section="taskWhiteboardLinking"
                                             text="Task-Whiteboard Linking"
                                             activeSection={activeSection}
                                             scrollToSection={scrollToSection}
@@ -975,8 +1011,9 @@ export function InfoModal({
                                 <main
                                     className="flex-1 overflow-y-auto p-6"
                                 >
-                                    <section id="overview" className="mb-12">
+                                    <section className="mb-12">
                                         <div
+                                            id="overview"
                                             ref={overviewRef}
                                             className="mb-16"
                                         >
@@ -1037,6 +1074,7 @@ export function InfoModal({
 
                                     <section className="mb-12">
                                         <div
+                                            id="basics"
                                             ref={basicsRef}
                                             className="mb-16"
                                         >
@@ -1044,6 +1082,7 @@ export function InfoModal({
                                                 Basics
                                             </h1>
                                             <div
+                                                id="profile"
                                                 ref={profileRef}
                                                 className="my-8"
                                             >
@@ -1054,13 +1093,14 @@ export function InfoModal({
                                                     In the top right corner you see a button with your name. When you click on it you can visit your profile. It should look something like this (ignore the profile photo!)
                                                 </p>
 
-                                                <GuideImg name='profile1.png' />
+                                                <GuideImg name='profile1.png' isGerman={isGerman} />
                                                 <p>
                                                     The first two tabs are very standard, they simply let you change your name, password and e-mail address.
                                                     Do not worry about the skills and working-hours tabs yet, they are part of the advanced topics!
                                                 </p>
                                             </div>
                                             <div
+                                                id="project"
                                                 ref={projectRef}
                                                 className="my-8"
                                             >
@@ -1070,12 +1110,12 @@ export function InfoModal({
                                                 <p>
                                                     We will quickly create a new project, we will use this superb project as our reference-project for everything that follows! (Note: you can give it any name you want)
                                                 </p>
-                                                <GuideImg name='project-create.gif' />
+                                                <GuideImg name='project-create.gif' isGerman={isGerman} />
                                                 <br />
                                                 <p>
                                                     Let's add some members, you can do that either directly from the "Add members" button, or in the project settings. Note that you can also remove them in the settings view (in case one is misbehaving).
                                                 </p>
-                                                <GuideImg name='project-addmembers.gif' />
+                                                <GuideImg name='project-addmembers.gif' isGerman={isGerman} />
                                                 <br />
                                                 <p>
                                                     Finally, when you are done with a project, you can either archive it to make it read-only, or your can properly delete it (but there is no coming back from that!). <br />
@@ -1083,11 +1123,12 @@ export function InfoModal({
                                                     Archived projects also appear in a separate section, and you are always able to un-archive a project when you need to.
                                                 </p>
 
-                                                <GuideImg name="project-archive.gif" />
+                                                <GuideImg name="project-archive.gif" isGerman={isGerman} />
 
                                             </div>
 
                                             <div
+                                                id="task"
                                                 ref={taskRef}
                                                 className="my-8"
                                             >
@@ -1101,6 +1142,7 @@ export function InfoModal({
                                                 </p>
 
                                                 <div
+                                                    id="createTask"
                                                     ref={createTaskRef}
                                                     className="my-8 border-l pl-4"
                                                 >
@@ -1112,10 +1154,11 @@ export function InfoModal({
                                                         <i>Note that all fields are completely optional. However, some fields should be filled out to incorporate them with the advanced features later.</i>
                                                     </p>
 
-                                                    <GuideImg name="task-create-and-edit.gif" />
+                                                    <GuideImg name="task-create-and-edit.gif" isGerman={isGerman} />
                                                 </div>
 
                                                 <div
+                                                    id="assignTask"
                                                     ref={assignTaskRef}
                                                     className="my-8 border-l pl-4"
                                                 >
@@ -1126,12 +1169,13 @@ export function InfoModal({
                                                         You can assign any team member to any task, allowing you to manage who is responsible for which task. <i>We will later in the Advanced section see how this process can be automated and optimized!</i>
                                                     </p>
 
-                                                    <GuideImg name="task-assign.gif" />
+                                                    <GuideImg name="task-assign.gif" isGerman={isGerman} />
                                                 </div>
 
                                             </div>
 
                                             <div
+                                                id="chat"
                                                 ref={chatRef}
                                                 className="my-8"
                                             >
@@ -1143,9 +1187,10 @@ export function InfoModal({
                                                     The last page is the chat! The chat is very simple - you can write a message and edit it or delete it if you regret what you have written.
                                                 </p>
 
-                                                <GuideImg name="chat.gif" />
+                                                <GuideImg name="chat.gif" isGerman={isGerman} />
 
                                                 <div
+                                                    id="chatEverywhere"
                                                     ref={chatEverywhereRef}
                                                     className="my-8"
                                                 >
@@ -1157,15 +1202,16 @@ export function InfoModal({
                                                         You do not need to go to the dedicated chat-page to open the chat! You can also access it directly from the task or whiteboard page.
                                                     </p>
 
-                                                    <GuideImg name="chat-everywhere-task.gif" />
+                                                    <GuideImg name="chat-everywhere-task.gif" isGerman={isGerman} />
                                                     <br />
                                                     <hr />
                                                     <br />
-                                                    <GuideImg name="chat-everywhere-whiteboard.gif" />
+                                                    <GuideImg name="chat-everywhere-whiteboard.gif" isGerman={isGerman} />
                                                 </div>
                                             </div>
 
                                             <div
+                                                id="whiteboard"
                                                 ref={whiteboardRef}
                                                 className="my-8"
                                             >
@@ -1177,9 +1223,10 @@ export function InfoModal({
                                                     The collaborative Whiteboard is a great option for things like brainstorming or designing more complex systems. For those unfamiliar with it, the Whiteboard is built on <a href="https://excalidraw.com/">Excalidraw</a>.
                                                 </p>
 
-                                                <GuideImg name="whiteboard.gif" />
+                                                <GuideImg name="whiteboard.gif" isGerman={isGerman} />
 
                                                 <div
+                                                    id="whiteboardTemplates"
                                                     ref={whiteboardTemplatesRef}
                                                     className="my-8"
                                                 >
@@ -1191,7 +1238,7 @@ export function InfoModal({
                                                         To get you started, we have designed a few templates that you can use. Templates are made up of plain-old Excalidraw drawings, so you can edit them all you like. You can, of course, use them as often as you want even in the same Whiteboard, they simply get added to your current position.
                                                     </p>
 
-                                                    <GuideImg name="whiteboard-templates.gif" />
+                                                    <GuideImg name="whiteboard-templates.gif" isGerman={isGerman} />
                                                 </div>
                                             </div>
 
@@ -1201,6 +1248,7 @@ export function InfoModal({
 
                                     <section id="settings" className="mb-12">
                                         <div
+                                            id="advanced"
                                             ref={advancedRef}
                                             className="mb-16"
                                         >
@@ -1209,6 +1257,7 @@ export function InfoModal({
                                             </h1>
 
                                             <div
+                                                id="automaticTaskAssignment"
                                                 ref={automaticTaskAssignmentRef}
                                                 className="my-8"
                                             >
@@ -1226,6 +1275,7 @@ export function InfoModal({
                                                 </p>
 
                                                 <div
+                                                    id="skills"
                                                     ref={skillsRef}
                                                     className="my-8"
                                                 >
@@ -1237,22 +1287,23 @@ export function InfoModal({
                                                         Skills are defined at a project-level. Every project is unique and therefore every project defines which skills are included in it. In order to streamline this process, you can either import skills from a different project, or again use premade templates. Note that only the project <b>owner</b> is able to manage the skills available in a project!
                                                     </p>
 
-                                                    <GuideImg name="creating-skills.gif" /><br />
+                                                    <GuideImg name="creating-skills.gif" isGerman={isGerman} /><br />
 
                                                     <p>
                                                         Now you are able to define which of those skills apply to you!
                                                     </p>
 
-                                                    <GuideImg name="choosing-skills.gif" /><br />
+                                                    <GuideImg name="choosing-skills.gif" isGerman={isGerman} /><br />
 
                                                     <p>
                                                         And finally, also assign which skills are required for any given task.
                                                     </p>
 
-                                                    <GuideImg name="assigning-skills.gif" />
+                                                    <GuideImg name="assigning-skills.gif" isGerman={isGerman} />
                                                 </div>
 
                                                 <div
+                                                    id="workinghours"
                                                     ref={workinghoursRef}
                                                     className="my-8"
                                                 >
@@ -1264,16 +1315,17 @@ export function InfoModal({
                                                         Again, as with skills, every project is unique and so is probably your involvement in it, especially when you are working on multiple projects at the same time! There is a shared maximum of hours-per-week you can spend (managed by the owner of the STRIDE instance), however, you are free to choose which project gets more or less of the whole. To do so, just go to the project settings and define the number of hours-per-week you want to work on this project under "My Working Hours".
                                                     </p>
 
-                                                    <GuideImg name="choose-working-hours.gif" /><br />
+                                                    <GuideImg name="choose-working-hours.gif" isGerman={isGerman} /><br />
 
                                                     <p>
                                                         Finally, provide an estimate of how long the task will take. The task scheduler will check if assigning you the task (assuming the estimated time) would overshoot your workload during any week. <i>Note: It is still possible to get tasks assigned that are longer than your weekly working-hours. The scheduler automatically tries to find a fitting range across multiple weeks if it needs to!</i>
                                                     </p>
 
-                                                    <GuideImg name="choose-estimation.gif" />
+                                                    <GuideImg name="choose-estimation.gif" isGerman={isGerman} />
                                                 </div>
 
                                                 <div
+                                                    id="taskScheduler"
                                                     ref={taskSchedulerRef}
                                                     className="my-8"
                                                 >
@@ -1285,12 +1337,13 @@ export function InfoModal({
                                                         Now that everything is setup, just run the scheduler and lay back (for like 2 seconds) until the scheduler found the optimal list of task-assignments!
                                                     </p>
 
-                                                    <GuideImg name="scheduler-run.gif" />
+                                                    <GuideImg name="scheduler-run.gif" isGerman={isGerman} />
                                                 </div>
                                             </div>
 
                                             <div
-                                                ref={taskWhiteboardLinking}
+                                                id="taskWhiteboardLinking"
+                                                ref={taskWhiteboardLinkingRef}
                                                 className="my-8"
                                             >
                                                 <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -1301,12 +1354,12 @@ export function InfoModal({
                                                 <br />
                                                 <p>In order to link a region of the Whiteboard with a task, simply select all the relevant elements, hit "Link Task" in the top-right corner and then choose the task you want to link.</p>
 
-                                                <GuideImg name="whiteboard-linking.gif" /><br />
+                                                <GuideImg name="whiteboard-linking.gif" isGerman={isGerman} /><br />
 
                                                 <p>Notice that the link is simply represented by a normal Excalidraw rectangle and a header. Deleting the Link is as simple as deleting this Excalidraw element! Also notice that the Task title in the header: Changing the title automatically changes the header as well.</p><br />
                                                 <p>Once linked, either click on the link icon in the top-right corner of the link-rectangle. Or click on the group in general and then click on "View Task" in the top right corner. The task will now show a preview of the Whiteboard, scaled and positioned exactly to the selected region. Clicking on the preview brings you right back to the selected spot on the Whiteboard.</p>
 
-                                                <GuideImg name="view-linked-task.gif" /><br />
+                                                <GuideImg name="view-linked-task.gif" isGerman={isGerman} /><br />
                                             </div>
 
                                         </div>
@@ -1326,9 +1379,45 @@ export function InfoModal({
         </Modal >
     );
 
-	if (isGerman) {
-		return germanVersion;
-	} else {
-		return englishVersion;
-	}
+    if (isGerman) {
+        return germanVersion;
+    } else {
+        return englishVersion;
+    }
+}
+
+interface GuideImgProps {
+    name: string;
+    isGerman: boolean;
+}
+
+function GuideImg({ name, isGerman }: GuideImgProps) {
+    return (
+        <div className="flex justify-center">
+            <img src={`/infoguide/${isGerman ? "de" : "en"}/${name}`} />
+        </div>
+    )
+}
+
+interface AsideButtonProps {
+    refObj: RefObject<HTMLDivElement | null>;
+    section: string;
+    text: string;
+    activeSection: string;
+    scrollToSection: (ref: React.RefObject<HTMLDivElement | null>) => void;
+};
+
+function AsideButton({ refObj, section, text, activeSection, scrollToSection }: AsideButtonProps) {
+    return (
+        <Button
+            variant='ghost'
+            className={cn(
+                "w-full justify-start px-3 py-2",
+                activeSection === section && "bg-[var(--surface-secondary)] font-medium"
+            )}
+            onClick={() => scrollToSection(refObj)}
+        >
+            {text}
+        </Button>
+    )
 }
