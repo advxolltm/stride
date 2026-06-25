@@ -208,7 +208,7 @@ export function KanbanBoard() {
     const skippedSchedulerMemberCount =
         schedulerMembers.length - schedulableSchedulerMembers.length
 
-    async function handleSchedulerRun(strat : OptimizationStrategy) {
+    async function handleSchedulerRun(strat : OptimizationStrategy, timeout : number) {
         if (schedulerTasks.length === 0) {
             toast.info(t('tasks.scheduler.intro.noTasks'))
             return EMPTY_SCHEDULER_PREVIEW
@@ -229,13 +229,23 @@ export function KanbanBoard() {
             return EMPTY_SCHEDULER_PREVIEW
         }
 
+        timeout = Math.round(timeout)
+
+        if (timeout > 45) {
+            timeout = 45
+        }
+        if (timeout < 3) {
+            timeout = 3
+        }
+
         try {
             const response = await scheduleProjectTasks({
                 projectId,
                 body: buildSchedulerTriggerRequest(
                     schedulerTasks,
                     schedulerMembers,
-                    ['max-hours-scheduled', strat as string, 'max-tasks-scheduled']
+                    ['max-hours-scheduled', strat as string, 'max-tasks-scheduled'],
+                    timeout
                 ),
             }).unwrap()
 

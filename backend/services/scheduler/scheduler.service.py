@@ -26,7 +26,7 @@ def get_env_int(s: str, default: int) -> int:
         return default
 
 
-MAX_ALLOWED_TIMEOUT_SECONDS = get_env_int("SCHED_MAX_ALLOWED_TIMEOUT_SECONDS", 60)
+MAX_ALLOWED_TIMEOUT_SECONDS = get_env_int("SCHED_MAX_ALLOWED_TIMEOUT_SECONDS", 45)
 
 
 PORT = 7270

@@ -53,6 +53,7 @@ export function SchedulerFlowModal({
     const onRunRef = useRef(onRun)
     const onOpenChangeRef = useRef(onOpenChange)
     const [strategy, setStrategy] = useState<OptimizationStrategy>('min-makespan')
+    const [timeout, setTimeout] = useState<number>(45)
 
     useEffect(() => {
         onRunRef.current = onRun
@@ -85,7 +86,7 @@ export function SchedulerFlowModal({
         hasStartedRunRef.current = true
         let isMounted = true
 
-        void onRunRef.current(strategy)
+        void onRunRef.current(strategy, timeout)
             .then((nextPreview) => {
                 if (!isMounted) return
 
@@ -195,6 +196,8 @@ export function SchedulerFlowModal({
                                 onRun={() => setStep('loading')}
                                 onStrategyChange={(val) => setStrategy(val as OptimizationStrategy)}
                                 strategy={strategy}
+                                timeout={timeout}
+                                onTimeoutChange={(val) => setTimeout(val as number)}
                             />
                         ) : null}
 
