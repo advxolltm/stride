@@ -72,4 +72,6 @@ export const transformSchedulerPreviewResponse = (
     newAssignments: response.new_assignments.map(transformSchedulerAssignment),
     changedAssignments:
         response.changed_assignments.map(transformSchedulerAssignment),
+        
+    incompatibleAssignments: (response.incompatible_assignments || []).map(transformSchedulerAssignment),
 })

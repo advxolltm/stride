@@ -183,6 +183,7 @@ export const ApiSchedulerAssignmentListSchema = z.array(
 export const ApiSchedulerPreviewResponseSchema = z.object({
     new_assignments: ApiSchedulerAssignmentListSchema,
     changed_assignments: ApiSchedulerAssignmentListSchema,
+    incompatible_assignments: ApiSchedulerAssignmentListSchema,
 })
 
 export type ApiSchedulerPreviewResponse = z.infer<
@@ -199,6 +200,7 @@ export type SchedulerAssignment = z.infer<typeof SchedulerAssignmentSchema>
 export const SchedulerPreviewResponseSchema = z.object({
     newAssignments: z.array(SchedulerAssignmentSchema),
     changedAssignments: z.array(SchedulerAssignmentSchema),
+    incompatibleAssignments: z.array(SchedulerAssignmentSchema),
 })
 
 export type SchedulerPreviewResponse = z.infer<

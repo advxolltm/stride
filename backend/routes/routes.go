@@ -425,8 +425,9 @@ type ReturnAssignment struct {
 }
 
 type AssignmentStruct struct {
-	NewAssignments     []ReturnAssignment `json:"new_assignments"`
-	ChangedAssignments []ReturnAssignment `json:"changed_assignments"`
+	NewAssignments          []ReturnAssignment `json:"new_assignments"`
+	ChangedAssignments      []ReturnAssignment `json:"changed_assignments"`
+	IncompatibleAssignments []ReturnAssignment `json:"incompatible_assignments"`
 }
 
 type ReturnUser struct {

@@ -361,17 +361,56 @@ func (t *taskStore) GetTasksInsideInterval(ctx context.Context, projectID uuid.U
 	return tasks, nil
 }
 
+// func (t *taskStore) AssignTaskBulk(ctx context.Context, assignments []Assignment) ([]models.TaskAssignee, error) {
+// 	var assigned []models.TaskAssignee
+// 	for _, assignment := range assignments {
+// 		assigned = append(assigned, models.TaskAssignee{
+// 			TaskID:          assignment.TaskID,
+// 			ProjectMemberID: assignment.ProjectMemberID,
+// 		})
+// 	}
+// 	err := t.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+// 		result := tx.Create(&assigned)
+// 		// uh oh
+// 		if result.Error != nil {
+// 			var pgErr *pgconn.PgError
+// 			if errors.As(result.Error, &pgErr) && pgErr.Code == db.UniqueConstraintViolationCode {
+// 				return ErrDuplicateTaskAssignment
+// 			}
+// 			return fmt.Errorf("failed to bulk assign tasks: %w", result.Error)
+// 		}
+// 		// commit
+// 		return nil
+// 	})
+
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return assigned, nil
+// }
+
 func (t *taskStore) AssignTaskBulk(ctx context.Context, assignments []Assignment) ([]models.TaskAssignee, error) {
+	if len(assignments) == 0 {
+		return []models.TaskAssignee{}, nil
+	}
 	var assigned []models.TaskAssignee
+	var taskIDs []uuid.UUID
+	taskIDMap := make(map[uuid.UUID]bool)
 	for _, assignment := range assignments {
 		assigned = append(assigned, models.TaskAssignee{
 			TaskID:          assignment.TaskID,
 			ProjectMemberID: assignment.ProjectMemberID,
 		})
+		if !taskIDMap[assignment.TaskID] {
+			taskIDs = append(taskIDs, assignment.TaskID)
+			taskIDMap[assignment.TaskID] = true
+		}
 	}
 	err := t.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("task_id IN ?", taskIDs).Delete(&models.TaskAssignee{}).Error; err != nil {
+			return fmt.Errorf("failed to clear old assignments: %w", err)
+		}
 		result := tx.Create(&assigned)
-		// uh oh
 		if result.Error != nil {
 			var pgErr *pgconn.PgError
 			if errors.As(result.Error, &pgErr) && pgErr.Code == db.UniqueConstraintViolationCode {
@@ -379,10 +418,8 @@ func (t *taskStore) AssignTaskBulk(ctx context.Context, assignments []Assignment
 			}
 			return fmt.Errorf("failed to bulk assign tasks: %w", result.Error)
 		}
-		// commit
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
 	}

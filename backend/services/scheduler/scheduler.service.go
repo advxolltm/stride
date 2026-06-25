@@ -54,8 +54,9 @@ type Assignment struct {
 }
 
 type ReturnStruct struct {
-	NewAssignments     []Assignment `json:"new_assignments"`
-	ChangedAssignments []Assignment `json:"changed_assignments"`
+	NewAssignments          []Assignment `json:"new_assignments"`
+	ChangedAssignments      []Assignment `json:"changed_assignments"`
+	IncompatibleAssignments []Assignment `json:"incompatible_assignments"`
 }
 
 type InputPayload struct {
@@ -173,6 +174,7 @@ func filterSchedulableMembers(
 
 func (s schedulerService) ScheduleTasksToUsers(c context.Context, req SchedulingRequest, settings Settings) (*ReturnStruct, error) {
 	// check if there is anything to schedule
+	// TODO: What if somebody is assigned to a task but they have 0 hours?
 	if len(req.TaskIDs) == 0 || len(req.UserIDs) == 0 {
 		return &ReturnStruct{
 			NewAssignments:     []Assignment{},
@@ -303,6 +305,7 @@ func (s schedulerService) ScheduleTasksToUsers(c context.Context, req Scheduling
 
 	var new_assignments []Assignment
 	var changed_assignments []Assignment
+	var removed_assignments []Assignment
 
 	old_map := make(map[uuid.UUID]uuid.UUID)
 	for _, task := range old_assignments {
@@ -342,38 +345,52 @@ func (s schedulerService) ScheduleTasksToUsers(c context.Context, req Scheduling
 
 		oldUser, exists := old_map[ass.TaskID]
 
-		fmt.Printf("\n--- Evaluating Task: %s ---\n", ass.TaskID)
-		fmt.Printf("Exists in old_map? %v\n", exists)
+		//fmt.Printf("\n--- Evaluating Task: %s ---\n", ass.TaskID)
+		//fmt.Printf("Exists in old_map? %v\n", exists)
 
 		if !exists {
-			fmt.Printf("Verdict: NEW ASSIGNMENT\n")
+			//fmt.Printf("Verdict: NEW ASSIGNMENT\n")
 			new_assignments = append(new_assignments, Assignment{
 				UserID: mappedUserID,
 				TaskID: ass.TaskID,
 			})
 		} else {
-			fmt.Printf("Old User (ProjectMemberID): %s\n", oldUser)
-			fmt.Printf("New User (ProjectMemberID): %s\n", ass.UserID)
+			//fmt.Printf("Old User (ProjectMemberID): %s\n", oldUser)
+			//fmt.Printf("New User (ProjectMemberID): %s\n", ass.UserID)
 
 			if oldUser != ass.UserID {
-				fmt.Printf("Verdict: CHANGED ASSIGNMENT\n")
+				//fmt.Printf("Verdict: CHANGED ASSIGNMENT\n")
 				changed_assignments = append(changed_assignments, Assignment{
 					UserID: mappedUserID,
 					TaskID: ass.TaskID,
 				})
 			} else {
-				fmt.Printf("Verdict: UNCHANGED (Ignored)\n")
+				//fmt.Printf("Verdict: UNCHANGED (Ignored)\n")
 			}
+			delete(old_map, ass.TaskID)
 		}
 	}
 
-	fmt.Printf("\nFINAL TALLY - New: %d | Changed: %d\n", len(new_assignments), len(changed_assignments))
+	for droppedTaskID, droppedProjectMemberID := range old_map {
+		mappedOldUserID, ok := member_user_map[droppedProjectMemberID]
+		if !ok {
+			mappedOldUserID = droppedProjectMemberID
+		}
 
-	fmt.Printf("NEW: %s, CHANGE: %s, MAP: %s", new_assignments, changed_assignments, old_map)
+		removed_assignments = append(removed_assignments, Assignment{
+			UserID: mappedOldUserID,
+			TaskID: droppedTaskID,
+		})
+	}
+
+	//fmt.Printf("\nFINAL TALLY - New: %d | Changed: %d\n", len(new_assignments), len(changed_assignments))
+
+	//fmt.Printf("NEW: %s, CHANGE: %s, MAP: %s", new_assignments, changed_assignments, old_map)
 
 	return &ReturnStruct{
-		NewAssignments:     new_assignments,
-		ChangedAssignments: changed_assignments,
+		NewAssignments:          new_assignments,
+		ChangedAssignments:      changed_assignments,
+		IncompatibleAssignments: removed_assignments,
 	}, nil
 }
 

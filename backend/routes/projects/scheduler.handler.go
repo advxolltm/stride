@@ -43,6 +43,12 @@ func mapToReturnAssignment(ass schedulerService.ReturnStruct) routes.AssignmentS
 				TaskID: a.TaskID,
 			}
 		}),
+		IncompatibleAssignments: routes.Map(ass.IncompatibleAssignments, func(a schedulerService.Assignment) routes.ReturnAssignment {
+			return routes.ReturnAssignment{
+				UserID: a.UserID,
+				TaskID: a.TaskID,
+			}
+		}),
 	}
 }
 
@@ -52,8 +58,8 @@ type SchedulingSettings struct {
 }
 
 type SchedulingRequest struct {
-	TaskIDs []uuid.UUID `json:"task_ids"`
-	UserIDs []uuid.UUID `json:"user_ids"`
+	TaskIDs  []uuid.UUID        `json:"task_ids"`
+	UserIDs  []uuid.UUID        `json:"user_ids"`
 	Settings SchedulingSettings `json:"settings"`
 }
 

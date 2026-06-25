@@ -31,8 +31,10 @@ export function SchedulerReviewStep({
     const assignments = [
         ...preview.newAssignments,
         ...preview.changedAssignments,
+        ...preview.incompatibleAssignments,
     ]
     const hasAssignments = assignments.length > 0
+    const onlyInvalidAssignments = assignments.length == preview.incompatibleAssignments.length
     const hasUnknownAssignee = assignments.some(
         (assignment) =>
             !members.some((member) => member.id === assignment.userId),
@@ -109,6 +111,11 @@ export function SchedulerReviewStep({
                             'tasks.scheduler.review.changedAssignmentsEmpty',
                             preview.changedAssignments,
                         )}
+                        {renderAssignmentSection(
+                            'tasks.scheduler.review.incompatibleAssignments',
+                            'tasks.scheduler.review.incompatibleAssignmentsEmpty',
+                            preview.incompatibleAssignments,
+                        )}
                     </>
                 ) : (
                     <div className="border-default-200 bg-content1 rounded-xl border p-4 text-sm text-default-600">
@@ -129,7 +136,7 @@ export function SchedulerReviewStep({
                 >
                     {t('tasks.scheduler.actions.cancel')}
                 </Button>
-                {hasAssignments ? (
+                {hasAssignments && !onlyInvalidAssignments ? (
                     <Button
                         onPress={onConfirm}
                         isPending={isConfirming}

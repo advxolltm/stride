@@ -29,6 +29,7 @@ interface SchedulerFlowModalProps {
 const EMPTY_SCHEDULER_PREVIEW: SchedulerPreviewResponse = {
     newAssignments: [],
     changedAssignments: [],
+    incompatibleAssignments: [],
 }
 
 export function SchedulerFlowModal({
@@ -112,10 +113,37 @@ export function SchedulerFlowModal({
             )
         }
 
-        setPreview((current) => ({
-            newAssignments: updateAssignments(current.newAssignments),
-            changedAssignments: updateAssignments(current.changedAssignments),
-        }))
+        setPreview((current) => {
+            const isDropped = current.incompatibleAssignments.some(
+                (assignment) => assignment.taskId === taskId
+            )
+
+            if (isDropped) {
+                return {
+                    newAssignments: current.newAssignments,
+                    changedAssignments: [
+                        ...current.changedAssignments,
+                        { taskId, userId },
+                    ],
+                    incompatibleAssignments: current.incompatibleAssignments.filter(
+                        (assignment) => assignment.taskId !== taskId
+                    ),
+                }
+            }
+            function updateAssignments(assignments: SchedulerAssignment[]) {
+                return assignments.map((assignment) =>
+                    assignment.taskId === taskId
+                        ? { ...assignment, userId }
+                        : assignment,
+                )
+            }
+
+            return {
+                newAssignments: updateAssignments(current.newAssignments),
+                changedAssignments: updateAssignments(current.changedAssignments),
+                incompatibleAssignments: current.incompatibleAssignments,
+            }
+        })
     }
 
     async function handleConfirm() {
