@@ -96,6 +96,12 @@ func seedStrategyScenario(dbConn *gorm.DB, service userService.UserService) {
 	dbConn.Create(&reactSkill)
 	dbConn.Create(&goSkill)
 
+	// As part of the presentation we can then change the weekly hours of Jane to 10 and shows that now it gives both tasks to James because his load is just 1.0 with all tasks
+	// making for a 1.0 maximum delta, while Jane would have a 2.0 workload with the task and james having 0.333333 making for a 1.6666666666666 delta which is less evenly distributed
+
+	// The logic behind this model: If the scheduler gave one task to each person: James would be done in less than 1.5 days while Jane would have to work for a full 2 Weeks
+	// If both tasks are given to James - Jane is done immediately, James only has to work for one full week, which is less unfair in out model because there is a smaller working time delta
+
 	fastMember := models.ProjectMember{User: *fastUser, Project: project, Role: "owner", WorkingHours: 30, Skills: []models.ProjectSkill{reactSkill, goSkill}}
 	slowMember := models.ProjectMember{User: *SlowUser, Project: project, Role: "member", WorkingHours: 18, Skills: []models.ProjectSkill{reactSkill}}
 
