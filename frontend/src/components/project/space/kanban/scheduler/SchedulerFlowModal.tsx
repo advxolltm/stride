@@ -108,19 +108,38 @@ export function SchedulerFlowModal({
     function handleAssignmentRemove(taskId: string, userId: string) {
         function updateAssignments(assignments: SchedulerAssignment[]) {
             return assignments.map(assignment => {
-				if(assignment.taskId === taskId && assignment.userId === userId) {
-					return { taskId: assignment.taskId, userId: null };
-				} else {
-					return assignment;
-				}
-			});
+                if (assignment.taskId === taskId && assignment.userId === userId) {
+                    return { taskId: assignment.taskId, userId: null };
+                } else {
+                    return assignment;
+                }
+            });
         }
 
-        setPreview((current) => ({
-            newAssignments: updateAssignments(current.newAssignments),
-            changedAssignments: updateAssignments(current.changedAssignments),
-			incompatibleAssignments: updateAssignments(current.incompatibleAssignments),
-        }))
+        setPreview((current) => {
+            const isDropped = current.incompatibleAssignments.some(
+                (assignment) => assignment.taskId === taskId
+            );
+
+            if (isDropped) {
+                return {
+                    newAssignments: current.newAssignments,
+                    changedAssignments: [
+                        ...current.changedAssignments,
+                        { taskId, userId: null },
+                    ],
+                    incompatibleAssignments: current.incompatibleAssignments.filter(
+                        (assignment) => assignment.taskId !== taskId
+                    ),
+                }
+            }
+
+            return {
+                newAssignments: updateAssignments(current.newAssignments),
+                changedAssignments: updateAssignments(current.changedAssignments),
+                incompatibleAssignments: updateAssignments(current.incompatibleAssignments),
+            };
+        })
     }
 
     function handleAssignmentChange(taskId: string, userId: string) {
@@ -149,13 +168,6 @@ export function SchedulerFlowModal({
                     ),
                 }
             }
-            function updateAssignments(assignments: SchedulerAssignment[]) {
-                return assignments.map((assignment) =>
-                    assignment.taskId === taskId
-                        ? { ...assignment, userId }
-                        : assignment,
-                )
-            }
 
             return {
                 newAssignments: updateAssignments(current.newAssignments),
@@ -172,7 +184,7 @@ export function SchedulerFlowModal({
             await onConfirm([
                 ...preview.newAssignments,
                 ...preview.changedAssignments,
-				...preview.incompatibleAssignments,
+                ...preview.incompatibleAssignments,
             ])
             handleOpenChange(false)
         } finally {
@@ -211,7 +223,7 @@ export function SchedulerFlowModal({
                                 isConfirming={isConfirming}
                                 onCancel={() => handleOpenChange(false)}
                                 onAssignmentChange={handleAssignmentChange}
-								onAssignmentRemove={handleAssignmentRemove}
+                                onAssignmentRemove={handleAssignmentRemove}
                                 onConfirm={handleConfirm}
                             />
                         ) : null}

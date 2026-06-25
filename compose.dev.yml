@@ -66,6 +66,7 @@ services:
       PASSWORD_REQUIRE_NUM: ${PASSWORD_REQUIRE_NUM}
       USERNAME_MIN_LENGTH: ${USERNAME_MIN_LENGTH}
       USERNAME_MAX_LENGTH: ${USERNAME_MAX_LENGTH}
+      SCHED_WORK_HOURS_PER_DAY: ${SCHED_WORK_HOURS_PER_DAY}
     depends_on:
       backserver:
         condition: service_healthy
@@ -127,6 +128,9 @@ services:
     build:
       context: ./backend/services/scheduler
       dockerfile: ./docker/dev.scheduler.Dockerfile
+    environment:
+      SCHED_WORK_HOURS_PER_DAY: ${SCHED_WORK_HOURS_PER_DAY:-8}
+      SCHED_MAX_ALLOWED_TIMEOUT_SECONDS: ${SCHED_MAX_ALLOWED_TIMEOUT_SECONDS:-60}
     restart: unless-stopped
     working_dir: /app
     ports:

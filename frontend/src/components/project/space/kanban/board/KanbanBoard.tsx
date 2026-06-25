@@ -75,6 +75,7 @@ function taskMatchesSearch(task: Task, query: string) {
 const EMPTY_SCHEDULER_PREVIEW: SchedulerPreviewResponse = {
     newAssignments: [],
     changedAssignments: [],
+	incompatibleAssignments: [],
 }
 
 export function KanbanBoard() {
@@ -267,15 +268,6 @@ export function KanbanBoard() {
             taskId: string
         }[],
     ) {
-        // const validAssignments = assignments.filter((assignment) =>
-        //     schedulerMembers.some((member) => member.id === assignment.userId),
-        // )
-        //
-        // if (validAssignments.length !== assignments.length) {
-        //     toast.danger(t('tasks.scheduler.review.invalidAssignments'))
-        //     return
-        // }
-
         try {
             await confirmScheduledAssignments({
                 projectId,
