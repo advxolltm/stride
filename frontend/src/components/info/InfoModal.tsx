@@ -50,7 +50,7 @@ export function InfoModal({
     const taskSchedulerRef = useRef<HTMLDivElement>(null);
     const taskWhiteboardLinking = useRef<HTMLDivElement>(null);
 
-	const [activeSection, setActiveSection] = useState("overview");
+    const [activeSection, setActiveSection] = useState("overview");
 
     const pageToSection: Record<string, RefObject<HTMLDivElement | null>> = {
         "tasks": taskRef,
@@ -71,14 +71,13 @@ export function InfoModal({
     useEffect(() => {
         if (!isOpen) return;
 
-		console.log(Object.keys(pageToSection), location.pathname);
-		let section = overviewRef;
-		for (const s of Object.keys(pageToSection)) {
-			if (location.pathname.includes(s)) {
-				section = pageToSection[s];
-				break;
-			}
-		}
+        let section = overviewRef;
+        for (const s of Object.keys(pageToSection)) {
+            if (location.pathname.includes(s)) {
+                section = pageToSection[s];
+                break;
+            }
+        }
         requestAnimationFrame(() => {
             section?.current?.scrollIntoView({
                 behavior: "smooth",
@@ -111,7 +110,701 @@ export function InfoModal({
         });
     };
 
-    return (
+    const germanVersion = (
+        <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
+            <Modal.Backdrop>
+                <Modal.Container size="cover">
+                    <Modal.Dialog>
+                        <Modal.Header>The STRIDE Guide™</Modal.Header>
+
+                        <Modal.Body>
+                            <div className="flex h-full">
+                                {/* Sidebar */}
+                                <aside className="w-90 border-r p-2 flex flex-col gap-1">
+                                    <AsideButton
+                                        refObj={overviewRef}
+                                        section="overview"
+                                        text="Übersicht"
+                                        activeSection={activeSection}
+                                        scrollToSection={scrollToSection}
+                                    />
+
+                                    <AsideButton
+                                        refObj={basicsRef}
+                                        section="basics"
+                                        text="Grundlagen"
+                                        activeSection={activeSection}
+                                        scrollToSection={scrollToSection}
+                                    />
+
+                                    <div className="ml-4 border-l pl-3 flex flex-col gap-1">
+
+                                        <AsideButton
+                                            refObj={profileRef}
+                                            section="profile"
+                                            text="Profilverwaltung"
+                                            activeSection={activeSection}
+                                            scrollToSection={scrollToSection}
+                                        />
+
+                                        <AsideButton
+                                            refObj={projectRef}
+                                            section="project"
+                                            text="Projekt erstellen und verwalten"
+                                            activeSection={activeSection}
+                                            scrollToSection={scrollToSection}
+                                        />
+
+                                        <div>
+                                            <AsideButton
+                                                refObj={taskRef}
+                                                section="task"
+                                                text="Aufgabenverwaltung"
+                                                activeSection={activeSection}
+                                                scrollToSection={scrollToSection}
+                                            />
+
+                                            <div className="ml-4 border-l mt-1 flex flex-col gap-1">
+
+                                                <AsideButton
+                                                    refObj={createTaskRef}
+                                                    section="createTask"
+                                                    text="Aufgaben erstellen und bearbeiten"
+                                                    activeSection={activeSection}
+                                                    scrollToSection={scrollToSection}
+                                                />
+
+                                                <AsideButton
+                                                    refObj={assignTaskRef}
+                                                    section="assignTask"
+                                                    text="Aufgaben zuweisen"
+                                                    activeSection={activeSection}
+                                                    scrollToSection={scrollToSection}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <AsideButton
+                                                refObj={chatRef}
+                                                section="chat"
+                                                text="Mit anderen chatten"
+                                                activeSection={activeSection}
+                                                scrollToSection={scrollToSection}
+                                            />
+                                            <div className="ml-4 border-l mt-1 flex flex-col gap-1">
+                                                <AsideButton
+                                                    refObj={chatEverywhereRef}
+                                                    section="chat-everywhere"
+                                                    text="Überall chatten"
+                                                    activeSection={activeSection}
+                                                    scrollToSection={scrollToSection}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <AsideButton
+                                                refObj={whiteboardRef}
+                                                section="whiteboard"
+                                                text="Whiteboard verwenden"
+                                                activeSection={activeSection}
+                                                scrollToSection={scrollToSection}
+                                            />
+                                            <div className="ml-4 border-l mt-1 flex flex-col gap-1">
+                                                <AsideButton
+                                                    refObj={whiteboardTemplatesRef}
+                                                    section="whiteboard-templates"
+                                                    text="Whiteboard-Vorlagen"
+                                                    activeSection={activeSection}
+                                                    scrollToSection={scrollToSection}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <AsideButton
+                                        refObj={advancedRef}
+                                        section="advanced"
+                                        text="Erweitert"
+                                        activeSection={activeSection}
+                                        scrollToSection={scrollToSection}
+                                    />
+
+                                    <div className="ml-4 border-l pl-3 flex flex-col gap-1">
+                                        <AsideButton
+                                            refObj={automaticTaskAssignmentRef}
+                                            section="automatic-task-assignment"
+                                            text="Automatische Aufgabenzuweisung"
+                                            activeSection={activeSection}
+                                            scrollToSection={scrollToSection}
+                                        />
+
+                                        <div className="ml-4 border-l mt-1 flex flex-col gap-1">
+                                            <AsideButton
+                                                refObj={skillsRef}
+                                                section="skills"
+                                                text="Fähigkeiten"
+                                                activeSection={activeSection}
+                                                scrollToSection={scrollToSection}
+                                            />
+
+                                            <AsideButton
+                                                refObj={workinghoursRef}
+                                                section="working-hours"
+                                                text="Arbeitsstunden"
+                                                activeSection={activeSection}
+                                                scrollToSection={scrollToSection}
+                                            />
+
+                                            <AsideButton
+                                                refObj={taskSchedulerRef}
+                                                section="task-scheduler"
+                                                text="Scheduler ausführen!"
+                                                activeSection={activeSection}
+                                                scrollToSection={scrollToSection}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="ml-4 border-l pl-3 flex flex-col gap-1">
+                                        <AsideButton
+                                            refObj={taskWhiteboardLinking}
+                                            section="task-whiteboard-linking"
+                                            text="Aufgaben-Whiteboard-Verknüpfung"
+                                            activeSection={activeSection}
+                                            scrollToSection={scrollToSection}
+                                        />
+                                    </div>
+                                </aside>
+
+                                {/* Scrollable content */}
+                                <main
+                                    className="flex-1 overflow-y-auto p-6"
+                                >
+                                    <section id="overview" className="mb-12">
+                                        <div
+                                            ref={overviewRef}
+                                            className="mb-16"
+                                        >
+                                            <h1 className="min-w-0 flex-1 truncate text-4xl font-bold tracking-tight">
+                                                Übersicht
+                                            </h1>
+
+                                            <p>
+                                                Dieser kurze Guide soll dir einen vollständigen Überblick über die Funktionen von <code>STRIDE</code> geben.
+                                                Du kannst diese Seite jederzeit über das <CircleQuestionMark className="inline h-5 w-5" /> Symbol in der Kopfzeile erneut öffnen.
+                                            </p>
+
+                                            <p className="mb-2">
+                                                Der Guide behandelt folgende Themen:
+                                            </p>
+
+                                            <ul className="list-disc pl-6 space-y-2">
+                                                <li>Profilverwaltung</li>
+                                                <li>Projekt erstellen und verwalten</li>
+
+                                                <li>
+                                                    Aufgabenverwaltung
+                                                    <ul className="list-disc pl-6 mt-2 space-y-1">
+                                                        <li>Aufgaben erstellen und bearbeiten</li>
+                                                        <li>Aufgaben zuweisen</li>
+                                                    </ul>
+                                                </li>
+
+                                                <li>
+                                                    Mit anderen chatten
+                                                    <ul className="list-disc pl-6 mt-2 space-y-1">
+                                                        <li>Überall chatten</li>
+                                                    </ul>
+                                                </li>
+
+                                                <li>
+                                                    Whiteboard verwenden
+                                                </li>
+                                            </ul>
+
+                                            <p className="my-2">
+                                                Der große Vorteil von <code>STRIDE</code> ist, dass alle Seiten und Funktionen miteinander verknüpft sind.
+                                                Dadurch greifen die verschiedenen Bereiche der Anwendung nahtlos ineinander. Allerdings braucht man dadurch auch
+                                                etwas mehr Wissen über die App, um alle Möglichkeiten wirklich auszunutzen. Wir empfehlen deshalb, zuerst die
+                                                oben genannten Grundlagen durchzulesen, bevor du dich an die erweiterten Themen wagst.
+                                                Der folgende Abschnitt behandelt:
+                                            </p>
+
+                                            <ul className="list-disc pl-6 space-y-2">
+                                                <li>
+                                                    Fähigkeiten
+                                                    <ul className="list-disc pl-6 mt-2 space-y-1">
+                                                        <li>Fähigkeiten als Projektbesitzer definieren</li>
+                                                        <li>Dir selbst Fähigkeiten zuweisen</li>
+                                                        <li>Erforderliche Fähigkeiten für Aufgaben festlegen</li>
+                                                    </ul>
+                                                </li>
+
+                                                <li>
+                                                    Aufgaben automatisch zuweisen
+                                                </li>
+
+                                                <li>
+                                                    Deine Whiteboard-Zeichnungen mit Aufgaben verknüpfen
+                                                </li>
+                                            </ul>
+
+                                        </div>
+                                    </section>
+
+                                    <section className="mb-12">
+                                        <div
+                                            ref={basicsRef}
+                                            className="mb-16"
+                                        >
+                                            <h1 className="min-w-0 flex-1 truncate text-4xl font-bold tracking-tight">
+                                                Grundlagen
+                                            </h1>
+
+                                            <div
+                                                ref={profileRef}
+                                                className="my-8"
+                                            >
+                                                <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
+                                                    Profilverwaltung
+                                                </h1>
+
+                                                <p>
+                                                    Oben rechts findest du einen Button mit deinem Namen. Wenn du darauf klickst,
+                                                    gelangst du zu deinem Profil. Es sollte ungefähr so aussehen
+                                                    (das Profilbild kannst du ignorieren!).
+                                                </p>
+
+                                                <GuideImg name='profile1.png' />
+
+                                                <p>
+                                                    Die ersten beiden Tabs sind ziemlich standardmäßig und erlauben dir,
+                                                    deinen Namen, dein Passwort und deine E-Mail-Adresse zu ändern.
+                                                    Um die Tabs für Fähigkeiten und Arbeitsstunden musst du dir noch keine
+                                                    Gedanken machen - die gehören zu den erweiterten Themen.
+                                                </p>
+                                            </div>
+
+                                            <div
+                                                ref={projectRef}
+                                                className="my-8"
+                                            >
+                                                <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
+                                                    Projekt erstellen und verwalten
+                                                </h1>
+
+                                                <p>
+                                                    Wir erstellen jetzt schnell ein neues Projekt. Dieses großartige Projekt
+                                                    verwenden wir als Referenzprojekt für alles, was danach kommt!
+                                                    (Hinweis: Du kannst den Namen natürlich frei wählen.)
+                                                </p>
+
+                                                <GuideImg name='project-create.gif' />
+                                                <br />
+
+                                                <p>
+                                                    Fügen wir jetzt ein paar Mitglieder hinzu. Das kannst du entweder direkt
+                                                    über den Button „Mitglieder hinzufügen“ machen oder über die
+                                                    Projekteinstellungen. Dort kannst du Mitglieder auch wieder entfernen
+                                                    (falls sich jemand danebenbenimmt).
+                                                </p>
+
+                                                <GuideImg name='project-addmembers.gif' />
+                                                <br />
+
+                                                <p>
+                                                    Wenn du mit einem Projekt fertig bist, kannst du es entweder archivieren,
+                                                    sodass nichts mehr bearbeitet werden kann, oder komplett löschen
+                                                    (das lässt sich nicht rückgängig machen!).
+                                                    <br />
+                                                    <br />
+                                                    Archivierte Projekte erscheinen außerdem in einem eigenen Bereich und
+                                                    können jederzeit wieder aus dem Archiv geholt werden.
+                                                </p>
+
+                                                <GuideImg name="project-archive.gif" />
+                                            </div>
+
+                                            <div
+                                                ref={taskRef}
+                                                className="my-8"
+                                            >
+                                                <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
+                                                    Aufgabenverwaltung
+                                                </h1>
+
+                                                <p>
+                                                    Jetzt, da dein Projekt eingerichtet ist, wird es Zeit, ein paar Aufgaben
+                                                    anzulegen. Aufgaben erlauben es dir, Arbeitspakete zu definieren, die
+                                                    innerhalb eines bestimmten Zeitraums erledigt werden müssen.
+                                                    Später (im Abschnitt „Erweitert“) siehst du außerdem, wie du Aufgaben mit
+                                                    dem Whiteboard verknüpfen kannst und wie Fähigkeiten sowie Arbeitslast dabei
+                                                    berücksichtigt werden können.
+                                                    <br />
+                                                    <br />
+                                                    Beachte, dass es zwei Ansichten gibt: das Kanban-Board und eine einfache
+                                                    Liste. Du kannst frei wählen, welche du verwenden möchtest - keine von
+                                                    beiden kann mehr als die andere. In diesem Guide verwenden wir das
+                                                    Kanban-Board.
+                                                </p>
+
+                                                <div
+                                                    ref={createTaskRef}
+                                                    className="my-8 border-l pl-4"
+                                                >
+                                                    <h1 className="min-w-0 flex-1 truncate text-2xl font-bold tracking-tight">
+                                                        Aufgaben erstellen und bearbeiten
+                                                    </h1>
+
+                                                    <p>
+                                                        Um eine Aufgabe zu erstellen, gehe einfach in die Spalte deiner Wahl
+                                                        (wahrscheinlich „To Do“) und vergib einen aussagekräftigen Titel,
+                                                        der einen groben Überblick über die Aufgabe gibt.
+                                                        Anschließend kannst du die Aufgabe öffnen und eine Beschreibung
+                                                        hinzufügen sowie festlegen, wie lange sie ungefähr dauern wird und
+                                                        in welchem Zeitraum daran gearbeitet werden darf.
+                                                        <br />
+                                                        <i>
+                                                            Beachte, dass alle Felder komplett optional sind. Einige davon
+                                                            solltest du aber ausfüllen, wenn du später die erweiterten
+                                                            Funktionen nutzen möchtest.
+                                                        </i>
+                                                    </p>
+
+                                                    <GuideImg name="task-create-and-edit.gif" />
+                                                </div>
+
+                                                <div
+                                                    ref={assignTaskRef}
+                                                    className="my-8 border-l pl-4"
+                                                >
+                                                    <h1 className="min-w-0 flex-1 truncate text-2xl font-bold tracking-tight">
+                                                        Aufgaben zuweisen
+                                                    </h1>
+
+                                                    <p>
+                                                        Du kannst jedes Teammitglied jeder Aufgabe zuweisen und so verwalten,
+                                                        wer für welche Aufgabe verantwortlich ist.<br/>
+                                                        <i>
+                                                            Im Abschnitt „Erweitert“ schauen wir uns später an,
+                                                            wie dieser Prozess automatisiert und optimiert werden kann!
+                                                        </i>
+                                                    </p>
+
+                                                    <GuideImg name="task-assign.gif" />
+                                                </div>
+                                            </div>
+
+                                            <div
+                                                ref={chatRef}
+                                                className="my-8"
+                                            >
+                                                <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
+                                                    Mit anderen chatten
+                                                </h1>
+
+                                                <p>
+                                                    Die letzte Seite ist der Chat! Der Chat ist ganz einfach:
+                                                    Du kannst Nachrichten schreiben, bearbeiten oder löschen,
+                                                    falls du bereust, was du geschrieben hast.
+                                                </p>
+
+                                                <GuideImg name="chat.gif" />
+
+                                                <div
+                                                    ref={chatEverywhereRef}
+                                                    className="my-8"
+                                                >
+                                                    <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
+                                                        Überall chatten
+                                                    </h1>
+
+                                                    <p>
+                                                        Du musst nicht extra auf die Chat-Seite wechseln, um den Chat zu öffnen.
+                                                        Du kannst ihn auch direkt auf der Aufgaben- oder Whiteboard-Seite verwenden.
+                                                    </p>
+
+                                                    <GuideImg name="chat-everywhere-task.gif" />
+                                                    <br />
+                                                    <hr />
+                                                    <br />
+                                                    <GuideImg name="chat-everywhere-whiteboard.gif" />
+                                                </div>
+                                            </div>
+
+                                            <div
+                                                ref={whiteboardRef}
+                                                className="my-8"
+                                            >
+                                                <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
+                                                    Whiteboard verwenden
+                                                </h1>
+
+                                                <p>
+                                                    Das kollaborative Whiteboard eignet sich hervorragend für Brainstorming
+                                                    oder das Entwerfen komplexerer Systeme. Falls du es noch nicht kennst:
+                                                    Das Whiteboard basiert auf <a href="https://excalidraw.com/">Excalidraw</a>.
+                                                </p>
+
+                                                <GuideImg name="whiteboard.gif" />
+
+                                                <div
+                                                    ref={whiteboardTemplatesRef}
+                                                    className="my-8"
+                                                >
+                                                    <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
+                                                        Whiteboard-Vorlagen
+                                                    </h1>
+
+                                                    <p>
+                                                        Für den Einstieg haben wir einige Vorlagen erstellt, die du verwenden
+                                                        kannst. Vorlagen bestehen einfach aus normalen Excalidraw-Zeichnungen
+                                                        und können beliebig bearbeitet werden.
+                                                        Natürlich kannst du sie so oft verwenden, wie du möchtest - sogar
+                                                        mehrfach im selben Whiteboard. Sie werden einfach an deiner aktuellen
+                                                        Position eingefügt.
+                                                    </p>
+
+                                                    <GuideImg name="whiteboard-templates.gif" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </section>
+
+                                    <section id="settings" className="mb-12">
+                                        <div
+                                            ref={advancedRef}
+                                            className="mb-16"
+                                        >
+                                            <h1 className="min-w-0 flex-1 truncate text-4xl font-bold tracking-tight">
+                                                Erweitert
+                                            </h1>
+
+                                            <div
+                                                ref={automaticTaskAssignmentRef}
+                                                className="my-8"
+                                            >
+                                                <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
+                                                    Automatische Aufgabenzuweisung
+                                                </h1>
+
+                                                <p>
+                                                    Wie bereits im Abschnitt „Aufgaben zuweisen“ erwähnt, kannst du diesen
+                                                    Prozess vollständig automatisieren und eine optimierte Liste von
+                                                    Aufgabenzuweisungen erhalten. Das System ist allerdings keine Magie und
+                                                    ruft auch nicht einfach ChatGPT im Hintergrund auf. Damit der sogenannte
+                                                    Aufgaben-Scheduler (sehr kreativer Name) sinnvoll arbeiten kann, musst du
+                                                    zwei Dinge bereitstellen, über die wir bisher noch nicht gesprochen haben: <b>Fähigkeiten</b> und <b>Arbeitsstunden</b>.
+                                                </p>
+
+                                                <br />
+
+                                                <p>
+                                                    In den folgenden Unterabschnitten zeigen wir dir, wie du diese anlegst
+                                                    und verwendest. Zunächst erklären wir aber kurz, was sie sind und wie
+                                                    sie den Aufgaben-Scheduler beeinflussen.
+                                                    <br />
+
+                                                    <b>Fähigkeiten:</b> Stell dir vor, du arbeitest in einem Projekt für eine
+                                                    öffentliche Website. Jemand muss den Code schreiben, jemand anderes den
+                                                    Server einrichten und überwachen und eine dritte Person kümmert sich um
+                                                    Marketing. Es gibt viele Aufgaben im Projekt, aber es wäre vermutlich
+                                                    keine gute Idee, wenn der Scheduler die Aufgabe „Große Marketingkampagne“
+                                                    dem Programmierer zuweist, oder?
+
+                                                    Fähigkeiten erlauben es dir, genau dieses Wissen abzubilden. Der
+                                                    Projektbesitzer kann Fähigkeiten definieren, die für das Projekt relevant
+                                                    sind. Aufgaben können anschließend eine Liste benötigter Fähigkeiten
+                                                    erhalten. Jeder Benutzer wählt dann aus, welche Fähigkeiten er besitzt.
+                                                    Der Scheduler weist eine Aufgabe nur dann einer Person zu, wenn diese
+                                                    alle erforderlichen Fähigkeiten erfüllt.
+
+                                                    <br />
+                                                    <br />
+
+                                                    <b>Arbeitsstunden:</b> Um die Arbeitslast fair zu verteilen, kannst du
+                                                    festlegen, wie viele Stunden pro Woche du für ein bestimmtes Projekt
+                                                    investieren möchtest. Damit das funktioniert, solltest du außerdem
+                                                    schätzen, wie lange eine Aufgabe dauert. Wenn alles eingerichtet ist,
+                                                    achtet der Scheduler darauf, dass deine wöchentlichen Arbeitsstunden
+                                                    nicht überschritten werden.
+                                                </p>
+
+                                                <div
+                                                    ref={skillsRef}
+                                                    className="my-8"
+                                                >
+                                                    <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
+                                                        Fähigkeiten
+                                                    </h1>
+
+                                                    <p>
+                                                        Fähigkeiten werden auf Projektebene definiert. Jedes Projekt ist
+                                                        anders und besitzt daher seine eigenen benötigten Fähigkeiten. Um den Prozess
+                                                        zu vereinfachen, kannst du Fähigkeiten aus anderen Projekten
+                                                        importieren oder vorbereitete Vorlagen verwenden.
+                                                        Beachte, dass nur der <b>Projektbesitzer</b> die verfügbaren
+                                                        Fähigkeiten eines Projekts verwalten kann.
+                                                    </p>
+
+                                                    <GuideImg name="creating-skills.gif" />
+                                                    <br />
+
+                                                    <p>
+                                                        Danach kannst du auswählen, welche dieser Fähigkeiten auf dich
+                                                        zutreffen.
+                                                    </p>
+
+                                                    <GuideImg name="choosing-skills.gif" />
+                                                    <br />
+
+                                                    <p>
+                                                        Zum Schluss kannst du auch festlegen, welche Fähigkeiten für eine
+                                                        bestimmte Aufgabe erforderlich sind.
+                                                    </p>
+
+                                                    <GuideImg name="assigning-skills.gif" />
+                                                </div>
+
+                                                <div
+                                                    ref={workinghoursRef}
+                                                    className="my-8"
+                                                >
+                                                    <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
+                                                        Arbeitsstunden
+                                                    </h1>
+
+                                                    <p>
+                                                        Genau wie Fähigkeiten sind auch Arbeitsstunden projektspezifisch.
+                                                        Vielleicht arbeitest du gleichzeitig an mehreren Projekten und
+                                                        investierst unterschiedlich viel Zeit in jedes davon.
+
+                                                        Es gibt eine gemeinsame maximale Anzahl an Stunden pro Woche
+                                                        (verwaltet vom Betreiber der STRIDE-Instanz), aber du kannst selbst
+                                                        entscheiden, wie viele dieser Stunden auf welches Projekt entfallen.
+
+                                                        Öffne dazu einfach die Projekteinstellungen und trage unter
+                                                        „Meine Arbeitsstunden“ ein, wie viele Stunden pro Woche du für
+                                                        dieses Projekt aufwenden möchtest.
+                                                    </p>
+
+                                                    <GuideImg name="choose-working-hours.gif" />
+                                                    <br />
+
+                                                    <p>
+                                                        Gib anschließend eine Schätzung an, wie lange eine Aufgabe dauern
+                                                        wird. Der Aufgaben-Scheduler überprüft dann, ob die Zuweisung dieser
+                                                        Aufgabe deine verfügbare Arbeitszeit in einer bestimmten Woche
+                                                        überschreiten würde.<br/>
+
+                                                        <i>
+                                                            Hinweis: Es ist trotzdem möglich, Aufgaben zugewiesen zu
+                                                            bekommen, die länger dauern als deine wöchentlichen
+                                                            Arbeitsstunden. Der Scheduler versucht in diesem Fall automatisch,
+                                                            einen passenden Zeitraum über mehrere Wochen hinweg zu finden.
+                                                        </i>
+                                                    </p>
+
+                                                    <GuideImg name="choose-estimation.gif" />
+                                                </div>
+
+                                                <div
+                                                    ref={taskSchedulerRef}
+                                                    className="my-8"
+                                                >
+                                                    <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
+                                                        Scheduler ausführen
+                                                    </h1>
+
+                                                    <p>
+                                                        Sobald alles eingerichtet ist, musst du nur noch den Scheduler
+                                                        starten und dich entspannt zurücklehnen (für ungefähr zwei Sekunden),
+                                                        während er die optimale Liste von Aufgabenzuweisungen berechnet.
+                                                    </p>
+
+                                                    <GuideImg name="scheduler-run.gif" />
+                                                </div>
+                                            </div>
+
+                                            <div
+                                                ref={taskWhiteboardLinking}
+                                                className="my-8"
+                                            >
+                                                <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
+                                                    Aufgaben mit dem Whiteboard verknüpfen
+                                                </h1>
+
+                                                <p>
+                                                    Im letzten Abschnitt zeigen wir dir, wie du Brainstorming auf dem
+                                                    Whiteboard mit den konkreten Aufgaben auf deinem Kanban-Board verbinden
+                                                    kannst.
+
+                                                    Es ist oft hilfreich, bestimmte Skizzen oder Designs auf dem Whiteboard
+                                                    direkt mit den Aufgaben zu verknüpfen, die sie repräsentieren. Dadurch
+                                                    behältst du leichter den Überblick über die einzelnen Komponenten eines
+                                                    Projekts und deren Zusammenhänge.
+
+                                                    Das Whiteboard liefert den Überblick über das große Ganze, während jede
+                                                    Aufgabe einfach auf einen bestimmten Bereich des Whiteboards verweist und
+                                                    sagt: „Das ist mein Teil.“
+                                                </p>
+
+                                                <br />
+
+                                                <p>
+                                                    Um einen Bereich des Whiteboards mit einer Aufgabe zu verknüpfen,
+                                                    markierst du einfach alle relevanten Elemente, klickst oben rechts auf
+                                                    „Aufgabe verknüpfen“ und wählst anschließend die gewünschte Aufgabe aus.
+                                                </p>
+
+                                                <GuideImg name="whiteboard-linking.gif" />
+                                                <br />
+
+                                                <p>
+                                                    Die Verknüpfung wird durch ein normales Excalidraw-Rechteck mit einer
+                                                    Überschrift dargestellt. Wenn du die Verknüpfung entfernen möchtest,
+                                                    reicht es aus, dieses Excalidraw-Element zu löschen.
+
+                                                    Beachte außerdem, dass der Aufgabentitel in der Überschrift angezeigt
+                                                    wird. Änderst du den Titel der Aufgabe, wird die Überschrift automatisch
+                                                    aktualisiert.
+                                                </p>
+
+                                                <br />
+
+                                                <p>
+                                                    Nach dem Verknüpfen kannst du entweder auf das Link-Symbol oben rechts
+                                                    im Verknüpfungsrechteck klicken oder die gesamte Gruppe auswählen und
+                                                    anschließend oben rechts „Aufgabe anzeigen“ wählen.
+
+                                                    Die Aufgabe zeigt dann eine Vorschau des Whiteboards, die exakt auf den
+                                                    ausgewählten Bereich skaliert und positioniert ist. Ein Klick auf die
+                                                    Vorschau bringt dich direkt zurück zu dieser Stelle auf dem Whiteboard.
+                                                </p>
+
+                                                <GuideImg name="view-linked-task.gif" />
+                                                <br />
+                                            </div>
+                                        </div>
+                                    </section>
+                                </main>
+                            </div>
+                        </Modal.Body>
+
+                        <Modal.Footer className="justify-start">
+                            <LanguageSwitcher />
+                            <div className="bg-border h-5 w-px" />
+                            <ThemeSwitcher />
+                        </Modal.Footer>
+                    </Modal.Dialog>
+                </Modal.Container>
+            </Modal.Backdrop >
+        </Modal >
+    );
+
+    const englishVersion = (
         <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
             <Modal.Backdrop>
                 <Modal.Container size="cover">
@@ -604,7 +1297,7 @@ export function InfoModal({
                                                     Task-Whiteboard Linking
                                                 </h1>
 
-                                                <p>In this last section we will also show you how to combine the brainstorming inside your Whiteboard with more formally written tasks in your Kanban-Board. Specifically, it would be nice if you can link the relevant parts of each of the sketches and designs you did in the Whiteboard with the individual Tasks that represent them. This makes it much easier to keep track of the individual components of a project and how they are interconnected. The Whiteboard can give a big-picture overview, and each task simply links to some region of the Whiteboard to say "This is my part".</p>
+                                                <p>In this last section we will also show you how to combine the brainstorming inside your Whiteboard with more concretely written tasks in your Kanban-Board. Specifically, it would be nice if you can link the relevant parts of each of the sketches and designs you did in the Whiteboard with the individual Tasks that represent them. This makes it much easier to keep track of the individual components of a project and how they are interconnected. The Whiteboard can give a big-picture overview, and each task simply links to some region of the Whiteboard to say "This is my part".</p>
                                                 <br />
                                                 <p>In order to link a region of the Whiteboard with a task, simply select all the relevant elements, hit "Link Task" in the top-right corner and then choose the task you want to link.</p>
 
@@ -632,4 +1325,10 @@ export function InfoModal({
             </Modal.Backdrop >
         </Modal >
     );
+
+	if (isGerman) {
+		return germanVersion;
+	} else {
+		return englishVersion;
+	}
 }
