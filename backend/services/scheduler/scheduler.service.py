@@ -27,6 +27,7 @@ def get_env_int(s: str, default: int) -> int:
 
 
 MAX_ALLOWED_TIMEOUT_SECONDS = get_env_int("SCHED_MAX_ALLOWED_TIMEOUT_SECONDS", 60)
+WORK_HOURS_PER_DAY = get_env_int("SCHED_WORK_HOURS_PER_DAY", 8)
 
 
 PORT = 7270
@@ -153,7 +154,7 @@ def schedule_tasks_to_members(
                     timeframe_start, task.due_at
                 )
 
-                time_left_in_week = (5 - min(task.start_at.weekday(), 5)) * 8
+                time_left_in_week = (5 - min(task.start_at.weekday(), 5)) * WORK_HOURS_PER_DAY
 
                 # min start measures how much of their work time has passed at minimum when they can start the task
                 min_start = (weeks_before_task * user.weekly_hours) + max(
@@ -510,7 +511,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
 
 if __name__ == "__main__":
     Handler = http.server.SimpleHTTPRequestHandler
-
     with socketserver.TCPServer(("", PORT), CustomHandler) as httpd:
         LOGGER.info(f"Serving at port {PORT}")
+        LOGGER.info(f"Configured work-hours per day: {WORK_HOURS_PER_DAY}")
         httpd.serve_forever()
