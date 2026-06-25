@@ -7,12 +7,12 @@
     },
     "actions": {
       "filter": "Filter",
-      "searchTasks": "Search tasks...",
+      "searchTasks": "Search Tasks...",
       "assign": "Assign Tasks",
       "add": "Add Task",
-      "menuAria": "Task actions",
-      "edit": "Edit task",
-      "delete": "Delete task",
+      "menuAria": "Task Actions",
+      "edit": "Edit Task",
+      "delete": "Delete Task",
       "createTask": "Create Task",
       "cancel": "Cancel"
     },

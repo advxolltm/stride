@@ -337,6 +337,10 @@ func (s schedulerService) ScheduleTasksToUsers(c context.Context, req Scheduling
 	// 	}
 	// }
 
+	// TODO: fix the 0 hours user showing up as unassigned on the (Frontend)
+	// TODO: When you reassign a task it should be in the Changed Assignments (Frontend)
+	// TODO: When you clear a task it should stay in the same section (Frontend)
+
 	for _, ass := range assignments {
 		mappedUserID, ok := member_user_map[ass.UserID]
 		if !ok || mappedUserID == uuid.Nil {
