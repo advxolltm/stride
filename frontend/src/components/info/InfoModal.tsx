@@ -1,6 +1,6 @@
 import { Button, cn, Modal } from '@heroui/react'
-import { CircleQuestionMark } from 'lucide-react'
-import { useEffect, useRef, useState, type RefObject } from 'react';
+import { CircleQuestionMark, Menu, X } from 'lucide-react'
+import React, { useEffect, useRef, useState, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next'
 import { LanguageSwitcher } from '../layout/LanguageSwitcher';
 import { ThemeSwitcher } from '../layout/ThemeSwitcher';
@@ -19,48 +19,50 @@ export function InfoModal({
     const isGerman = i18n.language.startsWith("de");
     const location = useLocation();
 
-    const overviewRef = useRef<HTMLDivElement>(null);
-    const basicsRef = useRef<HTMLDivElement>(null);
-    const profileRef = useRef<HTMLDivElement>(null);
-    const projectRef = useRef<HTMLDivElement>(null);
-    const taskRef = useRef<HTMLDivElement>(null);
-    const createTaskRef = useRef<HTMLDivElement>(null);
-    const assignTaskRef = useRef<HTMLDivElement>(null);
-    const chatRef = useRef<HTMLDivElement>(null);
-    const chatEverywhereRef = useRef<HTMLDivElement>(null);
-    const whiteboardRef = useRef<HTMLDivElement>(null);
-    const whiteboardTemplatesRef = useRef<HTMLDivElement>(null);
-
-    const advancedRef = useRef<HTMLDivElement>(null);
-    const automaticTaskAssignmentRef = useRef<HTMLDivElement>(null);
-    const skillsRef = useRef<HTMLDivElement>(null);
-    const workinghoursRef = useRef<HTMLDivElement>(null);
-    const taskSchedulerRef = useRef<HTMLDivElement>(null);
-    const taskWhiteboardLinkingRef = useRef<HTMLDivElement>(null);
+    const refs = {
+        overview: useRef<HTMLDivElement>(null),
+        basics: useRef<HTMLDivElement>(null),
+        profile: useRef<HTMLDivElement>(null),
+        project: useRef<HTMLDivElement>(null),
+        task: useRef<HTMLDivElement>(null),
+        createTask: useRef<HTMLDivElement>(null),
+        assignTask: useRef<HTMLDivElement>(null),
+        chat: useRef<HTMLDivElement>(null),
+        chatEverywhere: useRef<HTMLDivElement>(null),
+        whiteboard: useRef<HTMLDivElement>(null),
+        whiteboardTemplates: useRef<HTMLDivElement>(null),
+        advanced: useRef<HTMLDivElement>(null),
+        automaticTaskAssignment: useRef<HTMLDivElement>(null),
+        skills: useRef<HTMLDivElement>(null),
+        workinghours: useRef<HTMLDivElement>(null),
+        taskScheduler: useRef<HTMLDivElement>(null),
+        taskWhiteboardLinking: useRef<HTMLDivElement>(null),
+    };
 
     const [activeSection, setActiveSection] = useState("overview");
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     useEffect(() => {
         if (!isOpen) return;
 
         const sections = [
-            { id: "overview", ref: overviewRef },
-            { id: "basics", ref: basicsRef },
-            { id: "profile", ref: profileRef },
-            { id: "project", ref: projectRef },
-            { id: "task", ref: taskRef },
-            { id: "createTask", ref: createTaskRef },
-            { id: "assignTask", ref: assignTaskRef },
-            { id: "chat", ref: chatRef },
-            { id: "chatEverywhere", ref: chatEverywhereRef },
-            { id: "whiteboard", ref: whiteboardRef },
-            { id: "whiteboardTemplates", ref: whiteboardTemplatesRef },
-            { id: "advanced", ref: advancedRef },
-            { id: "automaticTaskAssignment", ref: automaticTaskAssignmentRef },
-            { id: "skills", ref: skillsRef },
-            { id: "workinghours", ref: workinghoursRef },
-            { id: "taskScheduler", ref: taskSchedulerRef },
-            { id: "taskWhiteboardLinking", ref: taskWhiteboardLinkingRef },
+            { id: "overview", ref: refs.overview },
+            { id: "basics", ref: refs.basics },
+            { id: "profile", ref: refs.profile },
+            { id: "project", ref: refs.project },
+            { id: "task", ref: refs.task },
+            { id: "createTask", ref: refs.createTask },
+            { id: "assignTask", ref: refs.assignTask },
+            { id: "chat", ref: refs.chat },
+            { id: "chatEverywhere", ref: refs.chatEverywhere },
+            { id: "whiteboard", ref: refs.whiteboard },
+            { id: "whiteboardTemplates", ref: refs.whiteboardTemplates },
+            { id: "advanced", ref: refs.advanced },
+            { id: "automaticTaskAssignment", ref: refs.automaticTaskAssignment },
+            { id: "skills", ref: refs.skills },
+            { id: "workinghours", ref: refs.workinghours },
+            { id: "taskScheduler", ref: refs.taskScheduler },
+            { id: "taskWhiteboardLinking", ref: refs.taskWhiteboardLinking },
         ];
 
         const observer = new IntersectionObserver(
@@ -96,14 +98,14 @@ export function InfoModal({
         if (!isOpen) return;
 
         const pageToSection: Record<string, RefObject<HTMLDivElement | null>> = {
-            "tasks": taskRef,
-            "chat": chatRef,
-            "whiteboard": whiteboardRef,
-            "project": projectRef,
-            "profile": profileRef,
+            "tasks": refs.task,
+            "chat": refs.chat,
+            "whiteboard": refs.whiteboard,
+            "project": refs.project,
+            "profile": refs.profile,
         };
 
-        let section = overviewRef;
+        let section = refs.overview;
         for (const s of Object.keys(pageToSection)) {
             if (location.pathname.includes(s)) {
                 section = pageToSection[s];
@@ -125,186 +127,44 @@ export function InfoModal({
             behavior: "smooth",
             block: "start",
         });
+        setSidebarOpen(false);
     };
-
-
 
     const germanVersion = (
         <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
             <Modal.Backdrop>
                 <Modal.Container size="cover">
                     <Modal.Dialog>
-                        <Modal.Header>The STRIDE Guide™</Modal.Header>
+                        <Modal.Header>
+                            <div className="flex align-center justify-between border-b">
+                                <p>The STRIDE Guide™</p>
+                                <button
+                                    onClick={() => setSidebarOpen(true)}
+                                    className="text-xl md:hidden"
+                                >
+                                    <Menu />
+                                </button>
+                            </div>
+                        </Modal.Header>
 
                         <Modal.Body>
                             <div className="flex h-full">
-                                {/* Sidebar */}
-                                <aside className="w-90 border-r p-2 flex flex-col gap-1">
-                                    <AsideButton
-                                        refObj={overviewRef}
-                                        section="overview"
-                                        text="Übersicht"
-                                        activeSection={activeSection}
-                                        scrollToSection={scrollToSection}
-                                    />
+                                <Sidebar
+                                    SidebarContent={SidebarGerman}
+                                    sidebarOpen={sidebarOpen}
+                                    setSidebarOpen={setSidebarOpen}
+									refs={refs}
+									activeSection={activeSection}
+									scrollToSection={scrollToSection}
+                                />
 
-                                    <AsideButton
-                                        refObj={basicsRef}
-                                        section="basics"
-                                        text="Grundlagen"
-                                        activeSection={activeSection}
-                                        scrollToSection={scrollToSection}
-                                    />
-
-                                    <div className="ml-4 border-l pl-3 flex flex-col gap-1">
-
-                                        <AsideButton
-                                            refObj={profileRef}
-                                            section="profile"
-                                            text="Profilverwaltung"
-                                            activeSection={activeSection}
-                                            scrollToSection={scrollToSection}
-                                        />
-
-                                        <AsideButton
-                                            refObj={projectRef}
-                                            section="project"
-                                            text="Projekt erstellen und verwalten"
-                                            activeSection={activeSection}
-                                            scrollToSection={scrollToSection}
-                                        />
-
-                                        <div>
-                                            <AsideButton
-                                                refObj={taskRef}
-                                                section="task"
-                                                text="Aufgabenverwaltung"
-                                                activeSection={activeSection}
-                                                scrollToSection={scrollToSection}
-                                            />
-
-                                            <div className="ml-4 border-l mt-1 flex flex-col gap-1">
-
-                                                <AsideButton
-                                                    refObj={createTaskRef}
-                                                    section="createTask"
-                                                    text="Aufgaben erstellen und bearbeiten"
-                                                    activeSection={activeSection}
-                                                    scrollToSection={scrollToSection}
-                                                />
-
-                                                <AsideButton
-                                                    refObj={assignTaskRef}
-                                                    section="assignTask"
-                                                    text="Aufgaben zuweisen"
-                                                    activeSection={activeSection}
-                                                    scrollToSection={scrollToSection}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <AsideButton
-                                                refObj={chatRef}
-                                                section="chat"
-                                                text="Mit anderen chatten"
-                                                activeSection={activeSection}
-                                                scrollToSection={scrollToSection}
-                                            />
-                                            <div className="ml-4 border-l mt-1 flex flex-col gap-1">
-                                                <AsideButton
-                                                    refObj={chatEverywhereRef}
-                                                    section="chatEverywhere"
-                                                    text="Überall chatten"
-                                                    activeSection={activeSection}
-                                                    scrollToSection={scrollToSection}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <AsideButton
-                                                refObj={whiteboardRef}
-                                                section="whiteboard"
-                                                text="Whiteboard verwenden"
-                                                activeSection={activeSection}
-                                                scrollToSection={scrollToSection}
-                                            />
-                                            <div className="ml-4 border-l mt-1 flex flex-col gap-1">
-                                                <AsideButton
-                                                    refObj={whiteboardTemplatesRef}
-                                                    section="whiteboardTemplates"
-                                                    text="Whiteboard-Vorlagen"
-                                                    activeSection={activeSection}
-                                                    scrollToSection={scrollToSection}
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <AsideButton
-                                        refObj={advancedRef}
-                                        section="advanced"
-                                        text="Erweitert"
-                                        activeSection={activeSection}
-                                        scrollToSection={scrollToSection}
-                                    />
-
-                                    <div className="ml-4 border-l pl-3 flex flex-col gap-1">
-                                        <AsideButton
-                                            refObj={automaticTaskAssignmentRef}
-                                            section="automaticTaskAssignment"
-                                            text="Automatische Aufgabenzuweisung"
-                                            activeSection={activeSection}
-                                            scrollToSection={scrollToSection}
-                                        />
-
-                                        <div className="ml-4 border-l mt-1 flex flex-col gap-1">
-                                            <AsideButton
-                                                refObj={skillsRef}
-                                                section="skills"
-                                                text="Fähigkeiten"
-                                                activeSection={activeSection}
-                                                scrollToSection={scrollToSection}
-                                            />
-
-                                            <AsideButton
-                                                refObj={workinghoursRef}
-                                                section="workinghours"
-                                                text="Arbeitsstunden"
-                                                activeSection={activeSection}
-                                                scrollToSection={scrollToSection}
-                                            />
-
-                                            <AsideButton
-                                                refObj={taskSchedulerRef}
-                                                section="taskScheduler"
-                                                text="Scheduler ausführen!"
-                                                activeSection={activeSection}
-                                                scrollToSection={scrollToSection}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="ml-4 border-l pl-3 flex flex-col gap-1">
-                                        <AsideButton
-                                            refObj={taskWhiteboardLinkingRef}
-                                            section="taskWhiteboardLinking"
-                                            text="Aufgaben-Whiteboard-Verknüpfung"
-                                            activeSection={activeSection}
-                                            scrollToSection={scrollToSection}
-                                        />
-                                    </div>
-                                </aside>
-
-                                {/* Scrollable content */}
                                 <main
                                     className="flex-1 overflow-y-auto p-6"
                                 >
                                     <section className="mb-12">
                                         <div
                                             id="overview"
-                                            ref={overviewRef}
+                                            ref={refs.overview}
                                             className="mb-16"
                                         >
                                             <h1 className="min-w-0 flex-1 truncate text-4xl font-bold tracking-tight">
@@ -377,7 +237,7 @@ export function InfoModal({
                                     <section className="mb-12">
                                         <div
                                             id="basics"
-                                            ref={basicsRef}
+                                            ref={refs.basics}
                                             className="mb-16"
                                         >
                                             <h1 className="min-w-0 flex-1 truncate text-4xl font-bold tracking-tight">
@@ -386,7 +246,7 @@ export function InfoModal({
 
                                             <div
                                                 id="profile"
-                                                ref={profileRef}
+                                                ref={refs.profile}
                                                 className="my-8"
                                             >
                                                 <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -411,7 +271,7 @@ export function InfoModal({
 
                                             <div
                                                 id="project"
-                                                ref={projectRef}
+                                                ref={refs.project}
                                                 className="my-8"
                                             >
                                                 <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -452,7 +312,7 @@ export function InfoModal({
 
                                             <div
                                                 id="task"
-                                                ref={taskRef}
+                                                ref={refs.task}
                                                 className="my-8"
                                             >
                                                 <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -476,7 +336,7 @@ export function InfoModal({
 
                                                 <div
                                                     id="createTask"
-                                                    ref={createTaskRef}
+                                                    ref={refs.createTask}
                                                     className="my-8 border-l pl-4"
                                                 >
                                                     <h1 className="min-w-0 flex-1 truncate text-2xl font-bold tracking-tight">
@@ -503,7 +363,7 @@ export function InfoModal({
 
                                                 <div
                                                     id="assignTask"
-                                                    ref={assignTaskRef}
+                                                    ref={refs.assignTask}
                                                     className="my-8 border-l pl-4"
                                                 >
                                                     <h1 className="min-w-0 flex-1 truncate text-2xl font-bold tracking-tight">
@@ -525,7 +385,7 @@ export function InfoModal({
 
                                             <div
                                                 id="chat"
-                                                ref={chatRef}
+                                                ref={refs.chat}
                                                 className="my-8"
                                             >
                                                 <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -542,7 +402,7 @@ export function InfoModal({
 
                                                 <div
                                                     id="chatEverywhere"
-                                                    ref={chatEverywhereRef}
+                                                    ref={refs.chatEverywhere}
                                                     className="my-8"
                                                 >
                                                     <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -564,7 +424,7 @@ export function InfoModal({
 
                                             <div
                                                 id="whiteboard"
-                                                ref={whiteboardRef}
+                                                ref={refs.whiteboard}
                                                 className="my-8"
                                             >
                                                 <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -581,7 +441,7 @@ export function InfoModal({
 
                                                 <div
                                                     id="whiteboardTemplates"
-                                                    ref={whiteboardTemplatesRef}
+                                                    ref={refs.whiteboardTemplates}
                                                     className="my-8"
                                                 >
                                                     <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -606,7 +466,7 @@ export function InfoModal({
                                     <section id="settings" className="mb-12">
                                         <div
                                             id="advanced"
-                                            ref={advancedRef}
+                                            ref={refs.advanced}
                                             className="mb-16"
                                         >
                                             <h1 className="min-w-0 flex-1 truncate text-4xl font-bold tracking-tight">
@@ -615,7 +475,7 @@ export function InfoModal({
 
                                             <div
                                                 id="automaticTaskAssignment"
-                                                ref={automaticTaskAssignmentRef}
+                                                ref={refs.automaticTaskAssignment}
                                                 className="my-8"
                                             >
                                                 <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -666,7 +526,7 @@ export function InfoModal({
 
                                                 <div
                                                     id="skills"
-                                                    ref={skillsRef}
+                                                    ref={refs.skills}
                                                     className="my-8"
                                                 >
                                                     <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -703,7 +563,7 @@ export function InfoModal({
 
                                                 <div
                                                     id="workinghours"
-                                                    ref={workinghoursRef}
+                                                    ref={refs.workinghours}
                                                     className="my-8"
                                                 >
                                                     <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -746,7 +606,7 @@ export function InfoModal({
 
                                                 <div
                                                     id="taskScheduler"
-                                                    ref={taskSchedulerRef}
+                                                    ref={refs.taskScheduler}
                                                     className="my-8"
                                                 >
                                                     <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -765,7 +625,7 @@ export function InfoModal({
 
                                             <div
                                                 id="taskWhiteboardLinking"
-                                                ref={taskWhiteboardLinkingRef}
+                                                ref={refs.taskWhiteboardLinking}
                                                 className="my-8"
                                             >
                                                 <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -845,176 +705,36 @@ export function InfoModal({
             <Modal.Backdrop>
                 <Modal.Container size="cover">
                     <Modal.Dialog>
-                        <Modal.Header>The STRIDE Guide™</Modal.Header>
+                        <Modal.Header>
+                            <div className="flex align-center justify-between border-b">
+                                <p>The STRIDE Guide™</p>
+                                <button
+                                    onClick={() => setSidebarOpen(true)}
+                                    className="text-xl md:hidden"
+                                >
+                                    <Menu />
+                                </button>
+                            </div>
+                        </Modal.Header>
 
                         <Modal.Body>
                             <div className="flex h-full">
-                                {/* Sidebar */}
-                                <aside className="w-90 border-r p-2 flex flex-col gap-1">
-                                    <AsideButton
-                                        refObj={overviewRef}
-                                        section="overview"
-                                        text="Overview"
-                                        activeSection={activeSection}
-                                        scrollToSection={scrollToSection}
-                                    />
+                                <Sidebar
+                                    SidebarContent={SidebarEnglish}
+                                    sidebarOpen={sidebarOpen}
+                                    setSidebarOpen={setSidebarOpen}
+									refs={refs}
+									activeSection={activeSection}
+									scrollToSection={scrollToSection}
+                                />
 
-                                    <AsideButton
-                                        refObj={basicsRef}
-                                        section="basics"
-                                        text="Basics"
-                                        activeSection={activeSection}
-                                        scrollToSection={scrollToSection}
-                                    />
-
-                                    {/* Subsections */}
-                                    <div className="ml-4 border-l pl-3 flex flex-col gap-1">
-
-                                        <AsideButton
-                                            refObj={profileRef}
-                                            section="profile"
-                                            text="Profile management"
-                                            activeSection={activeSection}
-                                            scrollToSection={scrollToSection}
-                                        />
-
-                                        <AsideButton
-                                            refObj={projectRef}
-                                            section="project"
-                                            text="Creating and managing a project"
-                                            activeSection={activeSection}
-                                            scrollToSection={scrollToSection}
-                                        />
-
-                                        {/* Task group */}
-                                        <div>
-                                            <AsideButton
-                                                refObj={taskRef}
-                                                section="task"
-                                                text="Task management"
-                                                activeSection={activeSection}
-                                                scrollToSection={scrollToSection}
-                                            />
-
-                                            <div className="ml-4 border-l mt-1 flex flex-col gap-1">
-
-                                                <AsideButton
-                                                    refObj={createTaskRef}
-                                                    section="createTask"
-                                                    text="Creating and editing tasks"
-                                                    activeSection={activeSection}
-                                                    scrollToSection={scrollToSection}
-                                                />
-
-                                                <AsideButton
-                                                    refObj={assignTaskRef}
-                                                    section="assignTask"
-                                                    text="Assigning tasks"
-                                                    activeSection={activeSection}
-                                                    scrollToSection={scrollToSection}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <AsideButton
-                                                refObj={chatRef}
-                                                section="chat"
-                                                text="Chatting with others"
-                                                activeSection={activeSection}
-                                                scrollToSection={scrollToSection}
-                                            />
-                                            <div className="ml-4 border-l mt-1 flex flex-col gap-1">
-                                                <AsideButton
-                                                    refObj={chatEverywhereRef}
-                                                    section="chatEverywhere"
-                                                    text="Chat everywhere"
-                                                    activeSection={activeSection}
-                                                    scrollToSection={scrollToSection}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <AsideButton
-                                                refObj={whiteboardRef}
-                                                section="whiteboard"
-                                                text="Using the Whiteboard"
-                                                activeSection={activeSection}
-                                                scrollToSection={scrollToSection}
-                                            />
-                                            <div className="ml-4 border-l mt-1 flex flex-col gap-1">
-                                                <AsideButton
-                                                    refObj={whiteboardTemplatesRef}
-                                                    section="whiteboardTemplates"
-                                                    text="Whiteboard Templates"
-                                                    activeSection={activeSection}
-                                                    scrollToSection={scrollToSection}
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <AsideButton
-                                        refObj={advancedRef}
-                                        section="advanced"
-                                        text="Advanced"
-                                        activeSection={activeSection}
-                                        scrollToSection={scrollToSection}
-                                    />
-                                    <div className="ml-4 border-l pl-3 flex flex-col gap-1">
-                                        <AsideButton
-                                            refObj={automaticTaskAssignmentRef}
-                                            section="automaticTaskAssignment"
-                                            text="Automatic Task Assignment"
-                                            activeSection={activeSection}
-                                            scrollToSection={scrollToSection}
-                                        />
-                                        <div className="ml-4 border-l mt-1 flex flex-col gap-1">
-                                            <AsideButton
-                                                refObj={skillsRef}
-                                                section="skills"
-                                                text="Skills"
-                                                activeSection={activeSection}
-                                                scrollToSection={scrollToSection}
-                                            />
-
-                                            <AsideButton
-                                                refObj={workinghoursRef}
-                                                section="workinghours"
-                                                text="Working-hours"
-                                                activeSection={activeSection}
-                                                scrollToSection={scrollToSection}
-                                            />
-
-                                            <AsideButton
-                                                refObj={taskSchedulerRef}
-                                                section="taskScheduler"
-                                                text="Running the Scheduler!"
-                                                activeSection={activeSection}
-                                                scrollToSection={scrollToSection}
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="ml-4 border-l pl-3 flex flex-col gap-1">
-                                        <AsideButton
-                                            refObj={taskWhiteboardLinkingRef}
-                                            section="taskWhiteboardLinking"
-                                            text="Task-Whiteboard Linking"
-                                            activeSection={activeSection}
-                                            scrollToSection={scrollToSection}
-                                        />
-                                    </div>
-                                </aside>
-
-                                {/* Scrollable content */}
                                 <main
                                     className="flex-1 overflow-y-auto p-6"
                                 >
                                     <section className="mb-12">
                                         <div
                                             id="overview"
-                                            ref={overviewRef}
+                                            ref={refs.overview}
                                             className="mb-16"
                                         >
                                             <h1 className="min-w-0 flex-1 truncate text-4xl font-bold tracking-tight">
@@ -1075,7 +795,7 @@ export function InfoModal({
                                     <section className="mb-12">
                                         <div
                                             id="basics"
-                                            ref={basicsRef}
+                                            ref={refs.basics}
                                             className="mb-16"
                                         >
                                             <h1 className="min-w-0 flex-1 truncate text-4xl font-bold tracking-tight">
@@ -1083,7 +803,7 @@ export function InfoModal({
                                             </h1>
                                             <div
                                                 id="profile"
-                                                ref={profileRef}
+                                                ref={refs.profile}
                                                 className="my-8"
                                             >
                                                 <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -1101,7 +821,7 @@ export function InfoModal({
                                             </div>
                                             <div
                                                 id="project"
-                                                ref={projectRef}
+                                                ref={refs.project}
                                                 className="my-8"
                                             >
                                                 <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -1129,7 +849,7 @@ export function InfoModal({
 
                                             <div
                                                 id="task"
-                                                ref={taskRef}
+                                                ref={refs.task}
                                                 className="my-8"
                                             >
                                                 <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -1143,7 +863,7 @@ export function InfoModal({
 
                                                 <div
                                                     id="createTask"
-                                                    ref={createTaskRef}
+                                                    ref={refs.createTask}
                                                     className="my-8 border-l pl-4"
                                                 >
                                                     <h1 className="min-w-0 flex-1 truncate text-2xl font-bold tracking-tight">
@@ -1159,7 +879,7 @@ export function InfoModal({
 
                                                 <div
                                                     id="assignTask"
-                                                    ref={assignTaskRef}
+                                                    ref={refs.assignTask}
                                                     className="my-8 border-l pl-4"
                                                 >
                                                     <h1 className="min-w-0 flex-1 truncate text-2xl font-bold tracking-tight">
@@ -1176,7 +896,7 @@ export function InfoModal({
 
                                             <div
                                                 id="chat"
-                                                ref={chatRef}
+                                                ref={refs.chat}
                                                 className="my-8"
                                             >
                                                 <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -1191,7 +911,7 @@ export function InfoModal({
 
                                                 <div
                                                     id="chatEverywhere"
-                                                    ref={chatEverywhereRef}
+                                                    ref={refs.chatEverywhere}
                                                     className="my-8"
                                                 >
                                                     <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -1212,7 +932,7 @@ export function InfoModal({
 
                                             <div
                                                 id="whiteboard"
-                                                ref={whiteboardRef}
+                                                ref={refs.whiteboard}
                                                 className="my-8"
                                             >
                                                 <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -1227,7 +947,7 @@ export function InfoModal({
 
                                                 <div
                                                     id="whiteboardTemplates"
-                                                    ref={whiteboardTemplatesRef}
+                                                    ref={refs.whiteboardTemplates}
                                                     className="my-8"
                                                 >
                                                     <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -1249,7 +969,7 @@ export function InfoModal({
                                     <section id="settings" className="mb-12">
                                         <div
                                             id="advanced"
-                                            ref={advancedRef}
+                                            ref={refs.advanced}
                                             className="mb-16"
                                         >
                                             <h1 className="min-w-0 flex-1 truncate text-4xl font-bold tracking-tight">
@@ -1258,7 +978,7 @@ export function InfoModal({
 
                                             <div
                                                 id="automaticTaskAssignment"
-                                                ref={automaticTaskAssignmentRef}
+                                                ref={refs.automaticTaskAssignment}
                                                 className="my-8"
                                             >
                                                 <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -1276,7 +996,7 @@ export function InfoModal({
 
                                                 <div
                                                     id="skills"
-                                                    ref={skillsRef}
+                                                    ref={refs.skills}
                                                     className="my-8"
                                                 >
                                                     <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -1304,7 +1024,7 @@ export function InfoModal({
 
                                                 <div
                                                     id="workinghours"
-                                                    ref={workinghoursRef}
+                                                    ref={refs.workinghours}
                                                     className="my-8"
                                                 >
                                                     <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -1326,7 +1046,7 @@ export function InfoModal({
 
                                                 <div
                                                     id="taskScheduler"
-                                                    ref={taskSchedulerRef}
+                                                    ref={refs.taskScheduler}
                                                     className="my-8"
                                                 >
                                                     <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -1343,7 +1063,7 @@ export function InfoModal({
 
                                             <div
                                                 id="taskWhiteboardLinking"
-                                                ref={taskWhiteboardLinkingRef}
+                                                ref={refs.taskWhiteboardLinking}
                                                 className="my-8"
                                             >
                                                 <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -1421,3 +1141,376 @@ function AsideButton({ refObj, section, text, activeSection, scrollToSection }: 
         </Button>
     )
 }
+
+interface SidebarInnerProps {
+    refs: Record<string, React.RefObject<HTMLDivElement | null>>;
+    activeSection: string;
+    scrollToSection: (ref: React.RefObject<HTMLDivElement | null>) => void;
+}
+
+function SidebarGerman({ refs, activeSection, scrollToSection }: SidebarInnerProps) {
+    return (
+        <>
+            <AsideButton
+                refObj={refs.overview}
+                section="overview"
+                text="Übersicht"
+                activeSection={activeSection}
+                scrollToSection={scrollToSection}
+            />
+
+            <AsideButton
+                refObj={refs.basics}
+                section="basics"
+                text="Grundlagen"
+                activeSection={activeSection}
+                scrollToSection={scrollToSection}
+            />
+
+            <div className="ml-4 border-l pl-3 flex flex-col gap-1">
+
+                <AsideButton
+                    refObj={refs.profile}
+                    section="profile"
+                    text="Profilverwaltung"
+                    activeSection={activeSection}
+                    scrollToSection={scrollToSection}
+                />
+
+                <AsideButton
+                    refObj={refs.project}
+                    section="project"
+                    text="Projekt erstellen und verwalten"
+                    activeSection={activeSection}
+                    scrollToSection={scrollToSection}
+                />
+
+                <div>
+                    <AsideButton
+                        refObj={refs.task}
+                        section="task"
+                        text="Aufgabenverwaltung"
+                        activeSection={activeSection}
+                        scrollToSection={scrollToSection}
+                    />
+
+                    <div className="ml-4 border-l mt-1 flex flex-col gap-1">
+
+                        <AsideButton
+                            refObj={refs.createTask}
+                            section="createTask"
+                            text="Aufgaben erstellen und bearbeiten"
+                            activeSection={activeSection}
+                            scrollToSection={scrollToSection}
+                        />
+
+                        <AsideButton
+                            refObj={refs.assignTask}
+                            section="assignTask"
+                            text="Aufgaben zuweisen"
+                            activeSection={activeSection}
+                            scrollToSection={scrollToSection}
+                        />
+                    </div>
+                </div>
+
+                <div>
+                    <AsideButton
+                        refObj={refs.chat}
+                        section="chat"
+                        text="Mit anderen chatten"
+                        activeSection={activeSection}
+                        scrollToSection={scrollToSection}
+                    />
+                    <div className="ml-4 border-l mt-1 flex flex-col gap-1">
+                        <AsideButton
+                            refObj={refs.chatEverywhere}
+                            section="chatEverywhere"
+                            text="Überall chatten"
+                            activeSection={activeSection}
+                            scrollToSection={scrollToSection}
+                        />
+                    </div>
+                </div>
+
+                <div>
+                    <AsideButton
+                        refObj={refs.whiteboard}
+                        section="whiteboard"
+                        text="Whiteboard verwenden"
+                        activeSection={activeSection}
+                        scrollToSection={scrollToSection}
+                    />
+                    <div className="ml-4 border-l mt-1 flex flex-col gap-1">
+                        <AsideButton
+                            refObj={refs.whiteboardTemplates}
+                            section="whiteboardTemplates"
+                            text="Whiteboard-Vorlagen"
+                            activeSection={activeSection}
+                            scrollToSection={scrollToSection}
+                        />
+                    </div>
+                </div>
+            </div>
+
+            <AsideButton
+                refObj={refs.advanced}
+                section="advanced"
+                text="Erweitert"
+                activeSection={activeSection}
+                scrollToSection={scrollToSection}
+            />
+
+            <div className="ml-4 border-l pl-3 flex flex-col gap-1">
+                <AsideButton
+                    refObj={refs.automaticTaskAssignment}
+                    section="automaticTaskAssignment"
+                    text="Automatische Aufgabenzuweisung"
+                    activeSection={activeSection}
+                    scrollToSection={scrollToSection}
+                />
+
+                <div className="ml-4 border-l mt-1 flex flex-col gap-1">
+                    <AsideButton
+                        refObj={refs.skills}
+                        section="skills"
+                        text="Fähigkeiten"
+                        activeSection={activeSection}
+                        scrollToSection={scrollToSection}
+                    />
+
+                    <AsideButton
+                        refObj={refs.workinghours}
+                        section="workinghours"
+                        text="Arbeitsstunden"
+                        activeSection={activeSection}
+                        scrollToSection={scrollToSection}
+                    />
+
+                    <AsideButton
+                        refObj={refs.taskScheduler}
+                        section="taskScheduler"
+                        text="Scheduler ausführen!"
+                        activeSection={activeSection}
+                        scrollToSection={scrollToSection}
+                    />
+                </div>
+            </div>
+
+            <div className="ml-4 border-l pl-3 flex flex-col gap-1">
+                <AsideButton
+                    refObj={refs.taskWhiteboardLinking}
+                    section="taskWhiteboardLinking"
+                    text="Aufgaben-Whiteboard-Verknüpfung"
+                    activeSection={activeSection}
+                    scrollToSection={scrollToSection}
+                />
+            </div>
+        </>
+    );
+}
+
+function SidebarEnglish({ refs, activeSection, scrollToSection }: SidebarInnerProps) {
+    return (
+        <>
+            <AsideButton
+                refObj={refs.overview}
+                section="overview"
+                text="Overview"
+                activeSection={activeSection}
+                scrollToSection={scrollToSection}
+            />
+
+            <AsideButton
+                refObj={refs.basics}
+                section="basics"
+                text="Basics"
+                activeSection={activeSection}
+                scrollToSection={scrollToSection}
+            />
+
+            <div className="ml-4 border-l pl-3 flex flex-col gap-1">
+
+                <AsideButton
+                    refObj={refs.profile}
+                    section="profile"
+                    text="Profile management"
+                    activeSection={activeSection}
+                    scrollToSection={scrollToSection}
+                />
+
+                <AsideButton
+                    refObj={refs.project}
+                    section="project"
+                    text="Creating and managing a project"
+                    activeSection={activeSection}
+                    scrollToSection={scrollToSection}
+                />
+
+                <div>
+                    <AsideButton
+                        refObj={refs.task}
+                        section="task"
+                        text="Task management"
+                        activeSection={activeSection}
+                        scrollToSection={scrollToSection}
+                    />
+
+                    <div className="ml-4 border-l mt-1 flex flex-col gap-1">
+
+                        <AsideButton
+                            refObj={refs.createTask}
+                            section="createTask"
+                            text="Creating and editing tasks"
+                            activeSection={activeSection}
+                            scrollToSection={scrollToSection}
+                        />
+
+                        <AsideButton
+                            refObj={refs.assignTask}
+                            section="assignTask"
+                            text="Assigning tasks"
+                            activeSection={activeSection}
+                            scrollToSection={scrollToSection}
+                        />
+                    </div>
+                </div>
+
+                <div>
+                    <AsideButton
+                        refObj={refs.chat}
+                        section="chat"
+                        text="Chatting with others"
+                        activeSection={activeSection}
+                        scrollToSection={scrollToSection}
+                    />
+                    <div className="ml-4 border-l mt-1 flex flex-col gap-1">
+                        <AsideButton
+                            refObj={refs.chatEverywhere}
+                            section="chatEverywhere"
+                            text="Chat everywhere"
+                            activeSection={activeSection}
+                            scrollToSection={scrollToSection}
+                        />
+                    </div>
+                </div>
+
+                <div>
+                    <AsideButton
+                        refObj={refs.whiteboard}
+                        section="whiteboard"
+                        text="Using the Whiteboard"
+                        activeSection={activeSection}
+                        scrollToSection={scrollToSection}
+                    />
+                    <div className="ml-4 border-l mt-1 flex flex-col gap-1">
+                        <AsideButton
+                            refObj={refs.whiteboardTemplates}
+                            section="whiteboardTemplates"
+                            text="Whiteboard Templates"
+                            activeSection={activeSection}
+                            scrollToSection={scrollToSection}
+                        />
+                    </div>
+                </div>
+            </div>
+
+            <AsideButton
+                refObj={refs.advanced}
+                section="advanced"
+                text="Advanced"
+                activeSection={activeSection}
+                scrollToSection={scrollToSection}
+            />
+            <div className="ml-4 border-l pl-3 flex flex-col gap-1">
+                <AsideButton
+                    refObj={refs.automaticTaskAssignment}
+                    section="automaticTaskAssignment"
+                    text="Automatic Task Assignment"
+                    activeSection={activeSection}
+                    scrollToSection={scrollToSection}
+                />
+                <div className="ml-4 border-l mt-1 flex flex-col gap-1">
+                    <AsideButton
+                        refObj={refs.skills}
+                        section="skills"
+                        text="Skills"
+                        activeSection={activeSection}
+                        scrollToSection={scrollToSection}
+                    />
+
+                    <AsideButton
+                        refObj={refs.workinghours}
+                        section="workinghours"
+                        text="Working-hours"
+                        activeSection={activeSection}
+                        scrollToSection={scrollToSection}
+                    />
+
+                    <AsideButton
+                        refObj={refs.taskScheduler}
+                        section="taskScheduler"
+                        text="Running the Scheduler!"
+                        activeSection={activeSection}
+                        scrollToSection={scrollToSection}
+                    />
+                </div>
+            </div>
+            <div className="ml-4 border-l pl-3 flex flex-col gap-1">
+                <AsideButton
+                    refObj={refs.taskWhiteboardLinking}
+                    section="taskWhiteboardLinking"
+                    text="Task-Whiteboard Linking"
+                    activeSection={activeSection}
+                    scrollToSection={scrollToSection}
+                />
+            </div>
+        </>
+    );
+}
+
+interface SidebarProps {
+    SidebarContent: React.ComponentType<SidebarInnerProps>;
+    sidebarOpen: boolean;
+    setSidebarOpen: (value: boolean) => void;
+    refs: Record<string, React.RefObject<HTMLDivElement | null>>;
+    activeSection: string;
+    scrollToSection: (ref: React.RefObject<HTMLDivElement | null>) => void;
+};
+
+const Sidebar = ({ SidebarContent, sidebarOpen, setSidebarOpen, refs, activeSection, scrollToSection }: SidebarProps) => (
+    <>
+        {/* Desktop Sidebar */}
+        <aside className="hidden md:flex w-90 border-r p-2 flex-col gap-1" >
+            <SidebarContent refs={refs} activeSection={activeSection} scrollToSection={scrollToSection} />
+        </aside >
+
+        {/* Mobile Drawer */}
+        <div
+            className={`md:hidden absolute inset-0 z-50 transition-opacity duration-300 ${sidebarOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+                }`
+            }
+        >
+            <div
+                className={`absolute inset-0 bg-surface/50 transition-opacity duration-300 ${sidebarOpen ? "opacity-100 pointer-events-auto" : "opacity-0"
+                    }`}
+                onClick={() => setSidebarOpen(false)}
+            />
+
+            <aside
+                className={`absolute left-0 top-0 h-full bg-surface w-80 shadow-xl overflow-y-auto p-3
+                transform transition-transform duration-300 ease-out
+                ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
+            >
+                <button
+                    className="mb-3 text-sm"
+                    onClick={() => setSidebarOpen(false)}
+                >
+                    <X />
+                </button>
+
+            	<SidebarContent refs={refs} activeSection={activeSection} scrollToSection={scrollToSection} />
+            </aside>
+        </div >
+    </>
+);
