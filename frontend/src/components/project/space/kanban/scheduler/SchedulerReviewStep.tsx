@@ -15,6 +15,7 @@ interface SchedulerReviewStepProps {
     isConfirming: boolean
     onCancel: () => void
     onAssignmentChange: (taskId: string, userId: string) => void
+	onAssignmentRemove: (taskId: string, userId: string) => void
     onConfirm: () => Promise<void>
 }
 
@@ -25,6 +26,7 @@ export function SchedulerReviewStep({
     isConfirming,
     onCancel,
     onAssignmentChange,
+	onAssignmentRemove,
     onConfirm,
 }: SchedulerReviewStepProps) {
     const { t } = useTranslation('space')
@@ -32,7 +34,7 @@ export function SchedulerReviewStep({
         ...preview.newAssignments,
         ...preview.changedAssignments,
         ...preview.incompatibleAssignments,
-    ]
+    ];
     const hasAssignments = assignments.length > 0
     const onlyInvalidAssignments = assignments.length == preview.incompatibleAssignments.length
     const hasUnknownAssignee = assignments.some(
@@ -59,9 +61,6 @@ export function SchedulerReviewStep({
                 </div>
                 {sectionAssignments.map((assignment) => {
                     const task = tasks.find((item) => item.id === assignment.taskId)
-                    console.log(assignment)
-                    console.log(task)
-                    console.log(tasks)
                     if (!task) {
                         return null
                     }
@@ -73,6 +72,7 @@ export function SchedulerReviewStep({
                             task={task}
                             members={members}
                             onChange={onAssignmentChange}
+							onRemove={onAssignmentRemove}
                         />
                     )
                 })}
@@ -122,11 +122,13 @@ export function SchedulerReviewStep({
                         {t('tasks.scheduler.review.emptyHint')}
                     </div>
                 )}
+				{/*
                 {hasAssignments && hasUnknownAssignee ? (
                     <div className="border-danger-200 bg-danger-50 text-danger-700 rounded-xl border p-4 text-sm">
                         {t('tasks.scheduler.review.invalidAssignments')}
                     </div>
                 ) : null}
+				*/}
             </Modal.Body>
             <Modal.Footer>
                 <Button
@@ -140,7 +142,7 @@ export function SchedulerReviewStep({
                     <Button
                         onPress={onConfirm}
                         isPending={isConfirming}
-                        isDisabled={hasUnknownAssignee}
+                        isDisabled={false}
                     >
                         {t('tasks.scheduler.actions.confirm')}
                     </Button>

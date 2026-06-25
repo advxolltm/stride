@@ -234,7 +234,7 @@ export function KanbanBoard() {
                 projectId,
                 body: buildSchedulerTriggerRequest(
                     schedulerTasks,
-                    schedulableSchedulerMembers,
+                    schedulerMembers,
                     ['max-hours-scheduled', strat as string, 'max-tasks-scheduled']
                 ),
             }).unwrap()
@@ -253,23 +253,23 @@ export function KanbanBoard() {
 
     async function handleSchedulerConfirm(
         assignments: {
-            userId: string
+            userId: string | null
             taskId: string
         }[],
     ) {
-        const validAssignments = assignments.filter((assignment) =>
-            schedulerMembers.some((member) => member.id === assignment.userId),
-        )
-
-        if (validAssignments.length !== assignments.length) {
-            toast.danger(t('tasks.scheduler.review.invalidAssignments'))
-            return
-        }
+        // const validAssignments = assignments.filter((assignment) =>
+        //     schedulerMembers.some((member) => member.id === assignment.userId),
+        // )
+        //
+        // if (validAssignments.length !== assignments.length) {
+        //     toast.danger(t('tasks.scheduler.review.invalidAssignments'))
+        //     return
+        // }
 
         try {
             await confirmScheduledAssignments({
                 projectId,
-                body: validAssignments.map((assignment) => ({
+                body: assignments.map((assignment) => ({
                     user_id: assignment.userId,
                     task_id: assignment.taskId,
                 })),

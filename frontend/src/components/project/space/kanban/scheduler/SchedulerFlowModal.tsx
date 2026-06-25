@@ -22,7 +22,7 @@ interface SchedulerFlowModalProps {
     skippedMemberCount: number
     estimatedTaskCount: number
     startDateTaskCount: number
-    onRun: (optimStrat : OptimizationStrategy) => Promise<SchedulerPreviewResponse>
+    onRun: (optimStrat: OptimizationStrategy) => Promise<SchedulerPreviewResponse>
     onConfirm: (assignments: SchedulerAssignment[]) => Promise<void>
 }
 
@@ -104,6 +104,24 @@ export function SchedulerFlowModal({
         }
     }, [step])
 
+    function handleAssignmentRemove(taskId: string, userId: string) {
+        function updateAssignments(assignments: SchedulerAssignment[]) {
+            return assignments.map(assignment => {
+				if(assignment.taskId === taskId && assignment.userId === userId) {
+					return { taskId: assignment.taskId, userId: null };
+				} else {
+					return assignment;
+				}
+			});
+        }
+
+        setPreview((current) => ({
+            newAssignments: updateAssignments(current.newAssignments),
+            changedAssignments: updateAssignments(current.changedAssignments),
+			incompatibleAssignments: updateAssignments(current.incompatibleAssignments),
+        }))
+    }
+
     function handleAssignmentChange(taskId: string, userId: string) {
         function updateAssignments(assignments: SchedulerAssignment[]) {
             return assignments.map((assignment) =>
@@ -153,6 +171,7 @@ export function SchedulerFlowModal({
             await onConfirm([
                 ...preview.newAssignments,
                 ...preview.changedAssignments,
+				...preview.incompatibleAssignments,
             ])
             handleOpenChange(false)
         } finally {
@@ -189,6 +208,7 @@ export function SchedulerFlowModal({
                                 isConfirming={isConfirming}
                                 onCancel={() => handleOpenChange(false)}
                                 onAssignmentChange={handleAssignmentChange}
+								onAssignmentRemove={handleAssignmentRemove}
                                 onConfirm={handleConfirm}
                             />
                         ) : null}

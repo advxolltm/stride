@@ -169,7 +169,7 @@ export type SchedulerScheduleRequest = z.infer<
 >
 
 export const ApiSchedulerAssignmentSchema = z.object({
-    user_id: z.string(),
+    user_id: z.nullable(z.string()),
     task_id: z.string(),
 })
 
@@ -191,7 +191,7 @@ export type ApiSchedulerPreviewResponse = z.infer<
 >
 
 export const SchedulerAssignmentSchema = z.object({
-    userId: z.string(),
+    userId: z.nullable(z.string()),
     taskId: z.string(),
 })
 

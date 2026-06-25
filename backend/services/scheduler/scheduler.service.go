@@ -196,13 +196,13 @@ func (s schedulerService) ScheduleTasksToUsers(c context.Context, req Scheduling
 			//TODO: Return error that shows that some project member was not found
 			return nil, err_u
 		}
+		//The scheduler works with ProjectMember IDs because the tasks use Projectmember IDs, but the frontend works with UserIDs
+		// So here we are...
+		member_user_map[user.ID] = userid
 		if user.WorkingHours == 0 {
 			continue
 		}
 		raw_users = append(raw_users, *user)
-		//The scheduler works with ProjectMember IDs because the tasks use Projectmember IDs, but the frontend works with UserIDs
-		// So here we are...
-		member_user_map[user.ID] = userid
 	}
 
 	schedulableUsers, err := filterSchedulableMembers(raw_users)
