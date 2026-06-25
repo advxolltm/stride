@@ -1,6 +1,6 @@
 import { Button, cn, Modal } from '@heroui/react'
 import { CircleQuestionMark, Menu, X } from 'lucide-react'
-import React, { useEffect, useRef, useState, type RefObject } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next'
 import { LanguageSwitcher } from '../layout/LanguageSwitcher';
 import { ThemeSwitcher } from '../layout/ThemeSwitcher';
@@ -11,6 +11,26 @@ type MyModalProps = {
     onOpenChange: (open: boolean) => void;
 };
 
+type SectionRefs = React.RefObject<{
+	overview: HTMLDivElement | null;
+	basics: HTMLDivElement | null;
+	profile: HTMLDivElement | null;
+	project: HTMLDivElement | null;
+	task: HTMLDivElement | null;
+	createTask: HTMLDivElement | null;
+	assignTask: HTMLDivElement | null;
+	chat: HTMLDivElement | null;
+	chatEverywhere: HTMLDivElement | null;
+	whiteboard: HTMLDivElement | null;
+	whiteboardTemplates: HTMLDivElement | null;
+	advanced: HTMLDivElement | null;
+	automaticTaskAssignment: HTMLDivElement | null;
+	skills: HTMLDivElement | null;
+	workinghours: HTMLDivElement | null;
+	taskScheduler: HTMLDivElement | null;
+	taskWhiteboardLinking: HTMLDivElement | null;
+}>;
+
 export function InfoModal({
     onOpenChange,
     isOpen
@@ -19,25 +39,25 @@ export function InfoModal({
     const isGerman = i18n.language.startsWith("de");
     const location = useLocation();
 
-    const refs = {
-        overview: useRef<HTMLDivElement>(null),
-        basics: useRef<HTMLDivElement>(null),
-        profile: useRef<HTMLDivElement>(null),
-        project: useRef<HTMLDivElement>(null),
-        task: useRef<HTMLDivElement>(null),
-        createTask: useRef<HTMLDivElement>(null),
-        assignTask: useRef<HTMLDivElement>(null),
-        chat: useRef<HTMLDivElement>(null),
-        chatEverywhere: useRef<HTMLDivElement>(null),
-        whiteboard: useRef<HTMLDivElement>(null),
-        whiteboardTemplates: useRef<HTMLDivElement>(null),
-        advanced: useRef<HTMLDivElement>(null),
-        automaticTaskAssignment: useRef<HTMLDivElement>(null),
-        skills: useRef<HTMLDivElement>(null),
-        workinghours: useRef<HTMLDivElement>(null),
-        taskScheduler: useRef<HTMLDivElement>(null),
-        taskWhiteboardLinking: useRef<HTMLDivElement>(null),
-    };
+    const refs = useRef({
+        overview: null as HTMLDivElement | null,
+        basics: null as HTMLDivElement | null,
+        profile: null as HTMLDivElement | null,
+        project: null as HTMLDivElement | null,
+        task: null as HTMLDivElement | null,
+        createTask: null as HTMLDivElement | null,
+        assignTask: null as HTMLDivElement | null,
+        chat: null as HTMLDivElement | null,
+        chatEverywhere: null as HTMLDivElement | null,
+        whiteboard: null as HTMLDivElement | null,
+        whiteboardTemplates: null as HTMLDivElement | null,
+        advanced: null as HTMLDivElement | null,
+        automaticTaskAssignment: null as HTMLDivElement | null,
+        skills: null as HTMLDivElement | null,
+        workinghours: null as HTMLDivElement | null,
+        taskScheduler: null as HTMLDivElement | null,
+        taskWhiteboardLinking: null as HTMLDivElement | null,
+    }) as SectionRefs;
 
     const [activeSection, setActiveSection] = useState("overview");
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -46,23 +66,23 @@ export function InfoModal({
         if (!isOpen) return;
 
         const sections = [
-            { id: "overview", ref: refs.overview },
-            { id: "basics", ref: refs.basics },
-            { id: "profile", ref: refs.profile },
-            { id: "project", ref: refs.project },
-            { id: "task", ref: refs.task },
-            { id: "createTask", ref: refs.createTask },
-            { id: "assignTask", ref: refs.assignTask },
-            { id: "chat", ref: refs.chat },
-            { id: "chatEverywhere", ref: refs.chatEverywhere },
-            { id: "whiteboard", ref: refs.whiteboard },
-            { id: "whiteboardTemplates", ref: refs.whiteboardTemplates },
-            { id: "advanced", ref: refs.advanced },
-            { id: "automaticTaskAssignment", ref: refs.automaticTaskAssignment },
-            { id: "skills", ref: refs.skills },
-            { id: "workinghours", ref: refs.workinghours },
-            { id: "taskScheduler", ref: refs.taskScheduler },
-            { id: "taskWhiteboardLinking", ref: refs.taskWhiteboardLinking },
+            { id: "overview", ref: refs.current.overview },
+            { id: "basics", ref: refs.current.basics },
+            { id: "profile", ref: refs.current.profile },
+            { id: "project", ref: refs.current.project },
+            { id: "task", ref: refs.current.task },
+            { id: "createTask", ref: refs.current.createTask },
+            { id: "assignTask", ref: refs.current.assignTask },
+            { id: "chat", ref: refs.current.chat },
+            { id: "chatEverywhere", ref: refs.current.chatEverywhere },
+            { id: "whiteboard", ref: refs.current.whiteboard },
+            { id: "whiteboardTemplates", ref: refs.current.whiteboardTemplates },
+            { id: "advanced", ref: refs.current.advanced },
+            { id: "automaticTaskAssignment", ref: refs.current.automaticTaskAssignment },
+            { id: "skills", ref: refs.current.skills },
+            { id: "workinghours", ref: refs.current.workinghours },
+            { id: "taskScheduler", ref: refs.current.taskScheduler },
+            { id: "taskWhiteboardLinking", ref: refs.current.taskWhiteboardLinking },
         ];
 
         const observer = new IntersectionObserver(
@@ -86,8 +106,8 @@ export function InfoModal({
         );
 
         sections.forEach(({ ref }) => {
-            if (ref.current) {
-                observer.observe(ref.current);
+            if (ref) {
+                observer.observe(ref);
             }
         });
 
@@ -97,15 +117,15 @@ export function InfoModal({
     useEffect(() => {
         if (!isOpen) return;
 
-        const pageToSection: Record<string, RefObject<HTMLDivElement | null>> = {
-            "tasks": refs.task,
-            "chat": refs.chat,
-            "whiteboard": refs.whiteboard,
-            "project": refs.project,
-            "profile": refs.profile,
+        const pageToSection: Record<string, HTMLDivElement | null> = {
+            "tasks": refs.current.task,
+            "chat": refs.current.chat,
+            "whiteboard": refs.current.whiteboard,
+            "project": refs.current.project,
+            "profile": refs.current.profile,
         };
 
-        let section = refs.overview;
+        let section = refs.current.overview;
         for (const s of Object.keys(pageToSection)) {
             if (location.pathname.includes(s)) {
                 section = pageToSection[s];
@@ -113,7 +133,7 @@ export function InfoModal({
             }
         }
         requestAnimationFrame(() => {
-            section?.current?.scrollIntoView({
+            section?.scrollIntoView({
                 behavior: "smooth",
                 block: "start",
             });
@@ -121,9 +141,9 @@ export function InfoModal({
     }, [isOpen, location.pathname]);
 
     const scrollToSection = (
-        ref: React.RefObject<HTMLDivElement | null>
+        element: HTMLDivElement | null
     ) => {
-        ref.current?.scrollIntoView({
+        element?.scrollIntoView({
             behavior: "smooth",
             block: "start",
         });
@@ -153,9 +173,9 @@ export function InfoModal({
                                     SidebarContent={SidebarGerman}
                                     sidebarOpen={sidebarOpen}
                                     setSidebarOpen={setSidebarOpen}
-									refs={refs}
-									activeSection={activeSection}
-									scrollToSection={scrollToSection}
+                                    refs={refs}
+                                    activeSection={activeSection}
+                                    scrollToSection={scrollToSection}
                                 />
 
                                 <main
@@ -164,7 +184,7 @@ export function InfoModal({
                                     <section className="mb-12">
                                         <div
                                             id="overview"
-                                            ref={refs.overview}
+                                            ref={el => { refs.current.overview = el }}
                                             className="mb-16"
                                         >
                                             <h1 className="min-w-0 flex-1 truncate text-4xl font-bold tracking-tight">
@@ -237,7 +257,7 @@ export function InfoModal({
                                     <section className="mb-12">
                                         <div
                                             id="basics"
-                                            ref={refs.basics}
+                                            ref={el => { refs.current.basics = el }}
                                             className="mb-16"
                                         >
                                             <h1 className="min-w-0 flex-1 truncate text-4xl font-bold tracking-tight">
@@ -246,7 +266,7 @@ export function InfoModal({
 
                                             <div
                                                 id="profile"
-                                                ref={refs.profile}
+                                                ref={el => { refs.current.profile = el }}
                                                 className="my-8"
                                             >
                                                 <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -271,7 +291,7 @@ export function InfoModal({
 
                                             <div
                                                 id="project"
-                                                ref={refs.project}
+                                                ref={el => { refs.current.project = el }}
                                                 className="my-8"
                                             >
                                                 <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -312,7 +332,7 @@ export function InfoModal({
 
                                             <div
                                                 id="task"
-                                                ref={refs.task}
+                                                ref={el => { refs.current.task = el }}
                                                 className="my-8"
                                             >
                                                 <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -336,7 +356,7 @@ export function InfoModal({
 
                                                 <div
                                                     id="createTask"
-                                                    ref={refs.createTask}
+                                                    ref={el => { refs.current.createTask = el }}
                                                     className="my-8 border-l pl-4"
                                                 >
                                                     <h1 className="min-w-0 flex-1 truncate text-2xl font-bold tracking-tight">
@@ -363,7 +383,7 @@ export function InfoModal({
 
                                                 <div
                                                     id="assignTask"
-                                                    ref={refs.assignTask}
+                                                    ref={el => { refs.current.assignTask = el }}
                                                     className="my-8 border-l pl-4"
                                                 >
                                                     <h1 className="min-w-0 flex-1 truncate text-2xl font-bold tracking-tight">
@@ -385,7 +405,7 @@ export function InfoModal({
 
                                             <div
                                                 id="chat"
-                                                ref={refs.chat}
+                                                ref={el => { refs.current.chat = el }}
                                                 className="my-8"
                                             >
                                                 <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -402,7 +422,7 @@ export function InfoModal({
 
                                                 <div
                                                     id="chatEverywhere"
-                                                    ref={refs.chatEverywhere}
+                                                    ref={el => { refs.current.chatEverywhere = el }}
                                                     className="my-8"
                                                 >
                                                     <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -424,7 +444,7 @@ export function InfoModal({
 
                                             <div
                                                 id="whiteboard"
-                                                ref={refs.whiteboard}
+                                                ref={el => { refs.current.whiteboard = el }}
                                                 className="my-8"
                                             >
                                                 <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -441,7 +461,7 @@ export function InfoModal({
 
                                                 <div
                                                     id="whiteboardTemplates"
-                                                    ref={refs.whiteboardTemplates}
+                                                    ref={el => { refs.current.whiteboardTemplates = el }}
                                                     className="my-8"
                                                 >
                                                     <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -466,7 +486,7 @@ export function InfoModal({
                                     <section id="settings" className="mb-12">
                                         <div
                                             id="advanced"
-                                            ref={refs.advanced}
+                                            ref={el => { refs.current.advanced = el }}
                                             className="mb-16"
                                         >
                                             <h1 className="min-w-0 flex-1 truncate text-4xl font-bold tracking-tight">
@@ -475,7 +495,7 @@ export function InfoModal({
 
                                             <div
                                                 id="automaticTaskAssignment"
-                                                ref={refs.automaticTaskAssignment}
+                                                ref={el => { refs.current.automaticTaskAssignment = el }}
                                                 className="my-8"
                                             >
                                                 <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -526,7 +546,7 @@ export function InfoModal({
 
                                                 <div
                                                     id="skills"
-                                                    ref={refs.skills}
+                                                    ref={el => { refs.current.skills = el }}
                                                     className="my-8"
                                                 >
                                                     <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -563,7 +583,7 @@ export function InfoModal({
 
                                                 <div
                                                     id="workinghours"
-                                                    ref={refs.workinghours}
+                                                    ref={el => { refs.current.workinghours = el }}
                                                     className="my-8"
                                                 >
                                                     <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -606,7 +626,7 @@ export function InfoModal({
 
                                                 <div
                                                     id="taskScheduler"
-                                                    ref={refs.taskScheduler}
+                                                    ref={el => { refs.current.taskScheduler = el }}
                                                     className="my-8"
                                                 >
                                                     <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -625,7 +645,7 @@ export function InfoModal({
 
                                             <div
                                                 id="taskWhiteboardLinking"
-                                                ref={refs.taskWhiteboardLinking}
+                                                ref={el => { refs.current.taskWhiteboardLinking = el }}
                                                 className="my-8"
                                             >
                                                 <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -723,9 +743,9 @@ export function InfoModal({
                                     SidebarContent={SidebarEnglish}
                                     sidebarOpen={sidebarOpen}
                                     setSidebarOpen={setSidebarOpen}
-									refs={refs}
-									activeSection={activeSection}
-									scrollToSection={scrollToSection}
+                                    refs={refs}
+                                    activeSection={activeSection}
+                                    scrollToSection={scrollToSection}
                                 />
 
                                 <main
@@ -734,7 +754,7 @@ export function InfoModal({
                                     <section className="mb-12">
                                         <div
                                             id="overview"
-                                            ref={refs.overview}
+                                            ref={el => { refs.current.overview = el }}
                                             className="mb-16"
                                         >
                                             <h1 className="min-w-0 flex-1 truncate text-4xl font-bold tracking-tight">
@@ -795,7 +815,7 @@ export function InfoModal({
                                     <section className="mb-12">
                                         <div
                                             id="basics"
-                                            ref={refs.basics}
+                                            ref={el => { refs.current.basics = el }}
                                             className="mb-16"
                                         >
                                             <h1 className="min-w-0 flex-1 truncate text-4xl font-bold tracking-tight">
@@ -803,7 +823,7 @@ export function InfoModal({
                                             </h1>
                                             <div
                                                 id="profile"
-                                                ref={refs.profile}
+                                                ref={el => { refs.current.profile = el }}
                                                 className="my-8"
                                             >
                                                 <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -821,7 +841,7 @@ export function InfoModal({
                                             </div>
                                             <div
                                                 id="project"
-                                                ref={refs.project}
+                                                ref={el => { refs.current.project = el }}
                                                 className="my-8"
                                             >
                                                 <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -849,7 +869,7 @@ export function InfoModal({
 
                                             <div
                                                 id="task"
-                                                ref={refs.task}
+                                                ref={el => { refs.current.task = el }}
                                                 className="my-8"
                                             >
                                                 <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -863,7 +883,7 @@ export function InfoModal({
 
                                                 <div
                                                     id="createTask"
-                                                    ref={refs.createTask}
+                                                    ref={el => { refs.current.createTask = el }}
                                                     className="my-8 border-l pl-4"
                                                 >
                                                     <h1 className="min-w-0 flex-1 truncate text-2xl font-bold tracking-tight">
@@ -879,7 +899,7 @@ export function InfoModal({
 
                                                 <div
                                                     id="assignTask"
-                                                    ref={refs.assignTask}
+                                                    ref={el => { refs.current.assignTask = el }}
                                                     className="my-8 border-l pl-4"
                                                 >
                                                     <h1 className="min-w-0 flex-1 truncate text-2xl font-bold tracking-tight">
@@ -896,7 +916,7 @@ export function InfoModal({
 
                                             <div
                                                 id="chat"
-                                                ref={refs.chat}
+                                                ref={el => { refs.current.chat = el }}
                                                 className="my-8"
                                             >
                                                 <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -911,7 +931,7 @@ export function InfoModal({
 
                                                 <div
                                                     id="chatEverywhere"
-                                                    ref={refs.chatEverywhere}
+                                                    ref={el => { refs.current.chatEverywhere = el }}
                                                     className="my-8"
                                                 >
                                                     <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -932,7 +952,7 @@ export function InfoModal({
 
                                             <div
                                                 id="whiteboard"
-                                                ref={refs.whiteboard}
+                                                ref={el => { refs.current.whiteboard = el }}
                                                 className="my-8"
                                             >
                                                 <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -947,7 +967,7 @@ export function InfoModal({
 
                                                 <div
                                                     id="whiteboardTemplates"
-                                                    ref={refs.whiteboardTemplates}
+                                                    ref={el => { refs.current.whiteboardTemplates = el }}
                                                     className="my-8"
                                                 >
                                                     <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -969,7 +989,7 @@ export function InfoModal({
                                     <section id="settings" className="mb-12">
                                         <div
                                             id="advanced"
-                                            ref={refs.advanced}
+                                            ref={el => { refs.current.advanced = el }}
                                             className="mb-16"
                                         >
                                             <h1 className="min-w-0 flex-1 truncate text-4xl font-bold tracking-tight">
@@ -978,7 +998,7 @@ export function InfoModal({
 
                                             <div
                                                 id="automaticTaskAssignment"
-                                                ref={refs.automaticTaskAssignment}
+                                                ref={el => { refs.current.automaticTaskAssignment = el }}
                                                 className="my-8"
                                             >
                                                 <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -996,7 +1016,7 @@ export function InfoModal({
 
                                                 <div
                                                     id="skills"
-                                                    ref={refs.skills}
+                                                    ref={el => { refs.current.skills = el }}
                                                     className="my-8"
                                                 >
                                                     <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -1024,7 +1044,7 @@ export function InfoModal({
 
                                                 <div
                                                     id="workinghours"
-                                                    ref={refs.workinghours}
+                                                    ref={el => { refs.current.workinghours = el }}
                                                     className="my-8"
                                                 >
                                                     <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -1046,7 +1066,7 @@ export function InfoModal({
 
                                                 <div
                                                     id="taskScheduler"
-                                                    ref={refs.taskScheduler}
+                                                    ref={el => { refs.current.taskScheduler = el }}
                                                     className="my-8"
                                                 >
                                                     <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -1063,7 +1083,7 @@ export function InfoModal({
 
                                             <div
                                                 id="taskWhiteboardLinking"
-                                                ref={refs.taskWhiteboardLinking}
+                                                ref={el => { refs.current.taskWhiteboardLinking = el }}
                                                 className="my-8"
                                             >
                                                 <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
@@ -1120,11 +1140,11 @@ function GuideImg({ name, isGerman }: GuideImgProps) {
 }
 
 interface AsideButtonProps {
-    refObj: RefObject<HTMLDivElement | null>;
+    refObj: HTMLDivElement | null;
     section: string;
     text: string;
     activeSection: string;
-    scrollToSection: (ref: React.RefObject<HTMLDivElement | null>) => void;
+    scrollToSection: (ref: HTMLDivElement | null) => void;
 };
 
 function AsideButton({ refObj, section, text, activeSection, scrollToSection }: AsideButtonProps) {
@@ -1143,16 +1163,16 @@ function AsideButton({ refObj, section, text, activeSection, scrollToSection }: 
 }
 
 interface SidebarInnerProps {
-    refs: Record<string, React.RefObject<HTMLDivElement | null>>;
+    refs: SectionRefs;
     activeSection: string;
-    scrollToSection: (ref: React.RefObject<HTMLDivElement | null>) => void;
+    scrollToSection: (ref: HTMLDivElement | null) => void;
 }
 
 function SidebarGerman({ refs, activeSection, scrollToSection }: SidebarInnerProps) {
     return (
         <>
             <AsideButton
-                refObj={refs.overview}
+                refObj={refs.current.overview}
                 section="overview"
                 text="Übersicht"
                 activeSection={activeSection}
@@ -1160,7 +1180,7 @@ function SidebarGerman({ refs, activeSection, scrollToSection }: SidebarInnerPro
             />
 
             <AsideButton
-                refObj={refs.basics}
+                refObj={refs.current.basics}
                 section="basics"
                 text="Grundlagen"
                 activeSection={activeSection}
@@ -1170,7 +1190,7 @@ function SidebarGerman({ refs, activeSection, scrollToSection }: SidebarInnerPro
             <div className="ml-4 border-l pl-3 flex flex-col gap-1">
 
                 <AsideButton
-                    refObj={refs.profile}
+                    refObj={refs.current.profile}
                     section="profile"
                     text="Profilverwaltung"
                     activeSection={activeSection}
@@ -1178,7 +1198,7 @@ function SidebarGerman({ refs, activeSection, scrollToSection }: SidebarInnerPro
                 />
 
                 <AsideButton
-                    refObj={refs.project}
+                    refObj={refs.current.project}
                     section="project"
                     text="Projekt erstellen und verwalten"
                     activeSection={activeSection}
@@ -1187,7 +1207,7 @@ function SidebarGerman({ refs, activeSection, scrollToSection }: SidebarInnerPro
 
                 <div>
                     <AsideButton
-                        refObj={refs.task}
+                        refObj={refs.current.task}
                         section="task"
                         text="Aufgabenverwaltung"
                         activeSection={activeSection}
@@ -1197,7 +1217,7 @@ function SidebarGerman({ refs, activeSection, scrollToSection }: SidebarInnerPro
                     <div className="ml-4 border-l mt-1 flex flex-col gap-1">
 
                         <AsideButton
-                            refObj={refs.createTask}
+                            refObj={refs.current.createTask}
                             section="createTask"
                             text="Aufgaben erstellen und bearbeiten"
                             activeSection={activeSection}
@@ -1205,7 +1225,7 @@ function SidebarGerman({ refs, activeSection, scrollToSection }: SidebarInnerPro
                         />
 
                         <AsideButton
-                            refObj={refs.assignTask}
+                            refObj={refs.current.assignTask}
                             section="assignTask"
                             text="Aufgaben zuweisen"
                             activeSection={activeSection}
@@ -1216,7 +1236,7 @@ function SidebarGerman({ refs, activeSection, scrollToSection }: SidebarInnerPro
 
                 <div>
                     <AsideButton
-                        refObj={refs.chat}
+                        refObj={refs.current.chat}
                         section="chat"
                         text="Mit anderen chatten"
                         activeSection={activeSection}
@@ -1224,7 +1244,7 @@ function SidebarGerman({ refs, activeSection, scrollToSection }: SidebarInnerPro
                     />
                     <div className="ml-4 border-l mt-1 flex flex-col gap-1">
                         <AsideButton
-                            refObj={refs.chatEverywhere}
+                            refObj={refs.current.chatEverywhere}
                             section="chatEverywhere"
                             text="Überall chatten"
                             activeSection={activeSection}
@@ -1235,7 +1255,7 @@ function SidebarGerman({ refs, activeSection, scrollToSection }: SidebarInnerPro
 
                 <div>
                     <AsideButton
-                        refObj={refs.whiteboard}
+                        refObj={refs.current.whiteboard}
                         section="whiteboard"
                         text="Whiteboard verwenden"
                         activeSection={activeSection}
@@ -1243,7 +1263,7 @@ function SidebarGerman({ refs, activeSection, scrollToSection }: SidebarInnerPro
                     />
                     <div className="ml-4 border-l mt-1 flex flex-col gap-1">
                         <AsideButton
-                            refObj={refs.whiteboardTemplates}
+                            refObj={refs.current.whiteboardTemplates}
                             section="whiteboardTemplates"
                             text="Whiteboard-Vorlagen"
                             activeSection={activeSection}
@@ -1254,7 +1274,7 @@ function SidebarGerman({ refs, activeSection, scrollToSection }: SidebarInnerPro
             </div>
 
             <AsideButton
-                refObj={refs.advanced}
+                refObj={refs.current.advanced}
                 section="advanced"
                 text="Erweitert"
                 activeSection={activeSection}
@@ -1263,7 +1283,7 @@ function SidebarGerman({ refs, activeSection, scrollToSection }: SidebarInnerPro
 
             <div className="ml-4 border-l pl-3 flex flex-col gap-1">
                 <AsideButton
-                    refObj={refs.automaticTaskAssignment}
+                    refObj={refs.current.automaticTaskAssignment}
                     section="automaticTaskAssignment"
                     text="Automatische Aufgabenzuweisung"
                     activeSection={activeSection}
@@ -1272,7 +1292,7 @@ function SidebarGerman({ refs, activeSection, scrollToSection }: SidebarInnerPro
 
                 <div className="ml-4 border-l mt-1 flex flex-col gap-1">
                     <AsideButton
-                        refObj={refs.skills}
+                        refObj={refs.current.skills}
                         section="skills"
                         text="Fähigkeiten"
                         activeSection={activeSection}
@@ -1280,7 +1300,7 @@ function SidebarGerman({ refs, activeSection, scrollToSection }: SidebarInnerPro
                     />
 
                     <AsideButton
-                        refObj={refs.workinghours}
+                        refObj={refs.current.workinghours}
                         section="workinghours"
                         text="Arbeitsstunden"
                         activeSection={activeSection}
@@ -1288,7 +1308,7 @@ function SidebarGerman({ refs, activeSection, scrollToSection }: SidebarInnerPro
                     />
 
                     <AsideButton
-                        refObj={refs.taskScheduler}
+                        refObj={refs.current.taskScheduler}
                         section="taskScheduler"
                         text="Scheduler ausführen!"
                         activeSection={activeSection}
@@ -1299,7 +1319,7 @@ function SidebarGerman({ refs, activeSection, scrollToSection }: SidebarInnerPro
 
             <div className="ml-4 border-l pl-3 flex flex-col gap-1">
                 <AsideButton
-                    refObj={refs.taskWhiteboardLinking}
+                    refObj={refs.current.taskWhiteboardLinking}
                     section="taskWhiteboardLinking"
                     text="Aufgaben-Whiteboard-Verknüpfung"
                     activeSection={activeSection}
@@ -1314,7 +1334,7 @@ function SidebarEnglish({ refs, activeSection, scrollToSection }: SidebarInnerPr
     return (
         <>
             <AsideButton
-                refObj={refs.overview}
+                refObj={refs.current.overview}
                 section="overview"
                 text="Overview"
                 activeSection={activeSection}
@@ -1322,7 +1342,7 @@ function SidebarEnglish({ refs, activeSection, scrollToSection }: SidebarInnerPr
             />
 
             <AsideButton
-                refObj={refs.basics}
+                refObj={refs.current.basics}
                 section="basics"
                 text="Basics"
                 activeSection={activeSection}
@@ -1332,7 +1352,7 @@ function SidebarEnglish({ refs, activeSection, scrollToSection }: SidebarInnerPr
             <div className="ml-4 border-l pl-3 flex flex-col gap-1">
 
                 <AsideButton
-                    refObj={refs.profile}
+                    refObj={refs.current.profile}
                     section="profile"
                     text="Profile management"
                     activeSection={activeSection}
@@ -1340,7 +1360,7 @@ function SidebarEnglish({ refs, activeSection, scrollToSection }: SidebarInnerPr
                 />
 
                 <AsideButton
-                    refObj={refs.project}
+                    refObj={refs.current.project}
                     section="project"
                     text="Creating and managing a project"
                     activeSection={activeSection}
@@ -1349,7 +1369,7 @@ function SidebarEnglish({ refs, activeSection, scrollToSection }: SidebarInnerPr
 
                 <div>
                     <AsideButton
-                        refObj={refs.task}
+                        refObj={refs.current.task}
                         section="task"
                         text="Task management"
                         activeSection={activeSection}
@@ -1359,7 +1379,7 @@ function SidebarEnglish({ refs, activeSection, scrollToSection }: SidebarInnerPr
                     <div className="ml-4 border-l mt-1 flex flex-col gap-1">
 
                         <AsideButton
-                            refObj={refs.createTask}
+                            refObj={refs.current.createTask}
                             section="createTask"
                             text="Creating and editing tasks"
                             activeSection={activeSection}
@@ -1367,7 +1387,7 @@ function SidebarEnglish({ refs, activeSection, scrollToSection }: SidebarInnerPr
                         />
 
                         <AsideButton
-                            refObj={refs.assignTask}
+                            refObj={refs.current.assignTask}
                             section="assignTask"
                             text="Assigning tasks"
                             activeSection={activeSection}
@@ -1378,7 +1398,7 @@ function SidebarEnglish({ refs, activeSection, scrollToSection }: SidebarInnerPr
 
                 <div>
                     <AsideButton
-                        refObj={refs.chat}
+                        refObj={refs.current.chat}
                         section="chat"
                         text="Chatting with others"
                         activeSection={activeSection}
@@ -1386,7 +1406,7 @@ function SidebarEnglish({ refs, activeSection, scrollToSection }: SidebarInnerPr
                     />
                     <div className="ml-4 border-l mt-1 flex flex-col gap-1">
                         <AsideButton
-                            refObj={refs.chatEverywhere}
+                            refObj={refs.current.chatEverywhere}
                             section="chatEverywhere"
                             text="Chat everywhere"
                             activeSection={activeSection}
@@ -1397,7 +1417,7 @@ function SidebarEnglish({ refs, activeSection, scrollToSection }: SidebarInnerPr
 
                 <div>
                     <AsideButton
-                        refObj={refs.whiteboard}
+                        refObj={refs.current.whiteboard}
                         section="whiteboard"
                         text="Using the Whiteboard"
                         activeSection={activeSection}
@@ -1405,7 +1425,7 @@ function SidebarEnglish({ refs, activeSection, scrollToSection }: SidebarInnerPr
                     />
                     <div className="ml-4 border-l mt-1 flex flex-col gap-1">
                         <AsideButton
-                            refObj={refs.whiteboardTemplates}
+                            refObj={refs.current.whiteboardTemplates}
                             section="whiteboardTemplates"
                             text="Whiteboard Templates"
                             activeSection={activeSection}
@@ -1416,7 +1436,7 @@ function SidebarEnglish({ refs, activeSection, scrollToSection }: SidebarInnerPr
             </div>
 
             <AsideButton
-                refObj={refs.advanced}
+                refObj={refs.current.advanced}
                 section="advanced"
                 text="Advanced"
                 activeSection={activeSection}
@@ -1424,7 +1444,7 @@ function SidebarEnglish({ refs, activeSection, scrollToSection }: SidebarInnerPr
             />
             <div className="ml-4 border-l pl-3 flex flex-col gap-1">
                 <AsideButton
-                    refObj={refs.automaticTaskAssignment}
+                    refObj={refs.current.automaticTaskAssignment}
                     section="automaticTaskAssignment"
                     text="Automatic Task Assignment"
                     activeSection={activeSection}
@@ -1432,7 +1452,7 @@ function SidebarEnglish({ refs, activeSection, scrollToSection }: SidebarInnerPr
                 />
                 <div className="ml-4 border-l mt-1 flex flex-col gap-1">
                     <AsideButton
-                        refObj={refs.skills}
+                        refObj={refs.current.skills}
                         section="skills"
                         text="Skills"
                         activeSection={activeSection}
@@ -1440,7 +1460,7 @@ function SidebarEnglish({ refs, activeSection, scrollToSection }: SidebarInnerPr
                     />
 
                     <AsideButton
-                        refObj={refs.workinghours}
+                        refObj={refs.current.workinghours}
                         section="workinghours"
                         text="Working-hours"
                         activeSection={activeSection}
@@ -1448,7 +1468,7 @@ function SidebarEnglish({ refs, activeSection, scrollToSection }: SidebarInnerPr
                     />
 
                     <AsideButton
-                        refObj={refs.taskScheduler}
+                        refObj={refs.current.taskScheduler}
                         section="taskScheduler"
                         text="Running the Scheduler!"
                         activeSection={activeSection}
@@ -1458,7 +1478,7 @@ function SidebarEnglish({ refs, activeSection, scrollToSection }: SidebarInnerPr
             </div>
             <div className="ml-4 border-l pl-3 flex flex-col gap-1">
                 <AsideButton
-                    refObj={refs.taskWhiteboardLinking}
+                    refObj={refs.current.taskWhiteboardLinking}
                     section="taskWhiteboardLinking"
                     text="Task-Whiteboard Linking"
                     activeSection={activeSection}
@@ -1473,9 +1493,9 @@ interface SidebarProps {
     SidebarContent: React.ComponentType<SidebarInnerProps>;
     sidebarOpen: boolean;
     setSidebarOpen: (value: boolean) => void;
-    refs: Record<string, React.RefObject<HTMLDivElement | null>>;
+    refs: SectionRefs
     activeSection: string;
-    scrollToSection: (ref: React.RefObject<HTMLDivElement | null>) => void;
+    scrollToSection: (ref: HTMLDivElement | null) => void;
 };
 
 const Sidebar = ({ SidebarContent, sidebarOpen, setSidebarOpen, refs, activeSection, scrollToSection }: SidebarProps) => (
@@ -1509,7 +1529,7 @@ const Sidebar = ({ SidebarContent, sidebarOpen, setSidebarOpen, refs, activeSect
                     <X />
                 </button>
 
-            	<SidebarContent refs={refs} activeSection={activeSection} scrollToSection={scrollToSection} />
+                <SidebarContent refs={refs} activeSection={activeSection} scrollToSection={scrollToSection} />
             </aside>
         </div >
     </>
