@@ -53,6 +53,8 @@ services:
       DB_NAME: ${POSTGRES_DB:-stride_db}
       REDIS_HOST: redis
       REDIS_PORT: "6379"
+      SCHEDULER_HOST: scheduleserver
+      SCHEDULER_PORT: "7270"
       MEDIA_DIR: /app/media
       PASSWORD_MIN_LENGTH: ${PASSWORD_MIN_LENGTH:-8}
       PASSWORD_REQUIRE_SPECIAL_CHAR: ${PASSWORD_REQUIRE_SPECIAL_CHAR:-true}
@@ -77,6 +79,18 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      scheduleserver:
+        condition: service_started
+    networks:
+      - stride_prod
+
+  scheduleserver:
+    build:
+      context: ./backend/services/scheduler
+      dockerfile: ./docker/prod.scheduler.Dockerfile
+    restart: unless-stopped
+    expose:
+      - "7270"
     networks:
       - stride_prod
 

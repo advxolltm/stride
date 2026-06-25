@@ -6,8 +6,6 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-stride}
       POSTGRES_USER: ${POSTGRES_USER:-stride}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-stride}
-      SCHEDULER_HOST: "scheduleserver"
-      SCHEDULER_PORT: "7270"
     ports:
       - "5432:5432"
     volumes:
@@ -93,6 +91,8 @@ services:
       DB_NAME: ${POSTGRES_DB:-stride}
       REDIS_HOST: redis
       REDIS_PORT: "6379"
+      SCHEDULER_HOST: scheduleserver
+      SCHEDULER_PORT: "7270"
       PASSWORD_MIN_LENGTH: ${PASSWORD_MIN_LENGTH}
       PASSWORD_REQUIRE_SPECIAL_CHAR: ${PASSWORD_REQUIRE_SPECIAL_CHAR}
       PASSWORD_REQUIRE_NUM: ${PASSWORD_REQUIRE_NUM}
@@ -121,6 +121,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      scheduleserver:
+        condition: service_started
     networks:
       - stride_net
 
