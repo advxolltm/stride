@@ -98,7 +98,7 @@ export function ProjectSettingsSidebar({
             </div>
 
             <div
-                className="hidden h-full w-44 shrink-0 flex-col gap-1 border-r border-[var(--separator)] p-2 xl:flex"
+                className="hidden h-full w-56 shrink-0 flex-col gap-1 border-r border-[var(--separator)] p-3 xl:flex"
             >
                 <p className="text-muted px-3 pt-2 pb-3 text-xs font-semibold tracking-wider uppercase">
                     {t('settingsSidebar.title')}
@@ -114,7 +114,7 @@ export function ProjectSettingsSidebar({
                             fullWidth
                             onPress={() => onTabChange(id)}
                             className={clsx(
-                                'justify-start gap-2.5 font-medium',
+                                'justify-start gap-2.5 px-3 py-2 text-left font-medium leading-tight whitespace-normal',
                                 isActive
                                     ? 'bg-[color-mix(in_oklch,var(--accent)_12%,transparent)] text-(--accent)'
                                     : 'text-muted',
