@@ -397,7 +397,7 @@ export function WhiteboardPage() {
                 <div
                     className="h-10 w-10 min-w-10 rounded-full border border-[var(--border)] bg-[color-mix(in_oklch,var(--surface)_94%,transparent)] text-[var(--foreground)] shadow-lg backdrop-blur-xl hover:bg-[var(--surface-secondary)]"
                 >
-                    <InfoIcon onPress={setIsInfoModalOpen}/>
+                    <InfoIcon onPress={() => setIsInfoModalOpen(true)}/>
                 </div>
                 <Tooltip delay={0}>
                     <Tooltip.Trigger className="inline-flex">

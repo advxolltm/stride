@@ -143,6 +143,7 @@ export function InfoModal({
     const scrollToSection = (
         element: HTMLDivElement | null
     ) => {
+		console.log(element);
         element?.scrollIntoView({
             behavior: "smooth",
             block: "start",
@@ -1140,14 +1141,14 @@ function GuideImg({ name, isGerman }: GuideImgProps) {
 }
 
 interface AsideButtonProps {
-    refObj: HTMLDivElement | null;
+    getRef: () => HTMLDivElement | null;
     section: string;
     text: string;
     activeSection: string;
     scrollToSection: (ref: HTMLDivElement | null) => void;
 };
 
-function AsideButton({ refObj, section, text, activeSection, scrollToSection }: AsideButtonProps) {
+function AsideButton({ getRef, section, text, activeSection, scrollToSection }: AsideButtonProps) {
     return (
         <Button
             variant='ghost'
@@ -1155,7 +1156,9 @@ function AsideButton({ refObj, section, text, activeSection, scrollToSection }: 
                 "w-full justify-start px-3 py-2",
                 activeSection === section && "bg-[var(--surface-secondary)] font-medium"
             )}
-            onClick={() => scrollToSection(refObj)}
+            onClick={() => {
+				scrollToSection(getRef());
+			}}
         >
             {text}
         </Button>
@@ -1172,7 +1175,7 @@ function SidebarGerman({ refs, activeSection, scrollToSection }: SidebarInnerPro
     return (
         <>
             <AsideButton
-                refObj={refs.current.overview}
+                getRef={() => refs.current.overview}
                 section="overview"
                 text="Übersicht"
                 activeSection={activeSection}
@@ -1180,7 +1183,7 @@ function SidebarGerman({ refs, activeSection, scrollToSection }: SidebarInnerPro
             />
 
             <AsideButton
-                refObj={refs.current.basics}
+                getRef={() => refs.current.basics}
                 section="basics"
                 text="Grundlagen"
                 activeSection={activeSection}
@@ -1190,7 +1193,7 @@ function SidebarGerman({ refs, activeSection, scrollToSection }: SidebarInnerPro
             <div className="ml-4 border-l pl-3 flex flex-col gap-1">
 
                 <AsideButton
-                    refObj={refs.current.profile}
+                    getRef={() => refs.current.profile}
                     section="profile"
                     text="Profilverwaltung"
                     activeSection={activeSection}
@@ -1198,7 +1201,7 @@ function SidebarGerman({ refs, activeSection, scrollToSection }: SidebarInnerPro
                 />
 
                 <AsideButton
-                    refObj={refs.current.project}
+                    getRef={() => refs.current.project}
                     section="project"
                     text="Projekt erstellen und verwalten"
                     activeSection={activeSection}
@@ -1207,7 +1210,7 @@ function SidebarGerman({ refs, activeSection, scrollToSection }: SidebarInnerPro
 
                 <div>
                     <AsideButton
-                        refObj={refs.current.task}
+                        getRef={() => refs.current.task}
                         section="task"
                         text="Aufgabenverwaltung"
                         activeSection={activeSection}
@@ -1217,7 +1220,7 @@ function SidebarGerman({ refs, activeSection, scrollToSection }: SidebarInnerPro
                     <div className="ml-4 border-l mt-1 flex flex-col gap-1">
 
                         <AsideButton
-                            refObj={refs.current.createTask}
+                            getRef={() => refs.current.createTask}
                             section="createTask"
                             text="Aufgaben erstellen und bearbeiten"
                             activeSection={activeSection}
@@ -1225,7 +1228,7 @@ function SidebarGerman({ refs, activeSection, scrollToSection }: SidebarInnerPro
                         />
 
                         <AsideButton
-                            refObj={refs.current.assignTask}
+                            getRef={() => refs.current.assignTask}
                             section="assignTask"
                             text="Aufgaben zuweisen"
                             activeSection={activeSection}
@@ -1236,7 +1239,7 @@ function SidebarGerman({ refs, activeSection, scrollToSection }: SidebarInnerPro
 
                 <div>
                     <AsideButton
-                        refObj={refs.current.chat}
+                        getRef={() => refs.current.chat}
                         section="chat"
                         text="Mit anderen chatten"
                         activeSection={activeSection}
@@ -1244,7 +1247,7 @@ function SidebarGerman({ refs, activeSection, scrollToSection }: SidebarInnerPro
                     />
                     <div className="ml-4 border-l mt-1 flex flex-col gap-1">
                         <AsideButton
-                            refObj={refs.current.chatEverywhere}
+                            getRef={() => refs.current.chatEverywhere}
                             section="chatEverywhere"
                             text="Überall chatten"
                             activeSection={activeSection}
@@ -1255,7 +1258,7 @@ function SidebarGerman({ refs, activeSection, scrollToSection }: SidebarInnerPro
 
                 <div>
                     <AsideButton
-                        refObj={refs.current.whiteboard}
+                        getRef={() => refs.current.whiteboard}
                         section="whiteboard"
                         text="Whiteboard verwenden"
                         activeSection={activeSection}
@@ -1263,7 +1266,7 @@ function SidebarGerman({ refs, activeSection, scrollToSection }: SidebarInnerPro
                     />
                     <div className="ml-4 border-l mt-1 flex flex-col gap-1">
                         <AsideButton
-                            refObj={refs.current.whiteboardTemplates}
+                            getRef={() => refs.current.whiteboardTemplates}
                             section="whiteboardTemplates"
                             text="Whiteboard-Vorlagen"
                             activeSection={activeSection}
@@ -1274,7 +1277,7 @@ function SidebarGerman({ refs, activeSection, scrollToSection }: SidebarInnerPro
             </div>
 
             <AsideButton
-                refObj={refs.current.advanced}
+                getRef={() => refs.current.advanced}
                 section="advanced"
                 text="Erweitert"
                 activeSection={activeSection}
@@ -1283,7 +1286,7 @@ function SidebarGerman({ refs, activeSection, scrollToSection }: SidebarInnerPro
 
             <div className="ml-4 border-l pl-3 flex flex-col gap-1">
                 <AsideButton
-                    refObj={refs.current.automaticTaskAssignment}
+                    getRef={() => refs.current.automaticTaskAssignment}
                     section="automaticTaskAssignment"
                     text="Automatische Aufgabenzuweisung"
                     activeSection={activeSection}
@@ -1292,7 +1295,7 @@ function SidebarGerman({ refs, activeSection, scrollToSection }: SidebarInnerPro
 
                 <div className="ml-4 border-l mt-1 flex flex-col gap-1">
                     <AsideButton
-                        refObj={refs.current.skills}
+                        getRef={() => refs.current.skills}
                         section="skills"
                         text="Fähigkeiten"
                         activeSection={activeSection}
@@ -1300,7 +1303,7 @@ function SidebarGerman({ refs, activeSection, scrollToSection }: SidebarInnerPro
                     />
 
                     <AsideButton
-                        refObj={refs.current.workinghours}
+                        getRef={() => refs.current.workinghours}
                         section="workinghours"
                         text="Arbeitsstunden"
                         activeSection={activeSection}
@@ -1308,7 +1311,7 @@ function SidebarGerman({ refs, activeSection, scrollToSection }: SidebarInnerPro
                     />
 
                     <AsideButton
-                        refObj={refs.current.taskScheduler}
+                        getRef={() => refs.current.taskScheduler}
                         section="taskScheduler"
                         text="Scheduler ausführen!"
                         activeSection={activeSection}
@@ -1319,7 +1322,7 @@ function SidebarGerman({ refs, activeSection, scrollToSection }: SidebarInnerPro
 
             <div className="ml-4 border-l pl-3 flex flex-col gap-1">
                 <AsideButton
-                    refObj={refs.current.taskWhiteboardLinking}
+                    getRef={() => refs.current.taskWhiteboardLinking}
                     section="taskWhiteboardLinking"
                     text="Aufgaben-Whiteboard-Verknüpfung"
                     activeSection={activeSection}
@@ -1334,7 +1337,7 @@ function SidebarEnglish({ refs, activeSection, scrollToSection }: SidebarInnerPr
     return (
         <>
             <AsideButton
-                refObj={refs.current.overview}
+                getRef={() => refs.current.overview}
                 section="overview"
                 text="Overview"
                 activeSection={activeSection}
@@ -1342,7 +1345,7 @@ function SidebarEnglish({ refs, activeSection, scrollToSection }: SidebarInnerPr
             />
 
             <AsideButton
-                refObj={refs.current.basics}
+                getRef={() => refs.current.basics}
                 section="basics"
                 text="Basics"
                 activeSection={activeSection}
@@ -1352,7 +1355,7 @@ function SidebarEnglish({ refs, activeSection, scrollToSection }: SidebarInnerPr
             <div className="ml-4 border-l pl-3 flex flex-col gap-1">
 
                 <AsideButton
-                    refObj={refs.current.profile}
+                    getRef={() => refs.current.profile}
                     section="profile"
                     text="Profile management"
                     activeSection={activeSection}
@@ -1360,7 +1363,7 @@ function SidebarEnglish({ refs, activeSection, scrollToSection }: SidebarInnerPr
                 />
 
                 <AsideButton
-                    refObj={refs.current.project}
+                    getRef={() => refs.current.project}
                     section="project"
                     text="Creating and managing a project"
                     activeSection={activeSection}
@@ -1369,7 +1372,7 @@ function SidebarEnglish({ refs, activeSection, scrollToSection }: SidebarInnerPr
 
                 <div>
                     <AsideButton
-                        refObj={refs.current.task}
+                        getRef={() => refs.current.task}
                         section="task"
                         text="Task management"
                         activeSection={activeSection}
@@ -1379,7 +1382,7 @@ function SidebarEnglish({ refs, activeSection, scrollToSection }: SidebarInnerPr
                     <div className="ml-4 border-l mt-1 flex flex-col gap-1">
 
                         <AsideButton
-                            refObj={refs.current.createTask}
+                            getRef={() => refs.current.createTask}
                             section="createTask"
                             text="Creating and editing tasks"
                             activeSection={activeSection}
@@ -1387,7 +1390,7 @@ function SidebarEnglish({ refs, activeSection, scrollToSection }: SidebarInnerPr
                         />
 
                         <AsideButton
-                            refObj={refs.current.assignTask}
+                            getRef={() => refs.current.assignTask}
                             section="assignTask"
                             text="Assigning tasks"
                             activeSection={activeSection}
@@ -1398,7 +1401,7 @@ function SidebarEnglish({ refs, activeSection, scrollToSection }: SidebarInnerPr
 
                 <div>
                     <AsideButton
-                        refObj={refs.current.chat}
+                        getRef={() => refs.current.chat}
                         section="chat"
                         text="Chatting with others"
                         activeSection={activeSection}
@@ -1406,7 +1409,7 @@ function SidebarEnglish({ refs, activeSection, scrollToSection }: SidebarInnerPr
                     />
                     <div className="ml-4 border-l mt-1 flex flex-col gap-1">
                         <AsideButton
-                            refObj={refs.current.chatEverywhere}
+                            getRef={() => refs.current.chatEverywhere}
                             section="chatEverywhere"
                             text="Chat everywhere"
                             activeSection={activeSection}
@@ -1417,7 +1420,7 @@ function SidebarEnglish({ refs, activeSection, scrollToSection }: SidebarInnerPr
 
                 <div>
                     <AsideButton
-                        refObj={refs.current.whiteboard}
+                        getRef={() => refs.current.whiteboard}
                         section="whiteboard"
                         text="Using the Whiteboard"
                         activeSection={activeSection}
@@ -1425,7 +1428,7 @@ function SidebarEnglish({ refs, activeSection, scrollToSection }: SidebarInnerPr
                     />
                     <div className="ml-4 border-l mt-1 flex flex-col gap-1">
                         <AsideButton
-                            refObj={refs.current.whiteboardTemplates}
+                            getRef={() => refs.current.whiteboardTemplates}
                             section="whiteboardTemplates"
                             text="Whiteboard Templates"
                             activeSection={activeSection}
@@ -1436,7 +1439,7 @@ function SidebarEnglish({ refs, activeSection, scrollToSection }: SidebarInnerPr
             </div>
 
             <AsideButton
-                refObj={refs.current.advanced}
+                getRef={() => refs.current.advanced}
                 section="advanced"
                 text="Advanced"
                 activeSection={activeSection}
@@ -1444,7 +1447,7 @@ function SidebarEnglish({ refs, activeSection, scrollToSection }: SidebarInnerPr
             />
             <div className="ml-4 border-l pl-3 flex flex-col gap-1">
                 <AsideButton
-                    refObj={refs.current.automaticTaskAssignment}
+                    getRef={() => refs.current.automaticTaskAssignment}
                     section="automaticTaskAssignment"
                     text="Automatic Task Assignment"
                     activeSection={activeSection}
@@ -1452,7 +1455,7 @@ function SidebarEnglish({ refs, activeSection, scrollToSection }: SidebarInnerPr
                 />
                 <div className="ml-4 border-l mt-1 flex flex-col gap-1">
                     <AsideButton
-                        refObj={refs.current.skills}
+                        getRef={() => refs.current.skills}
                         section="skills"
                         text="Skills"
                         activeSection={activeSection}
@@ -1460,7 +1463,7 @@ function SidebarEnglish({ refs, activeSection, scrollToSection }: SidebarInnerPr
                     />
 
                     <AsideButton
-                        refObj={refs.current.workinghours}
+                        getRef={() => refs.current.workinghours}
                         section="workinghours"
                         text="Working-hours"
                         activeSection={activeSection}
@@ -1468,7 +1471,7 @@ function SidebarEnglish({ refs, activeSection, scrollToSection }: SidebarInnerPr
                     />
 
                     <AsideButton
-                        refObj={refs.current.taskScheduler}
+                        getRef={() => refs.current.taskScheduler}
                         section="taskScheduler"
                         text="Running the Scheduler!"
                         activeSection={activeSection}
@@ -1478,7 +1481,7 @@ function SidebarEnglish({ refs, activeSection, scrollToSection }: SidebarInnerPr
             </div>
             <div className="ml-4 border-l pl-3 flex flex-col gap-1">
                 <AsideButton
-                    refObj={refs.current.taskWhiteboardLinking}
+                    getRef={() => refs.current.taskWhiteboardLinking}
                     section="taskWhiteboardLinking"
                     text="Task-Whiteboard Linking"
                     activeSection={activeSection}
