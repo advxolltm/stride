@@ -84,6 +84,15 @@
         "placeholder": "Select assignee",
         "empty": "No assignee",
         "search": "Search users..."
+      },
+      "settings": {
+        "strategy": "Optimization Strategy",
+        "distributeEvenly": "Distribute Evenly",
+        "distributeEvenlyDesc": "Balance the workload across all available members.",
+        "minMakespan": "Minimize Duration",
+        "minMakespanDesc": "Complete all tasks as quickly as possible.",
+        "timeout": "Max Calculation Time",
+        "timeoutDesc": "Higher values might yield better results for complex projects but take longer to process."
       }
     },
     "list": {

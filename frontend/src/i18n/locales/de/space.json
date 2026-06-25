@@ -84,6 +84,15 @@
         "placeholder": "Zuständigen auswählen",
         "empty": "Kein Zuständiger",
         "search": "Benutzer suchen..."
+      },
+      "settings": {
+        "strategy": "Optimierungsstrategie",
+        "distributeEvenly": "Gleichmäßig verteilen",
+        "distributeEvenlyDesc": "Die Arbeitslast gleichmäßig auf alle verfügbaren Teammitglieder verteilen.",
+        "minMakespan": "Dauer minimieren",
+        "minMakespanDesc": "Alle Aufgaben so schnell wie möglich abschließen.",
+        "timeout": "Maximale Berechnungszeit",
+        "timeoutDesc": "Höhere Werte können bei komplexen Projekten zu besseren Ergebnissen führen, verlängern aber die Wartezeit."
       }
     },
     "list": {
