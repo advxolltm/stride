@@ -75,6 +75,7 @@ function taskMatchesSearch(task: Task, query: string) {
 const EMPTY_SCHEDULER_PREVIEW: SchedulerPreviewResponse = {
     newAssignments: [],
     changedAssignments: [],
+	incompatibleAssignments: [],
 }
 
 export function KanbanBoard() {
@@ -208,7 +209,7 @@ export function KanbanBoard() {
     const skippedSchedulerMemberCount =
         schedulerMembers.length - schedulableSchedulerMembers.length
 
-    async function handleSchedulerRun(strat : OptimizationStrategy) {
+    async function handleSchedulerRun(strat : OptimizationStrategy, timeout : number) {
         if (schedulerTasks.length === 0) {
             toast.info(t('tasks.scheduler.intro.noTasks'))
             return EMPTY_SCHEDULER_PREVIEW
@@ -229,13 +230,23 @@ export function KanbanBoard() {
             return EMPTY_SCHEDULER_PREVIEW
         }
 
+        timeout = Math.round(timeout)
+
+        if (timeout > 45) {
+            timeout = 45
+        }
+        if (timeout < 3) {
+            timeout = 3
+        }
+
         try {
             const response = await scheduleProjectTasks({
                 projectId,
                 body: buildSchedulerTriggerRequest(
                     schedulerTasks,
-                    schedulableSchedulerMembers,
-                    ['max-hours-scheduled', strat as string, 'max-tasks-scheduled']
+                    schedulerMembers,
+                    ['max-hours-scheduled', strat as string, 'max-tasks-scheduled'],
+                    timeout
                 ),
             }).unwrap()
 
@@ -253,23 +264,14 @@ export function KanbanBoard() {
 
     async function handleSchedulerConfirm(
         assignments: {
-            userId: string
+            userId: string | null
             taskId: string
         }[],
     ) {
-        const validAssignments = assignments.filter((assignment) =>
-            schedulerMembers.some((member) => member.id === assignment.userId),
-        )
-
-        if (validAssignments.length !== assignments.length) {
-            toast.danger(t('tasks.scheduler.review.invalidAssignments'))
-            return
-        }
-
         try {
             await confirmScheduledAssignments({
                 projectId,
-                body: validAssignments.map((assignment) => ({
+                body: assignments.map((assignment) => ({
                     user_id: assignment.userId,
                     task_id: assignment.taskId,
                 })),

@@ -607,9 +607,6 @@ func TestUserRouteHandler_Integration(t *testing.T) {
 		var skills []models.ProjectSkill
 		err_um := json.Unmarshal(rec.Body.Bytes(), &skills)
 		require.NoError(t, err_um)
-
-		fmt.Println(skills)
-
 		selectedSkillIDs := map[string]bool{}
 		for _, skill := range skills {
 			selectedSkillIDs[skill.ID.String()] = true

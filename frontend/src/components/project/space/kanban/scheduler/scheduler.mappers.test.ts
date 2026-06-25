@@ -83,7 +83,8 @@ describe('scheduler mappers', () => {
             buildSchedulerTriggerRequest(
                 [mapTaskToSchedulerTaskOption(task, statusOptions)],
                 [mapProjectMemberToSchedulerMemberOption(member)],
-                ['max-hours-scheduled', 'min-makespan', 'max-tasks-scheduled']
+                ['max-hours-scheduled', 'min-makespan', 'max-tasks-scheduled'],
+                45
             ),
         ).toEqual({
             task_ids: ['task-1'],
@@ -94,6 +95,7 @@ describe('scheduler mappers', () => {
                     'min-makespan',
                     'max-tasks-scheduled',
                 ],
+                timeout_seconds: 45,
             },
         })
     })
@@ -102,6 +104,7 @@ describe('scheduler mappers', () => {
         const response: SchedulerPreviewResponse = {
             newAssignments: [{ userId: 'user-1', taskId: 'task-1' }],
             changedAssignments: [{ userId: 'user-2', taskId: 'task-2' }],
+            incompatibleAssignments: [],
         }
 
         expect(flattenSchedulerAssignments(response)).toEqual([

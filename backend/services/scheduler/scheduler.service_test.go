@@ -109,7 +109,7 @@ func TestProjectService(t *testing.T) {
 	ctx := context.Background()
 
 	runTest(t, db, "Assign Feasible Schedule", func(t *testing.T, db *gorm.DB, pServe projectService.ProjectService, uServ userService.UserService, tServe taskService.TaskService, sServe scheduler.SchedulerService) {
-		proj, users, members, skills := setupTestingProject(ctx, db, pServe, uServ, t)
+		proj, users, _, skills := setupTestingProject(ctx, db, pServe, uServ, t)
 
 		startDate := time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC)
 		dueDate := startDate.AddDate(0, 0, 7)
@@ -143,9 +143,6 @@ func TestProjectService(t *testing.T) {
 		require.NoError(t, err_s)
 
 		as_len := len(assignments.NewAssignments)
-
-		fmt.Println(assignments)
-		fmt.Println(members)
 
 		assert.Equal(t, 2, as_len)
 
@@ -403,9 +400,6 @@ func TestProjectService(t *testing.T) {
 
 		assignments, err_s := sServe.ScheduleTasksToUsers(ctx, req, schedulerSettings)
 		require.NoError(t, err_s)
-
-		fmt.Println(assignments)
-		fmt.Println(users[0].ID)
 
 		assert.Equal(t, 0, len(assignments.NewAssignments))
 	})

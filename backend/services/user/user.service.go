@@ -26,8 +26,6 @@ import (
 	"gorm.io/gorm"
 )
 
-//TODO: Tests user.service.go
-
 type AvatarInput struct {
 	Filename string
 	File     io.Reader

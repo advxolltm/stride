@@ -15,6 +15,7 @@ interface SchedulerAssignmentRowProps {
     task: SchedulerTaskOption
     members: SchedulerMemberOption[]
     onChange: (taskId: string, userId: string) => void
+	onRemove: (taskId: string, userId: string) => void
 }
 
 export function SchedulerAssignmentRow({
@@ -22,6 +23,7 @@ export function SchedulerAssignmentRow({
     task,
     members,
     onChange,
+	onRemove,
 }: SchedulerAssignmentRowProps) {
     const { t } = useTranslation('space')
     const { contains } = useFilter({ sensitivity: 'base' })
@@ -38,6 +40,11 @@ export function SchedulerAssignmentRow({
     function handleChange(key: Key | null) {
         if (!key) return
         onChange(task.id, key as string)
+    }
+
+    function handleClearButtonClick(): void {
+		if(!selectedMember?.id) return;
+		onRemove(task.id, selectedMember.id);
     }
 
     return (
@@ -97,7 +104,7 @@ export function SchedulerAssignmentRow({
                             )
                         }}
                     </Autocomplete.Value>
-                    <Autocomplete.ClearButton />
+                    <Autocomplete.ClearButton onClick={handleClearButtonClick} />
                     <Autocomplete.Indicator />
                 </Autocomplete.Trigger>
                 <Autocomplete.Popover>

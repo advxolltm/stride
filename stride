@@ -168,6 +168,8 @@ ensure_base_env() {
     ensure_env_default SESSION_EXPIRY_HOURS 24
     ensure_env_default SESSION_COOKIE_SECURE false
     ensure_env_default SITE_DOMAIN ""
+	ensure_env_default SCHED_MAX_ALLOWED_TIMEOUT_SECONDS 60
+	ensure_env_default SCHED_WORK_HOURS_PER_DAY 8
     ensure_secret_env POSTGRES_PASSWORD
     ensure_secret_env SESSION_SECRET
 }

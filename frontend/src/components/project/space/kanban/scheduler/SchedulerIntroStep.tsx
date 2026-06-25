@@ -12,6 +12,8 @@ interface SchedulerIntroStepProps {
     onRun: () => void
     strategy: string
     onStrategyChange: (strategy: string) => void
+    timeout: number
+    onTimeoutChange: (timeout: number) => void
 }
 
 export function SchedulerIntroStep({
@@ -24,6 +26,8 @@ export function SchedulerIntroStep({
     onRun,
     strategy,
     onStrategyChange,
+    timeout,
+    onTimeoutChange,
 }: SchedulerIntroStepProps) {
     const { t } = useTranslation('space')
     const hasTasks = taskCount > 0
@@ -87,7 +91,6 @@ export function SchedulerIntroStep({
             </span>
             
             <div className="flex flex-col gap-4">
-                {/* Option 1: Distribute Evenly */}
                 <label className="flex cursor-pointer items-start gap-3">
                     <input
                         type="radio"
@@ -107,7 +110,6 @@ export function SchedulerIntroStep({
                     </div>
                 </label>
 
-                {/* Option 2: Minimize Duration */}
                 <label className="flex cursor-pointer items-start gap-3">
                     <input
                         type="radio"
@@ -127,6 +129,30 @@ export function SchedulerIntroStep({
                     </div>
                 </label>
             </div>
+            <div className="flex flex-col gap-3 border-t border-default-200 pt-4">
+                            <div className="flex items-center justify-between">
+                                <span className="text-foreground text-sm font-medium">
+                                    {t('tasks.scheduler.settings.timeout', 'Max Calculation Time')}
+                                </span>
+                                <span className="text-primary font-semibold text-sm">
+                                    {timeout}s
+                                </span>
+                            </div>
+                            
+                            <input
+                                type="range"
+                                min={3}
+                                max={45}
+                                step={1}
+                                value={timeout}
+                                onChange={(e) => onTimeoutChange(Number(e.target.value))}
+                                className="w-full accent-primary cursor-pointer"
+                            />
+                            
+                            <span className="text-default-500 text-xs">
+                                {t('tasks.scheduler.settings.timeoutDesc', 'Higher values might yield better results for complex projects but take longer to process.')}
+                            </span>
+                        </div>
         </div>
     ) : null}
 </Modal.Body>

@@ -43,6 +43,12 @@ func mapToReturnAssignment(ass schedulerService.ReturnStruct) routes.AssignmentS
 				TaskID: a.TaskID,
 			}
 		}),
+		IncompatibleAssignments: routes.Map(ass.IncompatibleAssignments, func(a schedulerService.Assignment) routes.ReturnAssignment {
+			return routes.ReturnAssignment{
+				UserID: a.UserID,
+				TaskID: a.TaskID,
+			}
+		}),
 	}
 }
 
@@ -52,14 +58,19 @@ type SchedulingSettings struct {
 }
 
 type SchedulingRequest struct {
-	TaskIDs []uuid.UUID `json:"task_ids"`
-	UserIDs []uuid.UUID `json:"user_ids"`
+	TaskIDs  []uuid.UUID        `json:"task_ids"`
+	UserIDs  []uuid.UUID        `json:"user_ids"`
 	Settings SchedulingSettings `json:"settings"`
 }
 
 type SchedulingAssignment struct {
-	UserID uuid.UUID `json:"user_id"`
-	TaskID uuid.UUID `json:"task_id"`
+	UserID *uuid.UUID `json:"user_id"`
+	TaskID uuid.UUID  `json:"task_id"`
+}
+
+type additiveSchedulingAssignment struct {
+	UserID uuid.UUID
+	TaskID uuid.UUID
 }
 
 // @Summary		Assign chosen unassigned tasks in a project
@@ -152,8 +163,34 @@ func (h *schedulerRouteHandler) confirmPOSTHandle(c *echo.Context) error {
 
 	var ret []routes.ReturnAssignment
 
-	taskAssignments := make([]taskService.Assignment, len(req))
-	for i, assignment := range req {
+	var assignments []additiveSchedulingAssignment
+
+	for _, assignment := range req {
+		if assignment.UserID != nil {
+			assignments = append(assignments, additiveSchedulingAssignment{
+				UserID: *assignment.UserID,
+				TaskID: assignment.TaskID,
+			})
+		} else {
+			task, err_t := h.taskService.GetTask(c.Request().Context(), assignment.TaskID)
+			if err_t != nil {
+				return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "failed to find task"})
+			}
+
+			for _, existingAssignee := range task.Assignees {
+				if err := h.taskService.UnassignTask(
+					c.Request().Context(),
+					assignment.TaskID,
+					existingAssignee.ProjectMemberID,
+				); err != nil {
+					return c.JSON(http.StatusInternalServerError, routes.ErrorResponse{Error: "failed to remove task assignee"})
+				}
+			}
+		}
+	}
+
+	taskAssignments := make([]taskService.Assignment, len(assignments))
+	for i, assignment := range assignments {
 		member, err_m := h.projectService.GetProjectMember(c.Request().Context(), id, assignment.UserID)
 		if err_m != nil {
 			return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "failed to find a project user"})

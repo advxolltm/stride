@@ -5,7 +5,6 @@ import (
 
 	"backend/config"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -275,7 +274,6 @@ func (h userRouteHandler) userProjectSkillsPUTHandle(c *echo.Context) error {
 
 	userSkills, err := h.userService.UpdateUserProjectSkills(c.Request().Context(), userID, projectID, req.ProjectSkillIDs)
 	if err != nil {
-		fmt.Println("Error updating user project skills:", err)
 		status, msg := h.mapServiceError(err)
 		return c.JSON(status, ErrorResponse{Error: msg})
 	}
@@ -299,7 +297,6 @@ func (h userRouteHandler) userProjectSkillsPUTHandle(c *echo.Context) error {
 //	@Failure	500	{object}	ErrorResponse	"internal server error"
 //	@Router		/users [get]
 func (h userRouteHandler) usersGETHandle(c *echo.Context) error {
-	// TODO: add user-check
 
 	users, err := h.userService.GetAllUsers(c.Request().Context())
 	if err != nil {
