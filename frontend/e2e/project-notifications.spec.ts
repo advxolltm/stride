@@ -72,7 +72,9 @@ async function openTaskMenu(page: Page, taskTitle: string) {
 }
 
 async function openNotifications(page: Page) {
-    await page.getByLabel('Notifications').click()
+    await page
+        .locator('button[aria-label="Notifications"][aria-expanded]:visible')
+        .click()
     await expect(page.getByText('Notifications', { exact: true })).toBeVisible()
 }
 
