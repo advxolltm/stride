@@ -76,8 +76,8 @@
         "changedAssignments_other": "Changed assignments ({{count}})",
         "changedAssignmentsEmpty": "No existing assignments needed to be changed.",
         "invalidAssignments": "Please choose a valid team member for every task before confirming.",
-        "incompatibleAssignments": "Incompatible Tasks and their Assignments ({{count}})",
-        "incompatibleAssignmentsEmpty": "No incompatible Tasks."
+        "incompatibleAssignments": "Preassigned incompatible Tasks and their Assignments ({{count}})",
+        "incompatibleAssignmentsEmpty": "No preassigned incompatible Tasks."
       },
       "assignment": {
         "ariaLabel": "Assign {{taskTitle}}",

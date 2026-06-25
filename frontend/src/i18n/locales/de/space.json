@@ -76,8 +76,8 @@
         "changedAssignments_other": "Geaenderte Zuweisungen ({{count}})",
         "changedAssignmentsEmpty": "Bestehende Zuweisungen mussten nicht geaendert werden.",
         "invalidAssignments": "Bitte waehlen Sie fuer jede Aufgabe ein gueltiges Teammitglied aus, bevor Sie bestaetigen.",
-        "incompatibleAssignments": "Inkompatibel Tasks und ihre Zuweisungen ({{count}})",
-        "incompatibleAssignmentsEmpty": "Keine Tasks waren inkompatibel."
+        "incompatibleAssignments": "Bereits zugewiesene inkompatible Tasks und ihre Zuweisungen ({{count}})",
+        "incompatibleAssignmentsEmpty": "Keine bereits zugewiesenen Tasks waren inkompatibel."
       },
       "assignment": {
         "ariaLabel": "{{taskTitle}} zuweisen",
