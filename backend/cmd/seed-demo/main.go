@@ -112,8 +112,6 @@ func seedStrategyScenario(dbConn *gorm.DB, service userService.UserService) {
 	hoursBeeg := 20
 	hoursSmol := 10
 
-	// No dates being set would also work for showing off the imputing functionality and how it automatically imputes the most loose bound on tasks that have no bounds set
-
 	now := time.Date(2026, 6, 22, 0, 0, 0, 0, time.Local)
 	oneWeekLater := now.AddDate(0, 0, 5)
 	twoWeeksLater := now.AddDate(0, 0, 12)
