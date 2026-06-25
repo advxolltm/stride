@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -77,4 +78,33 @@ func seedSkillScenario(dbConn *gorm.DB, service userService.UserService) {
 
 func seedStrategyScenario(dbConn *gorm.DB, service userService.UserService) {
 	// Scenario where min makespan and divide evenly provide different results
+	fastUser, err := service.CreateUser(context.Background(), "James-SkillData", "james@demo.com", "Password1!")
+	if err != nil {
+		fmt.Println(fmt.Errorf("%s", err.Error()))
+	}
+	SlowUser, err := service.CreateUser(context.Background(), "Jane-SkillData", "jane@demo.com", "Password1!")
+	if err != nil {
+		fmt.Println(fmt.Errorf("%s", err.Error()))
+	}
+
+	project := models.Project{Name: "Strategy Demo Project", Slug: "strat-demo", Status: "active", Creator: fastUser}
+	dbConn.Create(&project)
+
+	fastMember := models.ProjectMember{User: *fastUser, Project: project, Role: "owner", WorkingHours: 30}
+	slowMember := models.ProjectMember{User: *SlowUser, Project: project, Role: "member", WorkingHours: 10}
+
+	dbConn.Create(&fastMember)
+	dbConn.Create(&slowMember)
+
+	hoursBeeg := 20
+	hoursSmol := 10
+
+	// No dates being set would also work for showing off the imputing functionality and how it automatically imputes the most loose bound on tasks that have no bounds set
+
+	now := time.Date(2026, 6, 22, 0, 0, 0, 0, time.Local)
+	oneWeekLater := now.AddDate(0, 0, 5)
+	twoWeeksLater := now.AddDate(0, 0, 12)
+
+	dbConn.Create(&models.Task{Title: "Build UI component", Project: project, Status: "todo", ExpectedDurationHours: &hoursBeeg, CreatedBy: fastMember.ID, StartDate: &now, DueDate: &twoWeeksLater})
+	dbConn.Create(&models.Task{Title: "Setup Database schema", Project: project, Status: "todo", ExpectedDurationHours: &hoursSmol, CreatedBy: slowMember.ID, StartDate: &now, DueDate: &oneWeekLater})
 }
