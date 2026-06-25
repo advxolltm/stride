@@ -102,7 +102,10 @@
     "add": "Add",
     "cancel": "Cancel",
     "membersAdded": "Members added successfully",
-    "membersAddError": "Failed to add members"
+    "membersAddError": "Failed to add members",
+    "allMembersAdded": "All available users are already members of this project.",
+    "selectedCount_one": "1 user selected",
+    "selectedCount_other": "{{count}} users selected"
   },
   "createDialog": {
     "title": "Create Project",

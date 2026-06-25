@@ -19,6 +19,7 @@ WORKDIR /app
 
 COPY --from=builder /out/stride-server /app/stride-server
 COPY --from=builder /out/stride-create-user /app/stride-create-user
+COPY --from=builder /app/seed-demo /app/seed-demo
 
 RUN mkdir -p /app/media
 

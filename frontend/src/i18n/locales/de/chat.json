@@ -27,7 +27,7 @@
 		},
 		"input": {
 			"placeholder": "Nachricht schreiben...",
-			"archivedPlaceholder": "Dieses Projekt ist archiviert. Der Chat ist schreibgeschuetzt."
+			"archivedPlaceholder": "Dieses Projekt ist archiviert. Der Chat ist schreibgeschützt."
 		},
 		"panel": {
 			"title": "Projektchat",
@@ -45,7 +45,7 @@
 		"errors": {
 			"sendMessage": "Nachricht konnte nicht gesendet werden",
 			"editMessage": "Nachricht konnte nicht aktualisiert werden",
-			"deleteMessage": "Nachricht konnte nicht geloescht werden"
+			"deleteMessage": "Nachricht konnte nicht gelöscht werden"
 		},
 		"deleteDialog": {
 			"title": "Nachricht löschen",

@@ -22,13 +22,14 @@ interface SchedulerFlowModalProps {
     skippedMemberCount: number
     estimatedTaskCount: number
     startDateTaskCount: number
-    onRun: (optimStrat : OptimizationStrategy) => Promise<SchedulerPreviewResponse>
+    onRun: (optimStrat: OptimizationStrategy, timeout: number) => Promise<SchedulerPreviewResponse>
     onConfirm: (assignments: SchedulerAssignment[]) => Promise<void>
 }
 
 const EMPTY_SCHEDULER_PREVIEW: SchedulerPreviewResponse = {
     newAssignments: [],
     changedAssignments: [],
+    incompatibleAssignments: [],
 }
 
 export function SchedulerFlowModal({
@@ -52,6 +53,7 @@ export function SchedulerFlowModal({
     const onRunRef = useRef(onRun)
     const onOpenChangeRef = useRef(onOpenChange)
     const [strategy, setStrategy] = useState<OptimizationStrategy>('min-makespan')
+    const [timeout, setTimeout] = useState<number>(45)
 
     useEffect(() => {
         onRunRef.current = onRun
@@ -84,7 +86,7 @@ export function SchedulerFlowModal({
         hasStartedRunRef.current = true
         let isMounted = true
 
-        void onRunRef.current(strategy)
+        void onRunRef.current(strategy, timeout)
             .then((nextPreview) => {
                 if (!isMounted) return
 
@@ -103,6 +105,43 @@ export function SchedulerFlowModal({
         }
     }, [step])
 
+    function handleAssignmentRemove(taskId: string, userId: string) {
+        function updateAssignments(assignments: SchedulerAssignment[]) {
+            return assignments.map(assignment => {
+                if (assignment.taskId === taskId && assignment.userId === userId) {
+                    return { taskId: assignment.taskId, userId: null };
+                } else {
+                    return assignment;
+                }
+            });
+        }
+
+        setPreview((current) => {
+            const isDropped = current.incompatibleAssignments.some(
+                (assignment) => assignment.taskId === taskId
+            );
+
+            if (isDropped) {
+                return {
+                    newAssignments: current.newAssignments,
+                    changedAssignments: [
+                        ...current.changedAssignments,
+                        { taskId, userId: null },
+                    ],
+                    incompatibleAssignments: current.incompatibleAssignments.filter(
+                        (assignment) => assignment.taskId !== taskId
+                    ),
+                }
+            }
+
+            return {
+                newAssignments: updateAssignments(current.newAssignments),
+                changedAssignments: updateAssignments(current.changedAssignments),
+                incompatibleAssignments: updateAssignments(current.incompatibleAssignments),
+            };
+        })
+    }
+
     function handleAssignmentChange(taskId: string, userId: string) {
         function updateAssignments(assignments: SchedulerAssignment[]) {
             return assignments.map((assignment) =>
@@ -112,10 +151,30 @@ export function SchedulerFlowModal({
             )
         }
 
-        setPreview((current) => ({
-            newAssignments: updateAssignments(current.newAssignments),
-            changedAssignments: updateAssignments(current.changedAssignments),
-        }))
+        setPreview((current) => {
+            const isDropped = current.incompatibleAssignments.some(
+                (assignment) => assignment.taskId === taskId
+            )
+
+            if (isDropped) {
+                return {
+                    newAssignments: current.newAssignments,
+                    changedAssignments: [
+                        ...current.changedAssignments,
+                        { taskId, userId },
+                    ],
+                    incompatibleAssignments: current.incompatibleAssignments.filter(
+                        (assignment) => assignment.taskId !== taskId
+                    ),
+                }
+            }
+
+            return {
+                newAssignments: updateAssignments(current.newAssignments),
+                changedAssignments: updateAssignments(current.changedAssignments),
+                incompatibleAssignments: current.incompatibleAssignments,
+            }
+        })
     }
 
     async function handleConfirm() {
@@ -125,6 +184,7 @@ export function SchedulerFlowModal({
             await onConfirm([
                 ...preview.newAssignments,
                 ...preview.changedAssignments,
+                ...preview.incompatibleAssignments,
             ])
             handleOpenChange(false)
         } finally {
@@ -148,6 +208,8 @@ export function SchedulerFlowModal({
                                 onRun={() => setStep('loading')}
                                 onStrategyChange={(val) => setStrategy(val as OptimizationStrategy)}
                                 strategy={strategy}
+                                timeout={timeout}
+                                onTimeoutChange={(val) => setTimeout(val as number)}
                             />
                         ) : null}
 
@@ -161,6 +223,7 @@ export function SchedulerFlowModal({
                                 isConfirming={isConfirming}
                                 onCancel={() => handleOpenChange(false)}
                                 onAssignmentChange={handleAssignmentChange}
+                                onAssignmentRemove={handleAssignmentRemove}
                                 onConfirm={handleConfirm}
                             />
                         ) : null}

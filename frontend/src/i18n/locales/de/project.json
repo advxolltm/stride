@@ -102,7 +102,10 @@
     "add": "Hinzufügen",
     "cancel": "Abbrechen",
     "membersAdded": "Mitglieder erfolgreich hinzugefügt",
-    "membersAddError": "Fehler beim Hinzufügen der Mitglieder"
+    "membersAddError": "Fehler beim Hinzufügen der Mitglieder",
+    "allMembersAdded": "Alle verfügbaren Benutzer sind bereits Mitglieder in diesem Projekt.",
+    "selectedCount_one": "1 Benutzer ausgewählt",
+    "selectedCount_other": "{{count}} Benutzer ausgewählt"
   },
   "createDialog": {
     "title": "Projekt erstellen",
@@ -255,7 +258,7 @@
   },
   "settingsSidebar": {
     "title": "Projekteinstellungen",
-    "close": "Einstellungen schliessen",
+    "close": "Einstellungen schließen",
     "tabs": {
       "general": "Allgemein",
       "members": "Team",

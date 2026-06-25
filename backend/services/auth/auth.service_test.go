@@ -63,7 +63,6 @@ func TestAuthService(t *testing.T) {
 		realUser2Pwd := testutils.GenerateUserPassword()
 		realUser2 := realUsers[1]
 
-		// TODO: replace with testutils call
 		_, err := sut.userService.UpdateUser(t.Context(), realUser2.ID, userService.UpdateUserInput{
 			Password: &realUser2Pwd,
 		})

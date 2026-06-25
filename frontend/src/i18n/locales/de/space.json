@@ -27,19 +27,19 @@
       "taskUpdateError": "Aufgabe konnte nicht aktualisiert werden.",
       "moveSuccess": "Aufgabe verschoben.",
       "moveError": "Aufgabe konnte nicht verschoben werden.",
-      "dueDateUpdateSuccess": "Faelligkeitsdatum aktualisiert.",
-      "dueDateUpdateError": "Faelligkeitsdatum konnte nicht aktualisiert werden.",
+      "dueDateUpdateSuccess": "Fälligkeitsdatum aktualisiert.",
+      "dueDateUpdateError": "Fälligkeitsdatum konnte nicht aktualisiert werden.",
       "loading": "Aufgaben werden geladen...",
       "createSuccess": "Aufgabe erstellt.",
       "createError": "Aufgabe konnte nicht erstellt werden.",
-      "archivedReadOnly": "Archiviertes Projekt - schreibgeschuetzt"
+      "archivedReadOnly": "Archiviertes Projekt - schreibgeschützt"
     },
     "scheduler": {
       "actions": {
         "cancel": "Abbrechen",
-        "close": "Schliessen",
+        "close": "Schließen",
         "run": "Scheduler starten",
-        "confirm": "Zuweisungen bestaetigen"
+        "confirm": "Zuweisungen bestätigen"
       },
       "messages": {
         "generateError": "Scheduler-Zuweisungen konnten nicht erstellt werden.",
@@ -48,40 +48,51 @@
       },
       "intro": {
         "title": "Aufgaben automatisch zuweisen?",
-        "help": "Pruefen Sie die Hinweise unten, bevor Sie den Scheduler starten.",
-        "noTasks": "Fuegen Sie mindestens eine offene Aufgabe hinzu, bevor Sie den Scheduler starten.",
-        "noMembers": "Hinterlegen Sie fuer mindestens ein Teammitglied Arbeitsstunden, bevor Sie den Scheduler starten.",
-        "noEstimatedTasks": "Fuegen Sie mindestens einer offenen Aufgabe eine geschaetzte Zeit hinzu, bevor Sie den Scheduler starten.",
-        "noStartDates": "Fuegen Sie mindestens einer offenen Aufgabe ein Startdatum hinzu, bevor Sie den Scheduler starten.",
-        "ready_one": "Der Scheduler verteilt {{taskCount}} offene oder in-arbeit Aufgaben anhand der Auslastung auf {{count}} verfuegbares Teammitglied. Sie koennen die Zuweisungen vor dem Bestaetigen noch pruefen und anpassen.",
-        "ready_other": "Der Scheduler verteilt {{taskCount}} offene  oder in-arbeit Aufgaben anhand der Auslastung auf {{count}} verfuegbare Teammitglieder. Sie koennen die Zuweisungen vor dem Bestaetigen noch pruefen und anpassen.",
-        "skippedMembers_one": "{{count}} Teammitglied hat 0 verfuegbare Stunden und wird uebersprungen.",
-        "skippedMembers_other": "{{count}} Teammitglieder haben 0 verfuegbare Stunden und werden uebersprungen."
+        "help": "Prüfen Sie die Hinweise unten, bevor Sie den Scheduler starten.",
+        "noTasks": "Fügen Sie mindestens eine offene Aufgabe hinzu, bevor Sie den Scheduler starten.",
+        "noMembers": "Hinterlegen Sie für mindestens ein Teammitglied Arbeitsstunden, bevor Sie den Scheduler starten.",
+        "noEstimatedTasks": "Fügen Sie mindestens einer offenen Aufgabe eine geschätzte Zeit hinzu, bevor Sie den Scheduler starten.",
+        "noStartDates": "Fügen Sie mindestens einer offenen Aufgabe ein Startdatum hinzu, bevor Sie den Scheduler starten.",
+        "ready_one": "Der Scheduler verteilt {{taskCount}} offene oder in-arbeit Aufgaben anhand der Auslastung auf {{count}} verfügbares Teammitglied. Sie können die Zuweisungen vor dem Bestätigen noch prüfen und anpassen.",
+        "ready_other": "Der Scheduler verteilt {{taskCount}} offene  oder in-arbeit Aufgaben anhand der Auslastung auf {{count}} verfügbare Teammitglieder. Sie können die Zuweisungen vor dem Bestätigen noch prüfen und anpassen.",
+        "skippedMembers_one": "{{count}} Teammitglied hat 0 verfügbare Stunden und wird übersprungen.",
+        "skippedMembers_other": "{{count}} Teammitglieder haben 0 verfügbare Stunden und werden übersprungen."
       },
       "loading": {
         "title": "Aufgaben werden zugewiesen",
         "description": "Der Scheduler weist Aufgaben zu..."
       },
       "review": {
-        "title": "Zuweisungen pruefen",
-        "description_one": "Pruefen Sie die folgende Zuweisung vor dem Speichern. {{count}} Aufgabe ist bereit.",
-        "description_other": "Pruefen Sie die folgenden Zuweisungen vor dem Speichern. {{count}} Aufgaben sind bereit.",
+        "title": "Zuweisungen prüfen",
+        "description_one": "Prüfen Sie die folgende Zuweisung vor dem Speichern. {{count}} Aufgabe ist bereit.",
+        "description_other": "Prüfen Sie die folgenden Zuweisungen vor dem Speichern. {{count}} Aufgaben sind bereit.",
         "emptyTitle": "Nichts zuzuweisen",
-        "emptyDescription": "Der Scheduler konnte fuer die ausgewaehlten Aufgaben keine neue Zuweisung finden.",
-        "emptyHint": "Passen Sie Aufgabendaten, geschaetzte Zeit, Faehigkeiten oder Teamverfuegbarkeit an und starten Sie den Scheduler erneut.",
+        "emptyDescription": "Der Scheduler konnte für die ausgewählten Aufgaben keine neue Zuweisung finden.",
+        "emptyHint": "Passen Sie Aufgabendaten, geschätzte Zeit, Fähigkeiten oder Teamverfügbarkeit an und starten Sie den Scheduler erneut.",
         "newAssignments_one": "Neue Zuweisungen ({{count}})",
         "newAssignments_other": "Neue Zuweisungen ({{count}})",
         "newAssignmentsEmpty": "Es wurden keine neuen Zuweisungen vorgeschlagen.",
-        "changedAssignments_one": "Geaenderte Zuweisungen ({{count}})",
-        "changedAssignments_other": "Geaenderte Zuweisungen ({{count}})",
-        "changedAssignmentsEmpty": "Bestehende Zuweisungen mussten nicht geaendert werden.",
-        "invalidAssignments": "Bitte waehlen Sie fuer jede Aufgabe ein gueltiges Teammitglied aus, bevor Sie bestaetigen."
+        "changedAssignments_one": "Geänderte Zuweisungen ({{count}})",
+        "changedAssignments_other": "Geänderte Zuweisungen ({{count}})",
+        "changedAssignmentsEmpty": "Bestehende Zuweisungen mussten nicht geändert werden.",
+        "invalidAssignments": "Bitte wählen Sie für jede Aufgabe ein gültiges Teammitglied aus, bevor Sie bestätigen.",
+        "incompatibleAssignments": "Bereits zugewiesene inkompatible Tasks und ihre Zuweisungen ({{count}})",
+        "incompatibleAssignmentsEmpty": "Keine bereits zugewiesenen Tasks waren inkompatibel."
       },
       "assignment": {
         "ariaLabel": "{{taskTitle}} zuweisen",
-        "placeholder": "Zustaendigen auswaehlen",
-        "empty": "Kein Zustaendiger",
+        "placeholder": "Zuständigen auswählen",
+        "empty": "Kein Zuständiger",
         "search": "Benutzer suchen..."
+      },
+      "settings": {
+        "strategy": "Optimierungsstrategie",
+        "distributeEvenly": "Gleichmäßig verteilen",
+        "distributeEvenlyDesc": "Die Arbeitslast gleichmäßig auf alle verfügbaren Teammitglieder verteilen.",
+        "minMakespan": "Dauer minimieren",
+        "minMakespanDesc": "Alle Aufgaben so schnell wie möglich abschließen.",
+        "timeout": "Maximale Berechnungszeit",
+        "timeoutDesc": "Höhere Werte können bei komplexen Projekten zu besseren Ergebnissen führen, verlängern aber die Wartezeit."
       }
     },
     "list": {
@@ -95,16 +106,16 @@
       "emptyDescription": "Erstellen Sie eine Aufgabe oder passen Sie Ihre Suche an, um passende Aufgaben zu sehen.",
       "visible": "Sichtbar",
       "hidden": "Ausgeblendet",
-      "resizeColumn": "Spalte {{column}} groesse aendern",
+      "resizeColumn": "Spalte {{column}} Größe ändern",
       "columns": {
         "task": "Aufgabe",
         "description": "Beschreibung",
-        "skills": "Faehigkeiten",
-        "assignee": "Zustaendiger",
+        "skills": "Fähigkeiten",
+        "assignee": "Zuständiger",
         "status": "Status",
-        "estimatedTime": "Geschaetzte Zeit",
+        "estimatedTime": "Geschätzte Zeit",
         "startDate": "Startdatum",
-        "dueDate": "Faelligkeitsdatum"
+        "dueDate": "Fälligkeitsdatum"
       },
       "filter": {
         "status": "Status",
@@ -139,7 +150,7 @@
       "labelsSearch": "Labels suchen",
       "assignee": "Zuständiger",
       "assigneePlaceholder": "Zuständigen auswählen",
-      "expectedDuration": "Geschaetzte Zeit (Stunden)",
+      "expectedDuration": "Geschätzte Zeit (Stunden)",
       "expectedDurationPlaceholder": "Leer lassen oder ganze Stunden eingeben",
       "expectedDurationInvalid": "Bitte eine positive ganze Stundenzahl eingeben oder das Feld leer lassen.",
       "startDate": "Startdatum",

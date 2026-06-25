@@ -280,26 +280,22 @@ func (h taskRouteHandler) taskPATCH(c *echo.Context) error {
 	if updatedTask.Title != task.Title {
 		affectedTaskLinkElements, err := h.whiteboardService.FindTaskLinkElements(ctx, userID, updatedTask.ProjectID, updatedTask.ID)
 		if err != nil {
-			// TODO: maybe rollback the task-update change?
 			slog.Error("taskPATCH: Failed to update linked whiteboard elements", "task", updatedTask.ID, "error", err)
 		} else {
 			for _, affectedElement := range affectedTaskLinkElements {
 				if affectedElement.ElementType == "text" {
 					var propsMap map[string]any
 					if err = json.Unmarshal(affectedElement.Props, &propsMap); err != nil {
-						// TODO: maybe rollback the task-update change?
 						slog.Error("taskPATCH: Failed to update linked whiteboard elements", "task", updatedTask.ID, "whiteboard-element", affectedElement.ID, "error", err)
 					}
 
 					propsMap["text"] = updatedTask.Title
 					propsMap["originalText"] = updatedTask.Title
 
-					// TODO: somehow calculate this better, but this seems to be good enough for now
 					propsMap["width"] = len(updatedTask.Title) * 10
 
 					updatedProps, err := json.Marshal(propsMap)
 					if err != nil {
-						// TODO: maybe rollback the task-update change?
 						slog.Error("taskPATCH: Failed to update linked whiteboard elements", "task", updatedTask.ID, "whiteboard-element", affectedElement.ID, "error", err)
 					}
 
@@ -320,7 +316,6 @@ func (h taskRouteHandler) taskPATCH(c *echo.Context) error {
 					}
 
 					if err != nil {
-						// TODO: maybe rollback the task-update change?
 						slog.Error("taskPATCH: Failed to update linked whiteboard elements", "task", updatedTask.ID, "whiteboard-element", affectedElement.ID, "error", err)
 					}
 				}
@@ -398,13 +393,11 @@ func (h taskRouteHandler) taskDELETE(c *echo.Context) error {
 
 	affectedTaskLinkElements, err := h.whiteboardService.FindTaskLinkElements(ctx, userID, task.ProjectID, task.ID)
 	if err != nil {
-		// TODO: maybe rollback the task-update change?
 		slog.Error("taskDELETE: Failed to update linked whiteboard elements", "task", task.ID, "error", err)
 	} else {
 		for _, affectedElement := range affectedTaskLinkElements {
 			err = h.whiteboardService.DeleteElement(ctx, userID, task.ProjectID, affectedElement.ID)
 			if err != nil {
-				// TODO: maybe rollback the task-update change?
 				slog.Error("taskDELETE: Failed to delete linked whiteboard elements", "task", task.ID, "whiteboard-element", affectedElement.ID, "error", err)
 			}
 
@@ -419,7 +412,6 @@ func (h taskRouteHandler) taskDELETE(c *echo.Context) error {
 			}
 
 			if err != nil {
-				// TODO: maybe rollback the task-update change?
 				slog.Error("taskDELETE: Failed to update linked whiteboard elements", "task", task.ID, "whiteboard-element", affectedElement.ID, "error", err)
 			}
 		}

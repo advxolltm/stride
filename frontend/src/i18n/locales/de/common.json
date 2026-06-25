@@ -7,8 +7,8 @@
     "createProject": "Projekt erstellen"
   },
   "navigation": {
-    "home": "Home",
-    "overview": "Uebersicht",
+    "home": "Startseite",
+    "overview": "Übersicht",
     "projects": "Projekte",
     "activeProjects": "Aktive Projekte",
     "archivedProjects": "Archivierte Projekte",
@@ -20,9 +20,9 @@
   "logout": {
     "label": "Abmelden",
     "title": "Abmelden?",
-    "message": "Sie muessen sich erneut anmelden, um fortzufahren.",
+    "message": "Sie müssen sich erneut anmelden, um fortzufahren.",
     "confirm": "Abmelden",
-    "pending": "Abmeldung laeuft..."
+    "pending": "Abmeldung läuft..."
   },
   "passwordInput": {
     "label": "Passwort",
@@ -45,10 +45,10 @@
     "unreadCount": "{{count}} ungelesen",
     "emptyTitle": "Keine Benachrichtigungen",
     "emptyDescription": "Neue Updates werden hier angezeigt.",
-    "deleteAriaLabel": "Benachrichtigung loeschen",
+    "deleteAriaLabel": "Benachrichtigung löschen",
     "markAsReadError": "Benachrichtigung konnte nicht als gelesen markiert werden.",
-    "openError": "Ziel der Benachrichtigung konnte nicht geoeffnet werden.",
-    "deleteError": "Benachrichtigung konnte nicht geloescht werden.",
+    "openError": "Ziel der Benachrichtigung konnte nicht geöffnet werden.",
+    "deleteError": "Benachrichtigung konnte nicht gelöscht werden.",
     "objectTypes": {
       "notification": "Benachrichtigung",
       "project": "Projekt",
@@ -73,11 +73,11 @@
     "confirm": "OK"
   },
   "projectDeleted": {
-    "title": "Projekt geloescht",
-    "message": "Projekt {{projectName}} wurde geloescht.",
+    "title": "Projekt gelöscht",
+    "message": "Projekt {{projectName}} wurde gelöscht.",
     "confirm": "OK"
   },
-  "primary": "Primaer",
+  "primary": "Primär",
   "danger": "Gefahr",
   "tailwindMessage": "Tailwind + Theme funktioniert",
   "auth": {

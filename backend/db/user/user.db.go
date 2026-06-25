@@ -15,8 +15,6 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-// TODO: Tests user.db.go
-
 type UpdateUserFields struct {
 	Email        *string              `gorm:"column:email"`
 	PasswordHash *string              `gorm:"column:password_hash"`

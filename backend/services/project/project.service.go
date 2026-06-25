@@ -91,7 +91,6 @@ func (s projectService) GetProject(ctx context.Context, id uuid.UUID) (*models.P
 }
 
 func (s projectService) GetProjectMember(ctx context.Context, projectId uuid.UUID, userId uuid.UUID) (*models.ProjectMember, error) {
-	// TODO: make more efficient call
 	members, err := s.projectStore.GetProjectMembers(ctx, projectId)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrProjectStoreFailed, err)
