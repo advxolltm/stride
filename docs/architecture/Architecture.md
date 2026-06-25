@@ -320,6 +320,7 @@ Major decisions:
 | Goroutine split for real-time workers | Keeps long-lived sockets, hub owners, pingers, readers, and flushers bounded.  | [ADR-0008](adr/0008-goroutine-split-for-realtime-workers.md)    |
 | gorilla/websocket and Redis hub       | Matches current backend and keeps project fan-out simple.                      | [ADR-0009](adr/0009-gorilla-websocket-and-redis-project-hub.md) |
 | Whiteboard framework decision         | Needed to lock Excalidraw versus alternatives and ownership boundaries.        | [ADR-0010](adr/0010-whiteboard-framework.md)                    |
+| Task-Scheduler using Google Or-Tools | Using an CP-SAT solver to efficiently solve complex optimization problems. | [ADR-0011](adr/0011-task-scheduler-or-tools.md)
 
 Proposed additional ADRs:
 
