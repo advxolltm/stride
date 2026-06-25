@@ -287,7 +287,7 @@ export const WhiteboardCanvas = forwardRef<
                 {remoteSelectionHighlights.map((highlight) => (
                     <div
                         key={highlight.element.id}
-                        className="absolute rounded-[3px] border-2 border-dashed border-[#f59e0b] shadow-[0_0_0_2px_rgba(245,158,11,0.18)]"
+                        className="whiteboard-remote-selection absolute"
                         style={{
                             left: `${highlight.left - 4}px`,
                             top: `${highlight.top - 4}px`,
