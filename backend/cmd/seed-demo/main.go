@@ -71,6 +71,7 @@ func seedSkillScenario(dbConn *gorm.DB, service userService.UserService) {
 	hours := 5
 
 	// No dates being set would also work for showing off the imputing functionality and how it automatically imputes the most loose bound on tasks that have no bounds set
+	// Swap around and add both skills to one to show that assignments are made accordingly / not at all when not possible
 
 	dbConn.Create(&models.Task{Title: "Build UI component", Project: project, NeededSkills: []models.ProjectSkill{reactSkill}, Status: "todo", ExpectedDurationHours: &hours, CreatedBy: frontMember.ID})
 	dbConn.Create(&models.Task{Title: "Setup Database schema", Project: project, NeededSkills: []models.ProjectSkill{goSkill}, Status: "todo", ExpectedDurationHours: &hours, CreatedBy: backMember.ID})
