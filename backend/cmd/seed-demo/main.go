@@ -90,8 +90,14 @@ func seedStrategyScenario(dbConn *gorm.DB, service userService.UserService) {
 	project := models.Project{Name: "Strategy Demo Project", Slug: "strat-demo", Status: "active", Creator: fastUser}
 	dbConn.Create(&project)
 
-	fastMember := models.ProjectMember{User: *fastUser, Project: project, Role: "owner", WorkingHours: 30}
-	slowMember := models.ProjectMember{User: *SlowUser, Project: project, Role: "member", WorkingHours: 10}
+	reactSkill := models.ProjectSkill{Name: "React", ProjectID: project.ID}
+	goSkill := models.ProjectSkill{Name: "Golang", ProjectID: project.ID}
+
+	dbConn.Create(&reactSkill)
+	dbConn.Create(&goSkill)
+
+	fastMember := models.ProjectMember{User: *fastUser, Project: project, Role: "owner", WorkingHours: 30, Skills: []models.ProjectSkill{reactSkill, goSkill}}
+	slowMember := models.ProjectMember{User: *SlowUser, Project: project, Role: "member", WorkingHours: 18, Skills: []models.ProjectSkill{reactSkill}}
 
 	dbConn.Create(&fastMember)
 	dbConn.Create(&slowMember)
@@ -105,6 +111,6 @@ func seedStrategyScenario(dbConn *gorm.DB, service userService.UserService) {
 	oneWeekLater := now.AddDate(0, 0, 5)
 	twoWeeksLater := now.AddDate(0, 0, 12)
 
-	dbConn.Create(&models.Task{Title: "Build UI component", Project: project, Status: "todo", ExpectedDurationHours: &hoursBeeg, CreatedBy: fastMember.ID, StartDate: &now, DueDate: &twoWeeksLater})
-	dbConn.Create(&models.Task{Title: "Setup Database schema", Project: project, Status: "todo", ExpectedDurationHours: &hoursSmol, CreatedBy: slowMember.ID, StartDate: &now, DueDate: &oneWeekLater})
+	dbConn.Create(&models.Task{Title: "Build UI component", Project: project, Status: "todo", ExpectedDurationHours: &hoursBeeg, CreatedBy: fastMember.ID, StartDate: &now, DueDate: &twoWeeksLater, NeededSkills: []models.ProjectSkill{reactSkill}})
+	dbConn.Create(&models.Task{Title: "Setup Database schema", Project: project, Status: "todo", ExpectedDurationHours: &hoursSmol, CreatedBy: slowMember.ID, StartDate: &now, DueDate: &oneWeekLater, NeededSkills: []models.ProjectSkill{goSkill}})
 }
