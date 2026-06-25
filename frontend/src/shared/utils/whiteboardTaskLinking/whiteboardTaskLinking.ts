@@ -195,7 +195,7 @@ function createTaskLinkRectangle(
         updated: Date.now(),
         index: null,
         frameId: null,
-        link: `/project/${projectId}/tasks?taskID=${taskId}`,
+        link: null,
         customData: {
             taskLinkId: taskId
         }
