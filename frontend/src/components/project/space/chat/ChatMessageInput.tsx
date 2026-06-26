@@ -20,7 +20,9 @@ export function ChatMessageInput({
 }: ChatMessageInputProps) {
     const { t } = useTranslation('chat')
     const isEmbedded = variant === 'embedded'
-    const isDrawer = variant === 'drawer'
+    const spacingClassName = isEmbedded
+        ? 'px-4 pt-2 pb-3'
+        : 'px-4 pt-2 pb-5'
     const inputRef = useRef<HTMLTextAreaElement | null>(null)
 
     const resizeInput = useCallback(() => {
@@ -70,11 +72,11 @@ export function ChatMessageInput({
     return (
         <div
             className={[
-                'shrink-0 touch-manipulation pb-1',
+                'shrink-0 touch-manipulation',
                 isEmbedded
                     ? 'border-border bg-surface-secondary'
                     : 'border-default-200 bg-background',
-                isDrawer ? 'px-4 pt-2' : 'px-4',
+                spacingClassName,
             ].join(' ')}
         >
             <Form className="w-full" onSubmit={onSubmit}>
