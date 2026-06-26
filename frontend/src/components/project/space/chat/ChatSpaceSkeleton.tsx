@@ -7,7 +7,11 @@ interface ChatSpaceSkeletonProps {
 export function ChatSpaceSkeleton({
     variant = 'page',
 }: ChatSpaceSkeletonProps) {
+    const isEmbedded = variant === 'embedded'
     const isDrawer = variant === 'drawer'
+    const composerSpacingClassName = isEmbedded
+        ? 'px-4 pt-2 pb-3'
+        : 'px-4 pt-2 pb-5'
 
     return (
         <div
@@ -59,7 +63,12 @@ export function ChatSpaceSkeleton({
                 </div>
             </div>
 
-            <div className="shrink-0 border-t-2 border-default-200 p-3 px-6">
+            <div
+                className={[
+                    'shrink-0 border-t-2 border-default-200',
+                    composerSpacingClassName,
+                ].join(' ')}
+            >
                 <div className="border-default-200 bg-surface flex h-14 items-center rounded-2xl border px-3 shadow-sm">
                     <Skeleton className="h-4 w-32 rounded-lg" />
                     <Skeleton className="ml-auto h-10 w-10 rounded-xl" />
