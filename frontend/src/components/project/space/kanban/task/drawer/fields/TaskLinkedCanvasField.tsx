@@ -67,7 +67,7 @@ export function TaskLinkedCanvasField({ task }: { task: Task }) {
             <div className="flex flex-col gap-1.5 h-full">
                 <div className="h-full">
                     <Label>{t("tasks.form.linkedWhiteboardRegion")}</Label>
-                    <div className="flex h-full w-full min-h-0">
+                    <div className="flex h-full w-full min-h-50 min-w-50">
                         <div className="min-w-0 flex-1" onClick={gotoCanvas}>
                             <style>{css}</style>
                             <WhiteboardCanvas

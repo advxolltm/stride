@@ -50,6 +50,10 @@ import { useTaskListPreferences } from './useTaskListPreferences'
 import { useKanbanState } from './useKanbanState'
 import type { OptimizationStrategy } from '../scheduler/SchedulerFlowModal'
 import { TaskFilters } from './TaskFilters'
+import { useDeleteProjectWhiteboardElementsBulkMutation, useGetProjectWhiteboardElementsQuery, useWatchWhiteboardEventsQuery } from '../../../../../store/features/whiteboard/whiteboard.api'
+import { skipToken } from '@reduxjs/toolkit/query'
+import { useWhiteboardSync } from '../../whiteboard/sync/useWhiteboardSync'
+import type { WhiteboardLiveUpdateEventPayload } from '../../../../../store/features/whiteboard/whiteboard.socket.types'
 
 function taskMatchesSearch(task: Task, query: string) {
     const searchableText = [
@@ -77,6 +81,8 @@ const EMPTY_SCHEDULER_PREVIEW: SchedulerPreviewResponse = {
     changedAssignments: [],
 	incompatibleAssignments: [],
 }
+
+const emptyLiveElementsById: Record<string, WhiteboardLiveUpdateEventPayload> = {};
 
 export function KanbanBoard() {
     const { t } = useTranslation('space')
@@ -174,6 +180,36 @@ export function KanbanBoard() {
         () => filteredColumns.flatMap((col) => col.tasks),
         [filteredColumns],
     )
+
+    const {
+        data: whiteboardElements = [],
+        isSuccess: isElementsReady,
+    } = useGetProjectWhiteboardElementsQuery(projectId ?? '', {
+        skip: !projectId,
+        refetchOnMountOrArgChange: true,
+    });
+
+    const whiteboardEventsWS = useWatchWhiteboardEventsQuery(
+        projectId && isElementsReady ? projectId : skipToken,
+        {
+            selectFromResult: ({ data }) => ({
+                liveElementsById: data?.liveElementsById ?? emptyLiveElementsById,
+            }),
+        },
+    );
+
+    const liveElementsById = whiteboardEventsWS.liveElementsById;
+    const {
+        excalidrawElements,
+    } = useWhiteboardSync({
+        projectId,
+        isReadOnly: isArchived,
+        whiteboardElements,
+        liveElementsById,
+    });
+
+    const [deleteProjectWhiteboardElementsBulk] =
+        useDeleteProjectWhiteboardElementsBulkMutation();
 
     const schedulerTasks = useMemo<SchedulerTaskOption[]>(
         () =>
@@ -547,7 +583,22 @@ export function KanbanBoard() {
                 }
                 confirmLabel="Delete task"
                 confirmVariant="danger"
-                onConfirm={confirmDelete}
+                onConfirm={async () => {
+					const linkedWhiteboardGroupToDelete = excalidrawElements
+						.filter(e => {
+							if(!e.customData?.taskLinkId) {
+								return false;
+							}
+
+							return e.customData.taskLinkId === taskToDelete?.id;
+						})
+						.map(e => e.id);
+					await deleteProjectWhiteboardElementsBulk({
+						projectId, 
+						elementIds: linkedWhiteboardGroupToDelete
+					});
+					await confirmDelete();
+				}}
             />
 
             <SchedulerFlowModal

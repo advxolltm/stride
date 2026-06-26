@@ -27,4 +27,5 @@ export interface WhiteboardCanvasProps {
     onCursorChange?: (message: WhiteboardCursorClientMessage) => void
     onSelectionChange?: (elementIds: readonly string[]) => boolean | void
 	onElementsSelectedChanged?: (elements: readonly Ordered<NonDeletedExcalidrawElement>[], groupedElements: readonly Ordered<NonDeletedExcalidrawElement>[], selectedOuterGroupIds: readonly string[]) => void
+	onLinkTaskRename?: (taskId: string, newTitle: string) => Promise<void>
 }

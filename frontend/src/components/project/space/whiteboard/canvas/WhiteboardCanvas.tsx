@@ -8,6 +8,8 @@ import {
 } from '@excalidraw/excalidraw'
 import type {
     ExcalidrawElement,
+    ExcalidrawTextElement,
+    NonDeletedExcalidrawElement,
     OrderedExcalidrawElement,
 } from '@excalidraw/excalidraw/element/types'
 import type { AppState, ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
@@ -66,6 +68,7 @@ export const WhiteboardCanvas = forwardRef<
     onCursorChange,
     onSelectionChange,
     onElementsSelectedChanged,
+	onLinkTaskRename,
 }, ref) {
     const containerRef = useRef<HTMLDivElement | null>(null)
 
@@ -186,10 +189,10 @@ export const WhiteboardCanvas = forwardRef<
 
     const handleElementsChange = (nextElements: readonly OrderedExcalidrawElement[]) => {
         const nextSceneSignature = getSceneSignature(nextElements);
-        if (externalSceneSignatureRef.current !== null && nextSceneSignature === externalSceneSignatureRef.current) { 
-			externalSceneSignatureRef.current = null;
-			return;
-		}
+        if (externalSceneSignatureRef.current !== null && nextSceneSignature === externalSceneSignatureRef.current) {
+            externalSceneSignatureRef.current = null;
+            return;
+        }
 
         onChange?.(nextElements)
     }
@@ -199,12 +202,12 @@ export const WhiteboardCanvas = forwardRef<
         const selectedGroupedElements = nextElements.filter(el => el.groupIds.some(groupId => appState.selectedGroupIds[groupId]));
         const editingTextElementIds = appState.editingTextElement
             ? [
-                  appState.editingTextElement.id,
-                  ...(appState.editingTextElement.type === 'text' &&
-                  appState.editingTextElement.containerId
-                      ? [appState.editingTextElement.containerId]
-                      : []),
-              ]
+                appState.editingTextElement.id,
+                ...(appState.editingTextElement.type === 'text' &&
+                    appState.editingTextElement.containerId
+                    ? [appState.editingTextElement.containerId]
+                    : []),
+            ]
             : []
         const selectedElementIds = Array.from(
             new Set(
@@ -224,6 +227,54 @@ export const WhiteboardCanvas = forwardRef<
         }
         onElementsSelectedChanged?.(selectedElements, selectedGroupedElements, Object.keys(appState.selectedGroupIds));
     }
+
+
+    // const previousTextElementsState = useRef<Map<string, string>>(new Map());
+	const currentlyEditingTextElementInitialText = useRef<string | null>(null);
+    const currentlyEditingTextElementId = useRef<string | null>(null);
+    const handleTextElementEdit = async (elements: readonly OrderedExcalidrawElement[], editingTextElement: NonDeletedExcalidrawElement | null) => {
+		// started editing a new element
+        if (editingTextElement !== null) {
+			if(!editingTextElement.customData?.taskLinkId) {
+				// we only care about task-link elements
+				return;
+			}
+
+			// take snapshot of the task-link element
+			if(currentlyEditingTextElementId.current === null) {
+				currentlyEditingTextElementId.current = editingTextElement.id;
+				currentlyEditingTextElementInitialText.current = (editingTextElement as ExcalidrawTextElement).text;
+				return;
+			} 
+
+			return;
+        }
+
+		// finished editing an element -> compare new value
+		if (editingTextElement === null && currentlyEditingTextElementId.current !== null) {
+			const element = elements.find(e => e.id === currentlyEditingTextElementId.current);
+			if(!element) {
+				currentlyEditingTextElementId.current = null;
+				currentlyEditingTextElementInitialText.current = null;
+				return;
+			}
+
+			const textElement = element as ExcalidrawTextElement;
+			const initialText = currentlyEditingTextElementInitialText.current;
+
+			currentlyEditingTextElementId.current = null;
+			currentlyEditingTextElementInitialText.current = null;
+
+			// title changed!
+			if(textElement.text !== initialText)	{
+				if(onLinkTaskRename) {
+					await onLinkTaskRename(textElement.customData!.taskLinkId, textElement.text);
+				}
+			}
+
+			return;
+		}
+    };
 
     return (
         <div
@@ -245,9 +296,10 @@ export const WhiteboardCanvas = forwardRef<
                         image: false,
                     },
                 }}
-                onChange={(nextElements, appState) => {
-					handleElementsChange(nextElements);
-					handleSelectionChange(nextElements, appState);
+                onChange={async (nextElements, appState) => {
+                    handleElementsChange(nextElements);
+                    handleSelectionChange(nextElements, appState);
+                    await handleTextElementEdit(nextElements, appState.editingTextElement);
                 }}
                 onPointerDown={() => {
                     isLocallyInteractingRef.current = true
