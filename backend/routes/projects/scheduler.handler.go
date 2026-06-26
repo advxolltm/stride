@@ -161,7 +161,7 @@ func (h *schedulerRouteHandler) confirmPOSTHandle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, routes.ErrorResponse{Error: "invalid request body"})
 	}
 
-	var ret []routes.ReturnAssignment
+	ret := make([]routes.ReturnAssignment, 0)
 
 	var assignments []additiveSchedulingAssignment
 
