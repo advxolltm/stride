@@ -1,4 +1,4 @@
-import { Button, Tooltip } from '@heroui/react'
+import { Button, toast, Tooltip } from '@heroui/react'
 import { skipToken } from '@reduxjs/toolkit/query'
 import {
     ChevronLeft,
@@ -54,6 +54,7 @@ import {
 } from '../shared/utils/whiteboardTaskLinking/whiteboardTaskLinking'
 import { InfoIcon } from '../components/info/InfoIcon'
 import { InfoModal } from '../components/info/InfoModal'
+import { useLazyGetTaskQuery, useUpdateTaskMutation } from '../store/features/tasks/task.api'
 
 const emptyLiveElementsById: Record<string, WhiteboardLiveUpdateEventPayload> =
     {}
@@ -67,6 +68,7 @@ export function WhiteboardPage() {
     const { projectId } = useParams()
     const [searchParams, setSearchParams] = useSearchParams()
     const { t } = useTranslation('project')
+    const { t: tTask } = useTranslation('space')
     const dispatch = useAppDispatch()
     const currentUserId = useAppSelector(selectUserId)
     const isDarkMode = useAppSelector((state) => state.theme.isDark)
@@ -207,6 +209,32 @@ export function WhiteboardPage() {
             setIsLinkTaskButtonVisible(true)
         }
     }
+
+    const [getTask] = useLazyGetTaskQuery();
+    const [updateTask] = useUpdateTaskMutation();
+	async function handleLinkTaskRename(taskId: string, newTitle: string) {
+		if(!projectId) {
+			return;
+		}
+
+		const task = await getTask(taskId, true);
+		if(task.error || !task.data) {
+			return;
+		}
+
+        const trimmed = newTitle.trim();
+        if (trimmed === task.data.title) {
+			return;
+		}
+
+        await updateTask({
+            taskId: task.data.id,
+            projectId,
+            body: { title: trimmed },
+        }).unwrap();
+
+        toast.success(tTask('tasks.messages.taskUpdateSuccess'));
+	}
 
     function handleOpenPanel() {
         setIsPanelOpen(true)
@@ -508,6 +536,7 @@ export function WhiteboardPage() {
                         onCursorChange={queueCursorUpdate}
                         onSelectionChange={sendSelectionUpdate}
                         onElementsSelectedChanged={handleElementsSelected}
+						onLinkTaskRename={handleLinkTaskRename}
                     />
                 </div>
 

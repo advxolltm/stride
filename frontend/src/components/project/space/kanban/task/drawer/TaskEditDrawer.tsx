@@ -41,6 +41,7 @@ export function TaskEditDrawer({
                                 key={`${task.id}:${task.title}`}
                                 task={task}
                             />
+							<TaskLinkedCanvasField task={task} />
                             <TaskDescriptionField task={task} />
                             <TaskExpectedDurationField task={task} />
                             <TaskStartDateField
@@ -54,7 +55,6 @@ export function TaskEditDrawer({
                             <TaskStatusField task={task} />
                             <TaskAssigneeField task={task} />
                             <TaskSkillsField task={task} />
-							<TaskLinkedCanvasField task={task} />
                         </Drawer.Body>
                     </Drawer.Dialog>
                 </Drawer.Content>

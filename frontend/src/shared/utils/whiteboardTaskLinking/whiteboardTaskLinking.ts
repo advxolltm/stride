@@ -161,7 +161,6 @@ function createTaskLinkText(
 function createTaskLinkRectangle(
     aabb: AABB,
     groupIds: string[],
-    projectId: string,
     taskId: string,
     style: TaskLinkElementsStyle
 ): ExcalidrawRectangleElement {
@@ -195,7 +194,7 @@ function createTaskLinkRectangle(
         updated: Date.now(),
         index: null,
         frameId: null,
-        link: `/project/${projectId}/tasks?taskID=${taskId}`,
+        link: null,
         customData: {
             taskLinkId: taskId
         }
@@ -277,7 +276,7 @@ function createLinkTaskGroupFromSelection(
     } as TaskLinkElementsStyle;
 
     const text = createTaskLinkText(aabb, taskLinkGroups, linkTaskChoice.id, linkTaskChoice.title, taskLinkStyle)
-    const rect = createTaskLinkRectangle(aabb, taskLinkGroups, linkTaskChoice.projectId, linkTaskChoice.id, taskLinkStyle);
+    const rect = createTaskLinkRectangle(aabb, taskLinkGroups, linkTaskChoice.id, taskLinkStyle);
 
     return {
         text,
