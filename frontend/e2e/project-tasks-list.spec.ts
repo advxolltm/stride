@@ -125,13 +125,17 @@ test.describe.serial('Project Tasks – List View', () => {
         await navigateToTasks(page, projectId)
         await switchToListView(page)
 
-        await expect(page.getByText('Assignee', { exact: true })).toBeVisible()
+        const assigneeResizeHandle = page.getByRole('button', {
+            name: 'Resize Assignee column',
+        })
+
+        await expect(assigneeResizeHandle).toBeVisible()
 
         await page.getByRole('button', { name: 'Columns' }).click()
         await page.getByRole('menuitemcheckbox', { name: 'Assignee' }).click()
         await page.keyboard.press('Escape')
 
-        await expect(page.getByText('Assignee', { exact: true })).toHaveCount(0)
+        await expect(assigneeResizeHandle).toHaveCount(0)
 
         const preferencesAfterToggle = await page.evaluate((currentProjectId) => {
             const raw = window.localStorage.getItem('task-list-preferences')
@@ -142,7 +146,7 @@ test.describe.serial('Project Tasks – List View', () => {
 
         await page.reload()
         await switchToListView(page)
-        await expect(page.getByText('Assignee', { exact: true })).toHaveCount(0)
+        await expect(assigneeResizeHandle).toHaveCount(0)
     })
 
     test('preserves resized list column widths after reload', async ({ page }) => {

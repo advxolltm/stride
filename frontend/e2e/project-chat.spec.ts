@@ -26,6 +26,16 @@ async function openMessageMenu(page: Page, messageText: string) {
     await messageGroup.getByRole('button', { name: 'Message actions' }).click()
 }
 
+async function saveInlineEdit(page: Page, previousMessageText: string) {
+    const editForm = page.locator('form').filter({
+        has: page
+            .locator('textarea[data-slot="textarea"]')
+            .filter({ hasText: previousMessageText }),
+    })
+
+    await editForm.getByRole('button').first().click()
+}
+
 // ---------------------------------------------------------------------------
 // Suite
 // ---------------------------------------------------------------------------
@@ -173,8 +183,12 @@ test.describe.serial('Project Chat', () => {
             await openMessageMenu(memberPage, memberMessage)
             await memberPage.getByRole('menuitem', { name: 'Edit' }).click()
 
-            await memberPage.locator('textarea').fill(memberEditedMessage)
-            await memberPage.locator('textarea').press('Control+Enter')
+            const editTextarea = memberPage
+                .locator('textarea[data-slot="textarea"]')
+                .filter({ hasText: memberMessage })
+                .first()
+            await editTextarea.fill(memberEditedMessage)
+            await saveInlineEdit(memberPage, memberEditedMessage)
 
             await expect(
                 memberPage.getByText(memberEditedMessage, { exact: true }),
@@ -231,8 +245,12 @@ test.describe.serial('Project Chat', () => {
         await openMessageMenu(page, ownerMessage)
         await page.getByRole('menuitem', { name: 'Edit' }).click()
 
-        await page.locator('textarea').fill(editedMessage)
-        await page.locator('textarea').press('Control+Enter')
+        const editTextarea = page
+            .locator('textarea[data-slot="textarea"]')
+            .filter({ hasText: ownerMessage })
+            .first()
+        await editTextarea.fill(editedMessage)
+        await saveInlineEdit(page, editedMessage)
 
         await expect(page.getByText(editedMessage, { exact: true })).toBeVisible()
 
@@ -283,7 +301,9 @@ test.describe.serial('Project Chat', () => {
             // Member's notification bell should show a badge.
             // Use getByLabel to target only the <button aria-label="Notifications">
             // and not the HeroUI Popover trigger div that also gets role="button".
-            const notifBell = memberPage.getByLabel('Notifications')
+            const notifBell = memberPage.locator(
+                'button[aria-label="Notifications"][aria-expanded]:visible',
+            )
             await expect(notifBell.locator('span')).toBeVisible({
                 timeout: 10000,
             })
@@ -317,7 +337,9 @@ test.describe.serial('Project Chat', () => {
             await page.goto(`/project/${projectId}/chat`)
             await sendMessage(page, openFromNotificationMessage)
 
-            const notifBell = memberPage.getByLabel('Notifications')
+            const notifBell = memberPage.locator(
+                'button[aria-label="Notifications"][aria-expanded]:visible',
+            )
             await expect(notifBell.locator('span')).toBeVisible({
                 timeout: 10_000,
             })
@@ -373,11 +395,13 @@ test.describe.serial('Project Chat', () => {
         }
 
         await page.goto(`/project/${projectId}/chat`)
+        const deletedMessageRow = page
+            .getByText(deletedUserMessage, { exact: true })
+            .locator('xpath=ancestor::div[contains(@class,"mb-6")][1]')
+
+        await expect(deletedMessageRow).toBeVisible()
         await expect(
-            page.getByText('user deleted', { exact: true }),
-        ).toBeVisible()
-        await expect(
-            page.getByText(deletedUserMessage, { exact: true }),
+            deletedMessageRow.getByText(/user deleted/i),
         ).toBeVisible()
     })
 })
