@@ -129,6 +129,7 @@ def schedule_tasks_to_members(
     last_max_end = 0.0
 
     timeframe_start = min(tasks, key=lambda t: t.start_at).start_at
+    timeframe_start = timeframe_start.replace(hour=0, minute=0, second=0, microsecond=0)
     timeframe_start = timeframe_start - datetime.timedelta(
         days=timeframe_start.weekday()
     )
@@ -148,10 +149,10 @@ def schedule_tasks_to_members(
             if user_has_skills(user, task):
                 # Calculate weeks
                 weeks_before_task = full_working_weeks_until_date(
-                    timeframe_start, task.start_at
+                    timeframe_start, task.start_at.replace(hour=0, minute=0, second=0, microsecond=0)
                 )
                 weeks_before_end = full_working_weeks_until_date(
-                    timeframe_start, task.due_at
+                    timeframe_start, task.due_at.replace(hour=0, minute=0, second=0, microsecond=0)
                 )
 
                 time_left_in_week = (5 - min(task.start_at.weekday(), 5)) * WORK_HOURS_PER_DAY
@@ -163,7 +164,7 @@ def schedule_tasks_to_members(
 
                 day_idx = min(task.due_at.weekday() + 1, 5)
                 max_end = (weeks_before_end * user.weekly_hours) + min(
-                    8 * day_idx, user.weekly_hours
+                    WORK_HOURS_PER_DAY * day_idx, user.weekly_hours
                 )
 
                 # Find the value on the largest max_end normalized by working hours
@@ -190,13 +191,13 @@ def schedule_tasks_to_members(
                         preassignments.append(preassigned_var)
                         preassignments_map[preassigned_var.index] = (i, j)
 
-
+                MAKESPAN_PRECISION = 100
                 # Find the last end time for MAKESPAN calculation
-                scaled_end = model.new_int_var(0, max_end, f"scaled_end_{i}_{j}")
-                model.add(scaled_end == end_var)
+                scaled_end = model.new_int_var(0, max_end * MAKESPAN_PRECISION, f"scaled_end_{i}_{j}")
+                model.add(scaled_end == end_var * MAKESPAN_PRECISION)
 
                 normalized_scaled_end = model.new_int_var(
-                    0, max_end, f"norm_end_scaled_{i}_{j}"
+                    0, max_end * MAKESPAN_PRECISION, f"norm_end_scaled_{i}_{j}"
                 )
                 model.add_division_equality(
                     normalized_scaled_end, scaled_end, user.weekly_hours
@@ -235,7 +236,7 @@ def schedule_tasks_to_members(
         task_presences = [job_assignment_presence[i][j] for i in range(num_members)]
         model.add_at_most_one(task_presences)
 
-    max_ending_time = model.new_int_var(0, int(last_max_end + 1), "max_ending_time")
+    max_ending_time = model.new_int_var(0, int(last_max_end * MAKESPAN_PRECISION + 1), "max_ending_time")
     model.add_max_equality(max_ending_time, task_ending_times)
 
     solver = cp_model.CpSolver()
