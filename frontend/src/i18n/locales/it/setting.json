@@ -1,0 +1,103 @@
+{
+  "title": "Impostazioni",
+  "description": "Gestisci le preferenze del tuo account e le competenze per progetto",
+  "back": "Indietro",
+  "tabs": {
+    "profile": "Profilo",
+    "security": "Sicurezza",
+    "skills": "Competenze",
+    "workingHours": "Ore di lavoro",
+    "users": "Utenti"
+  },
+  "profile": {
+    "title": "Informazioni personali",
+    "fullName": "Nome completo",
+    "username": "Nome utente",
+    "email": "Email",
+    "save": "Salva modifiche",
+    "reset": "Annulla modifiche",
+    "updateSuccess": "Profilo aggiornato con successo",
+    "updateError": "Impossibile aggiornare il profilo. Riprova."
+  },
+  "security": {
+    "title": "Cambia password",
+    "description": "Assicurati che il tuo account utilizzi una password sicura e univoca",
+    "currentPassword": "Password attuale",
+    "currentPasswordPlaceholder": "Inserisci la password attuale",
+    "newPassword": "Nuova password",
+    "newPasswordPlaceholder": "Inserisci la nuova password",
+    "confirmPassword": "Conferma nuova password",
+    "confirmPasswordPlaceholder": "Conferma la nuova password",
+    "update": "Aggiorna password",
+    "reset": "Reimposta",
+    "passwordMismatch": "Le nuove password non corrispondono.",
+    "passwordTooShort": "La password deve contenere almeno {{count}} caratteri.",
+    "passwordMissingSpecial": "La password deve contenere almeno un carattere speciale.",
+    "passwordMissingNumber": "La password deve contenere almeno un numero.",
+    "updateSuccess": "Password aggiornata con successo",
+    "updateError": "Impossibile aggiornare la password. Riprova."
+  },
+  "skills": {
+    "title": "Le tue competenze per progetto",
+    "description": "Seleziona le competenze che metti a disposizione di ciascun progetto",
+    "selectLabel": "Seleziona competenze",
+    "placeholder": "Seleziona competenze",
+    "searchPlaceholder": "Cerca competenze",
+    "selectedCount": "{{selected}} / {{total}} selezionate",
+    "save": "Salva modifiche",
+    "reset": "Annulla modifiche",
+    "updateSuccess": "Competenze aggiornate con successo",
+    "updateError": "Impossibile aggiornare le competenze. Riprova.",
+    "emptySkills": "Nessuna competenza ancora disponibile per questo progetto.",
+    "emptyProjects": "Non sei ancora membro di nessun progetto."
+  },
+  "workingHours": {
+    "title": "Le tue ore di lavoro settimanali",
+    "description": "Hai 40 ore a settimana. Distribuiscile tra i tuoi progetti.",
+    "save": "Salva modifiche",
+    "reset": "Annulla modifiche",
+    "updateSuccess": "Ore di lavoro aggiornate con successo",
+    "updateError": "Impossibile aggiornare le ore di lavoro. Riprova.",
+    "summary": {
+      "allocated": "Allocate",
+      "remaining": "Rimanenti"
+    },
+    "projectSubtitle": "{{hours}}h / settimana · max {{max}}h disponibili",
+    "inputAriaLabel": "Ore settimanali per {{project}}",
+    "availability": "Qui puoi assegnare fino a {{max}}h.",
+    "validation": {
+      "integer": "Inserisci un numero intero.",
+      "range": "Inserisci un valore compreso tra 0 e {{max}}h."
+    }
+  },
+  "users": {
+    "title": "Utenti",
+    "description": "Gestisci gli account utente e il recupero dell'accesso",
+    "addUser": "Aggiungi utente",
+    "username": "Nome utente",
+    "email": "Email",
+    "password": "Password",
+    "newPassword": "Nuova password",
+    "confirmPassword": "Conferma password",
+    "usernameLength": "Il nome utente deve contenere da {{min}} a {{max}} caratteri.",
+    "create": "Crea utente",
+    "cancel": "Annulla",
+    "resetPassword": "Reimposta password",
+    "resetPasswordTitle": "Reimposta password",
+    "delete": "Elimina",
+    "deleting": "Eliminazione in corso...",
+    "deleteTitle": "Eliminare l'utente?",
+    "deleteMessage": "Questa azione eliminerà definitivamente {{user}}.",
+    "superuserBadge": "Superutente",
+    "passwordMismatch": "Le password non corrispondono.",
+    "passwordTooShort": "La password deve contenere almeno {{count}} caratteri.",
+    "passwordMissingSpecial": "La password deve contenere almeno un carattere speciale.",
+    "passwordMissingNumber": "La password deve contenere almeno un numero.",
+    "createSuccess": "Utente creato con successo",
+    "createError": "Impossibile creare l'utente. Riprova.",
+    "resetSuccess": "Password reimpostata con successo",
+    "resetError": "Impossibile reimpostare la password. Riprova.",
+    "deleteSuccess": "Utente eliminato con successo",
+    "deleteError": "Impossibile eliminare l'utente. Riprova."
+  }
+}
