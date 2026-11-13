@@ -1,0 +1,58 @@
+{
+	"chat": {
+		"loadingMessages": "Caricamento messaggi...",
+		"message": {
+			"menu": "Azioni messaggio",
+			"lastEdited": "Modificato",
+			"userDeleted": "utente eliminato",
+			"you": "Tu",
+			"edit": "Modifica",
+			"delete": "Elimina",
+			"copy": "Copia messaggio"
+		},
+		"readReceipts": {
+			"delivered": "Consegnato",
+			"deliveredToOne": "Consegnato a {{name}}",
+			"deliveredToMany": "Consegnato a {{count}} membri",
+			"readByOne": "Letto da {{name}}",
+			"readByMany": "Letto da {{count}} membri"
+		},
+		"copy": {
+			"success": "Messaggio copiato",
+			"error": "Impossibile copiare il messaggio"
+		},
+		"groups": {
+			"today": "Oggi",
+			"yesterday": "Ieri"
+		},
+		"input": {
+			"placeholder": "Scrivi un messaggio...",
+			"archivedPlaceholder": "Questo progetto è archiviato. La chat è in sola lettura."
+		},
+		"panel": {
+			"title": "Chat del progetto",
+			"subtitle": "Chat del progetto",
+			"open": "Apri la chat del progetto",
+			"pin": "Fissa la chat",
+			"unpin": "Rimuovi la chat fissata",
+			"openFull": "Apri la chat completa",
+			"close": "Chiudi la chat"
+		},
+		"empty": {
+			"title": "Nessun messaggio",
+			"description": "Avvia la conversazione inviando il primo messaggio al tuo team."
+		},
+		"errors": {
+			"sendMessage": "Impossibile inviare il messaggio",
+			"editMessage": "Impossibile aggiornare il messaggio",
+			"deleteMessage": "Impossibile eliminare il messaggio"
+		},
+		"deleteDialog": {
+			"title": "Elimina messaggio",
+			"message": "Sei sicuro di voler eliminare questo messaggio?",
+			"confirm": "Elimina",
+			"pending": "Eliminazione in corso...",
+			"cancel": "Annulla"
+		}
+	}
+}

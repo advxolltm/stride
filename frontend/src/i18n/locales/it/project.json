@@ -1,0 +1,271 @@
+{
+  "header": {
+    "add": "Aggiungi membri",
+    "settings": "Impostazioni",
+    "projects": "PROGETTI"
+  },
+  "home": {
+    "title": "Progetti",
+    "description": "Gestisci i tuoi progetti, collabora con il tuo team e organizza i tuoi spazi di lavoro."
+  },
+  "projectCard": {
+    "actionsMenu": "Azioni del progetto",
+    "archived": "Archiviato",
+    "edit": "Modifica",
+    "archive": "Archivia",
+    "unarchive": "Ripristina dall'archivio",
+    "delete": "Elimina",
+    "archiveConfirmTitle": "Archiviare il progetto?",
+    "archiveConfirmMessage": "Sei sicuro di voler archiviare il progetto '{{name}}'?",
+    "archiveConfirm": "Archivia progetto",
+    "archiveConfirmPending": "Archiviazione in corso...",
+    "archiveSuccess": "Progetto archiviato con successo",
+    "archiveError": "Impossibile archiviare il progetto",
+    "unarchiveConfirmTitle": "Ripristinare il progetto dall'archivio?",
+    "unarchiveConfirmMessage": "Sei sicuro di voler spostare il progetto '{{name}}' di nuovo tra i progetti attivi?",
+    "unarchiveConfirm": "Ripristina progetto",
+    "unarchiveConfirmPending": "Ripristino in corso...",
+    "unarchiveSuccess": "Progetto spostato tra i progetti attivi",
+    "unarchiveError": "Impossibile ripristinare il progetto dall'archivio"
+  },
+  "emptyState": {
+    "title": "Nessun progetto ancora",
+    "description": "Crea il tuo primo progetto per iniziare a organizzare spazi di lavoro, persone e avanzamento in un unico posto."
+  },
+  "projectPage": {
+    "notFound": "Progetto non trovato."
+  },
+  "whiteboardPage": {
+    "loading": "Caricamento della lavagna...",
+    "loadingElements": "Caricamento degli elementi della lavagna...",
+    "loadingDescription": "Preparazione del canvas per questo progetto.",
+    "errorTitle": "Impossibile caricare la lavagna",
+    "errorFallback": "Riprova tra qualche istante.",
+    "shareError": "Impossibile copiare il link di condivisione",
+    "overviewAriaLabel": "Panoramica",
+    "shareAriaLabel": "Condividi lavagna",
+    "theme": {
+      "switchToDark": "Passa alla modalità scura",
+      "switchToLight": "Passa alla modalità chiara"
+    },
+    "participants": {
+      "title": "Partecipanti",
+      "ariaLabel_one": "{{count}} persona in questa lavagna",
+      "ariaLabel_other": "{{count}} persone in questa lavagna",
+      "focusParticipant": "Vai a {{name}} sulla lavagna",
+      "jump": "Vai",
+      "you": "Tu"
+    },
+    "panel": {
+      "title": "Hub della lavagna",
+      "open": "Apri l'hub della lavagna",
+      "openAriaLabel": "Apri l'hub della lavagna",
+      "close": "Chiudi pannello",
+      "pin": "Fissa pannello",
+      "unpin": "Sblocca pannello",
+      "tabsAriaLabel": "Schede del pannello della lavagna",
+      "tabs": {
+        "chat": "Chat",
+        "templates": "Modelli"
+      },
+      "templatesTitle": "Modelli",
+      "templatesComingSoon": "Prossimamente",
+      "useTemplate": "Usa modello"
+    },
+	"region": {
+		"linkTask": "Collega attività",
+		"viewTask": "Visualizza attività"
+	},
+    "templateImportSuccess": "Modello aggiunto alla lavagna",
+    "templateImportError": "Impossibile aggiungere il modello alla lavagna",
+    "bulkDeleteError": "Impossibile eliminare gli elementi selezionati della lavagna",
+    "bulkUpdateError": "Impossibile aggiornare gli elementi selezionati della lavagna"
+  },
+  "spaces": {
+    "title": "Spazi",
+    "whiteboard": "Lavagna",
+    "tasks": "Attività",
+    "chat": "Chat",
+    "whiteboardDescription": "Fai brainstorming in modo visivo",
+    "tasksDescription": "Gestisci e monitora il lavoro",
+    "chatDescription": "Comunica con il tuo team"
+  },
+  "tasks": {
+    "title": "Bacheca attività"
+  },
+  "addMembersDialog": {
+    "title": "Aggiungi membri",
+    "description": "Aggiungi persone del tuo spazio di lavoro a {{project}}",
+    "searchPlaceholder": "Cerca per nome o email...",
+    "noResults": "Nessun utente trovato",
+    "alreadyMember": "Già membro",
+    "selectedCount": "{{count}} selezionati",
+    "add": "Aggiungi",
+    "cancel": "Annulla",
+    "membersAdded": "Membri aggiunti con successo",
+    "membersAddError": "Impossibile aggiungere i membri",
+    "allMembersAdded": "Tutti gli utenti disponibili sono già membri di questo progetto.",
+    "selectedCount_one": "1 utente selezionato",
+    "selectedCount_other": "{{count}} utenti selezionati"
+  },
+  "createDialog": {
+    "title": "Crea progetto",
+    "description": "Configura un nuovo progetto con un titolo e una breve descrizione.",
+    "fields": {
+      "title": "Titolo",
+      "description": "Descrizione"
+    },
+    "placeholders": {
+      "title": "Inserisci il titolo del progetto",
+      "description": "Descrivi l'obiettivo di questo progetto"
+    },
+    "actions": {
+      "create": "Crea progetto"
+    }
+  },
+  "editDialog": {
+    "title": "Modifica progetto",
+    "description": "Aggiorna il nome e la descrizione del progetto.",
+    "fields": {
+      "title": "Titolo",
+      "description": "Descrizione"
+    },
+    "placeholders": {
+      "title": "Inserisci il titolo del progetto",
+      "description": "Descrivi l'obiettivo di questo progetto"
+    },
+    "actions": {
+      "save": "Salva modifiche"
+    }
+  },
+  "generalSettings": {
+    "title": "Informazioni sul progetto",
+    "edit": "Modifica",
+    "projectName": "Nome del progetto",
+    "projectDescription": "Descrizione del progetto",
+    "skills": "Competenze",
+    "nameLabel": "Nome",
+    "descriptionLabel": "Descrizione",
+    "skillsPlaceholder": "Seleziona competenze",
+    "skillsSearchPlaceholder": "Cerca competenze",
+    "projectSkills": "Competenze del progetto",
+    "createdBy": "Creato da",
+    "createdAt": "Creato il",
+    "updatedAt": "Aggiornato il",
+    "cancel": "Annulla",
+    "save": "Salva modifiche",
+    "saveSuccess": "Progetto aggiornato con successo",
+    "saveError": "Impossibile aggiornare il progetto",
+    "nameRequired": "Il nome del progetto è obbligatorio",
+    "archiveTitle": "Archivia progetto",
+    "archiveDescription": "I progetti archiviati vengono rimossi dall'elenco dei progetti attivi e restano consultabili tra i progetti archiviati.",
+    "unarchiveTitle": "Ripristina progetto dall'archivio",
+    "unarchiveDescription": "Sposta questo progetto di nuovo nell'elenco dei progetti attivi.",
+    "delete": "Elimina",
+    "deleteTitle": "Elimina progetto",
+    "deleteDescription": "Una volta eliminato un progetto, non si può tornare indietro. Assicurati della tua scelta.",
+    "deleteConfirmTitle": "Eliminare il progetto?",
+    "deleteConfirmMessage": "Sei sicuro di voler eliminare il progetto '{{name}}'? Questa azione non può essere annullata.",
+    "deleteConfirm": "Elimina progetto",
+    "deleteCancel": "Annulla",
+    "deleteSuccess": "Progetto eliminato con successo",
+    "deleteError": "Impossibile eliminare il progetto"
+  },
+  "membersSettings": {
+    "title": "Membri del team",
+    "add": "Aggiungi membri",
+    "owner": "Proprietario",
+    "member": "Membro",
+    "removeTitle": "Rimuovi membro",
+    "removeMessage": "Sei sicuro di voler rimuovere questo membro dal progetto?",
+    "removeConfirm": "Rimuovi",
+    "removeConfirmPending": "Rimozione in corso...",
+    "removeCancel": "Annulla",
+    "removeSuccess": "Membro rimosso con successo",
+    "removeError": "Impossibile rimuovere il membro"
+  },
+  "skillsSettings": {
+    "title": "Competenze",
+    "description": "Gestisci le competenze richieste per questo progetto.",
+    "addSkillTabsLabel": "Opzioni per aggiungere competenze",
+    "addSkillTabs": {
+      "templates": "Modelli",
+      "projects": "Da progetti",
+      "custom": "Personalizzata"
+    },
+    "searchTemplates": "Cerca competenze nei modelli...",
+    "searchProjects": "Cerca competenze nei progetti...",
+    "add": "Aggiungi",
+    "addAll": "Aggiungi tutte",
+    "added": "Aggiunta",
+    "done": "Fatto",
+    "addSuccess": "Competenza aggiunta con successo",
+    "addAllSuccess": "Competenze aggiunte con successo",
+    "addError": "Impossibile aggiungere la competenza",
+    "addSkill": "Aggiungi competenza",
+    "noSkillsFound": "Nessuna competenza trovata",
+    "noProjectSkills": "Nessuna competenza riutilizzabile del progetto trovata",
+    "nameLabel": "Nome",
+    "namePlaceholder": "Inserisci il nome della competenza",
+    "descriptionLabel": "Descrizione",
+    "descriptionPlaceholder": "Inserisci la descrizione della competenza",
+    "empty": "Nessuna competenza aggiunta ancora",
+    "save": "Salva competenza",
+    "cancel": "Annulla",
+    "nameRequired": "Il nome della competenza è obbligatorio",
+    "deleteTitle": "Elimina competenza",
+    "deleteMessage": "Sei sicuro di voler eliminare \"{{name}}\"?",
+    "deleteConfirm": "Elimina",
+    "deleteCancel": "Annulla",
+    "deleteSuccess": "Competenza eliminata con successo",
+    "deleteError": "Impossibile eliminare la competenza"
+  },
+  "mySkillsSettings": {
+    "title": "Le mie competenze",
+    "description": "Scegli le competenze che metti a disposizione di questo progetto.",
+    "edit": "Modifica",
+    "selectLabel": "Competenze selezionate",
+    "placeholder": "Seleziona competenze",
+    "searchPlaceholder": "Cerca competenze",
+    "selectedLabel": "{{selected}} di {{total}} selezionate",
+    "emptySkills": "Nessuna competenza ancora disponibile per questo progetto.",
+    "empty": "Nessuna competenza selezionata ancora",
+    "cancel": "Annulla",
+    "save": "Salva modifiche",
+    "saveSuccess": "Le tue competenze per il progetto sono state aggiornate",
+    "saveError": "Impossibile aggiornare le tue competenze per il progetto"
+  },
+  "myWorkingHoursSettings": {
+    "title": "Le mie ore di lavoro",
+    "description": "Regola quante ore a settimana dedichi a questo progetto. Il totale settimanale è limitato a 40h su tutti i progetti.",
+    "edit": "Modifica",
+    "cancel": "Annulla",
+    "save": "Salva modifiche",
+    "saveSuccess": "Ore di lavoro aggiornate con successo",
+    "saveError": "Impossibile aggiornare le ore di lavoro",
+    "summary": {
+      "allocated": "Totale allocato",
+      "remaining": "Rimanenti altrove"
+    },
+    "currentProjectTitle": "Ore su {{project}}",
+    "currentProjectSubtitle": "Max {{max}}h disponibili ({{committed}}h già impegnate in altri progetti)",
+    "otherProjectsTitle": "Altri progetti",
+    "inputAriaLabel": "Ore settimanali su {{project}}",
+    "availability": "Puoi assegnare fino a {{max}}h a questo progetto.",
+    "validation": {
+      "integer": "Inserisci un numero intero.",
+      "range": "Inserisci un valore compreso tra 0 e {{max}}h."
+    }
+  },
+  "settingsSidebar": {
+    "title": "Impostazioni del progetto",
+    "close": "Chiudi impostazioni",
+    "tabs": {
+      "general": "Generale",
+      "members": "Team",
+      "skills": "Competenze",
+      "mySkills": "Le mie competenze",
+      "myWorkingHours": "Le mie ore di lavoro"
+    }
+  }
+}
