@@ -1,0 +1,170 @@
+{
+  "tasks": {
+    "tabs": {
+      "ariaLabel": "Viste delle attività",
+      "board": "Bacheca",
+      "list": "Elenco"
+    },
+    "actions": {
+      "filter": "Filtra",
+      "searchTasks": "Cerca attività...",
+      "assign": "Assegna attività",
+      "add": "Aggiungi attività",
+      "menuAria": "Azioni dell'attività",
+      "edit": "Modifica attività",
+      "delete": "Elimina attività",
+      "createTask": "Crea attività",
+      "cancel": "Annulla"
+    },
+    "columns": {
+      "todo": "Da fare",
+      "inProgress": "In corso",
+      "done": "Completate",
+      "addTask": "Aggiungi attività"
+    },
+    "messages": {
+      "loading": "Caricamento delle attività...",
+      "taskUpdateSuccess": "Attività aggiornata.",
+      "taskUpdateError": "Impossibile aggiornare l'attività.",
+      "moveSuccess": "Attività spostata.",
+      "moveError": "Impossibile spostare l'attività.",
+      "dueDateUpdateSuccess": "Scadenza aggiornata.",
+      "dueDateUpdateError": "Impossibile aggiornare la scadenza.",
+      "createSuccess": "Attività creata.",
+      "createError": "Impossibile creare l'attività.",
+      "archivedReadOnly": "Progetto archiviato - sola lettura"
+    },
+    "scheduler": {
+      "actions": {
+        "cancel": "Annulla",
+        "close": "Chiudi",
+        "run": "Esegui lo scheduler",
+        "confirm": "Conferma assegnazioni"
+      },
+      "messages": {
+        "generateError": "Impossibile generare le assegnazioni dello scheduler.",
+        "confirmSuccess": "Assegnazioni dello scheduler salvate.",
+        "confirmError": "Impossibile salvare le assegnazioni dello scheduler."
+      },
+      "intro": {
+        "title": "Assegnare automaticamente le attività?",
+        "help": "Controlla i requisiti qui sotto prima di eseguire lo scheduler.",
+        "noTasks": "Aggiungi almeno un'attività aperta prima di eseguire lo scheduler.",
+        "noMembers": "Aggiungi le ore di lavoro di almeno un membro del team prima di eseguire lo scheduler.",
+        "noEstimatedTasks": "Aggiungi un tempo stimato ad almeno un'attività aperta prima di eseguire lo scheduler.",
+        "noStartDates": "Aggiungi una data di inizio ad almeno un'attività aperta prima di eseguire lo scheduler.",
+        "ready_one": "Lo scheduler distribuirà {{taskCount}} attività aperte o in corso tra {{count}} membro del team disponibile in base al carico di lavoro. Potrai rivedere e modificare prima di confermare.",
+        "ready_other": "Lo scheduler distribuirà {{taskCount}} attività aperte o in corso tra {{count}} membri del team disponibili in base al carico di lavoro. Potrai rivedere e modificare prima di confermare.",
+        "skippedMembers_one": "{{count}} membro del team ha 0 ore disponibili e verrà saltato.",
+        "skippedMembers_other": "{{count}} membri del team hanno 0 ore disponibili e verranno saltati."
+      },
+      "loading": {
+        "title": "Assegnazione delle attività",
+        "description": "Lo scheduler sta assegnando le attività..."
+      },
+      "review": {
+        "title": "Rivedi le assegnazioni",
+        "description_one": "Controlla l'assegnazione qui sotto prima di salvare. {{count}} attività è pronta.",
+        "description_other": "Controlla le assegnazioni qui sotto prima di salvare. {{count}} attività sono pronte.",
+        "emptyTitle": "Niente da assegnare",
+        "emptyDescription": "Lo scheduler non ha trovato nuove assegnazioni per le attività selezionate.",
+        "emptyHint": "Prova ad aggiornare le date delle attività, il tempo stimato, le competenze o la disponibilità del team, quindi esegui di nuovo lo scheduler.",
+        "newAssignments_one": "Nuove assegnazioni ({{count}})",
+        "newAssignments_other": "Nuove assegnazioni ({{count}})",
+        "newAssignmentsEmpty": "Non sono state suggerite nuove assegnazioni.",
+        "changedAssignments_one": "Assegnazioni modificate ({{count}})",
+        "changedAssignments_other": "Assegnazioni modificate ({{count}})",
+        "changedAssignmentsEmpty": "Nessuna assegnazione esistente doveva essere modificata.",
+        "invalidAssignments": "Scegli un membro del team valido per ogni attività prima di confermare.",
+        "incompatibleAssignments": "Attività incompatibili preassegnate e relative assegnazioni ({{count}})",
+        "incompatibleAssignmentsEmpty": "Nessuna attività incompatibile preassegnata."
+      },
+      "assignment": {
+        "ariaLabel": "Assegna {{taskTitle}}",
+        "placeholder": "Seleziona assegnatario",
+        "empty": "Nessun assegnatario",
+        "search": "Cerca utenti..."
+      },
+      "settings": {
+        "strategy": "Strategia di ottimizzazione",
+        "distributeEvenly": "Distribuisci in modo uniforme",
+        "distributeEvenlyDesc": "Bilancia il carico di lavoro tra tutti i membri disponibili.",
+        "minMakespan": "Minimizza la durata",
+        "minMakespanDesc": "Completa tutte le attività il più rapidamente possibile.",
+        "timeout": "Tempo massimo di calcolo",
+        "timeoutDesc": "Valori più alti possono dare risultati migliori per progetti complessi, ma richiedono più tempo di elaborazione."
+      }
+    },
+    "list": {
+      "title": "Tutte le attività",
+      "ariaLabel": "Elenco delle attività",
+      "estimatedTimeValue_one": "{{count}} ora",
+      "estimatedTimeValue_other": "{{count}} ore",
+      "newTaskMeta": "Le nuove attività vengono create in Da fare.",
+      "columnsButton": "Colonne",
+      "emptyTitle": "Nessuna attività ancora",
+      "emptyDescription": "Crea un'attività per iniziare, oppure modifica la ricerca per vedere le attività corrispondenti.",
+      "visible": "Visibile",
+      "hidden": "Nascosta",
+      "resizeColumn": "Ridimensiona la colonna {{column}}",
+      "columns": {
+        "task": "Attività",
+        "description": "Descrizione",
+        "skills": "Competenze",
+        "assignee": "Assegnatario",
+        "status": "Stato",
+        "estimatedTime": "Tempo stimato",
+        "startDate": "Data di inizio",
+        "dueDate": "Scadenza"
+      },
+      "filter": {
+        "status": "Stato",
+        "assignee": "Assegnatario",
+        "skill": "Competenza",
+        "clear": "Cancella",
+        "emptyAssignee": "Nessun assegnatario disponibile",
+        "emptySkill": "Nessuna competenza disponibile"
+      }
+    },
+    "drawer": {
+      "detailsTitle": "Dettagli attività",
+      "cancel": "Annulla",
+      "save": "Salva modifiche",
+      "close": "Chiudi"
+    },
+    "modal": {
+      "createTitle": "Nuova attività",
+      "description": "Aggiungi i dettagli dell'attività e assegna un responsabile.",
+      "cancel": "Annulla"
+    },
+    "form": {
+      "title": "Nome dell'attività",
+      "titlePlaceholder": "Inserisci il nome dell'attività",
+      "titleRequired": "Il nome dell'attività è obbligatorio.",
+      "description": "Descrizione",
+      "descriptionPlaceholder": "Descrivi l'attività",
+      "status": "Stato",
+      "statusPlaceholder": "Seleziona stato",
+      "labels": "Etichette / Competenze",
+      "labelsPlaceholder": "Seleziona etichette",
+      "labelsSearch": "Cerca etichette",
+      "assignee": "Assegnatario",
+      "assigneePlaceholder": "Seleziona assegnatario",
+      "expectedDuration": "Tempo stimato (ore)",
+      "expectedDurationPlaceholder": "Lascia vuoto o inserisci ore intere",
+      "expectedDurationInvalid": "Usa un numero intero positivo di ore oppure lascia il campo vuoto.",
+      "startDate": "Data di inizio",
+      "noStartDate": "Nessuna data di inizio",
+      "dueDate": "Scadenza",
+      "noDueDate": "Nessuna scadenza",
+      "skills": "Competenze",
+      "skillsPlaceholder": "Aggiungi competenze...",
+      "skillsSearch": "Cerca competenze...",
+      "skillsEmpty": "Nessuna competenza trovata",
+      "skillsUnavailable": "Nessuna competenza disponibile",
+      "assigneeSearch": "Cerca utenti...",
+      "assigneeEmpty": "Nessun assegnatario",
+	  "linkedWhiteboardRegion": "Area della lavagna collegata"
+    }
+  }
+}
