@@ -284,7 +284,7 @@ Regenerate the spec after changing handlers: see [`backend/README.md`](backend/R
 | End-to-end | **Playwright** | auth, projects, settings and permissions, tasks (list, drag, live sync), chat, notifications, scheduler, archived read-only |
 | Static analysis | ESLint, `tsc --noEmit`, golangci-lint, **govulncheck** | runs in CI on every MR |
 
-The GitLab pipeline (`.gitlab-ci.yml`) runs **build → test → deploy** on every merge request and on `master`.
+The GitLab pipeline (`.gitlab-ci.yml`) runs **build → test** on every merge request and on `develop`, and **build → test → deploy** on `main`.
 
 ---
 
