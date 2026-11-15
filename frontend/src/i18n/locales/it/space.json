@@ -121,7 +121,7 @@
         "status": "Stato",
         "assignee": "Assegnatario",
         "skill": "Competenza",
-        "clear": "Cancella",
+        "clear": "Azzera",
         "emptyAssignee": "Nessun assegnatario disponibile",
         "emptySkill": "Nessuna competenza disponibile"
       }
