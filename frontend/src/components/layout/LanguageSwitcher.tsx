@@ -31,6 +31,9 @@ export function LanguageSwitcher({ className }: LanguageSwitcherProps) {
                 <option value="de" className="bg-surface text-foreground">
                     🇩🇪 DE
                 </option>
+                <option value="it" className="bg-surface text-foreground">   
+                    🇮🇹 IT
+                </option>
             </select>
             <ChevronDown
                 aria-hidden="true"
