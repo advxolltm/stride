@@ -15,7 +15,7 @@
     "username": "Nome utente",
     "email": "Email",
     "save": "Salva modifiche",
-    "reset": "Annulla modifiche",
+    "reset": "Scarta modifiche",
     "updateSuccess": "Profilo aggiornato con successo",
     "updateError": "Impossibile aggiornare il profilo. Riprova."
   },
@@ -45,7 +45,7 @@
     "searchPlaceholder": "Cerca competenze",
     "selectedCount": "{{selected}} / {{total}} selezionate",
     "save": "Salva modifiche",
-    "reset": "Annulla modifiche",
+    "reset": "Scarta modifiche",
     "updateSuccess": "Competenze aggiornate con successo",
     "updateError": "Impossibile aggiornare le competenze. Riprova.",
     "emptySkills": "Nessuna competenza ancora disponibile per questo progetto.",
@@ -55,11 +55,11 @@
     "title": "Le tue ore di lavoro settimanali",
     "description": "Hai 40 ore a settimana. Distribuiscile tra i tuoi progetti.",
     "save": "Salva modifiche",
-    "reset": "Annulla modifiche",
+    "reset": "Scarta modifiche",
     "updateSuccess": "Ore di lavoro aggiornate con successo",
     "updateError": "Impossibile aggiornare le ore di lavoro. Riprova.",
     "summary": {
-      "allocated": "Allocate",
+      "allocated": "Allocato",
       "remaining": "Rimanenti"
     },
     "projectSubtitle": "{{hours}}h / settimana · max {{max}}h disponibili",
