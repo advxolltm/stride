@@ -62,7 +62,7 @@
       "openAriaLabel": "Apri l'hub della lavagna",
       "close": "Chiudi pannello",
       "pin": "Fissa pannello",
-      "unpin": "Sblocca pannello",
+      "unpin": "Sgancia pannello",
       "tabsAriaLabel": "Schede del pannello della lavagna",
       "tabs": {
         "chat": "Chat",
