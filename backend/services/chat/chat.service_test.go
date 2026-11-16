@@ -120,22 +120,14 @@ func TestChatStore(t *testing.T) {
 			createdMessages = append(createdMessages, msg)
 		}
 
-		page := 0
+		// page 0 is the last page; it may hold fewer than 3 messages, but always ends with the newest one
 		pageSize := 10
-		paginatedResult, err := cs.GetProjectMessages(ctx, proj.ID, page, pageSize)
+		paginatedResult, err := cs.GetProjectMessages(ctx, proj.ID, 0, pageSize)
 		require.NoError(t, err)
 
-		assert.NotNil(t, paginatedResult.Items)
-		assert.GreaterOrEqual(t, len(paginatedResult.Items), 3)
-
-		found := false
-		for _, item := range paginatedResult.Items {
-			if item.ID == createdMessages[0].ID {
-				found = true
-				break
-			}
-		}
-		assert.True(t, found, "Expected newly created message to be in the paginated results")
+		wantLen := paginatedResult.TotalItemCount - (paginatedResult.PageCount-1)*pageSize
+		require.Len(t, paginatedResult.Items, wantLen)
+		assert.Equal(t, createdMessages[len(createdMessages)-1].ID, paginatedResult.Items[wantLen-1].ID)
 	})
 	runTest(t, db, "MarkDelivered returns created cursor", func(t *testing.T, db *gorm.DB, cs chatService.ChatService) {
 		proj := testutils.SelectRandomProject(t, db)
