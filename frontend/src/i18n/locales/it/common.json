@@ -1,0 +1,116 @@
+{
+  "title": "Home",
+  "cardTitle": "Card",
+  "cardDescription": "Questo dovrebbe adattarsi alla modalità chiara e scura.",
+  "actions": {
+    "cancel": "Annulla",
+    "createProject": "Crea progetto"
+  },
+  "navigation": {
+    "home": "Home",
+    "overview": "Panoramica",
+    "projects": "Progetti",
+    "activeProjects": "Progetti attivi",
+    "archivedProjects": "Progetti archiviati",
+    "noActiveProjects": "Nessun progetto attivo",
+    "noArchivedProjects": "Nessun progetto archiviato",
+    "expandSidebar": "Espandi barra laterale",
+    "collapseSidebar": "Comprimi barra laterale"
+  },
+  "logout": {
+    "label": "Esci",
+    "title": "Uscire?",
+    "message": "Dovrai accedere di nuovo per continuare.",
+    "confirm": "Esci",
+    "pending": "Uscita in corso..."
+  },
+  "passwordInput": {
+    "label": "Password",
+    "placeholder": "Inserisci la tua password",
+    "createPlaceholder": "Crea una password",
+    "show": "Mostra password",
+    "hide": "Nascondi password"
+  },
+  "passwordValidation": {
+    "passwordTooShort": "La password deve contenere almeno {{count}} caratteri.",
+    "passwordMissingSpecial": "La password deve contenere almeno un carattere speciale.",
+    "passwordMissingNumber": "La password deve contenere almeno un numero."
+  },
+  "usernameValidation": {
+    "length": "Il nome utente deve contenere da {{min}} a {{max}} caratteri."
+  },
+  "notification": {
+    "ariaLabel": "Notifiche",
+    "title": "Notifiche",
+    "unreadCount": "{{count}} non lette",
+    "emptyTitle": "Nessuna notifica",
+    "emptyDescription": "I nuovi aggiornamenti appariranno qui.",
+    "deleteAriaLabel": "Elimina notifica",
+    "markAsReadError": "Impossibile contrassegnare la notifica come letta.",
+    "openError": "Impossibile aprire la destinazione della notifica.",
+    "deleteError": "Impossibile eliminare la notifica.",
+    "objectTypes": {
+      "notification": "Notifica",
+      "project": "Progetto",
+      "task": "Attività",
+      "chat": "Chat"
+    }
+  },
+  "projectRemoval": {
+    "title": "Rimosso dal progetto",
+    "message": "Sei stato rimosso dal progetto {{projectName}}.",
+    "confirm": "OK",
+    "projectFallback": "questo progetto"
+  },
+  "projectArchived": {
+    "title": "Progetto archiviato",
+    "message": "Il progetto {{projectName}} è stato archiviato.",
+    "confirm": "OK"
+  },
+  "projectUnarchived": {
+    "title": "Progetto ripristinato dall'archivio",
+    "message": "Il progetto {{projectName}} è stato ripristinato dall'archivio.",
+    "confirm": "OK"
+  },
+  "projectDeleted": {
+    "title": "Progetto eliminato",
+    "message": "Il progetto {{projectName}} è stato eliminato.",
+    "confirm": "OK"
+  },
+  "primary": "Primario",
+  "danger": "Pericolo",
+  "tailwindMessage": "Tailwind + tema funzionanti",
+  "auth": {
+    "login": {
+      "heading": "Bentornato",
+      "subheading": "Accedi al tuo account per continuare",
+      "emailLabel": "Email",
+      "emailPlaceholder": "Inserisci la tua email",
+      "emailInvalid": "Inserisci un indirizzo email valido",
+      "forgotPassword": "Password dimenticata?",
+      "submit": "Accedi",
+      "noAccount": "Non hai un account?",
+      "createAccount": "Crea account",
+      "errorInvalidCredentials": "Accesso non riuscito. Controlla le tue credenziali e riprova.",
+      "errorGeneric": "Si è verificato un errore durante l'accesso. Riprova più tardi."
+    },
+    "register": {
+      "heading": "Crea un account",
+      "subheading": "Inizia oggi con STRIDE",
+      "usernameLabel": "Nome utente",
+      "usernamePlaceholder": "Scegli un nome utente",
+      "emailLabel": "Email",
+      "emailPlaceholder": "Inserisci la tua email",
+      "emailInvalid": "Inserisci un indirizzo email valido",
+      "submit": "Crea account",
+      "haveAccount": "Hai già un account?",
+      "signIn": "Accedi",
+      "errorGeneric": "Creazione dell'account non riuscita"
+    }
+  },
+  "userMenu": {
+    "ariaLabel": "Menu",
+    "preferences": "Preferenze",
+    "profile": "Profilo"
+  }
+}

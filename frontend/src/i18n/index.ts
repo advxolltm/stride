@@ -14,6 +14,12 @@ import setting_de from './locales/de/setting.json'
 import space_de from './locales/de/space.json'
 import chat_de from './locales/de/chat.json'
 
+import common_it from './locales/it/common.json'
+import project_it from './locales/it/project.json'
+import setting_it from './locales/it/setting.json'
+import space_it from './locales/it/space.json'
+import chat_it from './locales/it/chat.json'
+
 const savedLang = localStorage.getItem('lang') || 'en'
 
 i18n.use(LanguageDetector)
@@ -34,6 +40,13 @@ i18n.use(LanguageDetector)
                 space: space_de,
 				chat: chat_de,
             },
+			it: {
+                common: common_it,
+                project: project_it,
+                setting: setting_it,
+                space: space_it,
+				chat: chat_it,
+			},
         },
         lng: savedLang,
         fallbackLng: 'en',
